@@ -197,7 +197,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 
   // ---------- 1) 학생키: 이름+학교 (학년은 키에서 제외, 속성으로만) ----------
   function studentKey(name, school) {
-    return cleanName(school) + '-' + cleanName(name);   // 예: 휘문중-조준모
+    return cleanName(school) + '-' + cleanName(name);   // 예: 휘문중-홍길동
   }
 
   // ---------- 2) 5대 통합축 매핑 (보너스 진단층; 단원·오개념 그룹이 본체) ----------
@@ -543,11 +543,12 @@ function rankMsg(rk){ var d=rk.score-rk.avg; var dt=d>=0?('반 평균보다 '+d+
   if(rk.per100<=30) return '상위권입니다. 상위 약 '+rk.per100+'% 위치이고, '+dt+'.';
   if(rk.per100<=50) return '평균 이상입니다. 상위 약 '+rk.per100+'%입니다. '+dt+'.';
   return '지금은 평균 부근입니다. '+dt+'. 재시로 최종 점수를 끌어올리고 있습니다.'; }
+function sc1(n){ return n==null?n:Math.round(n*10)/10; }
 function rankCard(rk){ return `<div class="card rankcard">
   <div class="rankhead">${rk.round}회 · 첫 응시 석차</div>
   <div class="rankrow">
-    <div class="rcell"><div class="rv">${rk.avg}</div><div class="rl">반 평균</div></div>
-    <div class="rcell me"><div class="rv">${rk.score}</div><div class="rl">우리 아이</div></div>
+    <div class="rcell"><div class="rv">${sc1(rk.avg)}</div><div class="rl">반 평균</div></div>
+    <div class="rcell me"><div class="rv">${sc1(rk.score)}</div><div class="rl">우리 아이</div></div>
     <div class="rcell"><div class="rv"><span class="pre">상위</span>${rk.per100}<span class="u">%</span></div><div class="rl">반 전체 기준</div></div>
   </div>
   <div class="rankmsg">${rankMsg(rk)}</div>
@@ -558,7 +559,7 @@ function qualCard(){ var rec=latest.finalScore-latest.jeongsiScore; var band, ms
   else { band='성장 구간'; msg='이번 회차도 통과했습니다. 꾸준히 올라오고 있고, 이번 주 핵심 처방으로 한 단계 더 갈 수 있어요.'; }
   return `<div class="card qualcard"><div class="rankhead">이번 회차 · ${latest.round}회</div>
     <div class="qualrow"><div class="qbadge">${band}</div>
-      ${rec>0?`<div class="qmetric"><span class="qv">+${rec}</span><span class="ql">첫 응시 → 최종</span></div>`:''}</div>
+      ${rec>0?`<div class="qmetric"><span class="qv">+${sc1(rec)}</span><span class="ql">첫 응시 → 최종</span></div>`:''}</div>
     <div class="rankmsg">${msg}</div></div>`; }
 function riskAssess(){ var t=A.trend||[], reasons=[], level='안정', note='';
   var fs=t.map(function(x){return x.finalScore;}).filter(function(v){return v!=null;});
@@ -601,8 +602,8 @@ function svgTrend(){
   const passLbl='';
   const jline=T.map((t,i)=>`${X(i)},${Y(t.jeongsiScore)}`).join(' ');
   const fline=T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ');
-  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#A9853C" font-family="JetBrains Mono">${t.jeongsiScore}</text>`:'');}).join('');
-  const fdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.finalScore)}" r="4" fill="#0B6E6E"/><text x="${X(i)}" y="${Y(t.finalScore)-9}" text-anchor="${anc}" font-size="10" font-weight="700" fill="#0B6E6E" font-family="JetBrains Mono">${t.finalScore}</text>`;}).join('');
+  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#A9853C" font-family="JetBrains Mono">${sc1(t.jeongsiScore)}</text>`:'');}).join('');
+  const fdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.finalScore)}" r="4" fill="#0B6E6E"/><text x="${X(i)}" y="${Y(t.finalScore)-9}" text-anchor="${anc}" font-size="10" font-weight="700" fill="#0B6E6E" font-family="JetBrains Mono">${sc1(t.finalScore)}</text>`;}).join('');
   const xlab=T.map((t,i)=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#61707F" font-family="JetBrains Mono">${t.round}회</text>`).join('');
   const farea=`${X(0)},${Y(0)} `+T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ')+` ${X(n-1)},${Y(0)}`;
   // A8 주석: 가장 큰 정시→최종 회복 지점 강조
@@ -611,7 +612,7 @@ function svgTrend(){
   if(recs.length){ var r0=recs[0], i=r0.i, t=r0.t, midY=(Y(t.jeongsiScore)+Y(t.finalScore))/2;
     var last=(i===n-1), lx=last?X(i)-7:X(i)+7, anc=last?'end':'start';
     annot=`<line x1="${X(i)}" y1="${Y(t.jeongsiScore)}" x2="${X(i)}" y2="${Y(t.finalScore)}" stroke="#A9853C" stroke-width="1" opacity=".45"/>`
-      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#A9853C" font-family="JetBrains Mono">재시 +${r0.rec}</text>`;
+      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#A9853C" font-family="JetBrains Mono">재시 +${sc1(r0.rec)}</text>`;
   }
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="회차별 점수 추이">
     <polygon points="${farea}" fill="#0B6E6E" opacity=".06"/>
@@ -642,6 +643,7 @@ function render(){
   var status=risk.level==='안정'?{k:'안정',c:'st-ok',t:'꾸준히 전진 중'}:risk.level==='주의'?{k:'주의',c:'st-warn',t:risk.reasons[0]||'살펴볼 신호 있음'}:{k:'집중 관리',c:'st-no',t:risk.reasons[0]||'재시로 채우는 중'};
   // ── 히어로 한 줄: 점수 궤적 4경우 + 회복탄력성 논제 (정확·품격) ──
   var _js=latest.jeongsiScore, _fs=latest.finalScore, _rec=_fs-_js;
+  var _jsD=sc1(_js), _fsD=sc1(_fs);
   var _pre='';
   if(allPass && A.trend.length>1){
     _pre = (avgRec>=8)
@@ -651,14 +653,14 @@ function render(){
   var _week;
   if(latest.passed && _rec===0){
     _week = _pre
-      ? '이번 회차도 재시 없이 <b>첫 시도에 '+_fs+'점</b>으로 넘었습니다.'
-      : '이번 회차는 재시 없이 <b>첫 시도에 '+_fs+'점</b>으로 통과했습니다.';
+      ? '이번 회차도 재시 없이 <b>첫 시도에 '+_fsD+'점</b>으로 넘었습니다.'
+      : '이번 회차는 재시 없이 <b>첫 시도에 '+_fsD+'점</b>으로 통과했습니다.';
   } else if(latest.passed && _rec>0){
-    _week = '이번 회차는 첫 시도 '+_js+'점에서 재시로 <b>'+_fs+'점</b>까지 끌어올려 통과했습니다.';
+    _week = '이번 회차는 첫 시도 '+_jsD+'점에서 재시로 <b>'+_fsD+'점</b>까지 끌어올려 통과했습니다.';
   } else if(_rec>0){
-    _week = '이번 회차는 '+_js+'점에서 <b>'+_fs+'점</b>까지 좁혔고, 통과선까지 '+(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
+    _week = '이번 회차는 '+_jsD+'점에서 <b>'+_fsD+'점</b>까지 좁혔고, 통과선까지 '+sc1(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
   } else {
-    _week = '이번 회차 첫 시도는 <b>'+_fs+'점</b>, 통과선까지 '+(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
+    _week = '이번 회차 첫 시도는 <b>'+_fsD+'점</b>, 통과선까지 '+sc1(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
   }
   var _thesis, _detail='';
   if(_pre){ _thesis=_pre.trim(); _detail=_week; } else { _thesis=_week; }
