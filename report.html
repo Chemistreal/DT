@@ -156,6 +156,8 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .gcell .gv{font-family:'JetBrains Mono',monospace;font-size:27px;font-weight:800;color:var(--teal-d);line-height:1}
 .gcell .gv .gu{font-size:13px;font-weight:700;opacity:.55}
 .gcell .gl{font-size:11px;color:var(--sub);margin-top:6px}
+.retakebtn{display:block;margin-top:14px;padding:13px;background:var(--o);color:#fff;text-align:center;border-radius:11px;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:-.01em}
+.retaken{font-size:11.5px;color:var(--sub);text-align:center;margin:8px 0 0;line-height:1.4}
 .qualcard{background:linear-gradient(180deg,#FAF6EF,var(--surface));border-left:4px solid var(--brass)}
 .qualrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .qbadge{font-size:14px;font-weight:800;color:#fff;background:var(--brass);padding:7px 16px;border-radius:20px}
@@ -554,13 +556,14 @@ function rankCard(rk){ return `<div class="card rankcard">
   <div class="rankmsg">${rankMsg(rk)}</div>
   <p class="ranknote">응시 인원이 적은 회차에도 위치가 흔들리지 않도록 보정한 값입니다.</p></div>`; }
 function showRank(rk){ return !!(rk && rk.n>=5 && rk.score>rk.avg && rk.score>=80); }
+function retakeCTA(){ if(latest.passed) return ''; var stu=new URLSearchParams(location.search).get('student'); if(!stu) return ''; return `<a class="retakebtn" href="index.html?retake=${encodeURIComponent(stu)}&c=${latest.course}&r=${latest.round}">재시 응시하기 →</a><p class="retaken">틀린 개념의 강의록을 학습한 뒤, 새 문항으로 재시를 봅니다.</p>`; }
 function qualCard(){ var rec=latest.finalScore-latest.jeongsiScore; var band, msg;
   if(!latest.passed){ band='다지기 단계'; msg='이번 회차는 재시로 약한 개념을 하나씩 잡는 중입니다. 점수보다, 무너지지 않고 채워가는 것이 먼저입니다.'; }
   else { band='성장 구간'; msg='이번 회차도 통과했습니다. 꾸준히 올라오고 있고, 이번 주 핵심 처방으로 한 단계 더 갈 수 있어요.'; }
   return `<div class="card qualcard"><div class="rankhead">이번 회차 · ${latest.round}회</div>
     <div class="qualrow"><div class="qbadge">${band}</div>
       ${rec>0?`<div class="qmetric"><span class="qv">+${sc1(rec)}</span><span class="ql">첫 응시 → 최종</span></div>`:''}</div>
-    <div class="rankmsg">${msg}</div></div>`; }
+    <div class="rankmsg">${msg}</div>${retakeCTA()}</div>`; }
 function riskAssess(){ var t=A.trend||[], reasons=[], level='안정', note='';
   var fs=t.map(function(x){return x.finalScore;}).filter(function(v){return v!=null;});
   var js=t.map(function(x){return x.jeongsiScore;}).filter(function(v){return v!=null;});
@@ -819,9 +822,10 @@ async function boot(){
     }
   }catch(e){ console.warn('리포트 데이터 로드 실패, 데모로 표시', e); }
   var demoHard=(new URLSearchParams(location.search).get('demo')==='hard');
+  var isDemo=!A;
   if(!A){ var src=demoHard?SYN_HARD:SYN; var c=ChemEngine.cumulative(src); A=c[Object.keys(c)[0]]; allRows=src;
     if(demoHard){ CU=CUM_UNITS_HARD; CX=CUM_AXES_HARD; } }
-  if(!RANK && !demoHard) RANK=DEMO_RANK;
+  if(isDemo && !demoHard) RANK=DEMO_RANK;  // 데모(SYN)일 때만 데모 석차; 실제 학생은 실제 석차(없으면 석차 카드 숨김→qualCard)
   A.info = A.info || { name:(allRows[0]||{}).name||'학생', school:(allRows[0]||{}).school||'' };
   if(!A.trend || !A.trend.length){ document.getElementById('app').innerHTML='<div class="card"><p class="lede">아직 응시 기록이 없습니다. 첫 시험을 채점하면 리포트가 채워집니다.</p></div>'; return; }
   latest=A.trend[A.trend.length-1];
