@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>해설 엔진 골격 · InterpEngine</title>
+<style>
+  :root{
+    --ink:#20303d; --sub:#5b6b78; --faint:#9aa7b2; --line:#e6ddcb; --line2:#eef0f2;
+    --paper:#faf7f0; --card:#ffffff; --brass:#b0894e; --brass-soft:#f7efdd;
+    --x:#c0392b; --x-bg:#fbeeec; --o:#1b8a4c; --o-bg:#eaf6ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:880px;margin:0 auto;padding:26px 18px 60px}
+  .top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
+  .kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:800}
+  h1{font-size:23px;margin:6px 0 4px}
+  .lede{color:var(--sub);font-size:14px;margin:0}
+  .grid{display:grid;grid-template-columns:1fr;gap:18px}
+  @media(min-width:760px){.grid{grid-template-columns:1.35fr 1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  select,button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);
+    border-radius:9px;padding:7px 12px;cursor:pointer}
+  button.brass{background:var(--brass);color:#fff;border-color:var(--brass);font-weight:700}
+  .muted{color:var(--faint);font-size:12px}
+  .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+
+  /* ===== 해설 블록 (interp_render.js가 생성) ===== */
+  .interp .ith{font-size:15px;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--brass-soft)}
+  .ib{border:1px solid var(--line2);border-left:3px solid var(--brass);border-radius:0 10px 10px 0;
+    padding:11px 13px;margin-bottom:10px;background:#fff}
+  .ibh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ibu{font-size:11px;font-weight:700;color:var(--brass);background:var(--brass-soft);
+    border-radius:20px;padding:2px 9px}
+  .ibn{font-size:14px}
+  .ibm{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--x);background:var(--x-bg);
+    border-radius:20px;padding:2px 9px}
+  .ibdx{margin:8px 0 0;font-size:13px;color:var(--ink);line-height:1.55}
+  .ibmis{margin-top:8px}
+  .ibcap{font-size:11px;font-weight:800;color:var(--sub);margin-bottom:3px}
+  .ibrow{font-size:12.5px;color:var(--ink);padding:2px 0 2px 12px;position:relative;line-height:1.5}
+  .ibrow:before{content:"·";position:absolute;left:2px;color:var(--brass);font-weight:800}
+  .ibfix{margin-top:8px;font-size:12.5px;color:#1b6b3c;background:var(--o-bg);
+    border-radius:8px;padding:6px 10px}
+  .ibfix span{font-weight:800}
+  .ibcite{margin-top:6px;font-size:11px;color:var(--faint);font-style:italic}
+
+  /* ===== 엔진 내부(심각도 랭킹) 패널 ===== */
+  .rk{font-size:12.5px}
+  .rkr{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line2)}
+  .rkr:last-child{border-bottom:0}
+  .rks{min-width:46px;color:var(--brass);font-weight:700}
+  .rku{color:var(--faint);font-size:11px}
+  .rkm{margin-left:auto;color:var(--x)}
+  details{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:13.5px}
+  .doc{padding:0 16px 16px;font-size:13px;color:var(--ink)}
+  .doc code{background:var(--brass-soft);border-radius:5px;padding:1px 6px;font-size:12px}
+  .doc b{color:var(--brass)}
+  .filebar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+  .pill{font-size:11px;font-weight:700;border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="kicker">CHEMISTREAL · 해설 콘텐츠 아키텍처</div>
+    <h1>해설 엔진 골격 — InterpEngine</h1>
+    <p class="lede">콘텐츠 · 엔진 · 렌더 3층 분리. 채점 결과를 넣으면 개념별로 묶고, 심각도 순으로 골라, 성적표 해설을 만든다. 배포된 앱과 별개의 작업용 뼈대다.</p>
+    <div class="filebar">
+      <span class="pill">interp_content.js · 992개념 시드</span>
+      <span class="pill">interp_engine.js · 선택 로직</span>
+      <span class="pill">interp_render.js · 표시</span>
+    </div>
+  </div>
+
+  <div class="ctl">
+    <label class="muted">코스</label>
+    <select id="course">
+      <option value="ch2">화학Ⅱ</option>
+      <option value="ch1">화학Ⅰ</option>
+      <option value="gc">일반화학</option>
+    </select>
+    <button class="brass" id="gen">다른 학생 예시 생성</button>
+    <span class="muted" id="meta"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card" id="out"><!-- 렌더 결과 --></div>
+    <div class="card">
+      <div style="font-weight:800;font-size:13px;margin-bottom:8px">엔진 내부 · 심각도 랭킹</div>
+      <p class="muted" style="margin:0 0 8px">틀린 수 × 난이도(lvl) × 단원 중심성. 렌더는 이 순서를 그대로 따른다.</p>
+      <div class="rk" id="rank"></div>
+    </div>
+  </div>
+
+  <details>
+    <summary>이 골격을 어떻게 쓰나 (3층 분리)</summary>
+    <div class="doc">
+      <p><b>1. interp_content</b> — 개념별 해설 콘텐츠 라이브러리. 지금은 forms_bank에서 992개념의 <code>name·unit·course·tier·mis</code>(오개념 교정 포인트)를 자동 시드해 뒀고, <code>dx</code>(개념이 약할 때의 진단 서술)·<code>fix</code>(보강 포인터)·<code>cite</code>(출처)는 빈칸이다. <b>네가 채워 가는 건 이 파일 하나뿐.</b> 엔진·렌더는 안 건드린다.</p>
+      <p><b>2. interp_engine</b> — 결과 <code>[{c, ok, lvl}]</code>를 개념으로 집계하고 심각도를 매겨 상위 N개를 고른다. 순수 로직이라 node에서 단독 테스트된다. 우선순위 규칙을 바꾸려면 여기만.</p>
+      <p><b>3. interp_render</b> — 고른 개념을 해설 HTML로 만든다. <code>dx</code>가 저작돼 있으면 그 진단 서술을, 없으면 시드된 교정 포인트를 보여준다. 표시 방식만 바꾸려면 여기만.</p>
+      <p style="margin-bottom:0">콘텐츠가 코드에 엉키지 않으므로, dx를 한 개념씩 채울 때마다 해설이 자동으로 그 개념부터 깊어진다. 나중에 이 엔진을 report.html의 「다시 볼 개념」 자리에 연결하면 배포본에도 그대로 쓸 수 있다.</p>
+    </div>
+  </details>
+</div>
+
+<!-- 3개 파일을 그대로 불러온다 (file://에서도 열리도록 전역 스크립트) -->
+<script src="interp_content.js"></script>
+<script src="interp_engine.js"></script>
+<script src="interp_render.js"></script>
+<script>
+  // 선후관계 DAG (조준모T 확인) — 단원 중심성 가중에만 사용
+  var PREREQ = {
+    gc:{기초지식:[],원자:["기초지식"],양자수:["원자"],전자배치:["양자수"],주기성:["전자배치"],분자:["전자배치","주기성"],물질의상태:["분자"],열역학:["기초지식"],화학평형:["열역학"],산염기평형:["화학평형"],산화환원평형:["화학평형","전자배치"],반응속도론:["기초지식"],배위화학:["전자배치","분자"],핵화학:["원자"]},
+    ch2:{분자간힘:[],이상기체:[],실제기체:["이상기체","분자간힘"],분압:["이상기체"],액체:["분자간힘"],고체:["분자간힘"],농도:[],총괄성:["농도","액체"],삼투압:["총괄성"],엔탈피:[],엔트로피:[],자발성:["엔탈피","엔트로피"],용해:["분자간힘","자발성"],반응속도:["농도"],산염기세기:[],완충:["산염기세기"],적정:["산염기세기","완충","농도"],산화수:[],전기화학:["산화수","자발성"],탄소화합물:[]},
+    ch1:{"Ⅰ-1":[],"Ⅰ-2":["Ⅰ-1"],"Ⅰ-3":["Ⅰ-1"],"Ⅰ-4":["Ⅰ-3"],"Ⅱ-1":["Ⅰ-1"],"Ⅱ-2":["Ⅱ-1"],"Ⅱ-3":["Ⅱ-2"],"Ⅱ-4":["Ⅱ-3"],"Ⅱ-5":["Ⅱ-3","Ⅱ-4"],"Ⅱ-6a":["Ⅱ-5"],"Ⅱ-6b":["Ⅱ-6a","Ⅱ-4"],"엔탈피":["Ⅰ-4"],"Ⅲ-1":["Ⅰ-4"],"Ⅲ-2":["Ⅲ-1","엔탈피"],"Ⅲ-3":["Ⅲ-1"],"Ⅳ-1":["Ⅰ-3"],"Ⅳ-2":["Ⅲ-1","Ⅳ-1"],"Ⅳ-3":["Ⅳ-2","Ⅰ-4"],"부록":["Ⅰ-3"]}
+  };
+
+  function rnd(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+  // 콘텐츠에서 한 코스의 개념을 골라 모의 채점 결과를 만든다(데모용)
+  function sampleResult(course){
+    var ids = Object.keys(INTERP_CONTENT).filter(function(c){ return INTERP_CONTENT[c].course===course; });
+    // 단원이 고루 섞이도록 단원별로 1~2개씩
+    var byU={}; ids.forEach(function(c){ var u=INTERP_CONTENT[c].unit||'?'; (byU[u]=byU[u]||[]).push(c); });
+    var pick=[]; Object.keys(byU).forEach(function(u){ var arr=byU[u]; for(var k=0;k<Math.min(2,arr.length);k++){ pick.push(rnd(arr)); } });
+    // 중복 제거 + 18개 내외로
+    pick=pick.filter(function(v,i){return pick.indexOf(v)===i;}).slice(0,18);
+    var tierLvl={A:3,B:2,C:1};
+    return pick.map(function(c){
+      var lvl=tierLvl[INTERP_CONTENT[c].tier]||2;
+      // 어려운 문항일수록 틀릴 확률↑ (데모 신뢰감)
+      var pWrong = lvl===3?0.55: lvl===2?0.35:0.18;
+      return { c:c, ok: Math.random()>pWrong, lvl:lvl };
+    });
+  }
+
+  function draw(){
+    var course=document.getElementById('course').value;
+    var result=sampleResult(course);
+    var agg=InterpEngine.aggregate(result, INTERP_CONTENT, PREREQ);
+    var selected=InterpEngine.select(agg, {top:8});
+    document.getElementById('out').innerHTML =
+      InterpRender.render(selected, INTERP_CONTENT, '다시 볼 개념 · 해설')
+      || '<p class="muted">이 표본에선 약한 개념이 없습니다. 다시 생성해 보세요.</p>';
+    // 엔진 내부 랭킹
+    var ranked=agg.filter(function(e){return e.missed>0;}).sort(function(a,b){return b.severity-a.severity;});
+    document.getElementById('rank').innerHTML = ranked.map(function(e){
+      return '<div class="rkr"><span class="rks mono">'+e.severity.toFixed(2)+'</span>'
+        +'<span>'+e.name+' <span class="rku">'+e.unit+'</span></span>'
+        +'<span class="rkm mono">'+e.missed+'/'+e.total+'</span></div>';
+    }).join('') || '<span class="muted">틀린 개념 없음</span>';
+    var wrong=result.filter(function(r){return !r.ok;}).length;
+    document.getElementById('meta').textContent='문항 '+result.length+'개 · 오답 '+wrong+'개 · 표시 '+selected.length+'개';
+  }
+
+  document.getElementById('gen').addEventListener('click', draw);
+  document.getElementById('course').addEventListener('change', draw);
+  draw();
+</script>
+</body>
+</html>

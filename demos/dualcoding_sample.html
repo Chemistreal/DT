@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>듀얼코딩 도식 샘플 · 분자 모양 · Chemistreal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
+<style>
+:root{--paper:#FAFAF7;--surface:#FFFFFF;--ink:#16202E;--sub:#61707F;--faint:#8A95A2;--line:#E7E8E2;--line2:#EEF0EA;
+  --teal:#0B6E6E;--teal-d:#0A5A5A;--teal-soft:#E4F0EF;--brass:#A9853C;--brass-soft:#F5EEDF;--o:#1B8A4C;--x:#C0392B;
+  --bond:#42525F;--atomC:#2B3744;--atomH:#7FA9A4;--lp:#A9853C;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--paper);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:680px;margin:0 auto;padding:22px 18px 48px}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;color:var(--brass);letter-spacing:.06em;text-transform:uppercase}
+h1{font-size:23px;letter-spacing:-.02em;margin:6px 0 6px}
+.lede{font-size:14px;color:var(--sub);margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 12px 12px;text-align:center;box-shadow:0 1px 2px rgba(16,32,46,.04),0 6px 18px rgba(16,32,46,.04)}
+.dc svg{width:100%;height:128px;display:block}
+.dc .nm{font-weight:800;font-size:14.5px;margin-top:4px}
+.dc .ex{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--teal);font-weight:700;margin-top:1px}
+.dc .ang{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--brass);font-weight:700}
+.dc .note{font-size:11.5px;color:var(--sub);margin-top:5px;line-height:1.45}
+.atom-c{fill:var(--atomC)}.atom-h{fill:var(--atomH)}.atom-lab{fill:#fff;font-family:'JetBrains Mono',monospace;font-weight:800;font-size:13px;text-anchor:middle;dominant-baseline:central}
+.bond{stroke:var(--bond);stroke-width:3;stroke-linecap:round}
+.bond2{stroke:var(--bond);stroke-width:2.2;stroke-linecap:round}
+.lp{fill:var(--lp)}
+.ang-arc{fill:none;stroke:var(--brass);stroke-width:1.4;opacity:.8}
+.ang-txt{fill:var(--brass);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;text-anchor:middle}
+.sec{margin:30px 0 12px;font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+.sec::before{content:"";width:4px;height:16px;background:var(--brass);border-radius:2px}
+/* 게이트 임베딩 목업 */
+.gate{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:15px}
+.gt{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:9px}
+.gt .gu{font-size:11px;color:var(--faint);font-weight:500}
+.gt .badge{margin-left:auto;font-size:11px;font-weight:700;color:var(--faint)}
+.reading{background:var(--surface);border:1px solid var(--line2);border-left:3px solid var(--teal);border-radius:9px;padding:12px 13px;font-size:13px;color:#2b3744}
+.reading .lab{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--teal);font-weight:700;letter-spacing:.04em;display:block;margin-bottom:4px}
+.reading b{color:var(--ink)}
+.dcmini{margin:10px auto 4px;max-width:200px}.dcmini svg{width:100%;height:120px}
+.embcap{font-size:11px;color:var(--brass);font-weight:600;margin-top:8px;text-align:center}
+.foot{margin-top:24px;font-size:12.5px;color:var(--sub);background:var(--brass-soft);border-radius:10px;padding:13px 15px}
+@media(max-width:480px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<div class="wrap">
+<div class="eyebrow">듀얼코딩 샘플 · E4</div>
+<h1>분자 모양 — 텍스트 + 도식</h1>
+<p class="lede">결합각·입체 구조는 글만으로 잡기 어려운 대표 개념입니다. 강의록에 정확한 도식 1개를 붙이면(이중 부호화) 기억에 훨씬 오래 남습니다. 아래는 게이트 강의록에 들어갈 도식의 품질 견본입니다.</p>
+
+<div class="grid">
+  <!-- 선형 CO2 -->
+  <div class="dc">
+    <svg viewBox="0 0 180 128" role="img" aria-label="선형 구조 이산화탄소">
+      <line class="bond" x1="46" y1="64" x2="74" y2="64"/><line class="bond" x1="46" y1="58" x2="74" y2="58"/>
+      <line class="bond" x1="106" y1="64" x2="134" y2="64"/><line class="bond" x1="106" y1="58" x2="134" y2="58"/>
+      <line class="bond" x1="46" y1="70" x2="74" y2="70"/><line class="bond" x1="106" y1="70" x2="134" y2="70"/>
+      <circle class="atom-h" cx="32" cy="64" r="15"/><text class="atom-lab" x="32" y="64">O</text>
+      <circle class="atom-c" cx="90" cy="64" r="16"/><text class="atom-lab" x="90" y="64">C</text>
+      <circle class="atom-h" cx="148" cy="64" r="15"/><text class="atom-lab" x="148" y="64">O</text>
+      <path class="ang-arc" d="M 70 96 Q 90 102 110 96"/><text class="ang-txt" x="90" y="116">180°</text>
+    </svg>
+    <div class="nm">선형</div><div class="ex">CO₂ · 결합각 <span class="ang">180°</span></div>
+    <div class="note">중심 원자에 비공유 전자쌍이 없고 결합 영역 2개 → 일직선. 무극성.</div>
+  </div>
+
+  <!-- 굽은 H2O -->
+  <div class="dc">
+    <svg viewBox="0 0 180 128" role="img" aria-label="굽은 구조 물">
+      <line class="bond" x1="90" y1="42" x2="52" y2="92"/><line class="bond" x1="90" y1="42" x2="128" y2="92"/>
+      <circle class="lp" cx="78" cy="22" r="2.6"/><circle class="lp" cx="102" cy="22" r="2.6"/>
+      <circle class="lp" cx="71" cy="33" r="2.6"/><circle class="lp" cx="109" cy="33" r="2.6"/>
+      <circle class="atom-c" cx="90" cy="42" r="16"/><text class="atom-lab" x="90" y="42">O</text>
+      <circle class="atom-h" cx="44" cy="100" r="13"/><text class="atom-lab" x="44" y="100" style="font-size:12px">H</text>
+      <circle class="atom-h" cx="136" cy="100" r="13"/><text class="atom-lab" x="136" y="100" style="font-size:12px">H</text>
+      <path class="ang-arc" d="M 74 64 Q 90 72 106 64"/><text class="ang-txt" x="90" y="84">104.5°</text>
+    </svg>
+    <div class="nm">굽은(굽은형)</div><div class="ex">H₂O · 결합각 <span class="ang">104.5°</span></div>
+    <div class="note">비공유 전자쌍 2개가 밀어 109.5°보다 좁아짐(점 = 비공유 전자쌍). 극성.</div>
+  </div>
+
+  <!-- 평면 삼각 BF3 -->
+  <div class="dc">
+    <svg viewBox="0 0 180 128" role="img" aria-label="평면 삼각 구조 삼플루오린화 붕소">
+      <line class="bond" x1="90" y1="64" x2="90" y2="30"/>
+      <line class="bond" x1="90" y1="64" x2="55" y2="92"/><line class="bond" x1="90" y1="64" x2="125" y2="92"/>
+      <circle class="atom-c" cx="90" cy="64" r="15"/><text class="atom-lab" x="90" y="64">B</text>
+      <circle class="atom-h" cx="90" cy="22" r="13"/><text class="atom-lab" x="90" y="22" style="font-size:11px">F</text>
+      <circle class="atom-h" cx="47" cy="100" r="13"/><text class="atom-lab" x="47" y="100" style="font-size:11px">F</text>
+      <circle class="atom-h" cx="133" cy="100" r="13"/><text class="atom-lab" x="133" y="100" style="font-size:11px">F</text>
+      <path class="ang-arc" d="M 78 50 Q 70 64 78 78"/><text class="ang-txt" x="60" y="68">120°</text>
+    </svg>
+    <div class="nm">평면 삼각형</div><div class="ex">BF₃ · 결합각 <span class="ang">120°</span></div>
+    <div class="note">결합 영역 3개가 평면에서 고르게 → 120°. 대칭이라 무극성.</div>
+  </div>
+
+  <!-- 정사면체 CH4 -->
+  <div class="dc">
+    <svg viewBox="0 0 180 128" role="img" aria-label="정사면체 구조 메테인">
+      <line class="bond" x1="90" y1="66" x2="90" y2="28"/>
+      <line class="bond" x1="90" y1="66" x2="52" y2="86"/>
+      <polygon class="lp" points="90,66 124,84 119,92" fill="var(--bond)"/>
+      <g><line x1="90" y1="66" x2="64" y2="106" stroke="var(--bond)" stroke-width="1.5" stroke-dasharray="2.5 3"/></g>
+      <circle class="atom-c" cx="90" cy="66" r="16"/><text class="atom-lab" x="90" y="66">C</text>
+      <circle class="atom-h" cx="90" cy="22" r="12"/><text class="atom-lab" x="90" y="22" style="font-size:11px">H</text>
+      <circle class="atom-h" cx="44" cy="90" r="12"/><text class="atom-lab" x="44" y="90" style="font-size:11px">H</text>
+      <circle class="atom-h" cx="132" cy="92" r="12"/><text class="atom-lab" x="132" y="92" style="font-size:11px">H</text>
+      <circle class="atom-h" cx="60" cy="116" r="11"/><text class="atom-lab" x="60" y="116" style="font-size:10px">H</text>
+      <text class="ang-txt" x="118" y="58">109.5°</text>
+    </svg>
+    <div class="nm">정사면체</div><div class="ex">CH₄ · 결합각 <span class="ang">109.5°</span></div>
+    <div class="note">결합 영역 4개가 3차원으로 최대한 벌어짐(굵은 쐐기 = 앞, 점선 = 뒤). 무극성.</div>
+  </div>
+</div>
+
+<div class="sec">강의록(게이트)에 들어가면</div>
+<div class="gate">
+  <div class="gt">분자 모양 판정<span class="gu">분자의 구조</span><span class="badge">잠김</span></div>
+  <div class="reading">
+    <span class="lab">개념 · 원리</span><b>중심 원자의 결합 영역 수 + 비공유 전자쌍</b>이 모양을 정한다. 전자쌍은 서로 밀어 가능한 한 멀리 벌어진다(원자가 껍질 전자쌍 반발).
+    <div class="dcmini">
+      <svg viewBox="0 0 180 128" role="img" aria-label="굽은 구조 물">
+        <line class="bond" x1="90" y1="42" x2="52" y2="92"/><line class="bond" x1="90" y1="42" x2="128" y2="92"/>
+        <circle class="lp" cx="78" cy="22" r="2.6"/><circle class="lp" cx="102" cy="22" r="2.6"/>
+        <circle class="lp" cx="71" cy="33" r="2.6"/><circle class="lp" cx="109" cy="33" r="2.6"/>
+        <circle class="atom-c" cx="90" cy="42" r="16"/><text class="atom-lab" x="90" y="42">O</text>
+        <circle class="atom-h" cx="44" cy="100" r="13"/><text class="atom-lab" x="44" y="100" style="font-size:12px">H</text>
+        <circle class="atom-h" cx="136" cy="100" r="13"/><text class="atom-lab" x="136" y="100" style="font-size:12px">H</text>
+        <path class="ang-arc" d="M 74 64 Q 90 72 106 64"/><text class="ang-txt" x="90" y="84">104.5°</text>
+      </svg>
+    </div>
+    <div class="embcap">예: H₂O는 비공유 전자쌍 2개가 밀어 굽은형(104.5°)</div>
+  </div>
+</div>
+
+<div class="foot"><b>제안.</b> 텍스트는 그대로 두고, 시각이 결정적인 개념에만 도식을 붙입니다. 1순위 후보: 분자 모양(VSEPR) · 오비탈 채우기(쌓음·훈트) · 상평형·르샤틀리에 이동 · 주기적 경향 화살표 · 루이스 구조. 개념당 SVG 1개라 가볍고(이미지 파일 없음), 모바일·인쇄·접근성 모두 통과. 이 견본 품질로 확장할지 결정해 주세요.</div>
+</div>
+</body></html>
