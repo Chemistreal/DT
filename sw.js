@@ -1,39 +1,37 @@
-// CHEMISTREAL 서비스워커 — 오프라인 회복탄력성
-// 전략: 네트워크 우선(온라인이면 항상 최신 콘텐츠), 실패 시 캐시 폴백.
-//        POST(시트 저장)와 외부 origin은 건드리지 않는다. 온라인에선 stale 위험이 없다.
+// CHEMISTREAL OX service worker
+// 네트워크 우선(online은 항상 최신) + 오프라인 시 캐시 폴백. PDF는 용량 때문에 캐시 제외.
 const CACHE = 'chemistreal-v1';
-const SHELL = ['index.html', 'report.html', 'challenge.html', 'pending.html', 'admin.html'];
 
-self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).catch(function () {}));
+self.addEventListener('install', (e) => {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', function (e) {
-  e.waitUntil(caches.keys().then(function (keys) {
-    return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
-  }));
-  self.clients.claim();
+self.addEventListener('activate', (e) => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
-self.addEventListener('fetch', function (e) {
-  var req = e.request;
-  if (req.method !== 'GET') return;                       // 시트 저장 등 POST는 통과
-  var url = new URL(req.url);
-  if (url.origin !== location.origin) return;             // 외부 스크립트/시트 API는 통과
-  e.respondWith(
-    fetch(req).then(function (res) {
-      if (res && res.ok && res.type === 'basic') {
-        var copy = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(req, copy); });
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return; // 동일 출처만
+  e.respondWith((async () => {
+    try {
+      const res = await fetch(req);
+      if (res && res.ok && !/\.pdf($|\?)/i.test(url.pathname)) {
+        const copy = res.clone();
+        const c = await caches.open(CACHE);
+        c.put(req, copy).catch(() => {});
       }
       return res;
-    }).catch(function () {
-      return caches.match(req).then(function (m) {
-        if (m) return m;
-        if (req.mode === 'navigate') return caches.match('index.html');
-        return Response.error();
-      });
-    })
-  );
+    } catch (err) {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      throw err;
+    }
+  })());
 });

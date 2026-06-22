@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>누적 OX 채점기 · CHEMISTREAL · JMChC</title>
+<style>
+  :root{--ink:#23201c;--ink2:#55504a;--gold:#9a7b27;--paper:#faf8f3;--card:#fff;--line:#e7e1d6;--good:#2f7d4f;--bad:#b23b3b;--shadow:0 1px 3px rgba(35,32,28,.07),0 6px 22px rgba(35,32,28,.05)}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--paper);color:var(--ink);font-family:"Malgun Gothic","Apple SD Gothic Neo","Pretendard",system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;padding:0 0 80px}
+  .wrap{max-width:880px;margin:0 auto;padding:0 18px}
+  header{border-bottom:2px solid var(--ink);margin-bottom:22px;padding:26px 0 14px}
+  .brand{font-size:11px;letter-spacing:.32em;color:var(--gold);font-weight:700;text-transform:uppercase}
+  h1{margin:6px 0 0;font-size:26px;letter-spacing:-.01em;font-weight:800}
+  h1 .dot{color:var(--gold)}
+  .sub{color:var(--ink2);font-size:13px;margin-top:4px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:18px;margin-bottom:18px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--ink2);padding:9px 16px;font:inherit;font-weight:700;cursor:pointer;font-size:14px}
+  .seg button.on{background:var(--ink);color:#fff}
+  select{appearance:none;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 34px 9px 12px;font:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a7b27' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center}
+  .lbl{font-size:12px;color:var(--ink2);font-weight:700;margin-right:2px}
+  .meta{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:baseline}
+  .meta .t{font-weight:800;font-size:18px}.meta .u{color:var(--gold);font-weight:700;font-size:13px}.meta .sc{color:var(--ink2);font-size:12px}
+  .modes{display:flex;gap:8px;margin:2px 0 12px;flex-wrap:wrap}
+  .modes button{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+  .modes button.on{border-color:var(--gold);color:var(--gold);background:#fbf7ec}
+  .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  .legend{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--ink2);background:#fbf7ec;border:1px solid #ecdfbf;border-radius:8px;padding:6px 12px}
+  .legend b{color:var(--gold)}
+  .prog{font-size:12px;font-weight:700;color:var(--ink2)}.prog b{color:var(--ink)}
+  .padhint{font-size:12px;color:var(--ink2);margin:-2px 0 10px}
+  .paste{margin-bottom:12px}
+  .paste textarea{width:100%;min-height:56px;border:1px solid var(--line);border-radius:9px;padding:11px 12px;font:inherit;font-size:16px;letter-spacing:.10em;resize:vertical}
+  .grid{display:grid;grid-template-columns:repeat(10,1fr);gap:7px;margin-top:2px}
+  @media(max-width:680px){.grid{grid-template-columns:repeat(6,1fr)}}
+  @media(max-width:420px){.grid{grid-template-columns:repeat(5,1fr)}}
+  .cell{border:1px solid var(--line);border-radius:8px;padding:4px 3px 5px;text-align:center;background:#fff}
+  .cell .qn{font-size:10px;color:var(--ink2);font-weight:700;margin-bottom:2px}
+  .inp{width:100%;border:1px solid var(--line);border-radius:6px;text-align:center;font:inherit;font-size:16px;font-weight:800;color:var(--ink);padding:3px 0;background:#fff;caret-color:transparent}
+  .inp:focus{outline:0;border-color:var(--gold);background:#fffdf4;box-shadow:0 0 0 2px rgba(154,123,39,.30)}
+  .ox{display:flex;gap:3px;justify-content:center}
+  .ox span{flex:1;font-size:13px;font-weight:800;color:#cbc4b8;border:1px solid var(--line);border-radius:5px;padding:3px 0}
+  .ox span.sel{color:#fff;background:var(--ink);border-color:var(--ink)}
+  .cell.correct{background:#f1f8f3;border-color:#bfe0cb}.cell.wrong{background:#fcf0f0;border-color:#e8c4c4}
+  .cell.correct .inp{background:#f1f8f3;border-color:#bfe0cb}.cell.wrong .inp{background:#fff;border-color:#e8c4c4}
+  .cell .ans{font-size:10px;margin-top:2px;font-weight:700}.cell.wrong .ans{color:var(--bad)}.cell.correct .ans{color:var(--good)}
+  .actions{display:flex;gap:10px;margin-top:16px}
+  .btn{appearance:none;border:0;border-radius:10px;padding:13px 22px;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+  .btn.primary{background:var(--gold);color:#fff}.btn.primary:hover{background:#876a1f}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink2)}
+  .result{display:none;margin-top:4px}.result.show{display:block}
+  .score-card{display:flex;align-items:center;gap:22px;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:18px 22px;background:#fff;box-shadow:var(--shadow)}
+  .big{font-size:54px;font-weight:800;line-height:1;letter-spacing:-.02em}.big small{font-size:18px;color:var(--ink2);font-weight:700}
+  .stat{display:flex;flex-direction:column;gap:2px}.stat b{font-size:22px;font-weight:800}.stat span{font-size:12px;color:var(--ink2);font-weight:600}
+  .badge{margin-left:auto;font-weight:800;font-size:15px;padding:8px 18px;border-radius:999px}
+  .badge.pass{background:#e9f4ee;color:var(--good)}.badge.fail{background:#fbecec;color:var(--bad)}
+  .wronglist{margin-top:14px;font-size:13px}.wronglist .h{font-weight:800;margin-bottom:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid #e8c4c4;background:#fcf0f0;color:var(--bad);border-radius:7px;padding:4px 9px;font-weight:700;font-size:12px}
+  .none{color:var(--good);font-weight:700}
+  footer{text-align:center;color:var(--ink2);font-size:11px;letter-spacing:.04em;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">CHEMISTREAL · JMChC</div>
+    <h1>누적 OX 채점기<span class="dot">.</span></h1>
+    <div class="sub">화학1 · 화학2 · 일반화학 · 전 46회 정답 내장. 응답을 입력하면 점수와 오답을 알려줍니다.</div>
+  </header>
+
+  <div class="panel">
+    <div class="row">
+      <span class="lbl">과목</span>
+      <div class="seg" id="courseSeg">
+        <button data-c="ch1">화학1</button><button data-c="ch2">화학2</button><button data-c="gc">일반화학</button>
+      </div>
+      <span class="lbl" style="margin-left:8px">회차</span>
+      <select id="roundSel"></select>
+    </div>
+    <div class="meta" id="meta" style="margin-top:14px"></div>
+  </div>
+
+  <div class="panel">
+    <div class="modes" id="modes">
+      <button data-m="pad" class="on">한 칸씩 입력</button>
+      <button data-m="paste">붙여넣기</button>
+      <button data-m="key">정답표 보기</button>
+    </div>
+
+    <div class="bar" id="bar">
+      <span class="legend">입력 &nbsp;<b>1 = O</b> &nbsp;·&nbsp; <b>2 = X</b></span>
+      <span class="prog">입력 <b id="progN">0</b> / 60</span>
+    </div>
+    <div class="padhint" id="padhint">1번 칸부터 1 또는 2를 누르면 자동으로 다음 칸으로 넘어갑니다. (지우기: Backspace · 이동: 방향키/클릭)</div>
+
+    <div id="pasteBox" class="paste" style="display:none">
+      <textarea id="pasteArea" inputmode="numeric" placeholder="학생 답안을 1·2로 60개 붙여넣기/입력 (1=O, 2=X)   예: 1 2 1 1 2 ...   띄어쓰기 무방"></textarea>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="actions" id="actions">
+      <button class="btn primary" id="gradeBtn">채점하기</button>
+      <button class="btn ghost" id="resetBtn">초기화</button>
+    </div>
+  </div>
+
+  <div class="result panel" id="result">
+    <div class="score-card">
+      <div class="big" id="scoreNum">0<small>점</small></div>
+      <div class="stat"><b id="okN" style="color:var(--good)">0</b><span>정답</span></div>
+      <div class="stat"><b id="ngN" style="color:var(--bad)">0</b><span>오답</span></div>
+      <div class="stat"><b id="totN">60</b><span>문항</span></div>
+      <div class="badge" id="passBadge">·</div>
+    </div>
+    <div class="wronglist"><div class="h">오답 문항</div><div class="chips" id="wrongChips"></div></div>
+  </div>
+
+  <footer>CHEMISTREAL · 조준모 화학 올림피아드 · 누적 OX 주간 테스트 채점 도구 · 만점 100점 · 통과 80점(48문항)</footer>
+</div>
+<script>
+const KEY = [{"course": "ch1", "courseName": "화학1", "round": 1, "title": "누적 OX 화학1 1회", "units": ["Ⅰ-1 화학의 기초", "Ⅰ-2 우리 생활과 화학"], "answers": ["O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "O", "X", "X", "O", "O", "O", "O", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 2, "title": "누적 OX 화학1 2회", "units": ["Ⅰ-3 몰과 화학식량"], "answers": ["O", "X", "O", "O", "O", "O", "O", "O", "X", "X", "O", "O", "X", "O", "X", "X", "O", "X", "X", "X", "O", "X", "O", "X", "X", "O", "X", "O", "O", "O", "O", "X", "O", "X", "O", "X", "X", "O", "O", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 3, "title": "누적 OX 화학1 3회", "units": ["Ⅰ-4 화학반응식"], "answers": ["O", "X", "O", "X", "X", "O", "X", "X", "X", "X", "O", "O", "X", "O", "O", "O", "O", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "X", "X", "X", "X", "O", "O", "X", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 4, "title": "누적 OX 화학1 4회", "units": ["Ⅱ-1 원자의 구성입자"], "answers": ["O", "X", "X", "O", "X", "X", "O", "O", "X", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "X", "X", "O", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 5, "title": "누적 OX 화학1 5회", "units": ["Ⅱ-2 현대 원자 모형"], "answers": ["O", "X", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "X", "X", "O", "X", "O", "O", "O", "X", "X", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "X", "O", "X", "O", "O", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 6, "title": "누적 OX 화학1 6회", "units": ["Ⅱ-3 전자배치"], "answers": ["X", "O", "O", "X", "O", "O", "O", "X", "X", "O", "X", "X", "O", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "X", "X", "O", "O", "X", "X", "X", "O", "O", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 7, "title": "누적 OX 화학1 7회", "units": ["Ⅱ-4 주기적 성질"], "answers": ["X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "X", "O", "X", "X", "O", "O", "O", "X", "O", "O", "X", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "X", "X", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 8, "title": "누적 OX 화학1 8회", "units": ["Ⅱ-5 화학결합"], "answers": ["X", "X", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "O", "X", "O", "X", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "X", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "X", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 9, "title": "누적 OX 화학1 9회", "units": ["Ⅱ-6a 분자의 구조"], "answers": ["O", "O", "X", "O", "O", "X", "X", "X", "O", "O", "X", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "O", "X", "O", "O", "X", "X", "O", "O", "X", "O", "O", "O", "X", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 10, "title": "누적 OX 화학1 10회", "units": ["Ⅱ-6b 분자의 성질"], "answers": ["O", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "O", "X", "O", "O", "O", "O", "X", "X", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 11, "title": "누적 OX 화학1 11회", "units": ["엔탈피·반응열"], "answers": ["O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 12, "title": "누적 OX 화학1 12회", "units": ["Ⅲ-1 화학평형"], "answers": ["O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "X", "O", "X", "O", "X", "X", "O", "O", "X", "X", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "O", "O", "O", "X", "O", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 13, "title": "누적 OX 화학1 13회", "units": ["Ⅲ-2 르샤틀리에 원리"], "answers": ["O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "X", "O", "O", "X", "X", "O", "O", "X", "O", "X", "X", "O", "O", "X", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 14, "title": "누적 OX 화학1 14회", "units": ["Ⅲ-3 상평형·용해평형"], "answers": ["O", "X", "O", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "X", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "O", "X", "O", "X", "X", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 15, "title": "누적 OX 화학1 15회", "units": ["Ⅳ-1 용액의 농도"], "answers": ["O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "X", "O", "X", "O", "O", "X", "X", "O", "O", "O", "O", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 16, "title": "누적 OX 화학1 16회", "units": ["Ⅳ-2 물의 자동이온화·pH"], "answers": ["O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "O", "O", "X", "X", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 17, "title": "누적 OX 화학1 17회", "units": ["Ⅳ-3 중화반응"], "answers": ["O", "X", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "O", "X", "X", "O", "O", "O", "X", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch1", "courseName": "화학1", "round": 18, "title": "누적 OX 화학1 18회", "units": ["부록 물질의 조성"], "answers": ["O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O", "X", "O", "X", "X", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "O", "X", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 1, "title": "누적 OX 화학2 1회", "units": ["분자 간 힘"], "answers": ["O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "O", "O", "X", "X", "X", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "X", "X", "X", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "X", "X", "O", "X", "O", "O", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 2, "title": "누적 OX 화학2 2회", "units": ["이상 기체"], "answers": ["O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "X", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "X", "X", "O", "X", "O", "X", "X", "O", "O", "X", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 3, "title": "누적 OX 화학2 3회", "units": ["실제 기체·분압"], "answers": ["O", "O", "X", "X", "O", "X", "O", "O", "X", "X", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "X", "X", "X", "O", "O", "O", "X", "X", "O", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 4, "title": "누적 OX 화학2 4회", "units": ["액체(증기압·끓는점)"], "answers": ["O", "O", "X", "O", "O", "X", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "X", "X", "X", "O", "O", "O", "O", "O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "X", "X", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "O", "X", "X", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 5, "title": "누적 OX 화학2 5회", "units": ["고체(결정 구조)"], "answers": ["O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "X", "X", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 6, "title": "누적 OX 화학2 6회", "units": ["용액의 농도"], "answers": ["O", "O", "X", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "O", "X", "X", "O", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 7, "title": "누적 OX 화학2 7회", "units": ["총괄성(증기압 내림·끓는점 오름·어는점 내림)"], "answers": ["O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O", "O", "X", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "X", "X", "X", "O", "X", "X", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 8, "title": "누적 OX 화학2 8회", "units": ["총괄성(삼투압)"], "answers": ["O", "X", "O", "X", "O", "X", "O", "X", "O", "O", "X", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "X", "X", "X", "O", "O", "O", "X", "O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 9, "title": "누적 OX 화학2 9회", "units": ["엔탈피·열화학(정량)"], "answers": ["O", "X", "O", "X", "O", "X", "O", "O", "O", "O", "X", "O", "X", "X", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 10, "title": "누적 OX 화학2 10회", "units": ["엔트로피·자발성"], "answers": ["O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "X", "X", "X", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "X", "X", "O", "X", "O", "O", "O", "O", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 11, "title": "누적 OX 화학2 11회", "units": ["용해·용해도"], "answers": ["O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "X", "X", "O", "O", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "X", "O", "O", "O", "O", "O", "X", "X", "X", "O", "O", "X", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 12, "title": "누적 OX 화학2 12회", "units": ["반응 속도"], "answers": ["O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "X", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 13, "title": "누적 OX 화학2 13회", "units": ["브뢴스테드 산염기·세기"], "answers": ["O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "X", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 14, "title": "누적 OX 화학2 14회", "units": ["약산/약염기 pH·완충·가수분해"], "answers": ["O", "X", "O", "X", "O", "O", "X", "X", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 15, "title": "누적 OX 화학2 15회", "units": ["중화적정·적정곡선·지시약"], "answers": ["O", "X", "O", "X", "O", "X", "X", "O", "X", "X", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "O", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 16, "title": "누적 OX 화학2 16회", "units": ["산화수·산화환원"], "answers": ["O", "X", "O", "X", "O", "X", "X", "O", "X", "X", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "X", "X", "O", "X", "O", "O", "X", "X", "X", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 17, "title": "누적 OX 화학2 17회", "units": ["화학전지·전기분해"], "answers": ["O", "X", "O", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "X", "X", "X", "O", "O", "X", "O", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "ch2", "courseName": "화학2", "round": 18, "title": "누적 OX 화학2 18회", "units": ["탄소화합물(작용기·반응)"], "answers": ["O", "X", "O", "X", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "X", "O", "X", "O", "X", "X", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 1, "title": "누적 OX 일반화학 1회", "units": ["기초지식·원자"], "answers": ["O", "X", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "X", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X", "X", "O", "O", "X", "O", "X", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 2, "title": "누적 OX 일반화학 2회", "units": ["분자(결합·구조·MO)"], "answers": ["O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "X", "X", "O", "O", "O", "O", "X", "O", "X", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 3, "title": "누적 OX 일반화학 3회", "units": ["물질의 상태"], "answers": ["O", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "X", "X", "X", "O", "O", "O", "O", "O", "O", "O", "O", "O", "X", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "X", "X", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 4, "title": "누적 OX 일반화학 4회", "units": ["열과 일(열역학)"], "answers": ["O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "O", "O", "O", "X", "O", "O", "O", "X", "X", "O", "O", "O", "X", "O", "X", "O", "O", "X", "X", "O", "O", "O", "O", "X", "O", "X", "X", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 5, "title": "누적 OX 일반화학 5회", "units": ["화학평형"], "answers": ["O", "O", "X", "X", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "X", "O", "O", "O", "O", "O", "X", "O", "X", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 6, "title": "누적 OX 일반화학 6회", "units": ["산염기 평형"], "answers": ["O", "X", "X", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "O", "X", "O", "X", "O", "O", "O", "X", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X", "O", "O", "X", "X", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "X", "X", "O", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 7, "title": "누적 OX 일반화학 7회", "units": ["산화환원 평형"], "answers": ["O", "X", "X", "X", "X", "O", "X", "O", "O", "X", "O", "O", "O", "X", "X", "X", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "O", "O", "O", "O", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "O", "X", "X", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "O", "X", "O", "O", "X", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 8, "title": "누적 OX 일반화학 8회", "units": ["반응속도론"], "answers": ["O", "X", "X", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "O", "O", "X", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "O", "X", "O", "X", "O", "O", "X", "O", "X", "O", "X", "O", "O", "O", "X", "O", "X", "O", "X"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 9, "title": "누적 OX 일반화학 9회", "units": ["배위화학"], "answers": ["O", "X", "X", "X", "O", "O", "X", "O", "X", "O", "O", "O", "O", "X", "X", "X", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "X", "X", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O", "O", "O", "X", "O", "X", "O", "O", "X", "O", "O", "X", "X", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}, {"course": "gc", "courseName": "일반화학", "round": 10, "title": "누적 OX 일반화학 10회", "units": ["핵화학"], "answers": ["O", "X", "X", "X", "X", "O", "X", "O", "X", "O", "O", "O", "X", "X", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "O", "O", "X", "O", "O", "O", "O", "O", "O", "X", "O", "O", "X", "O", "X", "X", "O", "X", "O", "X", "O", "X", "X", "O", "O", "O", "X", "O", "O", "X", "O", "O", "O", "X", "O", "O"], "scoring": {"per": 1.6667, "max": 100, "wrong": 0, "blank": 0, "pass": 80}}];
+const byCourse={ch1:[],ch2:[],gc:[]};
+KEY.forEach(k=>byCourse[k.course].push(k));
+let course='ch1', roundIdx=0, mode='pad';
+let resp=Array(60).fill(null), graded=false;
+const $=s=>document.querySelector(s);
+const grid=$('#grid'), roundSel=$('#roundSel');
+function cur(){return byCourse[course][roundIdx];}
+function clearGraded(){ if(graded){graded=false; $('#result').classList.remove('show');} }
+function updProg(){ $('#progN').textContent=resp.filter(v=>v).length; }
+
+function renderCourse(){
+  document.querySelectorAll('#courseSeg button').forEach(b=>b.classList.toggle('on',b.dataset.c===course));
+  roundSel.innerHTML='';
+  byCourse[course].forEach((k,i)=>{const o=document.createElement('option');o.value=i;o.textContent=k.round+'회';roundSel.appendChild(o);});
+  roundIdx=0; roundSel.value=0;
+}
+function renderMeta(){
+  const k=cur();
+  $('#meta').innerHTML=`<div><div class="t">${k.courseName} ${k.round}회</div><div class="u">${(k.units||[]).join(' · ')||'전 범위'}</div></div><div class="sc">60문항 · 문항당 1.67점 · 만점 100 · 통과 80(48문항)</div>`;
+}
+function renderGrid(){
+  const k=cur(); grid.innerHTML='';
+  for(let i=0;i<60;i++){
+    const c=document.createElement('div'); c.className='cell'; c.dataset.i=i;
+    let inner=`<div class="qn">${i+1}</div>`;
+    if(mode==='key'){
+      const a=k.answers[i];
+      inner+=`<div class="ox"><span class="${a==='O'?'sel':''}">O</span><span class="${a==='X'?'sel':''}">X</span></div>`;
+    } else {
+      const v=resp[i]||'';
+      inner+=`<input class="inp" data-i="${i}" inputmode="numeric" autocomplete="off" value="${v}">`;
+    }
+    if(graded && mode!=='key'){
+      const a=k.answers[i], ok=resp[i]===a;
+      c.classList.add(ok?'correct':'wrong');
+      if(!ok) inner+=`<div class="ans">정답 ${a}</div>`;
+    }
+    c.innerHTML=inner; grid.appendChild(c);
+  }
+  updProg();
+}
+function renderAll(){ renderMeta(); renderGrid(); }
+function focusBox(i){ const el=grid.querySelector(`.inp[data-i="${i}"]`); if(el){el.focus(); el.select&&el.select();} }
+
+document.querySelectorAll('#courseSeg button').forEach(b=>b.onclick=()=>{course=b.dataset.c;resetResp();renderCourse();renderAll();});
+roundSel.onchange=()=>{roundIdx=+roundSel.value;resetResp();renderAll();};
+document.querySelectorAll('#modes button').forEach(b=>b.onclick=()=>{
+  mode=b.dataset.m;
+  document.querySelectorAll('#modes button').forEach(x=>x.classList.toggle('on',x===b));
+  $('#pasteBox').style.display=mode==='paste'?'block':'none';
+  $('#padhint').style.display=mode==='pad'?'block':'none';
+  $('#bar').style.display=mode==='key'?'none':'flex';
+  $('#actions').style.display=mode==='key'?'none':'flex';
+  if(mode==='key'){$('#result').classList.remove('show');graded=false;}
+  renderGrid();
+  if(mode==='pad') setTimeout(()=>focusBox(0),30);
+});
+
+// 한 칸 입력 → 자동 다음 칸 (input 이벤트: 모바일 호환)
+grid.addEventListener('input',e=>{
+  const inp=e.target.closest('.inp'); if(!inp) return;
+  const i=+inp.dataset.i;
+  const ch=(inp.value||'').slice(-1).toUpperCase();
+  let v=null;
+  if(ch==='1'||ch==='O') v='O'; else if(ch==='2'||ch==='X') v='X';
+  if(v){ resp[i]=v; inp.value=v; clearGraded(); updProg(); if(i<59) focusBox(i+1); }
+  else { inp.value=resp[i]||''; }
+});
+grid.addEventListener('keydown',e=>{
+  const inp=e.target.closest('.inp'); if(!inp) return;
+  const i=+inp.dataset.i;
+  if(e.key==='Backspace'){ e.preventDefault();
+    if(resp[i]){ resp[i]=null; inp.value=''; clearGraded(); updProg(); }
+    else if(i>0){ resp[i-1]=null; focusBox(i-1); const p=grid.querySelector(`.inp[data-i="${i-1}"]`); if(p)p.value=''; clearGraded(); updProg(); }
+  } else if(e.key==='ArrowRight'||e.key==='ArrowDown'){ e.preventDefault(); if(i<59)focusBox(i+1); }
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){ e.preventDefault(); if(i>0)focusBox(i-1); }
+  else if(e.key==='Enter'){ e.preventDefault(); if(i<59)focusBox(i+1); }
+});
+grid.addEventListener('focusin',e=>{ const inp=e.target.closest('.inp'); if(inp)inp.select&&inp.select(); });
+
+// 붙여넣기
+$('#pasteArea').addEventListener('input',e=>{
+  const raw=e.target.value.toUpperCase(); const seq=[];
+  for(const ch of raw){ if(ch==='1'||ch==='O')seq.push('O'); else if(ch==='2'||ch==='X')seq.push('X'); if(seq.length>=60)break; }
+  resp=Array(60).fill(null); seq.forEach((v,i)=>resp[i]=v); clearGraded(); renderGrid();
+});
+
+$('#gradeBtn').onclick=()=>{
+  const k=cur(); let ok=0; const wrong=[];
+  for(let i=0;i<60;i++){ if(resp[i]===k.answers[i]) ok++; else wrong.push(i+1); }
+  const score=Math.round(ok*100/60), pass=ok>=48;
+  graded=true; renderGrid();
+  $('#scoreNum').innerHTML=score+'<small>점</small>';
+  $('#okN').textContent=ok; $('#ngN').textContent=60-ok;
+  const badge=$('#passBadge'); badge.textContent=pass?'통과':'미통과'; badge.className='badge '+(pass?'pass':'fail');
+  const chips=$('#wrongChips');
+  chips.innerHTML = wrong.length? wrong.map(n=>`<span class="chip">${n}번</span>`).join('') : '<span class="none">전 문항 정답</span>';
+  $('#result').classList.add('show'); $('#result').scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+function resetResp(){ resp=Array(60).fill(null); graded=false; $('#result').classList.remove('show'); $('#pasteArea').value=''; }
+$('#resetBtn').onclick=()=>{ resetResp(); renderGrid(); if(mode==='pad')focusBox(0); };
+
+renderCourse(); renderAll(); setTimeout(()=>focusBox(0),50);
+</script>
+</body>
+</html>
