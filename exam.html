@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chemistreal · 온라인 응시</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --ink:#16202E; --sub:#61707F; --faint:#8A95A2;
+  --line:#E7E8E2; --line2:#EEF0EA;
+  --teal:#0B6E6E; --teal-d:#0A5A5A; --teal-soft:#E4F0EF; --teal-line:#BFE0DD;
+  --o:#1B8A4C; --o-bg:#E7F5EC; --x:#C0392B; --x-bg:#FBEBE9;
+  --brass:#A9853C; --brass-soft:#F5EEDF;
+  --shadow:0 1px 2px rgba(16,32,46,.04), 0 6px 20px rgba(16,32,46,.04);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font-family:'Pretendard',system-ui,-apple-system,sans-serif; color:var(--ink); background:var(--paper);
+  line-height:1.55; -webkit-text-size-adjust:100%; -webkit-font-smoothing:antialiased; overscroll-behavior-y:none}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace; font-feature-settings:"tnum"}
+.wrap{max-width:640px; margin:0 auto; padding:0 0 calc(40px + env(safe-area-inset-bottom))}
+.hd{max-width:640px;margin:0 auto;padding:12px 16px calc(12px + env(safe-area-inset-top));display:flex;align-items:center;gap:9px}
+.logo{width:24px;height:24px;border-radius:7px;background:linear-gradient(150deg,var(--teal),var(--teal-d));position:relative;flex:none}
+.logo:after{content:"";position:absolute;inset:6px 6px auto auto;width:6px;height:6px;border-radius:50%;background:var(--brass)}
+.brand{font-weight:800;letter-spacing:-.01em;font-size:14.5px}
+.brand small{display:block;font-weight:500;color:var(--sub);font-size:10px;margin-top:-2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin:14px;box-shadow:var(--shadow)}
+h1{font-size:20px;letter-spacing:-.02em;margin:.1em 0 .15em}
+.lede{color:var(--sub);font-size:13.5px;margin:.3em 0 1.1em}
+h2{font-size:12px;letter-spacing:.04em;color:var(--teal);font-weight:700;margin:1.4em 0 .5em;display:flex;align-items:center;gap:7px}
+h2:before{content:"";width:14px;height:2px;background:var(--teal);border-radius:2px}
+label{display:block;font-size:12px;color:var(--sub);margin:13px 0 5px;font-weight:600}
+input{width:100%;padding:12px 13px;font-size:16px;border:1.5px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-family:inherit}
+input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.row2{display:flex;gap:10px}.row2>div{flex:1}
+button{font-family:inherit;cursor:pointer;border:0;border-radius:12px;font-size:15px;font-weight:700;padding:13px 16px;background:var(--teal);color:#fff;transition:transform .04s,filter .15s}
+button:active{transform:translateY(1px)} button:hover{filter:brightness(1.05)}
+button.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line);font-weight:600}
+button.ghost:hover{border-color:var(--teal);color:var(--teal);filter:none}
+button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;transform:none}
+.btnrow{display:flex;gap:10px;margin-top:18px}.btnrow button{flex:1}
+.muted{color:var(--faint);font-size:12px} .note{color:var(--sub);font-size:12px;margin-top:10px}
+.tabs{display:flex;gap:6px;margin:4px 0 14px;background:var(--line2);padding:4px;border-radius:12px}
+.tabs button{flex:1;background:transparent;color:var(--sub);font-size:13px;font-weight:600;padding:9px 4px;border-radius:9px}
+.tabs button.sel{background:var(--surface);color:var(--teal);box-shadow:var(--shadow)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px}
+.rchip{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;font-weight:700;color:var(--ink);gap:2px}
+.rchip:hover{border-color:var(--teal);color:var(--teal)} .rchip .n{font-size:18px} .rchip .u{font-size:9px;color:var(--faint);font-weight:500}
+/* exam */
+.exhead{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:saturate(1.4) blur(8px);display:flex;align-items:center;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-top));border-bottom:1px solid var(--line)}
+.exhead .cnt{font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.exhead .of{color:var(--faint);font-size:13px;font-family:'JetBrains Mono',monospace}
+.exhead .bar{flex:1;height:7px;background:var(--line2);border-radius:7px;overflow:hidden}
+.exhead .bar i{display:block;height:100%;background:var(--teal);transition:width .2s}
+.rvbtn{background:var(--surface);color:var(--teal);border:1.5px solid var(--teal-line);font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:9px}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 18px 18px;margin:14px;box-shadow:var(--shadow)}
+.qnum{font-size:12px;color:var(--teal);font-weight:700;letter-spacing:.02em}
+.qstmt{font-size:18px;line-height:1.55;margin:12px 0 20px;font-weight:500;min-height:2.4em;color:var(--ink)}
+.oxrow{display:flex;gap:12px}
+.oxbig{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:18px 0;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--sub);font-weight:800}
+.oxbig b{font-size:30px;line-height:1;font-family:'JetBrains Mono',monospace}
+.oxbig span{font-size:12.5px;font-weight:700}
+.oxbig.o.sel,.oxbig.o:hover{background:var(--o-bg);color:var(--o);border-color:var(--o)}
+.oxbig.x.sel,.oxbig.x:hover{background:var(--x-bg);color:var(--x);border-color:var(--x)}
+.hint{font-size:11.5px;color:var(--faint);text-align:center;margin:13px 0 4px}
+.hint kbd{font-family:'JetBrains Mono',monospace;background:var(--line2);border-radius:5px;padding:1px 6px;font-size:11px;color:var(--ink)}
+.navrow{display:flex;gap:10px;margin-top:8px}.navrow button{flex:1}
+.dotwrap{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin:0 14px 14px}
+.dotx{aspect-ratio:1;border-radius:7px;border:1px solid var(--line);background:var(--surface);font-size:11px;font-weight:700;color:var(--faint);padding:0;cursor:pointer}
+.dotx.o{background:var(--o-bg);color:var(--o);border-color:var(--o-bg)}
+.dotx.x{background:var(--x-bg);color:var(--x);border-color:var(--x-bg)}
+.dotx.cur{outline:2px solid var(--teal);outline-offset:1px}
+.rvgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin:6px 0 4px}
+.rv{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 0;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font-weight:800;cursor:pointer}
+.rv .rvn{font-size:10px;color:var(--faint);font-weight:600}
+.rv .rva{font-size:16px;font-family:'JetBrains Mono',monospace}
+.rv.o{background:var(--o-bg);color:var(--o);border-color:var(--o-bg)}
+.rv.x{background:var(--x-bg);color:var(--x);border-color:var(--x-bg)}
+.rv.b{border-style:dashed;color:var(--faint)}
+.rsban{display:flex;align-items:center;justify-content:center;gap:18px;padding:22px;border-radius:16px;margin-bottom:4px}
+.rsban.pass{background:var(--o-bg)} .rsban.fail{background:var(--x-bg)}
+.rss{font-size:46px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--ink)} .rss span{font-size:16px;margin-left:3px}
+.rsb{font-size:20px;font-weight:800} .rsban.pass .rsb{color:var(--o)} .rsban.fail .rsb{color:var(--x)}
+.rsrow{display:flex;margin:14px 0 6px;text-align:center} .rsrow>div{flex:1;display:flex;flex-direction:column;gap:1px} .rsrow b{font-size:22px} .rsrow span{font-size:11.5px;color:var(--faint)}
+.weak{display:flex;flex-direction:column;gap:7px;margin:4px 0 2px}
+.wk{display:flex;align-items:center;justify-content:space-between;background:var(--x-bg);border-radius:9px;padding:9px 13px}
+.wk .wkm{font-size:13px;font-weight:600;color:var(--ink)} .wk .wkc{font-size:13px;font-weight:800;color:var(--x)}
+.plink{margin-top:16px;padding:14px 15px;background:var(--teal-soft);border-radius:12px}
+.pll{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:8px}.pll .muted{font-weight:400}
+.plurl{font-size:11px;color:var(--teal-d);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
+.rlbtn{display:block;text-align:center;background:var(--teal);color:#fff;border-radius:12px;font-weight:700;padding:13px 16px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="hd"><span class="logo"></span><span class="brand">Chemistreal<small>다원교육 영재관 · 온라인 응시</small></span></div>
+<div class="wrap"><div id="app"></div></div>
+
+<script>/* ============================================================
+   Chemistreal 채점·진단·재시 로직 엔진 (Phase 2)
+   - 순수 함수만. DOM·네트워크 없음. Node와 브라우저에서 동일 동작.
+   - 여기서 테스트 통과한 코드가 그대로 앱(Phase 4)에 들어간다.
+   ============================================================ */
+(function (root) {
+  'use strict';
+
+  // ---------- 공통 유틸 ----------
+  function norm(s) {            // 문장 정규화(공백·괄호 미세차 흡수) → 중복 판별용
+    return (s || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
+  }
+  function cleanName(s) { return (s || '').replace(/\s+/g, '').trim(); }
+
+  // ---------- 1) 학생키: 이름+학교 (학년은 키에서 제외, 속성으로만) ----------
+  function studentKey(name, school) {
+    return cleanName(school) + '-' + cleanName(name);   // 예: 휘문중-홍길동
+  }
+
+  // ---------- 2) 5대 통합축 매핑 (보너스 진단층; 단원·오개념 그룹이 본체) ----------
+  // unit + mis 텍스트를 함께 스캔. 매칭 없으면 null (리포트는 단원/오개념으로 폴백).
+  var AXES = [
+    { key: 'A1', name: '에너지·자발성·평형 (ΔG=ΔH−TΔS=−nFE°=−RT ln K)',
+      kw: ['열역학','자발','엔트로피','전기화학','화학평형','평형','엔탈피','깁스','헤스','전지','전기분해','반응열'] },
+    { key: 'A3', name: '결합·극성·산화수 (전기음성도 장부)',
+      kw: ['전기음성도','산화수','산화','환원','결합','극성','루이스','이온화에너지'] },
+    { key: 'A5', name: '원자구조→주기율표 (파울리→부껍질 용량)',
+      kw: ['양자','오비탈','전자배치','전자 배치','주기율','부껍질','바닥상태','들뜬','원자 모형','원자모형'] },
+    { key: 'A2', name: '분자 운동·반응 속도 (볼츠만 분포)',
+      kw: ['반응속도','반응 속도','속도','활성화','촉매','충돌','기체','이상기체','실제기체','분압','분자 운동','확산'] },
+    { key: 'A4', name: '동적 평형·상·용액 (증발↔응축↔용해)',
+      kw: ['증기압','증발','액체','고체','총괄성','용해','농도','분자간','분자 간','상평형','포화'] }
+  ];
+  function axisOf(unit, mis) {
+    var hay = (unit || '') + ' ' + (mis || '');
+    for (var i = 0; i < AXES.length; i++) {
+      for (var j = 0; j < AXES[i].kw.length; j++) {
+        if (hay.indexOf(AXES[i].kw[j]) !== -1) return AXES[i];
+      }
+    }
+    return null;
+  }
+  function axisName(key) { for (var i=0;i<AXES.length;i++) if (AXES[i].key===key) return AXES[i].name; return key; }
+
+  // ---------- 3) 채점 ----------
+  // studentAnswers: ['O'|'X'|''] 길이 = keyItems.length (보통 60)
+  // keyItems: 정시 items [{n,u,mis,a,s,f,w,lvl,c}]
+  // scoring: {per, max, pass}
+  function gradeAttempt(studentAnswers, keyItems, scoring) {
+    var per = (scoring && scoring.per) || (100 / keyItems.length);
+    var passScore = (scoring && scoring.pass) != null ? scoring.pass : 80;
+    var perItem = [], correct = 0, blank = 0;
+    for (var i = 0; i < keyItems.length; i++) {
+      var it = keyItems[i];
+      var sa = (studentAnswers[i] || '').toUpperCase();
+      var isBlank = (sa !== 'O' && sa !== 'X');
+      var ok = (!isBlank && sa === String(it.a).toUpperCase());
+      if (ok) correct++;
+      if (isBlank) blank++;
+      perItem.push({
+        idx: i, id: it.n, c: it.c || null, unit: it.u, mis: it.mis,
+        lvl: it.lvl || 1, studentAns: isBlank ? '' : sa, correctAns: it.a,
+        ok: ok, blank: isBlank, f: it.f, w: it.w
+      });
+    }
+    var scoreRaw = correct * per;
+    var score = Math.round(scoreRaw * 10) / 10;       // 표시용 소수1
+    var pass = scoreRaw >= passScore - 1e-6;
+    return {
+      n: keyItems.length, correctCount: correct, blankCount: blank,
+      wrongCount: keyItems.length - correct - blank,
+      score: score, scoreInt: Math.round(scoreRaw), max: (scoring && scoring.max) || 100,
+      passScore: passScore, pass: pass, perItem: perItem
+    };
+  }
+
+  // 채점결과 → 교정 필요 개념(틀림 또는 미기입). cid 없으면 문항 자체 정보로 폴백.
+  function notCorrectConcepts(graded) {
+    var seenCid = {}, out = [];
+    graded.perItem.forEach(function (p) {
+      if (p.ok) return;                         // 맞은 건 제외
+      var keyC = p.c || ('NOID:' + p.idx);      // cid 없으면 문항별 폴백키
+      if (seenCid[keyC]) { seenCid[keyC].count++; return; }
+      var rec = { c: p.c || null, unit: p.unit, mis: p.mis, lvl: p.lvl,
+                  f: p.f, w: p.w, count: 1, blank: p.blank };
+      seenCid[keyC] = rec; out.push(rec);
+    });
+    return out;
+  }
+
+  // ---------- 4) 진단 (단발 1회차) ----------
+  function diagnose(graded, formsBank) {
+    formsBank = formsBank || {};
+    var byUnit = {}, byMis = {}, byAxis = {};
+    graded.perItem.forEach(function (p) {
+      // 단원별
+      var u = byUnit[p.unit] || (byUnit[p.unit] = { unit: p.unit, total: 0, wrong: 0 });
+      u.total++; if (!p.ok) u.wrong++;
+      // 축별
+      var ax = axisOf(p.unit, p.mis);
+      if (ax) {
+        var a = byAxis[ax.key] || (byAxis[ax.key] = { key: ax.key, name: ax.name, total: 0, wrong: 0 });
+        a.total++; if (!p.ok) a.wrong++;
+      }
+      // 오개념별 (틀린 것만 집계)
+      if (!p.ok) {
+        var m = byMis[p.mis] || (byMis[p.mis] = { mis: p.mis, unit: p.unit, count: 0, cids: [] });
+        m.count++; if (p.c && m.cids.indexOf(p.c) === -1) m.cids.push(p.c);
+      }
+    });
+    // 교정 개념 + 강의록 부착
+    var wrongConcepts = notCorrectConcepts(graded).map(function (w) {
+      var reading = (w.c && formsBank[w.c] && formsBank[w.c].reading) ? formsBank[w.c].reading : null;
+      return { c: w.c, unit: w.unit, mis: w.mis, lvl: w.lvl, blank: w.blank,
+               reading: reading, fix: w.f, why: w.w,
+               hasReading: !!(reading && (reading.oneline || reading.core)) };
+    });
+    function toSortedArr(obj, rateBase) {
+      return Object.keys(obj).map(function (k) {
+        var o = obj[k]; if (rateBase) o.rate = o.total ? Math.round(100 * o.wrong / o.total) : 0; return o;
+      }).sort(function (a, b) { return (b.wrong||b.count) - (a.wrong||a.count); });
+    }
+    return {
+      score: graded.score, pass: graded.pass, passScore: graded.passScore,
+      correctCount: graded.correctCount, wrongCount: graded.wrongCount, blankCount: graded.blankCount,
+      byUnit: toSortedArr(byUnit, true),
+      byMisconception: toSortedArr(byMis, false),
+      byAxis: toSortedArr(byAxis, true),
+      wrongConcepts: wrongConcepts
+    };
+  }
+
+  // ---------- 5) 읽음 확인 게이트 ----------
+  // wrongConcepts: diagnose의 wrongConcepts
+  // 각 개념: 강의록(있으면) + 확인질문(아직 안 본 다른 form O/X) 1개. 없으면 폴백(옳은문장 재확인).
+  function buildGate(wrongConcepts, formsBank, seenStatements) {
+    formsBank = formsBank || {}; seenStatements = seenStatements || {};
+    var gates = [];
+    wrongConcepts.forEach(function (w) {
+      var checks = [], fallback = false;
+      if (w.c && formsBank[w.c] && formsBank[w.c].forms) {
+        var fresh = formsBank[w.c].forms.filter(function (fm) { return !seenStatements[norm(fm.s)]; });
+        for (var i = 0; i < 2 && i < fresh.length; i++) { var p = fresh[i]; checks.push({ s: p.s, a: p.a, f: p.f, w: p.w }); seenStatements[norm(p.s)] = 1; }
+        if (checks.length < 2) {          // 새 문장 부족 → 본 적 있는 form으로 2단 채움
+          var more = formsBank[w.c].forms.filter(function (fm) { return !checks.some(function (c) { return norm(c.s) === norm(fm.s); }); });
+          for (var j = 0; checks.length < 2 && j < more.length; j++) { checks.push({ s: more[j].s, a: more[j].a, f: more[j].f, w: more[j].w }); }
+        }
+      }
+      if (!checks.length) {               // 폴백: cid 없거나 form 없음 → 옳은 문장 재확인(정답 O)
+        fallback = true;
+        var cf = { s: w.fix || w.mis, a: 'O', f: w.fix, w: w.why };
+        checks.push(cf); seenStatements[norm(cf.s)] = 1;
+      }
+      gates.push({
+        c: w.c, unit: w.unit, mis: w.mis,
+        reading: w.reading || null, hasReading: w.hasReading,
+        checks: checks, check: checks[0], fallback: fallback
+      });
+    });
+    return { gates: gates, seenStatements: seenStatements };
+  }
+
+  // ---------- 6) 재시 생성 (점점 쉽게 + 개별화) ----------
+  // attemptNo: 2=재시, 3=재재시  (정시=1)
+  // cbandVersions: round.retakeC = [{v,items:[{c,u,a,s,f,w}]}...] (C=기본, 더 쉬움)
+  // wrongCids: 직전 시도에서 틀린 개념 cid 집합(객체/배열)
+  // formsBank: 개별화용 대체 form 소스
+  // seenStatements: 이미 학생이 본 문장(중복 방지) · 갱신해서 반환
+  function buildRetake(attemptNo, cbandVersions, wrongCids, formsBank, seenStatements, wrongStmts) {
+    formsBank = formsBank || {}; seenStatements = seenStatements || {}; wrongStmts = wrongStmts || {};
+    var wrong = {};
+    (Array.isArray(wrongCids) ? wrongCids : Object.keys(wrongCids || {})).forEach(function (c) { if (c) wrong[c] = 1; });
+    if (!cbandVersions || !cbandVersions.length) return { items: [], seenStatements: seenStatements, n: 0 };
+    var base = cbandVersions[Math.min(attemptNo - 2, cbandVersions.length - 1)].items;
+
+    var usedThis = {};                 // 이 시도에서 쓴 문장 → 한 시험 안 중복 절대 방지
+    var subCids = base.map(function (it) { return it.c; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; }); // 대체용 범위 내 개념
+    function avail(fb, fn) { return (fb && fb.forms && fb.forms.length ? fb.forms : []).find(fn); }
+    function nwFresh(fb) { return avail(fb, function (fm) { return !usedThis[norm(fm.s)] && !seenStatements[norm(fm.s)] && !wrongStmts[norm(fm.s)]; }); }
+    function nwUnused(fb) { return avail(fb, function (fm) { return !usedThis[norm(fm.s)] && !wrongStmts[norm(fm.s)]; }); }
+    function subForm() {                // D9: 다른 범위 내 개념에서 안 본·안 틀린 form (재노출 0 보장)
+      for (var i = 0; i < subCids.length; i++) { var sfb = formsBank[subCids[i]]; var ff = nwFresh(sfb) || nwUnused(sfb);
+        if (ff) return { c: subCids[i], a: ff.a, s: ff.s, f: ff.f, w: ff.w }; }
+      return null;
+    }
+    var items = base.map(function (it) {
+      var fb = formsBank[it.c];
+      var orig = { c: it.c, a: it.a, s: it.s, f: it.f, w: it.w };
+      var pick, subbed = false, p;
+      if (wrong[it.c]) {
+        // 틀린 개념: 새 문장 우선, 학생이 틀린 문장은 절대 재노출 안 함
+        p = nwFresh(fb) || nwUnused(fb);
+        if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w };
+      } else {
+        // 맞힌 개념: 원본 유지(form 절약), 충돌 시에만 비오답 form으로
+        if (!usedThis[norm(orig.s)] && !wrongStmts[norm(orig.s)]) pick = orig;
+        else { p = nwUnused(fb); if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w }; }
+      }
+      if (!pick) { var sub = subForm(); if (sub) { pick = sub; subbed = true; } }  // 소진 → 범위 내 다른 개념으로 대체
+      if (!pick) pick = orig;                                                       // 최후(이론상 도달 안 함)
+      usedThis[norm(pick.s)] = 1; seenStatements[norm(pick.s)] = 1;
+      var pfb = formsBank[pick.c];
+      var mis = (pfb && pfb.m) || (fb && fb.m) || '';
+      return { c: pick.c, u: it.u, mis: mis, a: pick.a, s: pick.s, f: pick.f, w: pick.w,
+               targeted: !!wrong[it.c] && !subbed, substituted: subbed,
+               swapped: norm(pick.s) !== norm(it.s), reusedWrong: !!wrongStmts[norm(pick.s)] };
+    });
+    return { items: items, seenStatements: seenStatements, n: items.length };
+  }
+
+  // ---------- 7) 누적 (학생 단위, 미응시는 생략, null-safe) ----------
+  // rows: 제출 기록 배열. 각 row:
+  //   {studentKey, name, school, year, course, round, attempt('정시'|'재시'|'재재시'),
+  //    score, pass(bool), date, wrongMis:[..], wrongAxes:{key:count}, isTest(bool)}
+  // 반환: {studentKey: {info, trend[], chronicMis[], axisWeak[], roundsTaken[], coverageRound, attemptsTotal}}
+  function cumulative(rows) {
+    rows = rows || [];
+    var byStu = {};
+    rows.forEach(function (r) {
+      var k = r.studentKey || studentKey(r.name, r.school);
+      (byStu[k] || (byStu[k] = [])).push(r);
+    });
+
+    var out = {};
+    Object.keys(byStu).forEach(function (k) {
+      var rs = byStu[k];
+      // 회차별 묶기 (course+round)
+      var rounds = {};
+      rs.forEach(function (r) {
+        var rk = r.course + '#' + r.round;
+        (rounds[rk] || (rounds[rk] = { course: r.course, round: r.round, attempts: [] })).attempts.push(r);
+      });
+      // trend: 실제로 본 회차만, round 순. (미응시 회차는 애초에 키가 없어 자동 생략)
+      var trend = Object.keys(rounds).map(function (rk) {
+        var R = rounds[rk];
+        R.attempts.sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
+        var jeong = R.attempts.find(function (a) { return a.attempt === '정시'; });
+        var last = R.attempts[R.attempts.length - 1];
+        var passedAny = R.attempts.some(function (a) { return a.pass; });
+        return {
+          course: R.course, round: R.round,
+          jeongsiScore: jeong ? jeong.score : null,
+          finalScore: last ? last.score : null,
+          finalAttempt: last ? last.attempt : null,
+          attemptsCount: R.attempts.length,
+          passed: passedAny,
+          date: last ? last.date : null
+        };
+      }).sort(function (a, b) {
+        if (a.course !== b.course) return a.course < b.course ? -1 : 1;
+        return a.round - b.round;
+      });
+
+      // 고질 오개념: 서로 다른 회차에서 반복해서 틀린 것 (≥2회차)
+      var misRounds = {};
+      rs.forEach(function (r) {
+        (r.wrongMis || []).forEach(function (m) {
+          (misRounds[m] || (misRounds[m] = {}))[r.course + '#' + r.round] = 1;
+        });
+      });
+      var chronic = Object.keys(misRounds).map(function (m) {
+        return { mis: m, rounds: Object.keys(misRounds[m]).length };
+      }).filter(function (x) { return x.rounds >= 2; })
+        .sort(function (a, b) { return b.rounds - a.rounds; });
+
+      // 축별 누적 약점
+      var axis = {};
+      rs.forEach(function (r) {
+        var wa = r.wrongAxes || {};
+        Object.keys(wa).forEach(function (ak) { axis[ak] = (axis[ak] || 0) + wa[ak]; });
+      });
+      var axisWeak = Object.keys(axis).map(function (ak) {
+        return { key: ak, name: axisName(ak), wrong: axis[ak] };
+      }).sort(function (a, b) { return b.wrong - a.wrong; });
+
+      var roundsTaken = trend.map(function (t) { return t.course + t.round; });
+      var coverageRound = trend.length ? trend[trend.length - 1].round : 0;  // 최근 응시 회차 = 누적 범위
+      var attemptsTotal = rs.length;
+      var info = { name: rs[0].name, school: rs[0].school, yearLatest: latestYear(rs) };
+
+      out[k] = {
+        info: info, trend: trend, chronicMis: chronic, axisWeak: axisWeak,
+        roundsTaken: roundsTaken, roundsTakenCount: trend.length,
+        coverageRound: coverageRound, attemptsTotal: attemptsTotal,
+        passedRounds: trend.filter(function (t) { return t.passed; }).length
+      };
+    });
+    return out;
+  }
+  function order(att) { return (att === '정시' || att === '첫번째시험' || att === '이번주 테스트' || att === '첫 응시') ? 0 : att === '재시' ? 1 : 2; }
+  function latestYear(rs) {
+    var y = null, d = '';
+    rs.forEach(function (r) { if (r.date && r.date > d) { d = r.date; y = r.year; } });
+    return y != null ? y : (rs[0] ? rs[0].year : null);
+  }
+
+  // 간격 반복(D8): 과거 회차에 틀린 개념 중 지금 다시 점검할 것. chronic할수록(자주 틀림) 우선(D10 인출강도).
+  function spacedReview(rows, currentRound) {
+    var ord = { '정시': 0, '첫번째시험': 0, '이번주 테스트': 0, '첫 응시': 0, '재시': 1, '재재시': 2 };
+    var byRound = {};
+    (rows || []).forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
+    var byConcept = {};
+    Object.keys(byRound).forEach(function (rd) {
+      var rs = byRound[rd].slice().sort(function (a, b) { return (ord[a.attempt] || 0) - (ord[b.attempt] || 0); });
+      var first = rs[0]; if (!first) return;
+      (first.wrongMis || []).forEach(function (m) {
+        var o = byConcept[m] || (byConcept[m] = { rounds: {}, last: 0 });
+        o.rounds[rd] = 1; o.last = Math.max(o.last, Number(rd));
+      });
+    });
+    return Object.keys(byConcept).map(function (m) {
+      var o = byConcept[m];
+      return { mis: m, times: Object.keys(o.rounds).length, last: o.last, gap: (currentRound || 0) - o.last };
+    }).filter(function (x) { return x.last < (currentRound || 0); })
+      .sort(function (a, b) { return b.times - a.times || b.last - a.last; });
+  }
+
+  // ---------- export (Node + 브라우저) ----------
+  var api = {
+    norm: norm, studentKey: studentKey, axisOf: axisOf, axisName: axisName, AXES: AXES,
+    gradeAttempt: gradeAttempt, notCorrectConcepts: notCorrectConcepts,
+    diagnose: diagnose, buildGate: buildGate, buildRetake: buildRetake, cumulative: cumulative,
+    spacedReview: spacedReview
+  };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.ChemEngine = api;
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<script>
+const DATA_BASE='./appdata/';
+const PDF_BASE='./';
+const SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+const COURSE={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+const $=s=>document.querySelector(s);
+function pad2(n){n=Number(n);return (n<10?'0':'')+n;}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+let M=null,R=null,A=[],cur=0,view='boot',info={name:'',school:'',grade:''},course=null,round=null,SAVE_STATE=null,RESULT=null,ctab='ch2';
+
+async function loadJSON(file){ const r=await fetch(DATA_BASE+file,{cache:'no-store'}); if(!r.ok) throw new Error('load fail '+file); return await r.json(); }
+async function loadManifest(){ if(M) return M; M=await loadJSON('app_manifest.json'); return M; }
+async function loadRound(c,rd){ R=await loadJSON('round_'+c+'_'+pad2(rd)+'.json'); return R; }
+function reportBase(){ return location.origin+location.pathname.replace(/[^/]*$/,''); }
+function reportLink(){ return reportBase()+'report.html?student='+ChemEngine.studentKey(info.name,info.school); }
+
+async function boot(){
+  const q=new URLSearchParams(location.search);
+  const c=q.get('c')||q.get('course'); const r=q.get('r')||q.get('round');
+  if(c && r){ course=c; round=Number(r); ctab=c;
+    try{ await loadRound(c,r); view='id'; }catch(e){ view='loadfail'; }
+    render(); return;
+  }
+  try{ await loadManifest(); ctab=(M&&M.rounds&&M.rounds[0]&&M.rounds[0].course)||'ch2'; }catch(e){}
+  view='select'; render();
+}
+
+function setAns(v){ if(!R) return; A[cur]=v;
+  const items=R.jeongsi.items;
+  if(cur < items.length-1){ const nx=A.findIndex((a,j)=>j>cur && !a); cur = nx>=0?nx:cur+1; }
+  render();
+}
+function goItem(i){ cur=Math.max(0,Math.min(i,R.jeongsi.items.length-1)); render(); }
+document.addEventListener('keydown',e=>{
+  if(view!=='exam') return; const k=(e.key||'').toLowerCase();
+  if(k==='o'||k==='1'||k==='ㅐ'){ setAns('O'); }
+  else if(k==='x'||k==='2'||k==='ㅌ'){ setAns('X'); }
+  else if(e.key==='ArrowRight'||e.key==='ArrowDown'){ goItem(cur+1); }
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){ goItem(cur-1); }
+});
+
+async function pickRound(c,r){ course=c; round=Number(r); try{ await loadRound(c,r); view='id'; }catch(e){ view='loadfail'; } render(); }
+function startExam(){
+  const nm=$('#nm'),sc=$('#sc'),gr=$('#gr');
+  info.name=nm?nm.value.trim():''; info.school=sc?sc.value.trim():''; info.grade=gr?gr.value.trim():'';
+  if(!info.name||!info.school){ alert('이름과 학교를 입력하세요.'); return; }
+  A=new Array(R.jeongsi.items.length).fill(''); cur=0; view='exam'; render();
+}
+function toReview(){ view='review'; render(); }
+function backToExam(i){ if(i!=null) cur=i; view='exam'; render(); }
+function submitExam(){
+  const blanks=A.filter(a=>a!=='O'&&a!=='X').length;
+  if(blanks>0){ if(!confirm(blanks+'개 문항이 미응답입니다. 오답 처리하고 제출할까요?')) return; }
+  const g=ChemEngine.gradeAttempt(A,R.jeongsi.items,R.scoring);
+  const dx=ChemEngine.diagnose(g,{});
+  RESULT={g:g,dx:dx}; view='result'; render(); saveResult(g,dx);
+}
+async function saveResult(g,dx){
+  if(!SAVE_URL){ SAVE_STATE=null; updateSaveLine(); return; }
+  SAVE_STATE='saving'; updateSaveLine();
+  try{
+    const payload={ studentKey:ChemEngine.studentKey(info.name,info.school), reportLink:reportLink(),
+      name:info.name, school:info.school, year:info.grade,
+      course:R.course, round:R.round, attempt:'첫 응시',
+      score:g.score, pass:g.pass, correctCount:g.correctCount, wrongCount:g.wrongCount,
+      wrongMis:(dx.byMisconception||[]).map(m=>m.mis),
+      wrongAxes:(dx.byAxis||[]).reduce((o,a)=>{o[a.key]=a.wrong;return o;},{}),
+      units:(dx.byUnit||[]).map(u=>({u:u.unit,t:u.total,w:u.wrong})),
+      axes:(dx.byAxis||[]).map(a=>({k:a.key,t:a.total,w:a.wrong})),
+      isTest:false,
+      answers:(A||[]).map(a=>a==='O'?'O':a==='X'?'X':'.').join('') };
+    await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    SAVE_STATE='ok';
+  }catch(e){ SAVE_STATE='fail'; }
+  updateSaveLine();
+}
+function updateSaveLine(){ const el=$('#saveLine'); if(el) el.innerHTML=saveLineHTML(); }
+function saveLineHTML(){
+  if(SAVE_STATE==='saving') return '<span class="muted">결과 저장 중...</span>';
+  if(SAVE_STATE==='ok') return '<span style="color:#1B8A4C;font-weight:600">결과가 저장되었습니다</span>';
+  if(SAVE_STATE==='fail') return '<span style="color:#C0392B;font-weight:600">저장 실패 · </span><button class="ghost" style="padding:4px 10px;font-size:12px;margin-left:4px" onclick="saveResult(RESULT.g,RESULT.dx)">재시도</button>';
+  return '';
+}
+
+function render(){
+  let h='';
+  if(view==='boot'){ h='<div class="card"><h1>불러오는 중…</h1></div>'; }
+  else if(view==='loadfail'){ h='<div class="card"><h1>시험을 불러오지 못했습니다</h1><p class="lede">회차 데이터를 찾지 못했습니다. 링크를 확인하거나 아래에서 회차를 선택하세요.</p><div class="btnrow"><button onclick="course=null;round=null;loadManifest().then(()=>{view=\u0027select\u0027;render()})">회차 선택</button></div></div>'; }
+  else if(view==='select'){ h=selectView(); }
+  else if(view==='id'){ h=idView(); }
+  else if(view==='exam'){ h=examView(); }
+  else if(view==='review'){ h=reviewView(); }
+  else if(view==='result'){ h=resultView(); }
+  $('#app').innerHTML=h;
+}
+
+function selectView(){
+  const rounds=(M&&M.rounds)||[];
+  const courses=['ch1','ch2','gc'].filter(c=>rounds.some(r=>r.course===c));
+  if(courses.indexOf(ctab)<0) ctab=courses[0]||'ch1';
+  const tabs=courses.map(c=>'<button class="'+(ctab===c?'sel':'')+'" onclick="ctab=\u0027'+c+'\u0027;render()">'+(COURSE[c]||c)+'</button>').join('');
+  const chips=rounds.filter(r=>r.course===ctab).map(r=>'<div class="rchip" onclick="pickRound(\u0027'+r.course+'\u0027,'+r.round+')"><span class="n">'+r.round+'</span><span class="u">회</span></div>').join('');
+  return '<div class="card"><h1>온라인 응시</h1><p class="lede">회차를 선택해 바로 응시합니다. 60문항 OX · 합격 80점.</p><div class="tabs">'+tabs+'</div><div class="rgrid">'+(chips||'<p class="muted">회차가 없습니다.</p>')+'</div></div>';
+}
+function idView(){
+  const pass=(R.scoring&&R.scoring.pass)||80;
+  return '<div class="card"><h1>'+esc(R.title)+'</h1>'+
+    '<p class="lede">60문항 OX · 합격 '+pass+'점. 이름과 학교로 식별합니다(매년 학년이 바뀌어도 같은 학생으로 이어집니다).</p>'+
+    '<label>이름</label><input id="nm" value="'+esc(info.name)+'" placeholder="홍길동" autocomplete="off">'+
+    '<div class="row2"><div><label>학교</label><input id="sc" value="'+esc(info.school)+'" placeholder="OO중학교" autocomplete="off"></div>'+
+    '<div><label>학년</label><input id="gr" value="'+esc(info.grade)+'" placeholder="중2" autocomplete="off"></div></div>'+
+    '<div class="btnrow"><button onclick="startExam()">시험 시작 →</button></div>'+
+    '<div style="text-align:center;margin-top:10px"><a href="'+PDF_BASE+'index.html" style="color:var(--faint);font-size:12.5px;text-decoration:none">← 채점·진단 앱으로</a></div></div>';
+}
+function examView(){
+  const items=R.jeongsi.items, n=items.length, it=items[cur];
+  const done=A.filter(a=>a==='O'||a==='X').length, sel=A[cur];
+  const dots=items.map((x,i)=>'<button class="dotx '+(A[i]==='O'?'o':A[i]==='X'?'x':'')+' '+(i===cur?'cur':'')+'" onclick="goItem('+i+')">'+(i+1)+'</button>').join('');
+  const nav = cur<n-1
+    ? '<button class="ghost" onclick="goItem('+(cur+1)+')">다음 →</button>'
+    : '<button class="ok" onclick="toReview()">검토·제출 →</button>';
+  return '<div class="exhead"><span class="cnt mono">'+done+'</span><span class="of mono">/ '+n+'</span><div class="bar"><i style="width:'+(100*done/n)+'%"></i></div><button class="rvbtn" onclick="toReview()">검토</button></div>'+
+  '<div class="qcard"><div class="qnum mono">문항 '+(cur+1)+' · '+esc(it.u||'')+'</div>'+
+  '<div class="qstmt">'+esc(it.s)+'</div>'+
+  '<div class="oxrow">'+
+    '<button class="oxbig o '+(sel==='O'?'sel':'')+'" onclick="setAns(\u0027O\u0027)"><b>O</b><span>옳다</span></button>'+
+    '<button class="oxbig x '+(sel==='X'?'sel':'')+'" onclick="setAns(\u0027X\u0027)"><b>X</b><span>틀리다</span></button>'+
+  '</div>'+
+  '<p class="hint"><kbd>1</kbd>/<kbd>O</kbd>=옳다 · <kbd>2</kbd>/<kbd>X</kbd>=틀리다 · ←/→ 이동</p>'+
+  '<div class="navrow"><button class="ghost" '+(cur===0?'disabled':'')+' onclick="goItem('+(cur-1)+')">← 이전</button>'+nav+'</div></div>'+
+  '<div class="dotwrap">'+dots+'</div>';
+}
+function reviewView(){
+  const items=R.jeongsi.items,n=items.length;
+  const done=A.filter(a=>a==='O'||a==='X').length, blank=n-done;
+  const grid=items.map((it,i)=>'<button class="rv '+(A[i]==='O'?'o':A[i]==='X'?'x':'b')+'" onclick="backToExam('+i+')"><span class="rvn">'+(i+1)+'</span><span class="rva">'+(A[i]||'·')+'</span></button>').join('');
+  const blankTxt = blank? ' · <b style="color:var(--x)">미응답 '+blank+'</b>' : ' · 모두 응답';
+  return '<div class="card"><h1>검토</h1>'+
+    '<p class="lede">'+esc(R.title)+' · 응답 '+done+' / '+n+blankTxt+'. 번호를 누르면 해당 문항으로 돌아갑니다.</p>'+
+    '<div class="rvgrid">'+grid+'</div>'+
+    '<div class="btnrow"><button class="ghost" onclick="backToExam()">계속 풀기</button><button class="ok" onclick="submitExam()">제출하고 채점</button></div></div>';
+}
+function resultView(){
+  const g=RESULT.g, dx=RESULT.dx, pass=g.pass;
+  const weak=(dx.byMisconception||[]).slice(0,5);
+  const link=reportLink();
+  const weakHTML = weak.length
+    ? '<h2>많이 틀린 개념</h2><div class="weak">'+weak.map(m=>'<div class="wk"><span class="wkm">'+esc(m.mis)+'</span><span class="wkc mono">'+m.count+'</span></div>').join('')+'</div>'
+    : '<p class="note" style="text-align:center">모든 문항을 맞혔습니다. 훌륭합니다.</p>';
+  return '<div class="card">'+
+    '<div class="rsban '+(pass?'pass':'fail')+'"><div class="rss mono">'+g.score+'<span>점</span></div><div class="rsb">'+(pass?'합격':'재시 필요')+'</div></div>'+
+    '<div class="rsrow"><div><b class="mono" style="color:var(--o)">'+g.correctCount+'</b><span>맞음</span></div><div><b class="mono" style="color:var(--x)">'+g.wrongCount+'</b><span>틀림</span></div><div><b class="mono">'+g.blankCount+'</b><span>미응답</span></div></div>'+
+    '<div id="saveLine" style="text-align:center;margin:6px 0 2px;font-size:12.5px">'+saveLineHTML()+'</div>'+
+    weakHTML+
+    '<div class="plink"><div class="pll">상세 진단 리포트 <span class="muted">· 누적 추이·단원별·오개념 교정</span></div>'+
+      '<div class="plurl">'+esc(link)+'</div>'+
+      '<a class="rlbtn" href="'+esc(link)+'" target="_blank" rel="noopener">상세 리포트 보기 →</a></div>'+
+    '<div class="btnrow"><button class="ghost" onclick="A=new Array(R.jeongsi.items.length).fill(\u0027\u0027);cur=0;view=\u0027exam\u0027;render()">다시 풀기</button><button class="ghost" onclick="course=null;round=null;loadManifest().then(()=>{view=\u0027select\u0027;render()})">다른 회차</button></div>'+
+  '</div>';
+}
+boot();
+</script>
+</body></html>

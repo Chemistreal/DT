@@ -705,6 +705,10 @@ function copyReportLink(btn){ var link=reportLink();
   try{ navigator.clipboard.writeText(link).then(function(){flashCopied(btn);},function(){window.prompt('아래 링크를 복사하세요:',link);}); }
   catch(e){ try{window.prompt('아래 링크를 복사하세요:',link);}catch(_){} } }
 function flashCopied(btn){ if(!btn)return; var t=btn.dataset._t||btn.textContent; btn.dataset._t=t; btn.textContent='✓ 복사됨'; setTimeout(function(){btn.textContent=t;},1500); }
+function examLinkFor(){ return reportBase()+'exam.html?c='+S.round.course+'&r='+S.round.round; }
+function copyExamLink(btn){ var link=examLinkFor();
+  try{ navigator.clipboard.writeText(link).then(function(){flashCopied(btn);},function(){window.prompt('아래 링크를 복사하세요:',link);}); }
+  catch(e){ try{window.prompt('아래 링크를 복사하세요:',link);}catch(_){} } }
 function copyPassMsg(btn){
   var last=S.attempts[S.attempts.length-1];
   var course=COURSE[S.round.course]||S.round.course;
@@ -1036,11 +1040,17 @@ function render(){
   }
   else if(v==='pdf'){
     const m=(MANIFEST.rounds||[]).find(r=>r.data===S.roundId)||{};
-    h=`<div class="card"><h1>시험지 인쇄</h1><p class="lede">${S.round.title} · 60문항. PDF를 내려받아 인쇄하고 응시시킨 뒤, OMR을 걷어 채점하세요.</p>
+    h=`<div class="card"><h1>시험 출제 · 응시</h1><p class="lede">${S.round.title} · 60문항. 인쇄해서 종이로 보거나, 학생이 온라인으로 바로 응시할 수 있습니다.</p>
       <a id="pdfMunje" class="pdfbtn" href="${PDF_BASE+(m.munje_pdf||'#')}" target="_blank" rel="noopener"><span class="ic">시험</span><span>시험지 PDF<br><small>60문항 · 인쇄용</small></span></a>
       <a id="pdfHaeseol" class="pdfbtn" href="${PDF_BASE+(m.haeseol_pdf||'#')}" target="_blank" rel="noopener"><span class="ic">해설</span><span>해설·빠른정답 PDF<br><small>채점·복습용</small></span></a>
       <div id="pdfChk" style="font-size:13px;margin:1px 0 5px;min-height:17px"></div>
-      <div class="btnrow"><button class="ghost" onclick="go('select')">뒤로</button><button onclick="startGrade(S.round.jeongsi.items,1);go('grade')">채점 시작</button></div></div>`;
+      <div class="plink" style="background:var(--brass-soft)">
+        <div class="pll"><b>온라인 응시</b><span class="muted"> · 학생이 화면에서 풀면 자동 채점·진단·시트 저장</span></div>
+        <a class="pdfbtn" style="margin:0 0 10px" href="exam.html?c=${S.round.course}&r=${S.round.round}" target="_blank" rel="noopener"><span class="ic" style="background:#fff;color:var(--brass)">응시</span><span>온라인 응시 페이지 열기<br><small>이 회차를 바로 풀기</small></span></a>
+        <div class="plurl" id="examUrl">${reportBase()}exam.html?c=${S.round.course}&r=${S.round.round}</div>
+        <button class="ghost" style="width:100%;font-size:13px;padding:10px" onclick="copyExamLink(this)">학생 전달용 링크 복사</button>
+      </div>
+      <div class="btnrow"><button class="ghost" onclick="go('select')">뒤로</button><button onclick="startGrade(S.round.jeongsi.items,1);go('grade')">OMR 채점</button></div></div>`;
   }
   else if(v==='grade'){ h=inputScreen('첫 응시 채점','OMR을 보고 각 문항을 1(O)·2(X)로 입력하세요.','채점 완료','doGrade',false); }
   else if(v==='report'){
