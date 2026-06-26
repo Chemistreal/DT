@@ -495,15 +495,21 @@ async function saveResult(g,dx){
       isTest:false,
       answers:(A||[]).map(a=>a==='O'?'O':a==='X'?'X':'.').join('') };
     await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
-    SAVE_STATE='ok';
+    var saved=false;
+    try{
+      var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(payload.studentKey)+'&t='+Date.now(),{cache:'no-store'});
+      var vj=await vr.json();
+      saved=!!(vj&&vj.rows&&vj.rows.some(function(r){return String(r.course)===String(R.course)&&String(r.round)===String(R.round);}));
+    }catch(_e){ saved=false; }
+    SAVE_STATE=saved?'ok':'fail';
   }catch(e){ SAVE_STATE='fail'; }
   updateSaveLine();
 }
 function updateSaveLine(){ const el=$('#saveLine'); if(el) el.innerHTML=saveLineHTML(); }
 function saveLineHTML(){
-  if(SAVE_STATE==='saving') return '<span class="muted">결과 저장 중...</span>';
-  if(SAVE_STATE==='ok') return '<span style="color:#1B8A4C;font-weight:600">결과가 저장되었습니다</span>';
-  if(SAVE_STATE==='fail') return '<span style="color:#C0392B;font-weight:600">저장 실패 · </span><button class="ghost" style="padding:4px 10px;font-size:12px;margin-left:4px" onclick="saveResult(RESULT.g,RESULT.dx)">재시도</button>';
+  if(SAVE_STATE==='saving') return '<span class="muted">결과 저장·확인 중...</span>';
+  if(SAVE_STATE==='ok') return '<span style="color:#1B8A4C;font-weight:600">결과가 저장되었습니다 · 리포트 확인 가능</span>';
+  if(SAVE_STATE==='fail') return '<span style="color:#C0392B;font-weight:600">저장이 확인되지 않았습니다 · </span><button class="ghost" style="padding:4px 10px;font-size:12px;margin-left:4px" onclick="saveResult(RESULT.g,RESULT.dx)">재시도</button>';
   return '';
 }
 
@@ -580,7 +586,7 @@ function resultView(){
     '<div class="plink"><div class="pll">상세 진단 리포트 <span class="muted">· 누적 추이·단원별·오개념 교정</span></div>'+
       '<div class="plurl">'+esc(link)+'</div>'+
       '<a class="rlbtn" href="'+esc(link)+'" target="_blank" rel="noopener">상세 리포트 보기 →</a></div>'+
-    '<div class="btnrow"><button class="ghost" onclick="A=new Array(R.jeongsi.items.length).fill(\u0027\u0027);cur=0;view=\u0027exam\u0027;render()">다시 풀기</button><button class="ghost" onclick="course=null;round=null;loadManifest().then(()=>{view=\u0027select\u0027;render()})">다른 회차</button></div>'+
+    '<p class="note" style="text-align:center;margin-top:14px">응시가 끝났습니다. 결과는 자동 저장되며, 위 버튼으로 상세 리포트를 확인할 수 있습니다.</p>'+
   '</div>';
 }
 boot();
