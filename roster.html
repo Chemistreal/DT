@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>반 명단 · 시험 미응시 현황 · Chemistreal</title>
+<style>
+:root{
+  --bg:#0f1216; --card:#171b21; --card2:#1c212a; --line:#2a2f37;
+  --ink:#e9e7e0; --muted:#9aa0a8; --brass:#c9a24b; --brass-d:#a9842f;
+  --brass-soft:rgba(201,162,75,.12); --ok:#54b27a; --bad:#e0705f; --warn:#d9a441;
+  --okbg:rgba(84,178,122,.12); --badbg:rgba(224,112,95,.13); --warnbg:rgba(217,164,65,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:780px;margin:0 auto;padding:18px 14px 120px}
+h1{font-size:20px;margin:2px 0 2px;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:13px;margin:0 0 16px;line-height:1.5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 14px;margin:0 0 14px}
+.card h2{font-size:14.5px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--brass);display:inline-block}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.row{display:flex;align-items:center;gap:8px}
+.between{justify-content:space-between}
+.wrapline{flex-wrap:wrap}
+button{font-family:inherit;cursor:pointer;border-radius:9px;border:1px solid var(--line);
+  background:var(--card2);color:var(--ink);padding:8px 12px;font-size:13px;transition:.12s}
+button:hover{border-color:var(--brass-d)}
+button.brass{background:var(--brass);border-color:var(--brass);color:#1a1407;font-weight:700}
+button.brass:hover{background:var(--brass-d);border-color:var(--brass-d)}
+button.ghost{background:transparent}
+button.tiny{padding:4px 9px;font-size:12px;border-radius:7px}
+button.danger{color:var(--bad);border-color:transparent;background:transparent}
+button.danger:hover{background:var(--badbg);border-color:transparent}
+input{font-family:inherit;background:#10141a;border:1px solid var(--line);color:var(--ink);
+  border-radius:8px;padding:8px 10px;font-size:14px;width:100%}
+input:focus{outline:none;border-color:var(--brass-d)}
+input.rnd{width:88px;text-align:center}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--brass-soft);
+  color:var(--brass);border:1px solid rgba(201,162,75,.3);white-space:nowrap}
+.badge.warn{background:var(--warnbg);color:var(--warn);border-color:rgba(217,164,65,.35)}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);
+  border-radius:999px;padding:4px 6px 4px 11px;margin:0;font-size:13px}
+.chip.bad{background:var(--badbg);border-color:rgba(224,112,95,.35);color:#f1b5ab}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.x{border:none;background:transparent;color:var(--muted);font-size:15px;line-height:1;padding:2px 5px;border-radius:50%;cursor:pointer}
+.x:hover{color:var(--bad);background:rgba(224,112,95,.15)}
+.clscard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 11px;margin:11px 0}
+.slist{display:flex;flex-direction:column;gap:6px;margin:10px 0 8px}
+.srow{display:flex;align-items:center;gap:7px}
+.srow .idx{color:var(--muted);font-size:11px;width:22px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.addrow{display:flex;gap:7px;margin-top:6px}
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.banner{background:var(--brass-soft);border:1px solid rgba(201,162,75,.3);color:#e7cd92;
+  border-radius:11px;padding:11px 12px;font-size:13px;line-height:1.5;margin:0 0 14px}
+.abcls{padding:11px 0;border-top:1px solid var(--line)}
+.abcls:first-of-type{border-top:none}
+.abhead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.abhead .nm{font-weight:600;font-size:14px}
+.cnt{font-size:12.5px;font-variant-numeric:tabular-nums}
+.cnt.bad{color:var(--bad)} .cnt.ok{color:var(--ok)}
+.bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin:8px 0 2px}
+.bar > i{display:block;height:100%;background:var(--ok)}
+.footer{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(to top,var(--bg) 60%,transparent);
+  padding:14px;display:flex;gap:10px;justify-content:center;align-items:center}
+.footer .inner{max-width:780px;width:100%;display:flex;gap:10px;align-items:center}
+.grow{flex:1}
+.savestat{font-size:12.5px}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--brass);
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:5px}
+@keyframes sp{to{transform:rotate(360deg)}}
+a{color:var(--brass)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>반 명단 · 시험 미응시 현황</h1>
+  <p class="sub">주말 시험을 본 학생(수기 입력 또는 본인 응시)을 명단과 대조해, 안 본 학생을 반별로 보여줍니다. 매주 월요일 18시에 같은 내용이 메일로도 갑니다.</p>
+
+  <div id="banner"></div>
+
+  <div class="card">
+    <h2><span class="dot"></span>이번 주 미응시 현황 <span id="genAt" class="muted small" style="font-weight:400;margin-left:auto"></span></h2>
+    <p class="note" style="margin:2px 0 4px">저장된 명단 기준입니다. 명단을 고친 뒤에는 저장하고 새로고침하세요.</p>
+    <div id="absbox"><p class="muted small">불러오는 중...</p></div>
+    <div style="margin-top:10px"><button class="ghost tiny" id="refreshAbs">현황 새로고침</button></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot"></span>반 명단 관리</h2>
+    <p class="note">반 이름에 <b>화학1 · 화학2 · 일반화학</b>이 들어가면 과목이 자동 인식됩니다. "이번주 회차"는 비워두면 자동(최근 8일 내 최신 회차)으로 잡습니다. 학생 추가칸에 여러 명을 줄바꿈/쉼표로 붙여넣으면 한 번에 들어갑니다.</p>
+    <div id="classes"></div>
+    <button class="ghost" id="addC" style="margin-top:8px">+ 반 추가</button>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="inner">
+    <span id="saveStat" class="savestat muted grow"></span>
+    <button class="ghost" id="sendMail">알림 메일 보내기</button>
+    <button class="brass" id="save">명단 저장</button>
+  </div>
+</div>
+
+<script>
+var API='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+
+var DEFAULT_ROSTER=[
+  {label:'화학2 토1:30-5:30',students:['고승원','곽도윤','권효주','김두은','김시헌','김연준','김채원','김태연','석지후','송지호','안승재','안지원','오가연','오승민','이건우','이도현','이세현','이원준','이정민','이지한','이지호','이지환','이채연','장재민','최시아','현정욱','최민준']},
+  {label:'일반화학 일1:30-5:30',students:['강태영','권지유','김민결','김영우','이도형','전준','전하연','황승하','황예린']},
+  {label:'화학1 일6-10',students:['강신우','고영훈','구자홍','권승현','김도현','김명준','김서준','김승현','김예성','김지완','김현승','박정현','옥윤아','온주호','유민상','윤정원','이다인','이동선','이민성','이아은','이지율','이지호','이진혁','이하윤','이한주','이현욱','임병준','임준휘','임하율','장윤아','전주환','최준혁','최지호','한이주','한준태','홍아라','황윤성']},
+  {label:'화학2 토6-10',students:['박건태','박소영','이지안','정예찬','조예준','최승규','홍수환','고유진','홍선우']}
+];
+
+var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+function courseOf(label){
+  var s=String(label||'');
+  if(s.indexOf('일반화학')>=0) return 'gc';
+  if(s.indexOf('화학2')>=0||s.indexOf('화학Ⅱ')>=0) return 'ch2';
+  if(s.indexOf('화학1')>=0||s.indexOf('화학Ⅰ')>=0) return 'ch1';
+  return '';
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+var state={classes:[], loadedEmpty:false};
+var $=function(s){return document.querySelector(s);};
+
+function renderClasses(){
+  var box=$('#classes'); var h='';
+  state.classes.forEach(function(k,ci){
+    var co=courseOf(k.label);
+    var badge=co?('<span class="badge">'+COURSE_KO[co]+'</span>')
+                 :('<span class="badge warn">과목 미인식</span>');
+    h+='<div class="clscard" data-ci="'+ci+'">';
+    h+='<div class="row between wrapline" style="gap:8px">';
+    h+='<input class="lab" data-ci="'+ci+'" value="'+esc(k.label)+'" placeholder="반 이름 (예: 화학2 토1:30-5:30)" style="flex:1;min-width:180px">';
+    h+=badge;
+    h+='</div>';
+    h+='<div class="row wrapline" style="margin-top:9px;gap:10px">';
+    h+='<label class="small muted">이번주 회차 <input class="rnd" data-ci="'+ci+'" type="number" min="1" value="'+(k.round==null?'':esc(k.round))+'" placeholder="자동"></label>';
+    h+='<span class="small muted">학생 '+(k.students||[]).length+'명</span>';
+    h+='</div>';
+    h+='<div class="slist">';
+    (k.students||[]).forEach(function(nm,si){
+      h+='<div class="srow"><span class="idx">'+(si+1)+'</span>'
+        +'<input class="snm" data-ci="'+ci+'" data-si="'+si+'" value="'+esc(nm)+'">'
+        +'<button class="x delS" data-ci="'+ci+'" data-si="'+si+'" title="삭제">×</button></div>';
+    });
+    h+='</div>';
+    h+='<div class="addrow"><input class="addS" data-ci="'+ci+'" placeholder="학생 추가 (여러 명은 줄바꿈/쉼표)">'
+      +'<button class="tiny addBtn" data-ci="'+ci+'">추가</button></div>';
+    h+='<div style="margin-top:10px;text-align:right"><button class="tiny danger delC" data-ci="'+ci+'">이 반 삭제</button></div>';
+    h+='</div>';
+  });
+  if(!state.classes.length) h='<p class="muted small">반이 없습니다. 아래 "반 추가"로 시작하세요.</p>';
+  box.innerHTML=h;
+}
+
+function renderAbsentees(A){
+  var box=$('#absbox')||$('#absbox'); box=document.getElementById('absbox');
+  if(!A||!A.classes){ box.innerHTML='<p class="muted small">불러오지 못했습니다.</p>'; return; }
+  document.getElementById('genAt').textContent=A.generatedAt?('갱신 '+A.generatedAt):'';
+  if(!A.classes.length){ box.innerHTML='<p class="muted small">저장된 명단이 없습니다. 아래에서 명단을 만들고 저장하세요.</p>'; return; }
+  var h='';
+  A.classes.forEach(function(c){
+    h+='<div class="abcls">';
+    h+='<div class="abhead"><span class="nm">'+esc(c.label)+'</span>';
+    if(c.note){ h+='<span class="badge warn">'+esc(c.note)+'</span></div>';
+      h+='<p class="note" style="margin:6px 0 0">반 이름에 화학1/화학2/일반화학을 넣어 과목을 인식시키세요.</p></div>'; return; }
+    if(c.noExam){ h+='<span class="badge">'+(COURSE_KO[c.course]||c.course)+'</span></div>';
+      h+='<p class="note" style="margin:6px 0 0">최근 8일 내 채점된 시험이 없습니다.</p></div>'; return; }
+    h+='<span class="badge">'+(COURSE_KO[c.course]||c.course)+' '+c.round+'회</span>';
+    var miss=c.absent.length;
+    h+='<span class="cnt '+(miss?'bad':'ok')+'" style="margin-left:auto">미응시 '+miss+' / '+c.total+'명</span>';
+    h+='</div>';
+    var pct=c.total?Math.round(c.present/c.total*100):0;
+    h+='<div class="bar"><i style="width:'+pct+'%"></i></div>';
+    if(miss){
+      h+='<div class="chips">';
+      c.absent.forEach(function(n){ h+='<span class="chip bad">'+esc(n)+'</span>'; });
+      h+='</div>';
+    } else {
+      h+='<p class="note" style="margin:6px 0 0;color:var(--ok)">전원 응시 완료</p>';
+    }
+    h+='</div>';
+  });
+  box.innerHTML=h;
+}
+
+async function loadRoster(){
+  try{
+    var r=await fetch(API+'?action=roster&t='+Date.now(),{cache:'no-store'});
+    var j=await r.json();
+    if(j&&j.classes&&j.classes.length){ state.classes=normalize(j.classes); state.loadedEmpty=false; }
+    else { state.classes=normalize(DEFAULT_ROSTER); state.loadedEmpty=true; }
+  }catch(e){ state.classes=normalize(DEFAULT_ROSTER); state.loadedEmpty=true; }
+  banner();
+  renderClasses();
+}
+function normalize(arr){
+  return (arr||[]).map(function(k){
+    return {label:String(k.label||'').trim(),
+            students:(k.students||[]).map(function(s){return String(s||'').trim();}).filter(Boolean),
+            round:(k.round===0||k.round)?Number(k.round):null};
+  });
+}
+function banner(){
+  var b=document.getElementById('banner');
+  if(state.loadedEmpty){
+    b.innerHTML='<div class="banner">서버에 저장된 명단이 없어 <b>기본 명단</b>을 불러왔습니다. 확인 후 아래 <b>명단 저장</b>을 누르면 반영됩니다. (화학1의 중복 이름 등은 저장 전에 정리하세요.)</div>';
+  } else b.innerHTML='';
+}
+
+async function loadAbsentees(){
+  document.getElementById('absbox').innerHTML='<p class="muted small"><span class="spin"></span>불러오는 중...</p>';
+  try{
+    var r=await fetch(API+'?action=absentees&t='+Date.now(),{cache:'no-store'});
+    var j=await r.json();
+    renderAbsentees(j&&j.absentees);
+  }catch(e){ document.getElementById('absbox').innerHTML='<p class="muted small">불러오지 못했습니다. (배포/권한 확인)</p>'; }
+}
+
+function setStat(html){ document.getElementById('saveStat').innerHTML=html; }
+
+async function save(){
+  var payload={action:'roster',classes:state.classes.filter(function(k){return (k.label||'').trim();})};
+  setStat('<span class="spin"></span>저장 중...');
+  try{
+    await fetch(API,{method:'POST',body:JSON.stringify(payload)});
+    var vr=await fetch(API+'?action=roster&t='+Date.now(),{cache:'no-store'});
+    var vj=await vr.json();
+    if(vj&&vj.classes){
+      var n=vj.classes.length, tot=vj.classes.reduce(function(a,c){return a+((c.students||[]).length);},0);
+      state.classes=normalize(vj.classes); state.loadedEmpty=false; banner(); renderClasses();
+      setStat('<span style="color:var(--ok);font-weight:600">저장됨 · '+n+'개 반 · '+tot+'명</span>');
+      loadAbsentees();
+    } else { setStat('<span style="color:var(--bad);font-weight:600">저장 확인 실패</span>'); }
+  }catch(e){ setStat('<span style="color:var(--bad);font-weight:600">저장 실패 (배포/권한 확인)</span>'); }
+}
+
+async function sendMail(){
+  setStat('<span class="spin"></span>메일 발송 중...');
+  try{
+    await fetch(API,{method:'POST',body:JSON.stringify({action:'absentee_email'})});
+    setStat('<span style="color:var(--ok);font-weight:600">알림 메일을 보냈습니다</span>');
+  }catch(e){ setStat('<span style="color:var(--bad);font-weight:600">메일 발송 실패</span>'); }
+}
+
+/* ---- 편집 이벤트 (위임) ---- */
+var cont=document.getElementById('classes');
+cont.addEventListener('input',function(e){
+  var t=e.target, ci=+t.getAttribute('data-ci');
+  if(t.classList.contains('snm')){ var si=+t.getAttribute('data-si'); state.classes[ci].students[si]=t.value; }
+  else if(t.classList.contains('lab')){ state.classes[ci].label=t.value; }
+  else if(t.classList.contains('rnd')){ var v=t.value.trim(); state.classes[ci].round=v===''?null:Number(v); }
+});
+cont.addEventListener('focusout',function(e){
+  if(e.target.classList.contains('lab')) renderClasses(); // 과목 배지 갱신
+});
+cont.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&e.target.classList.contains('addS')){ e.preventDefault(); addStudents(+e.target.getAttribute('data-ci'),e.target.value); e.target.value=''; }
+});
+cont.addEventListener('click',function(e){
+  var t=e.target;
+  if(t.classList.contains('delS')){ var ci=+t.getAttribute('data-ci'), si=+t.getAttribute('data-si'); state.classes[ci].students.splice(si,1); renderClasses(); }
+  else if(t.classList.contains('addBtn')){ var ci=+t.getAttribute('data-ci'); var inp=cont.querySelector('.addS[data-ci="'+ci+'"]'); addStudents(ci,inp.value); inp.value=''; }
+  else if(t.classList.contains('delC')){ var ci=+t.getAttribute('data-ci'); if(confirm('"'+(state.classes[ci].label||'이 반')+'" 반을 삭제할까요?')){ state.classes.splice(ci,1); renderClasses(); } }
+});
+function addStudents(ci,text){
+  var names=String(text||'').split(/[\n,]+/).map(function(s){return s.trim();}).filter(Boolean);
+  if(!names.length) return;
+  state.classes[ci].students=(state.classes[ci].students||[]).concat(names);
+  renderClasses();
+}
+document.getElementById('addC').addEventListener('click',function(){
+  state.classes.push({label:'',students:[],round:null}); renderClasses();
+  var labs=cont.querySelectorAll('.lab'); if(labs.length) labs[labs.length-1].focus();
+});
+document.getElementById('save').addEventListener('click',save);
+document.getElementById('sendMail').addEventListener('click',function(){
+  if(confirm('지금 미응시 알림 메일을 보낼까요? (등록된 주소로 발송)')) sendMail();
+});
+document.getElementById('refreshAbs').addEventListener('click',loadAbsentees);
+
+loadRoster();
+loadAbsentees();
+</script>
+</body>
+</html>
