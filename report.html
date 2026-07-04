@@ -318,6 +318,13 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .oxlegend .lg-w{color:#B23C2E;font-weight:700;}
 .soldiv{height:1px;background:#E3DFD4;margin:16px 0;}
 .solh2{font-size:16px;font-weight:800;margin-bottom:6px;}
+.todoread{margin-top:10px;}
+.tritem{border:1px solid #E7E4DC;border-left:3px solid #0B6E6E;border-radius:8px;padding:8px 11px;margin-top:7px;background:#FBFAF6;}
+.trf{font-size:13px;color:#16202E;font-weight:600;line-height:1.5;}
+.trf::before{content:"\2714  ";color:#0B6E6E;}
+.trw{margin-top:4px;font-size:12px;color:#4A4A4A;line-height:1.55;}
+.trw b{color:#16202E;}
+
 
 
 
@@ -1215,14 +1222,25 @@ function render(commit){
       ${nearList.length?`<div class="strchips">${nearList.map(function(u){var p=Math.round(100*(u.t-u.w)/u.t);return '<span class="strchip">'+u.u+' <b>'+p+'%</b></span>';}).join('')}</div><p class="note" style="margin-top:7px">가장 자리 잡아가는 단원입니다. 여기부터 발판을 넓혀 갑니다.</p>`:''}</div>`;
   }
 
-  // 이번 주 확인할 개념 (A15+A16): 열린 질문 → 막히면 엄마가 풀어 설명(core) → 따뜻한 마감
+  // 이번 주 확인할 개념: 실제 문장 앵커 질문 → 막히면 설명 → 함께 읽기
   var todoMis=(A.chronicMis[0]?A.chronicMis[0].mis:(latestWrong[0]||null));
   if(todoMis){ var todoOl=ONELINE[todoMis]||''; var todoCore=CORE[todoMis]||todoOl;
+    var _anchors=(window._deepWrong||[]).filter(function(x){return x.mis===todoMis&&(x.f||x.s);});
+    var _a0=_anchors[0]||null;
+    var _corePlain=(todoCore||'').replace(/\*\*/g,'');
+    var _coreSent=''; if(_corePlain){ var _ci=_corePlain.indexOf('다. '); _coreSent=_ci>=0?_corePlain.slice(0,_ci+2):_corePlain; if(_coreSent.length>90) _coreSent=''; }
+    var qline;
+    if(_a0){ qline='"'+_esc(_a0.f||_a0.s)+'" 이 문장이 왜 맞는지, 네 말로 설명해 볼래?'; }
+    else if(_coreSent){ qline='"'+_esc(_coreSent)+'" 이게 왜 그런지, 네 말로 설명해 볼래?'; }
+    else { qline='"'+todoMis+'"에서 배운 것 중 맞는 문장을 하나 골라서, 왜 맞는지 설명해 볼래?'; }
+    var _expl = todoCore? md(todoCore) : (_a0&&_a0.w? _esc(_a0.w) : '');
+    var _reads=_anchors.slice(0,2);
     h+=`<div class="card todo">
       <div class="todohead"><span class="todotag">이번 주 확인할 개념</span><span class="todomis">${todoMis}</span></div>
-      <div class="todointro">아이가 스스로 설명해 볼 때 개념이 진짜로 남습니다. 아래 질문을 건네고, 아이의 설명을 들어봐 주세요.</div>
-      <div class="todohome"><span class="tlab">이렇게 물어봐 주세요</span>"${todoMis}, 이거 왜 그렇게 되는지 네 말로 설명해 볼래?"</div>
-      ${todoCore?`<div class="todocore"><span class="tlab">아이가 막히면, 이렇게 풀어서 설명해 주세요</span>${md(todoCore)} 그런 다음 "그럼 왜 그렇게 될까?"를 한 번 더 같이 짚어 보세요.</div>`:''}
+      <div class="todointro">아이가 스스로 설명해 볼 때 개념이 진짜로 남습니다. 아래 질문을 그대로 건네고, 아이의 설명을 들어봐 주세요.</div>
+      <div class="todohome"><span class="tlab">이렇게 물어봐 주세요</span>${qline}</div>
+      ${_expl?`<div class="todocore"><span class="tlab">잘 대답하지 못하면, 이렇게 설명해 주세요</span>${_expl} 그런 다음 "그럼 왜 그렇게 될까?"를 한 번 더 같이 짚어 보세요.</div>`:''}
+      ${_reads.length?`<div class="todoread"><span class="tlab">그래도 어려워하면, 아래 내용을 함께 읽어 주세요</span>${_reads.map(function(x){return '<div class="tritem"><div class="trf">'+_esc(x.f||x.s)+'</div>'+(x.w?'<div class="trw"><b>해설</b> '+_esc(x.w)+'</div>':'')+'</div>';}).join('')}</div>`:''}
       <div class="todoguide">한 번에 정확히 답하지 못해도 괜찮습니다. 막히는 지점을 함께 짚어 가는 과정 자체가 가장 좋은 공부입니다.${todoOl?'<br><span class="gmuted">한 줄 정리 · '+md(todoOl)+'</span>':''}</div>
     </div>`; }
 
@@ -1311,7 +1329,7 @@ async function boot(){
   latestRows=(allRows||[]).filter(function(r){return r.round===latest.round;}).sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);});
   latestWrong=Array.from(new Set(latestRows.reduce(function(acc,r){return acc.concat(r.wrongMis||[]);},[])));
   window._deepWrong=[];
-  try{ var _di=await loadRoundItems(latest.course,latest.round); var _da=(latestRows[0]&&latestRows[0].answers)||''; if(_di&&_da){ _di.forEach(function(it,i){ if(_da[i]!==it.a) window._deepWrong.push({c:it.c,unit:it.u,mis:it.mis}); }); } }catch(e){}
+  try{ var _di=await loadRoundItems(latest.course,latest.round); var _da=(latestRows[0]&&latestRows[0].answers)||''; if(_di&&_da){ _di.forEach(function(it,i){ if(_da[i]!==it.a) window._deepWrong.push({c:it.c,unit:it.u,mis:it.mis,s:it.s,f:it.f,w:it.w}); }); } }catch(e){}
   if(demoHard && !window._deepWrong.length){ window._deepWrong=[{c:'CH2-136',unit:'총괄성',mis:'총괄성 정의'},{c:'CH2-149',unit:'총괄성',mis:'총괄성 크기'},{c:'CH2-117',unit:'농도',mis:'몰농도 온도'},{c:'CH2-043',unit:'이상기체',mis:'운동 에너지와 온도'},{c:'CH2-078',unit:'액체',mis:'끓는점 정의'}]; }
   await computeQuad(isDemo);
   render();

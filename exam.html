@@ -107,10 +107,11 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
     return (s || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
   }
   function cleanName(s) { return (s || '').replace(/\s+/g, '').trim(); }
+  function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.replace(/중학교$/, '중').replace(/고등학교$/, '고').replace(/초등학교$/, '초'); }
 
   // ---------- 1) 학생키: 이름+학교 (학년은 키에서 제외, 속성으로만) ----------
   function studentKey(name, school) {
-    return cleanName(school) + '-' + cleanName(name);   // 예: 휘문중-홍길동
+    return normSchool(school) + '-' + cleanName(name);   // 예: 휘문중-홍길동 ('휘문중학교'도 동일 키)
   }
 
   // ---------- 2) 5대 통합축 매핑 (보너스 진단층; 단원·오개념 그룹이 본체) ----------
