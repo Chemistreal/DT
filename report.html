@@ -278,6 +278,49 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .re-close:hover{background:#0B6E6E;}
 .round-embed .card{box-shadow:none;border:1px solid #E7E4DC;}
 .round-embed .card.hero{border:1px solid #0B6E6E;}
+.re-loading{padding:14px 4px;color:var(--sub);font-size:13px;}
+.card.sols h2{margin-bottom:10px;}
+.sol{border:1px solid #E7E4DC;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff;}
+.sol.w{border-left:3px solid #B23C2E;background:#FDF7F5;}
+.sol.c{border-left:3px solid #0B6E6E;}
+.sol.u{border-left:3px solid #C9C6BE;}
+.sol-h{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:5px;}
+.sol-n{font-weight:800;font-size:14px;color:#16202E;min-width:20px;}
+.sol-mark{font-size:11px;font-weight:800;padding:1px 8px;border-radius:20px;}
+.sol-mark.w{color:#B23C2E;background:rgba(178,60,46,.10);}
+.sol-mark.c{color:#0B6E6E;background:rgba(11,110,110,.10);}
+.sol-ans{font-size:12px;color:var(--sub);font-weight:700;font-family:'JetBrains Mono',monospace;}
+.sol-mis{font-size:11px;color:#8A3B2E;background:rgba(178,60,46,.07);border:1px solid rgba(178,60,46,.18);border-radius:20px;padding:1px 8px;margin-left:auto;}
+.sol-s{font-size:13.5px;color:#16202E;line-height:1.5;}
+.sol-w{margin-top:6px;font-size:12.5px;color:#4A4A4A;line-height:1.55;background:#F7F5EF;border-radius:7px;padding:7px 10px;}
+.sol-w b{color:#16202E;}
+.sol-none{padding:12px;color:#0B6E6E;font-size:13px;text-align:center;font-weight:700;}
+.sol-toggle{margin:4px 0 12px;background:none;border:1px solid #16202E;color:#16202E;border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+.sol-toggle:hover{background:#16202E;color:#fff;}
+.misgrp{margin-bottom:15px;}
+.misgrp-h{display:flex;align-items:center;gap:8px;margin:0 0 7px;padding-bottom:5px;border-bottom:2px solid #16202E;}
+.misgrp-t{font-weight:800;font-size:14px;color:#B23C2E;}
+.misgrp-c{font-size:11px;font-weight:800;color:#fff;background:#B23C2E;border-radius:20px;padding:1px 9px;}
+.wrongpick{color:#B23C2E;}
+.oxwrap{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;}
+.oxtable{flex:1;min-width:220px;border-collapse:collapse;font-size:13px;}
+.oxtable th{font-size:11px;font-weight:800;color:var(--sub);letter-spacing:.04em;padding:5px 6px;border-bottom:2px solid #16202E;text-align:center;}
+.oxtable td{padding:4px 6px;text-align:center;border-bottom:1px solid #EEEBE3;font-family:'JetBrains Mono',monospace;}
+.oxtable .tn{color:#16202E;font-weight:700;width:34px;}
+.oxtable .tc{color:#4A4A4A;font-weight:700;}
+.oxtable .tm{font-weight:800;width:56px;}
+.oxtable tr.row-w{background:#FBEDEA;}
+.oxtable tr.row-w .tm{color:#B23C2E;}
+.oxtable tr.row-c .tm{color:#0B6E6E;}
+.oxtable tr.row-u td{color:#B8B4AA;}
+.oxlegend{display:flex;gap:16px;font-size:12px;color:var(--sub);margin-bottom:4px;}
+.oxlegend .lg-c{color:#0B6E6E;font-weight:700;}
+.oxlegend .lg-w{color:#B23C2E;font-weight:700;}
+.soldiv{height:1px;background:#E3DFD4;margin:16px 0;}
+.solh2{font-size:16px;font-weight:800;margin-bottom:6px;}
+
+
+
 
 
 </style></head>
@@ -919,14 +962,9 @@ function dxDeepHTML(name,dx){
 
 var _EMBED=false;
 var _RSNAP=null,_VR=null;
-function showRoundDetail(course,round){
-  var host=document.getElementById('rc-exp-'+course+'-'+round);
-  if(!host) return;
-  var wasOpen=host.classList.contains('open');
-  document.querySelectorAll('.rc-expand.open').forEach(function(e){e.classList.remove('open');e.innerHTML='';});
-  document.querySelectorAll('.rcard.sel').forEach(function(e){e.classList.remove('sel');});
-  if(wasOpen) return;
-  if(typeof ChemEngine==='undefined'||!ChemEngine.cumulative) return;
+function _esc(x){return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function renderRoundEmbed(course,round){
+  if(typeof ChemEngine==='undefined'||!ChemEngine.cumulative) return '';
   var snap={A:A,allRows:allRows,RANK:RANK,COHORT:COHORT,latest:latest,latestRows:latestRows,latestWrong:(typeof latestWrong!=='undefined'?latestWrong:[]),deep:window._deepWrong,em:_EMBED};
   var sub=(snap.allRows||[]).filter(function(r){return r.course===course&&Number(r.round)<=Number(round);});
   var html='';
@@ -940,17 +978,83 @@ function showRoundDetail(course,round){
         latestRows=(allRows||[]).filter(function(r){return r.round===latest.round;}).sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);});
         latestWrong=Array.from(new Set(latestRows.reduce(function(acc,r){return acc.concat(r.wrongMis||[]);},[])));
         window._deepWrong=[]; _EMBED=true;
-        try{ html=render(false); }catch(e){ html='<div class="card"><p class="lede">이 회차 상세를 불러오지 못했습니다.</p></div>'; }
+        try{ html=render(false); }catch(e){ html=''; }
         _EMBED=false;
       }
     }
   }
   A=snap.A; allRows=snap.allRows; RANK=snap.RANK; COHORT=snap.COHORT; latest=snap.latest; latestRows=snap.latestRows; latestWrong=snap.latestWrong; window._deepWrong=snap.deep; _EMBED=snap.em;
-  if(!html) return;
-  host.innerHTML='<div class="round-embed"><div class="re-head"><span>'+(CRSLBL[course]||'화학')+' '+round+'회 시점 상세 리포트</span><button class="re-close" onclick="showRoundDetail(\''+course+'\','+round+')">닫기 \u2715</button></div>'+html+'</div>';
+  return html;
+}
+async function buildSolutions(course,round){
+  var items=null; try{ items=await loadRoundItems(course,round); }catch(e){}
+  if(!items||!items.length) return '';
+  var rows=(allRows||[]).filter(function(r){return r.course===course&&Number(r.round)===Number(round)&&typeof r.answers==='string'&&r.answers.length;});
+  rows.sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);});
+  var ans=(rows[0]&&rows[0].answers)||''; var hasAns=ans.length>=items.length;
+  function ox(v){return v==='O'?'O':(v==='X'?'X':'-');}
+  var wrongItems=[];
+  items.forEach(function(it,i){
+    var cor=it.a, mine=hasAns?ans.charAt(i):null, ok=hasAns?(mine===cor):null;
+    it.__i=i; it.__mine=mine; it.__ok=ok;
+    if(ok===false) wrongItems.push(it);
+  });
+  var out='<div class="card sols"><h2>문항별 정오 <span class="rc-sub">\u00b7 '+(hasAns?('맞음 '+(items.length-wrongItems.length)+' \u00b7 틀림 '+wrongItems.length):'정답표')+'</span></h2>';
+  // ---- 1~60 정오 표 (2컬럼: 앞 30 / 뒤 30) ----
+  function cell(it){
+    var cor=it.a, mine=it.__mine, ok=it.__ok;
+    var cls=ok===false?'row-w':ok===true?'row-c':'row-u';
+    var myTxt=(hasAns&&(mine==='O'||mine==='X'))?ox(mine):'\u2013';
+    return '<tr class="'+cls+'"><td class="tn">'+(it.__i+1)+'</td><td class="tc">'+ox(cor)+'</td><td class="tm">'+myTxt+'</td></tr>';
+  }
+  var half=Math.ceil(items.length/2);
+  function tableHalf(a,b){
+    var r='';
+    for(var i=a;i<b;i++) r+=cell(items[i]);
+    return '<table class="oxtable"><thead><tr><th class="tn">#</th><th class="tc">정답</th><th class="tm">학생답</th></tr></thead><tbody>'+r+'</tbody></table>';
+  }
+  out+='<div class="oxwrap">'+tableHalf(0,half)+tableHalf(half,items.length)+'</div>';
+  if(hasAns) out+='<div class="oxlegend"><span class="lg lg-c">\u25a0 맞음</span><span class="lg lg-w">\u25a0 틀림</span></div>';
+  // ---- 오개념 정리 (틀린 문항 개념별) ----
+  function detail(it){
+    var cor=it.a, mine=it.__mine;
+    var ansTxt=(hasAns&&(mine==='O'||mine==='X'))?'<span class="sol-ans">정답 '+ox(cor)+' \u00b7 내 답 <b class="wrongpick">'+ox(mine)+'</b></span>':'<span class="sol-ans">정답 '+ox(cor)+'</span>';
+    return '<div class="sol w"><div class="sol-h"><span class="sol-n">'+(it.__i+1)+'</span>'+ansTxt+'</div><div class="sol-s">'+_esc(it.s)+'</div>'+(it.w?'<div class="sol-w"><b>해설</b> '+_esc(it.w)+'</div>':'')+'</div>';
+  }
+  if(hasAns&&wrongItems.length){
+    var gmap={},order=[];
+    wrongItems.forEach(function(it){ var m=it.mis||'기타'; if(!gmap[m]){gmap[m]=[];order.push(m);} gmap[m].push(it); });
+    order.sort(function(a,b){return gmap[b].length-gmap[a].length;});
+    out+='<div class="soldiv"></div><h2 class="solh2">오개념 정리 <span class="rc-sub">\u00b7 틀린 '+wrongItems.length+'문항을 개념별로</span></h2>';
+    out+='<p class="rc-help">틀린 문항을 오개념(개념 오류)별로 묶었습니다. 많이 틀린 개념이 위에 옵니다.</p>';
+    order.forEach(function(m){
+      var g=gmap[m];
+      out+='<div class="misgrp"><div class="misgrp-h"><span class="misgrp-t">'+_esc(m)+'</span><span class="misgrp-c">'+g.length+'문항</span></div>';
+      g.forEach(function(it){ out+=detail(it); });
+      out+='</div>';
+    });
+  }else if(hasAns){
+    out+='<div class="soldiv"></div><div class="sol-none">이 회차에 틀린 문항이 없습니다. 완벽합니다.</div>';
+  }
+  return out+'</div>';
+}
+async function showRoundDetail(course,round){
+  var host=document.getElementById('rc-exp-'+course+'-'+round);
+  if(!host) return;
+  var wasOpen=host.classList.contains('open');
+  document.querySelectorAll('.rc-expand.open').forEach(function(e){e.classList.remove('open');e.innerHTML='';});
+  document.querySelectorAll('.rcard.sel').forEach(function(e){e.classList.remove('sel');});
+  if(wasOpen) return;
+  var head='<div class="re-head"><span>'+(CRSLBL[course]||'화학')+' '+round+'회 시점 상세 리포트</span><button class="re-close" onclick="showRoundDetail(\''+course+'\','+round+')">닫기 \u2715</button></div>';
+  host.innerHTML='<div class="round-embed">'+head+'<div class="re-loading">불러오는 중\u2026</div></div>';
   host.classList.add('open');
   var cardEl=host.previousElementSibling; if(cardEl&&cardEl.classList&&cardEl.classList.contains('rcard')) cardEl.classList.add('sel');
   setTimeout(function(){host.scrollIntoView({behavior:'smooth',block:'nearest'});},30);
+  var html=renderRoundEmbed(course,round);
+  var sol=''; try{ sol=await buildSolutions(course,round); }catch(e){ sol=''; }
+  if(!host.classList.contains('open')) return;
+  if(!html&&!sol){ host.innerHTML='<div class="round-embed">'+head+'<div class="re-loading">상세를 불러오지 못했습니다.</div></div>'; return; }
+  host.innerHTML='<div class="round-embed">'+head+html+sol+'</div>';
 }
 function backToFull(){
   if(!_RSNAP) return;
