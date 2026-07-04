@@ -1014,12 +1014,12 @@ function render(){
   if(v==='id'){
     const sv=savedSession();
     h=(sv?`<div class="resume"><div style="flex:1">채점하던 내용이 있습니다 · <b>${sv.name}</b> · ${sv.attemptNo===1?'정시':sv.attemptNo===2?'재시':'재재시'} (${sv.answers.filter(a=>a).length}/${sv.keyItems.length})</div><button onclick="resume()">이어하기</button><button class="x" onclick="clearSession();render()">지우기</button></div>`:'')+
-    `<div class="card"><h1>학생 정보</h1><p class="lede">이름과 학교로 학생을 식별합니다. 학년은 응시 시점 기록용이라 매년 바뀌어도 같은 학생으로 이어집니다.</p>
+    `<div class="card"><h1>학생 정보</h1><p class="lede">이름과 학교로 학생을 식별합니다. 학년은 응시 시점 기록용이라 매년 바뀌어도 같은 학생으로 이어집니다.</p>${S.round?`<div style="margin:2px 0 12px;padding:9px 12px;background:#f6f2e4;border:1px solid #e6dcbf;border-radius:8px;font-size:13px;color:#6b5b1e"><b>회차 유지</b> · ${S.round.title||'선택한 회차'} <a href="#" onclick="go('select');return false" style="color:#9a7b1e;margin-left:6px;font-weight:700;text-decoration:none">회차 변경 →</a></div>`:''}
       <label>이름</label><input id="f_name" value="${S.name}" placeholder="예: 홍길동" autocomplete="off">
       <div class="row2"><div><label>학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중" autocomplete="off"></div>
         <div><label>학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2" inputmode="numeric"></div></div>
       <div class="toggle"><input type="checkbox" id="f_test" ${S.isTest?'checked':''}><label for="f_test" style="margin:0;color:inherit">테스트 모드 · 예시 학생으로 전 과정 점검 (기록에 테스트로 표시)</label></div>
-      <div class="btnrow"><button onclick="saveId()">이 학생 시작</button></div></div>
+      <div class="btnrow"><button onclick="saveId()">${S.round?'이 학생 채점 시작':'이 학생 시작'}</button></div></div>
       <div style="text-align:center;margin-top:13px;display:flex;gap:8px 16px;justify-content:center;flex-wrap:wrap"><a href="pending.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">재시 미응시 현황 보기 →</a><a href="roster.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">반 명단 · 주말시험 미응시 보기 →</a></div>
       ${cohortPanelHTML()}`;
   }
@@ -1068,7 +1068,7 @@ function render(){
       ${dx.byMisconception.slice(0,8).map(m=>`<div class="kv"><span>${m.mis}</span><span class="r">${m.unit} · <b class="mono">${m.count}</b></span></div>`).join('')||'<p class="muted">없음</p>'}
       <h2>단원별 정답률</h2>
       ${dx.byUnit.map(u=>`<div class="ubar"><span class="un">${u.unit}</span><div class="ut"><i style="width:${100-u.rate}%"></i></div><span class="uv mono">${u.total-u.wrong}/${u.total}</span></div>`).join('')}
-      <div class="btnrow">${g.pass?`<button class="ok" onclick="go('done')">통과 화면으로</button>`:`<button onclick="afterReport()">강의록 학습 후 재시 준비</button>`}</div>
+      <div class="btnrow">${g.pass?`<button class="ok" onclick="go('done')">통과 화면으로</button>`:`<button onclick="afterReport()">강의록 학습 후 재시 준비</button>`}<button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button></div>
       <div class="plink">
         <div class="pll">학부모 리포트 링크 <span class="muted">· 이 학생 전용, 회차 쌓이면 자동 갱신</span></div>
         <div class="plurl mono">${reportLink()}</div>
@@ -1109,7 +1109,7 @@ function render(){
       ${reqG.length>2?`<div class="gencourage">${gateEncourage(reqUnlocked,reqG.length)}</div>`:''}
       ${reqG.map(gateHTML).join('')}
       ${hasOpt?`<div class="gatedivider"><span>추가 권장 학습</span>통과에 필수는 아니지만, 함께 보면 더 단단해집니다</div>${optG.map(gateHTML).join('')}`:''}
-      ${S.attemptNo>=3?`<div class="gexhaust">3회(정시·재시·재재시) 모두 응시했습니다. 강의록을 충분히 복습한 뒤 <b>선생님과 1:1로 함께 점검</b>하면 확실히 잡을 수 있어요.</div><div class="btnrow"><button class="ghost" onclick="resetAll()">복습 마치기</button></div>`:`<div class="btnrow"><button ${allRequiredUnlocked()?'':'disabled'} onclick="startRetake()">${allRequiredUnlocked()?(S.attemptNo+1===3?'재재시 시작':'재시 시작'):(hasOpt?'핵심 개념 해제 후 재시':'모든 개념 해제 후 재시')}</button></div>`}</div>`;
+      ${S.attemptNo>=3?`<div class="gexhaust">3회(정시·재시·재재시) 모두 응시했습니다. 강의록을 충분히 복습한 뒤 <b>선생님과 1:1로 함께 점검</b>하면 확실히 잡을 수 있어요.</div><div class="btnrow"><button class="ghost" onclick="resetAll()">복습 마치기</button></div>`:`<div class="btnrow"><button ${allRequiredUnlocked()?'':'disabled'} onclick="startRetake()">${allRequiredUnlocked()?(S.attemptNo+1===3?'재재시 시작':'재시 시작'):(hasOpt?'핵심 개념 해제 후 재시':'모든 개념 해제 후 재시')}</button><button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button></div>`}</div>`;
   }
   else if(v==='retake'){
     const lb=S.attemptNo===2?'재시':'재재시';
@@ -1126,7 +1126,7 @@ function render(){
         <div class="pll" style="justify-content:center">학부모에게 통과 소식 전달 <span class="muted">· 리포트 링크 포함</span></div>
         <div class="btnrow" style="margin-top:7px;justify-content:center"><button class="ghost sm" onclick="copyPassMsg(this)">통과 소식 + 링크 복사</button></div>
       </div>
-      <div class="btnrow" style="max-width:340px;margin:10px auto 0"><button class="ghost" onclick="resetAll()">새 채점</button></div></div>`;
+      <div class="btnrow" style="max-width:340px;margin:10px auto 0"><button onclick="nextStudent()">다음 학생 채점 →</button><button class="ghost" onclick="resetAll()">다른 회차·새 학생</button></div></div>`;
   }
   $('#app').innerHTML=h;
   if(S.view==='grade'||S.view==='retake'){var fe=document.getElementById('entry'); if(fe) fe.focus();}
@@ -1135,7 +1135,7 @@ function render(){
   if(S.view==='select'){ loadStudentHist(); }
 }
 function saveId(){S.name=$('#f_name').value.trim()||'학생';S.school=$('#f_school').value.trim()||'학교';
-  S.grade=$('#f_grade').value.trim();S.isTest=$('#f_test').checked;go('select');}
+  S.grade=$('#f_grade').value.trim();S.isTest=$('#f_test').checked;if(S.round&&S.roundId&&S.round.jeongsi&&S.round.jeongsi.items){startGrade(S.round.jeongsi.items,1);go('grade');}else{go('select');}}
 async function pickRound(file){S.roundId=file;$('#app').innerHTML='<div class="loading">시험 불러오는 중…</div>';
   const rd=await loadRound(file); if(!rd){$('#app').innerHTML='<div class="card"><p>이 회차 데이터는 배포 후 로드됩니다. (미리보기는 화학Ⅱ 7회만 내장)</p><div class="btnrow"><button class="ghost" onclick="go(\'select\')">뒤로</button></div></div>';return;}
   S.round=rd;go('pdf');}
@@ -1145,6 +1145,7 @@ async function resume(){const sv=savedSession();if(!sv)return;$('#app').innerHTM
   S.attemptNo=sv.attemptNo;S.answers=sv.answers;S.cur=sv.cur;S.keyItems=sv.keyItems;S.attempts=sv.attempts;S.seen=sv.seen;S.wrongStmts=sv.wrongStmts||{};
   await ensureForms(); go(sv.view);}
 function resetAll(){clearSession();S=blank();render();}
+function nextStudent(){var kr=S.round,ki=S.roundId;clearSession();S=blank();S.round=kr;S.roundId=ki;S.view='id';render();window.scrollTo(0,0);}
 
 // 부팅
 (async function(){ S=blank(); await loadManifest(); var _q=new URLSearchParams(location.search);
