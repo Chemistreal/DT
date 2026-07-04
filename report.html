@@ -1038,6 +1038,14 @@ async function buildSolutions(course,round){
   }
   return out+'</div>';
 }
+async function fillMainSolutions(){
+  try{
+    var host=document.getElementById('main-sols');
+    if(!host||!latest) return;
+    var sol=await buildSolutions(latest.course,latest.round);
+    if(sol && document.getElementById('main-sols')) document.getElementById('main-sols').innerHTML=sol;
+  }catch(e){}
+}
 async function showRoundDetail(course,round){
   var host=document.getElementById('rc-exp-'+course+'-'+round);
   if(!host) return;
@@ -1273,6 +1281,7 @@ function render(commit){
 
   // 마감 · 서명 + 다음 점검 + 관계
   h+=roundCardsHTML();
+  if(!_EMBED) h+='<div id="main-sols"></div>';
   if(!_EMBED) h+=`<div class="card closing">
     <p class="closetext"><b>한 번의 점수가 아니라, 끝까지 채워 가는 과정을 봅니다.</b> 아이가 약한 곳을 만나도 다시 잡아 통과까지 가는 이 걸음을, 다음 회차에서 또 함께 기록하겠습니다.</p>
     <div class="sign">궁금한 점은 언제든 편하게 말씀해 주세요.<div class="signname">조준모T · 다원교육 영재관 화학</div></div>
@@ -1306,6 +1315,7 @@ async function boot(){
   if(demoHard && !window._deepWrong.length){ window._deepWrong=[{c:'CH2-136',unit:'총괄성',mis:'총괄성 정의'},{c:'CH2-149',unit:'총괄성',mis:'총괄성 크기'},{c:'CH2-117',unit:'농도',mis:'몰농도 온도'},{c:'CH2-043',unit:'이상기체',mis:'운동 에너지와 온도'},{c:'CH2-078',unit:'액체',mis:'끓는점 정의'}]; }
   await computeQuad(isDemo);
   render();
+  try{ await fillMainSolutions(); }catch(e){}
 }
 boot();
 </script>
