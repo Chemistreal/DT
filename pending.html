@@ -38,6 +38,12 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .copybtn{margin-top:8px;font-size:12px;font-weight:700;color:var(--char);background:#fff;border:1.3px solid var(--gold);border-radius:8px;padding:7px 11px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .copybtn:active{transform:scale(.98)}
 .copybtn.copied{background:#eef7f0;border-color:var(--green);color:var(--green)}
+.copygrp{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.cglab{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted);margin-bottom:1px}
+.copygrp .copybtn{margin-top:0;width:100%;text-align:center;border-left-width:3px}
+.copybtn.s1{border-left-color:#3b82f6}
+.copybtn.s2{border-left-color:#f59e0b}
+.copybtn.s3{border-left-color:#ef4444}
 .days{flex-shrink:0;text-align:center;min-width:62px}
 .days .dn{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
 .days .dl{font-size:10.5px;color:var(--muted);margin-top:2px}
@@ -74,22 +80,49 @@ function urgency(days){ return days>=7?'urgent':days>=4?'warn':'ok'; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
 function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-function shareMsg(d){
+var STAGE_LABEL={'1':'1단계 · 월요일','2':'2단계 · 수요일','3':'3단계 · 수업 전날'};
+function shareMsg(d, stage){
   var course=COURSE[d.course]||d.course;
-  return '[다원교육 영재관 화학] '+d.name+' 학생 학부모님께\n\n'
-    +course+' '+d.round+'회 '+d.att+'('+d.score+'점) 미통과 후 '+d.next+'에 아직 응시하지 않아 안내드립니다. '
-    +'아래 링크에서 틀린 개념만 강의록으로 다시 잡은 뒤 '+d.next+'를 볼 수 있습니다(같은 문제는 다시 나오지 않습니다).\n\n'
-    +'▶ '+d.link+'\n\n'
-    +'이번 주 안에 마치면 다음 회차가 한결 수월합니다. 감사합니다.\n조준모T';
+  var head='[다원교육 영재관 · 화학] '+d.name+' 학생';
+  var reask='재시는 아이가 틀린 개념만 골라 개별 출제되며, 처음 본 문항과 겹치지 않습니다.';
+  var link='▶ '+d.link;
+  if(stage==='3'){
+    return head+' 재시 안내 (수업 전날)\n\n'
+      +'안녕하세요, 화학 조준모입니다.\n\n'
+      +'내일 수업을 앞두고 마지막으로 안내드립니다. '+course+' '+d.round+'회 재시가 아직 확인되지 않았는데, 내일 수업 전까지는 꼭 마치고 오면 좋겠습니다. 재시로 개념을 정리한 상태로 들어와야 내일 진도가 온전히 이어집니다.\n\n'
+      +'아래 링크에서 취약 개념 보강 후 재시까지 짧게 마무리해 주세요. '+reask+'\n\n'
+      +link+'\n\n'
+      +'오늘 안에 완료해 두시면 내일 수업이 한결 수월합니다. 감사합니다.\n\n조준모 드림';
+  }
+  if(stage==='2'){
+    return head+' 재시 리마인드\n\n'
+      +'안녕하세요, 화학 조준모입니다.\n\n'
+      +'앞서 안내드린 '+course+' '+d.round+'회 재시가 아직 확인되지 않아 다시 한번 챙겨드립니다. 지금 보강하면 개념이 굳기 전에 정확히 잡히는 시점이라, 이번 주가 지나기 전에 마무리하시길 권합니다.\n\n'
+      +'아래 링크에서 틀린 개념만 강의록으로 짚은 뒤 재시를 보면 됩니다. 오래 걸리지 않고, '+reask+'\n\n'
+      +link+'\n\n'
+      +'수업 전까지 마쳐 두면 다음 진도를 훨씬 편하게 따라갑니다. 감사합니다.\n\n조준모 드림';
+  }
+  // 1단계 (월요일 · 처음 안내)
+  return head+' 재시 안내\n\n'
+    +'안녕하세요, 화학 조준모입니다.\n\n'
+    +d.name+' 학생이 '+course+' '+d.round+'회 '+d.att+'에서 '+d.score+'점으로 통과선(80점)에 조금 못 미쳤습니다. 저희 반은 틀린 개념을 다시 잡아 통과까지 마무리하는 재시 과정을 두는데, 이번 주 재시를 아직 시작하기 전이라 안내드립니다.\n\n'
+    +'아래 링크에서 취약 개념만 강의록으로 보강한 뒤 재시를 보면 됩니다. '+reask+'\n\n'
+    +link+'\n\n'
+    +'누적 시험이라 이번 주 안에 마무리하면 다음 회차가 훨씬 수월합니다. 감사합니다.\n\n조준모 드림';
 }
 function copyShare(btn){
-  var msg=shareMsg(btn.dataset); if(!msg) return;
-  var done=function(){ btn.textContent='복사됨 ✓ 카톡에 붙여넣기'; btn.classList.add('copied');
-    setTimeout(function(){ btn.textContent='카톡 독촉 메시지 복사'; btn.classList.remove('copied'); }, 2000); };
+  var stage=btn.getAttribute('data-stage')||'1';
+  var host=btn.closest('.copygrp')||btn.parentNode;
+  var d={ name:host.getAttribute('data-name'), course:host.getAttribute('data-course'), round:host.getAttribute('data-round'),
+    att:host.getAttribute('data-att'), score:host.getAttribute('data-score'), next:host.getAttribute('data-next'), link:host.getAttribute('data-link') };
+  var msg=shareMsg(d, stage); if(!msg) return;
+  var orig=btn.getAttribute('data-orig')||btn.textContent;
+  var done=function(){ btn.textContent='복사됨 ✓'; btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent=orig; btn.classList.remove('copied'); }, 1800); };
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(msg).then(done).catch(fallback); }
   else fallback();
   function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=msg; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done(); }catch(e){ prompt('독촉 메시지 복사', msg); } }
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done(); }catch(e){ prompt('메시지 복사', msg); } }
 }
 
 function rowHTML(p){
@@ -100,7 +133,12 @@ function rowHTML(p){
     +'<div class="rsub">'+sub+'</div>'
     +'<div class="rwhat"><b>'+(COURSE[p.course]||esc(p.course))+' '+esc(p.round)+'회</b> · '
       +esc(p.lastAttempt)+' '+esc(p.score)+'점 미통과 → <span class="rneed">'+esc(p.nextNeeded)+' 미응시</span></div>'
-    +(p.reportLink?'<button class="copybtn" data-link="'+escAttr(p.reportLink)+'" data-name="'+escAttr(p.name)+'" data-course="'+escAttr(p.course)+'" data-round="'+escAttr(p.round)+'" data-att="'+escAttr(p.lastAttempt)+'" data-score="'+escAttr(p.score)+'" data-next="'+escAttr(p.nextNeeded)+'" onclick="copyShare(this)">카톡 독촉 메시지 복사</button>':'')
+    +(p.reportLink?'<div class="copygrp" data-link="'+escAttr(p.reportLink)+'" data-name="'+escAttr(p.name)+'" data-course="'+escAttr(p.course)+'" data-round="'+escAttr(p.round)+'" data-att="'+escAttr(p.lastAttempt)+'" data-score="'+escAttr(p.score)+'" data-next="'+escAttr(p.nextNeeded)+'">'
+    +'<div class="cglab">카톡 안내 복사</div>'
+    +'<button class="copybtn s1" data-stage="1" data-orig="1단계 · 월 안내" onclick="copyShare(this)">1단계 · 월 안내</button>'
+    +'<button class="copybtn s2" data-stage="2" data-orig="2단계 · 수 리마인드" onclick="copyShare(this)">2단계 · 수 리마인드</button>'
+    +'<button class="copybtn s3" data-stage="3" data-orig="3단계 · 전날 최종" onclick="copyShare(this)">3단계 · 전날 최종</button>'
+    +'</div>':'')
     +'</div><div class="days '+u+'"><div class="dn">'+p.days+'</div><div class="dl">일 경과<br>('+esc(p.lastDate)+')</div></div></div>';
 }
 
