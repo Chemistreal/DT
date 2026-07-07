@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{if(localStorage.getItem('dt_admgate')!=='ok')document.documentElement.classList.add('adm-gating');}catch(e){document.documentElement.classList.add('adm-gating');}</script>
+<style>html.adm-gating body{visibility:hidden}</style>
+<title>재시 수기 입력 · Chemistreal</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{ --paper:#FAFAF7;--surface:#FFFFFF;--ink:#16202E;--sub:#61707F;--faint:#8A95A2;--line:#E7E8E2;
+  --teal:#0B6E6E;--teal-d:#0A5A5A;--o:#1B8A4C;--o-bg:#E7F5EC;--x:#C0392B;--x-bg:#FBEBE9;--brass:#A9853C;
+  --shadow:0 1px 2px rgba(16,32,46,.04),0 6px 20px rgba(16,32,46,.05); }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Pretendard,-apple-system,system-ui,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:22px 16px 80px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+header h1{font-size:17px;font-weight:900}
+header .sub{font-size:12.5px;color:var(--sub);font-weight:600}
+header .right{margin-left:auto;display:flex;gap:10px}
+header a{color:var(--faint);font-size:12.5px;text-decoration:none;cursor:pointer}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-top:14px}
+label{display:block;font-size:12px;font-weight:800;color:var(--sub);margin:0 0 5px}
+select,input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:14.5px;background:#fff;font-family:inherit}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1;min-width:120px}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+.btn.pri{background:var(--teal);color:#fff}.btn.pri:disabled{background:#B9C4C4;cursor:not-allowed}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--sub)}
+.note{font-size:12.5px;color:var(--sub);line-height:1.55}
+.err{color:var(--x);font-size:13px;font-weight:700}.ok{color:var(--o);font-weight:800}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 13px;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--ink)}
+.chip.cur{border-color:var(--teal);background:var(--o-bg);color:var(--teal-d)}
+.stuhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.stuhead .nm{font-size:17px;font-weight:900}.stuhead .meta{font-size:12.5px;color:var(--sub)}
+.oxgrid{display:grid;grid-template-columns:1fr;gap:5px;margin-top:8px}
+@media(min-width:720px){.oxgrid{grid-template-columns:1fr 1fr;column-gap:20px}}
+.oxrow{display:flex;align-items:center;gap:8px;padding:5px 7px;border-radius:9px;font-size:13px;line-height:1.5}
+.oxrow.cur{background:var(--o-bg);outline:2px solid var(--teal)}
+.oxrow .qn{min-width:26px;font-weight:800;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums}
+.oxrow .qs{flex:1;color:var(--ink)}
+.oxbtns{display:flex;gap:4px}
+.oxb{width:34px;height:32px;border-radius:8px;border:1.6px solid var(--line);background:#fff;font-size:14px;font-weight:800;color:var(--sub);cursor:pointer;font-family:inherit}
+.oxb.o.sel{background:var(--o);border-color:var(--o);color:#fff}
+.oxb.x.sel{background:var(--x);border-color:var(--x);color:#fff}
+.gradebar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);margin:16px -16px -16px;padding:12px 16px;border-radius:0 0 14px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cnt{font-weight:900;font-variant-numeric:tabular-nums}
+.scorepill{font-weight:900;font-size:15px;color:var(--teal-d)}
+.statusline{margin-top:10px;font-size:13px}
+.loglist{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.logrow{font-size:13px;color:var(--sub);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.logrow b{color:var(--ink)}.logrow a{color:var(--teal-d);font-weight:700;text-decoration:none;font-size:12.5px}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;background:#fff;padding:1px 6px;font-size:11.5px;font-family:inherit;font-weight:700;color:var(--sub)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.locked{max-width:420px;margin:22vh auto;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>재시 수기 입력</h1>
+    <span class="sub">종이 재시 결과를 O/X로 입력 · 자동 채점 · 리포트 반영</span>
+    <div class="right"><a href="home.html">홈</a><a onclick="resetTok()">코드 재입력</a></div>
+  </header>
+
+  <div class="card">
+    <div class="row">
+      <div style="max-width:150px"><label>회차</label><select id="rd" onchange="onPick()"></select></div>
+      <div><label>반</label><select id="cls" onchange="pickClass()"><option value="">명단 불러오는 중...</option></select></div>
+      <div style="max-width:130px"><label>시도</label><select id="att" onchange="onPick()"><option value="2">재시</option><option value="3">재재시</option></select></div>
+      <div style="flex:0;display:flex;align-items:flex-end"><button class="btn ghost" onclick="manualStudent()">직접 입력</button></div>
+    </div>
+    <div id="chips" class="chips"></div>
+    <p class="note" id="rosterNote" style="margin-top:9px"></p>
+  </div>
+
+  <div class="card" id="entryCard" style="display:none">
+    <div class="stuhead"><span class="nm" id="stuNm"></span><span class="meta" id="stuMeta"></span></div>
+    <div class="row" id="manualRow" style="display:none;margin-bottom:10px">
+      <div><label>이름</label><input type="text" id="mNm" placeholder="홍길동"></div>
+      <div><label>학교</label><input type="text" id="mSc" placeholder="OO중학교"></div>
+      <div style="max-width:110px"><label>학년</label><input type="text" id="mGr" placeholder="2"></div>
+      <div style="flex:0;display:flex;align-items:flex-end"><button class="btn ghost" onclick="loadForManual()">재시지 불러오기</button></div>
+    </div>
+    <p class="note" id="entryNote">그 학생의 재시지를 다시 만들어 문항을 불러온 뒤, 종이에 적힌 O/X를 그대로 입력합니다. 키보드 <kbd>O</kbd>/<kbd>1</kbd> = 옳다, <kbd>X</kbd>/<kbd>2</kbd> = 틀리다, 자동 전진. <kbd>&larr;</kbd><kbd>&rarr;</kbd> 이동.</p>
+    <div id="loadingItems" style="display:none" class="note"><span class="spin"></span> 재시지 불러오는 중...</div>
+    <div class="oxgrid" id="oxgrid"></div>
+    <div class="gradebar" id="gradebar" style="display:none">
+      <span class="cnt"><span id="cntDone">0</span>/<span id="cntTot">0</span> 입력</span>
+      <span id="gradePrev" class="note"></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost" style="font-size:12.5px;padding:7px 11px" onclick="clearAll()">전체 지우기</button>
+      <button class="btn pri" id="saveBtn" onclick="gradeAndSave()" disabled>채점하고 저장</button>
+    </div>
+    <div class="statusline" id="statusline"></div>
+  </div>
+
+  <div class="card" id="logCard" style="display:none">
+    <label>이번 세션 저장 기록</label>
+    <div class="loglist" id="loglist"></div>
+  </div>
+</div>
+
+<script src="chemengine.js"></script>
+<script src="retakegen.js"></script>
+<script>
+var SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+var ATT_LABEL={2:'재시',3:'재재시'};
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function reportBase(){var p=location.href.split('?')[0].split('#')[0];return p.slice(0,p.lastIndexOf('/')+1);}
+
+function admTok(){var t='';try{t=localStorage.getItem('dt_admtok')||'';}catch(e){}return (t||'').trim();}
+function admReset(){try{localStorage.removeItem('dt_admtok');}catch(e){}}
+function resetTok(){try{localStorage.removeItem('dt_admgate');}catch(e){} location.reload();}
+function gateOK(){
+  try{ if(localStorage.getItem('dt_admgate')==='ok'){ document.documentElement.classList.remove('adm-gating'); return true; } }catch(e){}
+  var ok=false;
+  for(var i=0;i<5;i++){ var v=prompt('관리자 비밀번호를 입력하세요'); if(v===null) break; if((v||'').trim()==='0000'){ ok=true; break; } }
+  if(ok){ try{ localStorage.setItem('dt_admgate','ok'); }catch(e){} document.documentElement.classList.remove('adm-gating'); return true; }
+  document.body.innerHTML='<div class="locked"><div style="font-size:38px">\uD83D\uDD12</div><h2 style="margin:10px 0 6px;font-size:19px">관리자 전용 페이지</h2><p style="color:#61707F;font-size:14px;line-height:1.6">비밀번호가 필요합니다.</p><button onclick="location.reload()" style="margin-top:14px;border:0;border-radius:9px;padding:9px 16px;background:#0B6E6E;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">다시 시도</button></div>';
+  document.documentElement.classList.remove('adm-gating'); return false;
+}
+
+var MAN=null, CLASSES=[], CUR={round:1,att:2,ci:-1,si:-1,manual:false,name:'',school:'',year:'',key:''};
+var ITEMS=null, KEYARR=null, OX=[], AIDX=0, SCORING=null, SAVING=false, DONE={};
+
+async function boot(){
+  if(!gateOK()) return;
+  try{ MAN=await DTRetake.loadManifest(''); }catch(e){}
+  var rdSel=document.getElementById('rd');
+  var rounds=(MAN&&MAN.rounds)||[];
+  var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+  rdSel.innerHTML=rounds.map(function(m){return '<option value="'+m.course+'|'+m.round+'">'+(COURSE_KO[m.course]||m.course)+' '+m.round+'회</option>';}).join('');
+  if(rounds.length){ var f=rounds[0]; CUR.round=f.round; CUR.course=f.course; }
+  loadNames();
+}
+function curRoundSel(){ var v=document.getElementById('rd').value.split('|'); CUR.course=v[0]; CUR.round=Number(v[1]); }
+function onPick(){ curRoundSel(); CUR.att=Number(document.getElementById('att').value)||2; renderChips();
+  if(CUR.name && !CUR.manual) loadForStudent(); }
+
+async function loadNames(){
+  var note=document.getElementById('rosterNote'), cs=document.getElementById('cls');
+  var code=admTok();
+  try{
+    var r=await fetch(SAVE_URL+'?action=names&code='+encodeURIComponent(code)+'&t='+Date.now(),{cache:'no-store'});
+    var j=await r.json();
+    if(!j||j.ok===false){ cs.innerHTML='<option value="">명단 없음</option>'; note.textContent='명단을 못 불러왔습니다. 직접 입력으로 진행하세요.'; return; }
+    CLASSES=j.classes||[];
+    cs.innerHTML='<option value="">반 선택</option>'+CLASSES.map(function(k,i){return '<option value="'+i+'">'+esc(k.label)+' ('+((k.students||[]).length)+'명)</option>';}).join('');
+    note.textContent='반과 학생을 고르면 그 학생의 재시지를 불러옵니다.';
+  }catch(e){ cs.innerHTML='<option value="">명단 없음</option>'; note.textContent='명단을 못 불러왔습니다. 직접 입력으로 진행하세요.'; }
+}
+function pickClass(){ CUR.ci=Number(document.getElementById('cls').value); if(isNaN(CUR.ci)) CUR.ci=-1; CUR.si=-1; renderChips(); }
+function renderChips(){
+  var box=document.getElementById('chips'); var k=CLASSES[CUR.ci];
+  if(!k){ box.innerHTML=''; return; }
+  box.innerHTML=(k.students||[]).map(function(s,i){
+    var key=ChemEngine.studentKey(s.name,s.school||'');
+    var done=DONE[key+'#'+CUR.course+CUR.round+'#'+CUR.att];
+    return '<button type="button" class="chip'+(i===CUR.si?' cur':'')+(done?' cur':'')+'" onclick="pickStudent('+i+')">'+esc(s.name)+(done?' \u2713':'')+'</button>';
+  }).join('');
+}
+function pickStudent(i){
+  var k=CLASSES[CUR.ci]; var s=k&&k.students&&k.students[i]; if(!s) return;
+  CUR.si=i; CUR.manual=false; CUR.name=s.name||''; CUR.school=s.school||''; CUR.year=s.year||'';
+  CUR.key=ChemEngine.studentKey(CUR.name,CUR.school);
+  loadForStudent();
+}
+function manualStudent(){ CUR.manual=true; CUR.si=-1; CUR.name=''; CUR.school=''; CUR.year='';
+  document.getElementById('entryCard').style.display='block';
+  document.getElementById('manualRow').style.display='flex';
+  document.getElementById('stuNm').textContent='직접 입력';
+  document.getElementById('stuMeta').textContent='';
+  document.getElementById('oxgrid').innerHTML=''; document.getElementById('gradebar').style.display='none';
+  document.getElementById('statusline').innerHTML='';
+}
+function loadForManual(){
+  CUR.name=(document.getElementById('mNm').value||'').trim();
+  CUR.school=(document.getElementById('mSc').value||'').trim();
+  CUR.year=(document.getElementById('mGr').value||'').trim();
+  if(!CUR.name){ document.getElementById('statusline').innerHTML='<span class="err">이름을 입력하세요.</span>'; return; }
+  CUR.key=ChemEngine.studentKey(CUR.name,CUR.school);
+  loadForStudent();
+}
+
+async function loadForStudent(){
+  curRoundSel(); CUR.att=Number(document.getElementById('att').value)||2;
+  document.getElementById('entryCard').style.display='block';
+  document.getElementById('manualRow').style.display=CUR.manual?'flex':'none';
+  document.getElementById('stuNm').textContent=CUR.manual?(CUR.name||'직접 입력'):CUR.name;
+  document.getElementById('stuMeta').textContent=(CUR.school||'')+(CUR.year?(' \u00b7 '+CUR.year+'학년'):'')+' \u00b7 '+(ATT_LABEL[CUR.att]||'재시');
+  document.getElementById('oxgrid').innerHTML=''; document.getElementById('gradebar').style.display='none';
+  document.getElementById('statusline').innerHTML='';
+  var li=document.getElementById('loadingItems'); li.style.display='block';
+  ITEMS=null; KEYARR=null; OX=[]; AIDX=0; SAVING=false;
+  try{
+    var rr=await DTRetake.items({key:CUR.key, course:CUR.course, round:CUR.round, attemptNo:CUR.att});
+    li.style.display='none';
+    if(!rr || !rr.items || !rr.items.length){
+      document.getElementById('oxgrid').innerHTML='';
+      document.getElementById('statusline').innerHTML='<span class="err">이 학생의 '+CUR.round+'회 첫 응시 기록이 없어 재시지를 만들 수 없습니다.</span> 먼저 정시를 응시했는지 확인하세요.';
+      return;
+    }
+    ITEMS=rr.items; SCORING=rr.scoring||{pass:80};
+    KEYARR=ITEMS.map(function(it){return it.a==='O'?'O':'X';});
+    OX=ITEMS.map(function(){return '';});
+    AIDX=0;
+    renderGrid(); refreshBar();
+    document.getElementById('gradebar').style.display='flex';
+    document.getElementById('cntTot').textContent=ITEMS.length;
+  }catch(e){
+    li.style.display='none';
+    document.getElementById('statusline').innerHTML='<span class="err">재시지 로드 실패: '+esc(e&&e.message?e.message:String(e))+'</span>';
+  }
+}
+
+function renderGrid(){
+  var g=document.getElementById('oxgrid'); if(!ITEMS) return;
+  g.innerHTML=ITEMS.map(function(it,i){
+    return '<div class="oxrow'+(i===AIDX?' cur':'')+'" id="ox'+i+'" onclick="setIdx('+i+')">'
+      +'<span class="qn">'+(i+1)+'</span>'
+      +'<span class="qs">'+esc(it.s)+'</span>'
+      +'<span class="oxbtns">'
+      +'<button type="button" class="oxb o'+(OX[i]==='O'?' sel':'')+'" onclick="setOX('+i+',\'O\');event.stopPropagation()">O</button>'
+      +'<button type="button" class="oxb x'+(OX[i]==='X'?' sel':'')+'" onclick="setOX('+i+',\'X\');event.stopPropagation()">X</button>'
+      +'</span></div>';
+  }).join('');
+}
+function setIdx(i){ AIDX=Math.max(0,Math.min(ITEMS.length-1,i)); renderGrid(); var el=document.getElementById('ox'+AIDX); if(el&&el.scrollIntoView) el.scrollIntoView({block:'nearest'}); }
+function setOX(i,v){ OX[i]=(OX[i]===v)?'':v; if(OX[i]!=='') AIDX=Math.min(ITEMS.length-1,i+1); renderGrid(); refreshBar(); }
+function clearAll(){ if(!ITEMS) return; OX=ITEMS.map(function(){return '';}); AIDX=0; renderGrid(); refreshBar(); document.getElementById('statusline').innerHTML=''; }
+function refreshBar(){
+  var done=OX.filter(function(a){return a!=='';}).length;
+  document.getElementById('cntDone').textContent=done;
+  var btn=document.getElementById('saveBtn'); if(btn) btn.disabled=(done===0)||SAVING;
+  var gp=document.getElementById('gradePrev');
+  if(gp && ITEMS){
+    if(done>0){ var s=scoreNow(); gp.innerHTML='<span class="scorepill">'+s.score+'점</span>'+(s.wrong.length?' <span style="color:var(--x)">오답 '+s.wrong.length+'</span>':(done===ITEMS.length?' <span class="ok">전 문항 정답</span>':'')); }
+    else gp.textContent='';
+  }
+}
+function scoreNow(){
+  var correct=0, wrong=[];
+  for(var i=0;i<ITEMS.length;i++){ if(OX[i]!=='' && OX[i]===KEYARR[i]) correct++; else wrong.push(i+1); }
+  var per=(SCORING&&SCORING.per)||(100/ITEMS.length);
+  return { correct:correct, wrong:wrong, score:Math.round(correct*per) };
+}
+document.addEventListener('keydown',function(ev){
+  var ec=document.getElementById('entryCard'); if(!ec||ec.style.display==='none'||!ITEMS) return;
+  var tag=(document.activeElement&&document.activeElement.tagName)||''; if(tag==='INPUT'||tag==='SELECT') return;
+  var k=ev.key;
+  if(k==='o'||k==='O'||k==='1'){ setOX(AIDX,'O'); ev.preventDefault(); }
+  else if(k==='x'||k==='X'||k==='2'){ setOX(AIDX,'X'); ev.preventDefault(); }
+  else if(k==='Backspace'){ if(OX[AIDX]==='') AIDX=Math.max(0,AIDX-1); OX[AIDX]=''; renderGrid(); refreshBar(); ev.preventDefault(); }
+  else if(k==='ArrowRight'||k==='ArrowDown'){ setIdx(AIDX+1); ev.preventDefault(); }
+  else if(k==='ArrowLeft'||k==='ArrowUp'){ setIdx(AIDX-1); ev.preventDefault(); }
+});
+
+async function gradeAndSave(){
+  if(SAVING||!ITEMS) return;
+  var st=document.getElementById('statusline');
+  var blanks=OX.filter(function(a){return a==='';}).length;
+  if(blanks>0 && !confirm('빈 문항 '+blanks+'개는 오답 처리됩니다. 저장할까요?')) return;
+  var ans=OX.map(function(a){return a==='O'?'O':a==='X'?'X':'';});
+  var g=ChemEngine.gradeAttempt(ans, ITEMS, SCORING);
+  var forms=await DTRetake.forms('');
+  var dx=ChemEngine.diagnose(g, forms);
+  var attLabel=ATT_LABEL[CUR.att]||'재시';
+  var sk=ChemEngine.studentKey(CUR.name,CUR.school);
+  var link=reportBase()+'report.html?student='+sk+'-'+DTRetake.tokenFor(sk);
+  var payload={
+    studentKey:sk, reportLink:link, name:CUR.name, school:CUR.school, year:CUR.year,
+    course:CUR.course, round:CUR.round, attempt:attLabel,
+    score:g.score, pass:g.pass, correctCount:g.correctCount, wrongCount:g.wrongCount,
+    wrongMis:(dx.byMisconception||[]).map(function(m){return m.mis;}),
+    wrongAxes:(dx.byAxis||[]).reduce(function(o,a){o[a.key]=a.wrong;return o;},{}),
+    units:(dx.byUnit||[]).map(function(u){return {u:u.unit,t:u.total,w:u.wrong};}),
+    axes:(dx.byAxis||[]).map(function(a){return {k:a.key,t:a.total,w:a.wrong};}),
+    isTest:false,
+    answers:ans.map(function(a){return a==='O'?'O':a==='X'?'X':'.';}).join('')
+  };
+  SAVING=true; refreshBar();
+  st.innerHTML='<span class="spin"></span> 저장 중...';
+  var saved=false;
+  try{
+    await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    try{
+      var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(DTRetake.tokWith(sk))+'&t='+Date.now(),{cache:'no-store'});
+      var vj=await vr.json();
+      saved=!!(vj&&vj.rows&&vj.rows.some(function(r){ return r.course===CUR.course && String(r.round)===String(CUR.round) && r.attempt===attLabel && String(r.answers||'')===payload.answers; }));
+    }catch(e){}
+  }catch(e){}
+  SAVING=false; refreshBar();
+  if(saved){
+    DONE[sk+'#'+CUR.course+CUR.round+'#'+CUR.att]=true;
+    var okMsg='<span class="ok">시트 저장 확인</span> \u00b7 '+esc(CUR.name)+' '+CUR.round+'회 '+attLabel+' '+g.score+'점'+(g.pass?' <span class="ok">통과</span>':' <span class="err">미달</span>');
+    addLog(CUR.name, CUR.round, attLabel, g.score, g.pass, link);
+    renderChips();
+    st.innerHTML=okMsg;
+  }else{
+    st.innerHTML='<span class="err">저장 확인 실패.</span> 네트워크·배포를 확인한 뒤 다시 [채점하고 저장]. 같은 학생·회차·시도는 덮어쓰기라 중복되지 않습니다.';
+  }
+}
+function addLog(name,round,att,score,pass,link){
+  document.getElementById('logCard').style.display='block';
+  var d=document.createElement('div'); d.className='logrow';
+  d.innerHTML='<b>'+esc(name)+'</b> '+round+'회 '+att+' \u00b7 '+score+'점 '+(pass?'통과':'미달')+' <a href="'+esc(link)+'" target="_blank" rel="noopener">리포트 &rarr;</a>';
+  var box=document.getElementById('loglist'); box.insertBefore(d,box.firstChild);
+}
+boot();
+</script>
+</body>
+</html>

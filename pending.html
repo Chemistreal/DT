@@ -75,6 +75,9 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .copybtn.a1{border-left-color:#3b82f6}
 .copybtn.a2{border-left-color:#8b5cf6}
 .copybtn.abc{border-left-color:var(--gold)}
+.zipbtn{border:1px solid var(--teal,#0B6E6E);color:var(--teal-d,#0A5A5A);background:#fff;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:8px;white-space:nowrap}
+.zipbtn:hover{background:rgba(11,110,110,.07)}
+.zipbtn[data-busy="1"]{opacity:.7;cursor:progress}
 </style>
 </head>
 <body>
@@ -181,7 +184,8 @@ function absentClassHTML(c){
   var el=examLink(c.course, c.round);
   var head='<div class="abx-head"><span class="abx-nm">'+esc(c.label)+'</span>'
     +'<span class="abx-badge">'+(COURSE[c.course]||esc(c.course))+' '+esc(c.round)+'회</span>'
-    +'<span class="abx-cnt">미응시 '+c.absent.length+'/'+c.total+'명</span></div>';
+    +'<span class="abx-cnt">미응시 '+c.absent.length+'/'+c.total+'명</span>'
+    +'<button class="zipbtn" data-course="'+escAttr(c.course)+'" data-round="'+Number(c.round)+'" data-label="'+escAttr(c.label)+'" data-absent="'+escAttr(JSON.stringify(c.absent))+'" onclick="zipExamClass(this)">시험지 ZIP</button></div>';
   var bc='<div class="copygrp abx-bc" data-kind="exam" data-name="" data-course="'+escAttr(c.course)+'" data-round="'+escAttr(c.round)+'" data-link="'+escAttr(el)+'">'
     +'<button class="copybtn abc" data-stage="bc" data-orig="반 전체 공지 복사" onclick="copyShare(this)">반 전체 공지 복사</button></div>';
   var stus=(c.absent||[]).map(function(nm){
@@ -213,6 +217,7 @@ function rowHTML(p){
 
 function render(P, ABS){
   var a=P.active||[], s=P.stale||[];
+  _ACTIVE=a.slice();
   var absClasses=(ABS&&ABS.classes||[]).filter(function(c){return c.absent&&c.absent.length;});
   var absN=absClasses.reduce(function(t,c){return t+c.absent.length;},0);
   var gen=document.getElementById('gen'); if(gen) gen.textContent='갱신 '+(P.generatedAt||(ABS&&ABS.generatedAt)||'');
@@ -230,7 +235,7 @@ function render(P, ABS){
   else if(!absN){ h+='<div class="empty">이번 회차 시험을 응시하지 않은 학생이 없습니다.</div>'; }
   else{ h+='<div class="muted-note">저장된 반 명단 기준, 이번 회차 시험 응시 기록이 없는 학생입니다. 버튼으로 온라인 응시 안내를 복사해 보내세요. (OX 워밍업이 아니라 정식 60문항 시험입니다.)</div>'; h+=absClasses.map(absentClassHTML).join(''); }
 
-  h+='<div class="sec-h">재시 필요 <span class="tag">'+a.length+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 오래된 순</span></div>';
+  h+='<div class="sec-h">재시 필요 <span class="tag">'+a.length+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 오래된 순</span>'+(a.length?'<button class="zipbtn" style="margin-left:auto" onclick="zipRetakePending(this)">재시지 ZIP ('+a.length+'명)</button>':'')+'</div>';
   if(!a.length){ h+='<div class="empty">2주 이내 재시 미응시 학생이 없습니다.</div>'; }
   else{ h+='<div class="muted-note">정시(또는 재시) 미통과 후 다음 재시를 아직 보지 않은 학생입니다. 토요일 수업 전에 확인하세요.</div>'; h+=a.map(rowHTML).join(''); }
 
@@ -279,7 +284,66 @@ function load(){
     document.getElementById('app').innerHTML='<div class="err">연결 실패: '+esc(String(e))+'<br>Apps Script 웹앱이 배포되어 있고 액세스가 "모든 사용자"인지 확인하세요.</div>';
   });
 }
+/* ===== 오프라인 인쇄용 ZIP 다운로드 ===== */
+var _ACTIVE=[];   // 재시 필요 목록 캐시(zipRetakePending 용)
+var JSZIP_URL='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+function loadJSZip(){ if(window.JSZip) return Promise.resolve(); return new Promise(function(res,rej){ var s=document.createElement('script'); s.src=JSZIP_URL; s.onload=res; s.onerror=function(){rej(new Error('JSZip 로드 실패'));}; document.head.appendChild(s); }); }
+function safeName(s){ return String(s||'학생').replace(/[\\/:*?"<>|]/g,'').trim()||'학생'; }
+function keyFromLink(link){ try{ var m=String(link||'').match(/[?&]student=([^&]+)/); if(!m) return ''; var raw=decodeURIComponent(m[1]); var li=raw.lastIndexOf('-'); if(li>0 && /^[0-9a-z]{8}$/.test(raw.slice(li+1))) return raw.slice(0,li); return raw; }catch(e){ return ''; } }
+function saveBlob(blob,fname){ var u=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=u; a.download=fname; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },1500); }
+
+// 미응시(정시) 반 -> 그 회차 시험지 1부를 학생 이름별로 복사해 ZIP
+async function zipExamClass(btn){
+  if(btn.dataset.busy==='1') return; var orig=btn.textContent; btn.dataset.busy='1';
+  var course=btn.getAttribute('data-course'), round=Number(btn.getAttribute('data-round')), label=btn.getAttribute('data-label');
+  var names=[]; try{ names=JSON.parse(btn.getAttribute('data-absent')||'[]'); }catch(e){ names=[]; }
+  if(!names.length){ alert('미응시자가 없습니다.'); btn.dataset.busy='0'; return; }
+  try{
+    btn.textContent='라이브러리\u2026'; await loadJSZip();
+    btn.textContent='시험지 생성\u2026';
+    var made=await DTPDF.make({course:course, round:round, kind:'exam', variant:'jeongsi', output:'blob', onstep:function(m){ btn.textContent=m||orig; }});
+    var zip=new JSZip();
+    names.forEach(function(nm){ zip.file(safeName(nm)+'.pdf', made.blob); });
+    btn.textContent='압축\u2026';
+    var out=await zip.generateAsync({type:'blob'});
+    saveBlob(out, safeName(label)+'_'+round+'회_시험지.zip');
+    btn.textContent='\u2713 완료';
+  }catch(e){ btn.textContent=orig; alert('ZIP 생성 실패: '+(e&&e.message?e.message:e)); }
+  setTimeout(function(){ btn.textContent=orig; btn.dataset.busy='0'; },1600);
+}
+
+// 재시 필요 학생 -> 각자 개인화 재시지(이름.pdf) ZIP
+async function zipRetakePending(btn){
+  if(btn.dataset.busy==='1') return; var orig=btn.textContent; btn.dataset.busy='1';
+  var list=_ACTIVE.slice();
+  if(!list.length){ alert('재시 필요 학생이 없습니다.'); btn.dataset.busy='0'; return; }
+  try{
+    btn.textContent='라이브러리\u2026'; await loadJSZip();
+    var zip=new JSZip(); var ok=0, fail=[];
+    for(var i=0;i<list.length;i++){
+      var s=list[i]; var key=keyFromLink(s.reportLink);
+      btn.textContent='재시지 '+(i+1)+'/'+list.length+' ('+ (s.name||'') +')';
+      try{
+        var rr=await DTRetake.items({key:key, course:s.course, round:s.round});
+        if(!rr || !rr.items.length){ fail.push(s.name||key); continue; }
+        var made=await DTPDF.make({items:rr.items, course:s.course, round:Number(s.round), vlabel:'재시', kind:'exam', scoring:rr.scoring, output:'blob', fname:safeName(s.name)+'.pdf'});
+        zip.file(made.fname, made.blob); ok++;
+      }catch(e){ fail.push((s.name||key)+' ('+(e&&e.message?e.message:e)+')'); }
+    }
+    if(!ok){ btn.textContent=orig; alert('생성된 재시지가 없습니다.'+(fail.length?'\n실패: '+fail.slice(0,5).join(', '):'')); btn.dataset.busy='0'; return; }
+    btn.textContent='압축\u2026';
+    var out=await zip.generateAsync({type:'blob'});
+    saveBlob(out, '재시지_'+ok+'명.zip');
+    btn.textContent='\u2713 '+ok+'명';
+    if(fail.length) alert('일부 실패('+fail.length+'명): '+fail.slice(0,6).join(', ')+'\n(첫 응시 기록이 없으면 재시지를 만들 수 없습니다.)');
+  }catch(e){ btn.textContent=orig; alert('ZIP 생성 실패: '+(e&&e.message?e.message:e)); }
+  setTimeout(function(){ btn.textContent=orig; btn.dataset.busy='0'; },1800);
+}
+
 load();
 </script>
+<script src="chemengine.js"></script>
+<script src="retakegen.js"></script>
+<script src="pdfgen.js"></script>
 </body>
 </html>
