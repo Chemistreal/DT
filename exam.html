@@ -584,15 +584,12 @@ function selectView(){
 function idView(){
   const pass=(R.scoring&&R.scoring.pass)||80;
   return '<div class="card"><h1>'+esc(R.title)+'</h1>'+
-    '<p class="lede">60문항 OX · 합격 '+pass+'점. 이름과 학교로 식별합니다(매년 학년이 바뀌어도 같은 학생으로 이어집니다).</p>'+
-    '<div class="rosterpick"><button type="button" class="rpbtn" onclick="rosterPick()">반 명단에서 이름 선택하기</button><span class="rpnote" id="rpnote"></span>'+
-    '<div id="rpsel" style="display:none;margin-top:8px"><div class="row2"><div><label>반</label><select id="rpc" onchange="rpClass()"></select></div>'+
-    '<div><label>이름</label><select id="rps" onchange="rpStudent()"></select></div></div></div></div>'+
+    '<p class="lede">60문항 OX · 합격 '+pass+'점.</p>'+
     '<label>이름</label><input id="nm" value="'+esc(info.name)+'" placeholder="홍길동" autocomplete="off">'+
     '<div class="row2"><div><label>학교</label><input id="sc" value="'+esc(info.school)+'" placeholder="OO중학교" autocomplete="off"></div>'+
     '<div><label>학년</label><input id="gr" value="'+esc(info.grade)+'" placeholder="중2" autocomplete="off"></div></div>'+
     '<div class="btnrow"><button onclick="startExam()">시험 시작 →</button></div>'+
-    '<div style="text-align:center;margin-top:10px"><a href="'+PDF_BASE+'index.html" style="color:var(--faint);font-size:12.5px;text-decoration:none">← 채점·진단 앱으로</a></div></div>';
+    '</div>';
 }
 function examView(){
   const items=R.jeongsi.items, n=items.length, it=items[cur];

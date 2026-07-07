@@ -915,7 +915,7 @@ function quadCard(){
     +'<div class="quad">'
     +'<div class="qcell alert"><div class="qh">쉬운데 틀림 · 최우선</div><div class="qn">'+b.ew.length+'</div><div class="qs">반 대부분이 맞힌 문항</div></div>'
     +'<div class="qcell"><div class="qh">어려운데 틀림 · 도전</div><div class="qn">'+b.hw.length+'</div><div class="qs">반도 많이 틀린 문항</div></div>'
-    +'<div class="qcell good"><div class="qh">어려운데 맞음 · 강점</div><div class="qn">'+b.hc.length+'</div><div class="qs">변별 문항을 잡음</div></div>'
+    +'<div class="qcell good"><div class="qh">어려운데 맞음 · 강점</div><div class="qn">'+b.hc.length+'</div><div class="qs">어려운 문제도 맞혔어요</div></div>'
     +'<div class="qcell"><div class="qh">쉬운데 맞음 · 안정</div><div class="qn">'+b.ec.length+'</div><div class="qs">기본기 확보</div></div>'
     +'</div>'+ewList+depth+'</div>';
 }
@@ -1462,7 +1462,7 @@ function hwDetailHTML(row){
     items.push('<div class="hwitem"><div class="hwih"><span class="hwno">'+(i+1)+'번 <i class="hwg">(전역 '+g+'번)</i></span>'+
       '<span class="sol-ans">정답 '+cor+' \u00b7 내 답 <b class="wrongpick">'+((my&&my!=='.')?_esc(my):'\u2013')+'</b></span></div>'+
       (mm.stem?'<div class="hwstem">'+_esc(mm.stem)+'</div>':'')+
-      '<div class="hwsrc">'+(mm.src?_esc('['+mm.src+']')+' \u00b7 ':'')+(mm.rate?('전국 정답률 '+mm.rate+'% \u00b7 '):'')+(ri?('해설 p.'+ri.sol_page+'~'):'')+'</div></div>');
+      '<div class="hwsrc">'+(mm.src?_esc('['+mm.src+']')+' \u00b7 ':'')+(mm.rate?('정답률 '+mm.rate+'% \u00b7 '):'')+(ri?('해설 p.'+ri.sol_page+'~'):'')+'</div></div>');
   }
   var body2=items.length
     ? '<div class="hwlbl">오답 '+items.length+'문항 \u00b7 이번 주 안에 해설지로 복습</div><div class="hwitems">'+items.join('')+'</div>'
