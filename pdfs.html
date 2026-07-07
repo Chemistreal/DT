@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{if(localStorage.getItem('dt_admgate')!=='ok')document.documentElement.classList.add('adm-gating');}catch(e){document.documentElement.classList.add('adm-gating');}</script>
+<style>html.adm-gating body{visibility:hidden}</style>
+<title>시험지 · 해설 PDF · Chemistreal</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{ --paper:#FAFAF7;--surface:#FFFFFF;--ink:#16202E;--sub:#61707F;--faint:#8A95A2;--line:#E7E8E2;
+  --teal:#0B6E6E;--teal-d:#0A5A5A;--brass:#A9853C;--shadow:0 1px 2px rgba(16,32,46,.04),0 6px 20px rgba(16,32,46,.05); }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Pretendard,-apple-system,system-ui,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto;padding:22px 16px 70px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+header h1{font-size:18px;font-weight:900}
+header .sub{font-size:12.5px;color:var(--sub);font-weight:600}
+header a{margin-left:auto;color:var(--faint);font-size:12.5px;text-decoration:none}
+.tabs{display:flex;gap:8px;margin:16px 0 6px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 15px;font-size:14px;font-weight:800;color:var(--sub);cursor:pointer;font-family:inherit}
+.tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.note{font-size:12.5px;color:var(--sub);line-height:1.6;margin:8px 2px 14px}
+.rcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:13px 15px;margin-bottom:10px}
+.rtitle{font-size:15px;font-weight:800;margin-bottom:9px}
+.rtitle .rc-round{color:var(--teal-d)}
+.grp{display:flex;flex-wrap:wrap;gap:7px 14px;align-items:center;padding:5px 0;border-top:1px dashed var(--line)}
+.grp:first-of-type{border-top:0}
+.glab{min-width:52px;font-size:12.5px;font-weight:800;color:var(--sub)}
+.dtpdf-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--teal);color:var(--teal-d);background:#fff;border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.dtpdf-btn:hover{background:rgba(11,110,110,.07)}
+.dtpdf-btn.sol{border-color:var(--brass);color:#8a6a2f}
+.dtpdf-btn.sol:hover{background:rgba(169,133,60,.08)}
+.dtpdf-btn.is-busy{opacity:.7;cursor:progress}
+.locked{max-width:420px;margin:22vh auto;text-align:center;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>시험지 · 해설 PDF</h1>
+    <span class="sub">전 회차 · 정시 + 재시 · 원클릭 다운로드</span>
+    <a href="home.html">홈</a>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <p class="note">회차별로 시험지(문제만)와 해설(정답·바로잡기·해설)을 바로 내려받습니다. 재시 1~3은 점점 쉬워지는 재시용 문항입니다. 처음 한 번은 라이브러리를 불러오느라 몇 초 걸릴 수 있습니다.</p>
+  <div id="list"></div>
+</div>
+
+<script src="pdfgen.js"></script>
+<script>
+var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+var ORDER=['ch1','ch2','gc'];
+var MAN=null, CUR='ch1';
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function gateOK(){
+  try{ if(localStorage.getItem('dt_admgate')==='ok'){ document.documentElement.classList.remove('adm-gating'); return true; } }catch(e){}
+  var ok=false;
+  for(var i=0;i<5;i++){ var v=prompt('관리자 비밀번호를 입력하세요'); if(v===null) break; if((v||'').trim()==='0000'){ ok=true; break; } }
+  if(ok){ try{ localStorage.setItem('dt_admgate','ok'); }catch(e){} document.documentElement.classList.remove('adm-gating'); return true; }
+  document.body.innerHTML='<div class="locked"><div style="font-size:38px">\uD83D\uDD12</div><h2 style="margin:10px 0 6px;font-size:19px">관리자 전용 페이지</h2><p style="color:#61707F;font-size:14px;line-height:1.6">비밀번호가 필요합니다.</p><button onclick="location.reload()" style="margin-top:14px;border:0;border-radius:9px;padding:9px 16px;background:#0B6E6E;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">다시 시도</button></div>';
+  document.documentElement.classList.remove('adm-gating');
+  return false;
+}
+
+function btn(course,round,kind,variant,label,sol){
+  return '<button class="dtpdf-btn'+(sol?' sol':'')+'" onclick="DTPDF.run(this,{course:\''+course+'\',round:'+round+',kind:\''+kind+'\',variant:'+(variant==='jeongsi'?"'jeongsi'":variant)+'})">'+label+'</button>';
+}
+function roundCard(m){
+  var c=m.course, r=m.round;
+  var h='<div class="rcard"><div class="rtitle"><span class="rc-round">'+(COURSE_KO[c]||c)+' '+r+'회</span> <span style="color:var(--faint);font-weight:600;font-size:12.5px">'+esc(m.title||'')+'</span></div>';
+  h+='<div class="grp"><span class="glab">정시</span>'+btn(c,r,'exam','jeongsi','시험지 PDF',false)+btn(c,r,'sol','jeongsi','해설 PDF',true)+'</div>';
+  for(var v=1;v<=3;v++){
+    h+='<div class="grp"><span class="glab">재시 '+v+'</span>'+btn(c,r,'exam',v,'시험지 PDF',false)+btn(c,r,'sol',v,'해설 PDF',true)+'</div>';
+  }
+  h+='</div>';
+  return h;
+}
+function renderList(){
+  var rounds=(MAN.rounds||[]).filter(function(m){return m.course===CUR;}).sort(function(a,b){return a.round-b.round;});
+  document.getElementById('list').innerHTML=rounds.map(roundCard).join('') || '<p class="note">이 과목의 회차가 없습니다.</p>';
+  var tabs=document.getElementById('tabs');
+  tabs.innerHTML=ORDER.filter(function(c){return (MAN.rounds||[]).some(function(m){return m.course===c;});})
+    .map(function(c){ var n=(MAN.rounds||[]).filter(function(m){return m.course===c;}).length;
+      return '<button class="tab'+(c===CUR?' on':'')+'" onclick="CUR=\''+c+'\';renderList()">'+(COURSE_KO[c]||c)+' <span style="opacity:.6">'+n+'</span></button>'; }).join('');
+}
+async function boot(){
+  if(!gateOK()) return;
+  try{
+    var res=await fetch('appdata/app_manifest.json',{cache:'no-store'});
+    MAN=await res.json();
+  }catch(e){ document.getElementById('list').innerHTML='<p class="note">회차 목록을 불러오지 못했습니다.</p>'; return; }
+  if(!(MAN.rounds||[]).some(function(m){return m.course===CUR;})) CUR=(MAN.rounds&&MAN.rounds[0]&&MAN.rounds[0].course)||'ch1';
+  renderList();
+}
+boot();
+</script>
+</body>
+</html>

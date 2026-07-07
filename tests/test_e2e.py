@@ -74,7 +74,7 @@ def run():
 
         def newpage(admtok=None, stucode=None):
             ctx = br.new_context(viewport={'width': 1280, 'height': 900})
-            init = "try{localStorage.clear();"
+            init = "try{localStorage.clear();localStorage.setItem('dt_admgate','ok');"
             if admtok: init += f"localStorage.setItem('dt_admtok','{admtok}');"
             if stucode: init += f"localStorage.setItem('dt_stucode','{stucode}');"
             init += "}catch(e){}"
@@ -111,6 +111,9 @@ def run():
         T('1회 오답 3건', pg.locator('.hwitem').count() == 3)
         det = pg.locator('#hwdetail').inner_text()
         T('정답/내답/전역/해설p 표기', ('정답 3' in det) and ('내 답' in det) and ('전역 5번' in det) and ('p.171' in det))
+        HWM = json.load(open('/home/claude/build/appdata/hw_jm1.json', encoding='utf-8'))
+        stems = [HWM['meta'][g]['stem'][:14] for g in ['5', '12', '20']]
+        T('meta 렌더: 발문 3건(워크북 재파싱)', all(st and st in det for st in stems), (stems, det[:200]))
         try:
             pg.wait_for_function("document.querySelector('#main-sols') && document.querySelector('#main-sols').innerText.length>500", timeout=12000)
             T('메인 정오표(60문항) 부착', '60' in pg.locator('#main-sols').inner_text()[:4000])
@@ -166,30 +169,17 @@ def run():
           len(exec_urls) > 0 and all('action=cohortmis' in u for u in exec_urls), exec_urls[:3])
         ctx.close()
 
-        # ---------- [D] exam 명단 드롭다운 ----------
-        print('[D] exam: 반 명단 드롭다운 (STUDENT_CODE)')
-        ctx, pg, errs = newpage(stucode=SCODE)
-        names_urls = []
-        def ex_route(route):
-            u = route.request.url
-            if 'action=names' in u:
-                names_urls.append(u)
-                route.fulfill(status=200, content_type='application/json', body=json.dumps({"ok": True, "classes": [
-                    {"label": "화학1 일6-10", "course": "ch1", "students": [
-                        {"name": "홍길동", "school": "휘문중", "year": "2"},
-                        {"name": "김민준", "school": "단대부중", "year": "2"}]}]}))
-            else:
-                route.fulfill(status=200, content_type='application/json', body=json.dumps({"ok": True, "rows": []}))
-        pg.route(EXEC + '*', ex_route)
+        # ---------- [D] exam 직접 입력 (반 명단 드롭다운 제거됨) ----------
+        print('[D] exam: 직접 입력 화면 (관리자용 드롭다운 제거 확인)')
+        ctx, pg, errs = newpage()
+        pg.route(EXEC + '*', lambda route: route.fulfill(status=200, content_type='application/json', body=json.dumps({"ok": True, "rows": []})))
         pg.goto(f'{BASE}/exam.html?c=ch1&r=1', wait_until='domcontentloaded')
-        pg.wait_for_selector('.rpbtn', timeout=9000)
-        pg.click('.rpbtn')
-        pg.wait_for_selector('#rpsel', state='visible', timeout=6000)
-        T('names 요청에 반 코드', len(names_urls) == 1 and ('code=' + SCODE) in names_urls[0], names_urls)
-        pg.select_option('#rpc', '0')
-        pg.select_option('#rps', '1')
-        T('이름/학교/학년 자동 채움',
-          pg.input_value('#nm') == '김민준' and pg.input_value('#sc') == '단대부중' and pg.input_value('#gr') == '2')
+        pg.wait_for_selector('#nm', timeout=9000)
+        body_d = pg.inner_text('body')
+        T('반 명단 드롭다운 버튼 제거됨', pg.locator('.rpbtn').count() == 0)
+        T('내부 식별 안내 문구 제거됨', '이름과 학교로 식별' not in body_d)
+        T('교사앱 링크 제거됨', '채점·진단 앱으로' not in body_d)
+        T('학생 직접 입력(이름/학교/학년) 유지', pg.locator('#nm').count() == 1 and pg.locator('#sc').count() == 1 and pg.locator('#gr').count() == 1)
         T('페이지 오류 없음', len(errs) == 0, errs[:2])
         ctx.close()
 
