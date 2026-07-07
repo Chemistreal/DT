@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>try{if(localStorage.getItem('dt_admgate')!=='ok')document.documentElement.classList.add('adm-gating');}catch(e){document.documentElement.classList.add('adm-gating');}</script>
+<style>html.adm-gating body{visibility:hidden}</style>
 <title>Chemistreal · 채점과 진단</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1152,7 +1154,16 @@ function resetAll(){clearSession();S=blank();render();}
 function nextStudent(){var kr=S.round,ki=S.roundId;clearSession();S=blank();S.round=kr;S.roundId=ki;S.view='id';render();window.scrollTo(0,0);}
 
 // 부팅
-(async function(){ S=blank(); await loadManifest(); var _q=new URLSearchParams(location.search);
+function adminGate(){
+  try{ if(localStorage.getItem('dt_admgate')==='ok'){ document.documentElement.classList.remove('adm-gating'); return true; } }catch(e){}
+  var ok=false;
+  for(var i=0;i<5;i++){ var v=prompt('관리자 비밀번호를 입력하세요'); if(v===null) break; if((v||'').trim()==='0000'){ ok=true; break; } }
+  if(ok){ try{ localStorage.setItem('dt_admgate','ok'); }catch(e){} document.documentElement.classList.remove('adm-gating'); return true; }
+  document.body.innerHTML='<div style="max-width:420px;margin:22vh auto;padding:0 24px;text-align:center;font-family:Pretendard,-apple-system,system-ui,sans-serif;color:#16202E"><div style="font-size:38px">\uD83D\uDD12</div><h2 style="margin:10px 0 6px;font-size:19px">관리자 전용 페이지</h2><p style="color:#61707F;font-size:14px;line-height:1.6">비밀번호가 필요합니다.</p><button onclick="location.reload()" style="margin-top:14px;border:0;border-radius:9px;padding:9px 16px;background:#0B6E6E;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">다시 시도</button></div>';
+  document.documentElement.classList.remove('adm-gating');
+  return false;
+}
+(async function(){ if(!adminGate()) return; S=blank(); await loadManifest(); var _q=new URLSearchParams(location.search);
   if(_q.get('retake')){ enterRetake(_q.get('retake'),_q.get('c'),_q.get('r')); return; } render(); })();
 // #4 오프라인 회복탄력성: 서비스워커 등록(배포 https에서만 동작, 실패는 무시)
 if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
