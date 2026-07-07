@@ -126,6 +126,12 @@ h2{font-size:14px;margin:20px 0 2px;letter-spacing:-.01em}
 </script>
 <script>
 const SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+/* ---- 관리자 코드 (Apps Script 스크립트 속성 ADMIN_TOKEN 값) ---- */
+function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){}
+  if(!t){ t=(prompt('관리자 코드를 입력하세요')||'').trim(); if(t){ try{ localStorage.setItem('dt_admtok',t); }catch(e){} } }
+  return (t||'').trim(); }
+function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
+
 const COURSE={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
 // 콜드스타트 prior: 저작 난이도 lvl(1=쉬움/2=보통/3=어려움) → 기대 정답률. 조정 가능.
 const LVL_PRIOR={1:0.85,2:0.70,3:0.55};
@@ -303,13 +309,13 @@ function adminRankRows(active,excl,autoEx,pass){
 }
 
 /* ===== 데이터 + 제외 ===== */
-async function adminFetch(){ try{ var r=await fetch(SAVE_URL); var j=await r.json(); adminRows=(j.rows||[]).filter(function(x){return !x.isTest;}); adminExcluded=j.excluded||[]; }catch(e){ adminRows=[]; adminExcluded=[]; } render(); }
+async function adminFetch(){ try{ var r=await fetch(SAVE_URL+'?all=1&token='+encodeURIComponent(admTok())+'&t='+Date.now(),{cache:'no-store'}); var j=await r.json(); if(j&&j.ok===false&&j.error==='auth'){ admReset(); alert('관리자 코드가 올바르지 않습니다. 페이지를 새로고침한 뒤 다시 입력해 주세요.'); } adminRows=(j.rows||[]).filter(function(x){return !x.isTest;}); adminExcluded=j.excluded||[]; }catch(e){ adminRows=[]; adminExcluded=[]; } render(); }
 async function adminPickRound(data){ adminRound=await loadRound(data); render(); }
 function adminBack(){ adminRound=null; render(); }
 function exK(sk){ return sk+'#'+adminRound.course+'#'+adminRound.round; }
 function isExcluded(sk){ return adminExcluded.indexOf(exK(sk))>=0; }
 async function toggleExclude(sk,off){ var key=exK(sk); if(off){ adminExcluded=adminExcluded.filter(function(x){return x!==key;}); } else { if(adminExcluded.indexOf(key)<0) adminExcluded.push(key); } render();
-  try{ await fetch(SAVE_URL,{method:'POST',body:JSON.stringify({action:'exclude',studentKey:sk,course:adminRound.course,round:adminRound.round,off:!!off})}); }catch(e){} }
+  try{ await fetch(SAVE_URL,{method:'POST',body:JSON.stringify({action:'exclude',token:admTok(),studentKey:sk,course:adminRound.course,round:adminRound.round,off:!!off})}); }catch(e){} }
 
 /* ===== 학생 진단 패널 ===== */
 function adminPickStudent(sk){ adminStudent=sk; render(); }

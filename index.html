@@ -581,7 +581,7 @@ async function enterRetake(key,course,round){
   if(!MANIFEST) await loadManifest();
   S={view:'retakeload'}; render();
   var rows=[];
-  try{ var resp=await fetch(SAVE_URL+'?student='+encodeURIComponent(key)); var j=await resp.json(); rows=j.rows||[]; }catch(e){}
+  try{ var resp=await fetch(SAVE_URL+'?student='+encodeURIComponent(tokWith(key))+'&t='+Date.now(),{cache:'no-store'}); var j=await resp.json(); rows=j.rows||[]; }catch(e){}
   var mrec=(MANIFEST.rounds||[]).find(function(m){return m.course===course && Number(m.round)===Number(round);});
   var rd=mrec?await loadRound(mrec.data):null;
   var fr=rows.filter(function(r){return r.course===course && Number(r.round)===Number(round) && (r.attempt==='첫 응시'||r.attempt==='정시'||r.attempt==='첫번째시험');});
@@ -701,7 +701,10 @@ function renderSteps(){
 }
 function go(v){S.view=v;render();window.scrollTo(0,0);}
 function reportBase(){ return location.origin+location.pathname.replace(/[^/]*$/,''); }
-function reportLink(){ return reportBase()+'report.html?student='+ChemEngine.studentKey(S.name,S.school); }
+var LINK_SALT='chemistreal::s4lt::9f3Kq2026';
+function tokenFor(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
+function tokWith(k){ k=String(k||''); var li=k.lastIndexOf('-'); if(li>0&&/^[0-9a-z]{8}$/.test(k.slice(li+1))) return k; return k+'-'+tokenFor(k); }
+function reportLink(){ var k=ChemEngine.studentKey(S.name,S.school); return reportBase()+'report.html?student='+k+'-'+tokenFor(k); }
 function copyReportLink(btn){ var link=reportLink();
   try{ navigator.clipboard.writeText(link).then(function(){flashCopied(btn);},function(){window.prompt('아래 링크를 복사하세요:',link);}); }
   catch(e){ try{window.prompt('아래 링크를 복사하세요:',link);}catch(_){} } }
@@ -762,7 +765,7 @@ function loadStudentHist(){
   if(!S||!S.name||!S.school||!SAVE_URL) return;
   var key=ChemEngine.studentKey(S.name,S.school);
   if(STUDENT_HIST_KEY===key && STUDENT_HIST) return; // 같은 학생 이미 로드
-  fetch(SAVE_URL+'?student='+encodeURIComponent(key)).then(function(r){return r.json();}).then(function(j){
+  fetch(SAVE_URL+'?student='+encodeURIComponent(tokWith(key))+'&t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
     var hist={}, weakR={};
     (j.rows||[]).forEach(function(r){ if(r.isTest) return; var k=r.course+'#'+r.round;
       if(r.pass) hist[k]='pass'; else if(hist[k]!=='pass') hist[k]='fail';
@@ -777,7 +780,7 @@ function loadStudentHist(){
 // #7 코호트 약점: 시트 전체에서 최근 회차의 반 오개념 약점 집계(진입 화면 요약). 1회만 로드.
 function loadCohort(){
   if(COHORT_LOADED || !SAVE_URL) return; COHORT_LOADED=true;
-  fetch(SAVE_URL).then(function(r){return r.json();}).then(function(j){
+  fetch(SAVE_URL+'?action=cohortmis&t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
     var rows=(j.rows||[]).filter(function(r){ return !r.isTest && r.attempt==='정시'; });
     if(!rows.length){ COHORT={empty:true}; if(S&&S.view==='id')render(); return; }
     var latest=null;

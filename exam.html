@@ -89,6 +89,13 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .plurl{font-size:11px;color:var(--teal-d);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
 .rlbtn{display:block;text-align:center;background:var(--teal);color:#fff;border-radius:12px;font-weight:700;padding:13px 16px;text-decoration:none}
 </style>
+<style>
+.rosterpick{margin:2px 0 14px;padding:10px 12px;border:1px dashed var(--line,#d8d2c6);border-radius:10px;background:rgba(11,110,110,.04)}
+.rpbtn{background:none;border:1px solid var(--teal,#0B6E6E);color:var(--teal-d,#085a5a);border-radius:8px;padding:7px 12px;font-size:13.5px;font-weight:700;cursor:pointer}
+.rpbtn:hover{background:rgba(11,110,110,.08)}
+.rpnote{margin-left:10px;font-size:12.5px;color:var(--faint,#9a9284)}
+.rosterpick select{width:100%;padding:9px 10px;border:1px solid var(--line,#d8d2c6);border-radius:8px;font-size:14px;background:#fff}
+</style>
 </head>
 <body>
 <div class="hd"><span class="logo"></span><span class="brand">Chemistreal<small>다원교육 영재관 · 온라인 응시</small></span></div>
@@ -438,7 +445,47 @@ async function loadJSON(file){ const r=await fetch(DATA_BASE+file,{cache:'no-sto
 async function loadManifest(){ if(M) return M; M=await loadJSON('app_manifest.json'); return M; }
 async function loadRound(c,rd){ R=await loadJSON('round_'+c+'_'+pad2(rd)+'.json'); return R; }
 function reportBase(){ return location.origin+location.pathname.replace(/[^/]*$/,''); }
-function reportLink(){ return reportBase()+'report.html?student='+ChemEngine.studentKey(info.name,info.school); }
+var LINK_SALT='chemistreal::s4lt::9f3Kq2026';
+function tokenFor(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
+function reportLink(){ var k=ChemEngine.studentKey(info.name,info.school); return reportBase()+'report.html?student='+k+'-'+tokenFor(k); }
+
+
+/* ---- 반 명단 드롭다운 (STUDENT_CODE 게이트, 실패 시 자유입력 그대로) ---- */
+var RP={classes:null};
+function stuCode(reset){ if(reset){ try{ localStorage.removeItem('dt_stucode'); }catch(_e){} }
+  var c=''; try{ c=localStorage.getItem('dt_stucode')||''; }catch(_e){}
+  if(!c){ c=(prompt('반 코드를 입력하세요 (선생님 공지)')||'').trim(); if(c){ try{ localStorage.setItem('dt_stucode',c); }catch(_e){} } }
+  return (c||'').trim(); }
+async function rosterPick(){
+  var note=document.getElementById('rpnote'); if(note) note.textContent='명단 불러오는 중\u2026';
+  var code=stuCode(); if(!code){ if(note) note.textContent=''; return; }
+  try{
+    var r=await fetch(SAVE_URL+'?action=names&code='+encodeURIComponent(code)+'&t='+Date.now(),{cache:'no-store'});
+    var j=await r.json();
+    if(!j||j.ok===false){ stuCode(true);
+      if(note) note.textContent=(j&&j.error==='auth')?'반 코드가 올바르지 않습니다. 버튼을 눌러 다시 입력하세요.':'명단 기능이 아직 설정되지 않았습니다. 아래에 직접 입력하세요.';
+      return; }
+    RP.classes=j.classes||[];
+    var box=document.getElementById('rpsel'), cs=document.getElementById('rpc'), ss=document.getElementById('rps');
+    if(!box||!cs||!ss) return;
+    cs.innerHTML='<option value="">반 선택</option>'+RP.classes.map(function(k,i){return '<option value="'+i+'">'+esc(k.label)+'</option>';}).join('');
+    ss.innerHTML='<option value="">이름 선택</option>';
+    box.style.display='block'; if(note) note.textContent='';
+  }catch(_e){ if(note) note.textContent='명단을 불러오지 못했습니다. 아래에 직접 입력하세요.'; }
+}
+function rpClass(){
+  var ci=document.getElementById('rpc').value, sl=document.getElementById('rps');
+  var k=RP.classes&&RP.classes[Number(ci)];
+  sl.innerHTML='<option value="">이름 선택</option>'+(((k&&k.students)||[]).map(function(s,i){return '<option value="'+i+'">'+esc(s.name)+'</option>';}).join(''));
+}
+function rpStudent(){
+  var ci=document.getElementById('rpc').value, si=document.getElementById('rps').value;
+  var k=RP.classes&&RP.classes[Number(ci)]; var s=k&&k.students&&k.students[Number(si)];
+  if(!s) return;
+  info.name=s.name||''; if(s.school) info.school=s.school; if(s.year) info.grade=s.year;
+  var nm=document.getElementById('nm'), sc=document.getElementById('sc'), gr=document.getElementById('gr');
+  if(nm) nm.value=info.name; if(sc&&s.school) sc.value=s.school; if(gr&&s.year) gr.value=s.year;
+}
 
 async function boot(){
   const q=new URLSearchParams(location.search);
@@ -498,7 +545,7 @@ async function saveResult(g,dx){
     await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
     var saved=false;
     try{
-      var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(payload.studentKey)+'&t='+Date.now(),{cache:'no-store'});
+      var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(payload.studentKey+'-'+tokenFor(payload.studentKey))+'&t='+Date.now(),{cache:'no-store'});
       var vj=await vr.json();
       saved=!!(vj&&vj.rows&&vj.rows.some(function(r){return String(r.course)===String(R.course)&&String(r.round)===String(R.round);}));
     }catch(_e){ saved=false; }
@@ -538,6 +585,9 @@ function idView(){
   const pass=(R.scoring&&R.scoring.pass)||80;
   return '<div class="card"><h1>'+esc(R.title)+'</h1>'+
     '<p class="lede">60문항 OX · 합격 '+pass+'점. 이름과 학교로 식별합니다(매년 학년이 바뀌어도 같은 학생으로 이어집니다).</p>'+
+    '<div class="rosterpick"><button type="button" class="rpbtn" onclick="rosterPick()">반 명단에서 이름 선택하기</button><span class="rpnote" id="rpnote"></span>'+
+    '<div id="rpsel" style="display:none;margin-top:8px"><div class="row2"><div><label>반</label><select id="rpc" onchange="rpClass()"></select></div>'+
+    '<div><label>이름</label><select id="rps" onchange="rpStudent()"></select></div></div></div></div>'+
     '<label>이름</label><input id="nm" value="'+esc(info.name)+'" placeholder="홍길동" autocomplete="off">'+
     '<div class="row2"><div><label>학교</label><input id="sc" value="'+esc(info.school)+'" placeholder="OO중학교" autocomplete="off"></div>'+
     '<div><label>학년</label><input id="gr" value="'+esc(info.grade)+'" placeholder="중2" autocomplete="off"></div></div>'+

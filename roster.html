@@ -107,6 +107,12 @@ a{color:var(--brass)}
 
 <script>
 var API='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+/* ---- 관리자 코드 (Apps Script 스크립트 속성 ADMIN_TOKEN 값) ---- */
+function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){}
+  if(!t){ t=(prompt('관리자 코드를 입력하세요')||'').trim(); if(t){ try{ localStorage.setItem('dt_admtok',t); }catch(e){} } }
+  return (t||'').trim(); }
+function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
+
 
 var DEFAULT_ROSTER=[
   {label:'화학2 토1:30-5:30',students:['고승원','곽도윤','권효주','김두은','김시헌','김연준','김채원','김태연','석지후','송지호','안승재','안지원','오가연','오승민','이건우','이도현','이세현','이원준','이정민','이지한','이지호','이지환','이채연','장재민','최시아','현정욱','최민준']},
@@ -192,8 +198,9 @@ function renderAbsentees(A){
 
 async function loadRoster(){
   try{
-    var r=await fetch(API+'?action=roster&t='+Date.now(),{cache:'no-store'});
+    var r=await fetch(API+'?action=roster&token='+encodeURIComponent(admTok())+'&t='+Date.now(),{cache:'no-store'});
     var j=await r.json();
+    if(j&&j.ok===false&&j.error==='auth'){ admReset(); alert('관리자 코드가 올바르지 않습니다. 페이지를 새로고침한 뒤 다시 입력해 주세요.'); }
     if(j&&j.classes&&j.classes.length){ state.classes=normalize(j.classes); state.loadedEmpty=false; }
     else { state.classes=normalize(DEFAULT_ROSTER); state.loadedEmpty=true; }
   }catch(e){ state.classes=normalize(DEFAULT_ROSTER); state.loadedEmpty=true; }
@@ -217,8 +224,9 @@ function banner(){
 async function loadAbsentees(){
   document.getElementById('absbox').innerHTML='<p class="muted small"><span class="spin"></span>불러오는 중...</p>';
   try{
-    var r=await fetch(API+'?action=absentees&t='+Date.now(),{cache:'no-store'});
+    var r=await fetch(API+'?action=absentees&token='+encodeURIComponent(admTok())+'&t='+Date.now(),{cache:'no-store'});
     var j=await r.json();
+    if(j&&j.ok===false&&j.error==='auth'){ admReset(); }
     renderAbsentees(j&&j.absentees);
   }catch(e){ document.getElementById('absbox').innerHTML='<p class="muted small">불러오지 못했습니다. (배포/권한 확인)</p>'; }
 }
@@ -226,11 +234,11 @@ async function loadAbsentees(){
 function setStat(html){ document.getElementById('saveStat').innerHTML=html; }
 
 async function save(){
-  var payload={action:'roster',classes:state.classes.filter(function(k){return (k.label||'').trim();})};
+  var payload={action:'roster',token:admTok(),classes:state.classes.filter(function(k){return (k.label||'').trim();})};
   setStat('<span class="spin"></span>저장 중...');
   try{
     await fetch(API,{method:'POST',body:JSON.stringify(payload)});
-    var vr=await fetch(API+'?action=roster&t='+Date.now(),{cache:'no-store'});
+    var vr=await fetch(API+'?action=roster&token='+encodeURIComponent(admTok())+'&t='+Date.now(),{cache:'no-store'});
     var vj=await vr.json();
     if(vj&&vj.classes){
       var n=vj.classes.length, tot=vj.classes.reduce(function(a,c){return a+((c.students||[]).length);},0);
@@ -244,7 +252,7 @@ async function save(){
 async function sendMail(){
   setStat('<span class="spin"></span>메일 발송 중...');
   try{
-    await fetch(API,{method:'POST',body:JSON.stringify({action:'absentee_email'})});
+    await fetch(API,{method:'POST',body:JSON.stringify({action:'absentee_email',token:admTok()})});
     setStat('<span style="color:var(--ok);font-weight:600">알림 메일을 보냈습니다</span>');
   }catch(e){ setStat('<span style="color:var(--bad);font-weight:600">메일 발송 실패</span>'); }
 }

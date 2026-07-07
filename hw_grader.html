@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>숙제 채점 콘솔 · 조준모의고사 화학 I</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root{ --paper:#FAFAF7;--surface:#FFFFFF;--ink:#16202E;--sub:#61707F;--faint:#8A95A2;--line:#E7E8E2;
+  --teal:#0B6E6E;--teal-d:#0A5A5A;--teal-soft:#E4F0EF;--o:#1B8A4C;--o-bg:#E7F5EC;--x:#C0392B;--x-bg:#FBEBE9;--brass:#A9853C;
+  --shadow:0 1px 2px rgba(16,32,46,.04),0 6px 20px rgba(16,32,46,.05); }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:22px 16px 70px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-bottom:14px;border-bottom:2px solid var(--ink)}
+header h1{font-size:17px;font-weight:900}
+header .sub{font-size:12.5px;color:var(--sub);font-weight:600}
+header .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+header a{color:var(--faint);font-size:12.5px;text-decoration:none}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px;margin-top:14px}
+label{display:block;font-size:12px;font-weight:800;color:var(--sub);margin:0 0 5px}
+select,input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:14.5px;background:#fff;font-family:inherit}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>div{flex:1;min-width:130px}
+.btn{border:0;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+.btn.pri{background:var(--teal);color:#fff}
+.btn.pri:disabled{background:#B9C4C4;cursor:not-allowed}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--sub)}
+.btn.mini{padding:6px 11px;font-size:12.5px;border-radius:8px}
+.muted{color:var(--faint);font-size:12.5px}
+.note{font-size:12.5px;color:var(--sub);line-height:1.55}
+.err{color:var(--x);font-size:13px;font-weight:700}
+.ok{color:var(--o);font-weight:800}
+/* 학생 칩 */
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:6px 13px;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--ink)}
+.chip.cur{border-color:var(--teal);background:var(--teal-soft);color:var(--teal-d)}
+.chip.done{border-color:var(--o);color:var(--o);background:var(--o-bg)}
+.chip.done::after{content:" \2713";font-weight:900}
+/* 답안 그리드 */
+.stuhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.stuhead .nm{font-size:17px;font-weight:900}
+.stuhead .meta{font-size:12.5px;color:var(--sub)}
+.subrounds{font-size:12px;color:var(--faint);margin-left:auto}
+.subrounds b{color:var(--brass)}
+.agrid{display:grid;grid-template-columns:1fr;gap:6px;margin-top:6px}
+@media(min-width:640px){.agrid{grid-template-columns:1fr 1fr;column-gap:22px}}
+.arow{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:9px}
+.arow.cur{background:var(--teal-soft);outline:2px solid var(--teal)}
+.arow .no{width:26px;text-align:right;font-weight:800;font-size:13.5px;color:var(--sub);font-variant-numeric:tabular-nums}
+.ob{width:34px;height:34px;border-radius:50%;border:1.6px solid var(--line);background:#fff;font-size:13.5px;font-weight:800;color:var(--sub);cursor:pointer;font-family:inherit}
+.ob.sel{background:var(--ink);border-color:var(--ink);color:#fff}
+.arow .clr{margin-left:2px;border:0;background:none;color:var(--faint);font-size:12px;cursor:pointer;padding:4px}
+.gradebar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);margin:16px -16px -16px;padding:12px 16px;border-radius:0 0 14px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cnt{font-weight:900;font-variant-numeric:tabular-nums}
+.scorepill{font-weight:900;font-size:15px;color:var(--teal-d)}
+.wrongpill{font-size:12.5px;color:var(--x);font-weight:700}
+.statusline{margin-top:10px;font-size:13px}
+.loglist{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.logrow{font-size:13px;color:var(--sub);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.logrow b{color:var(--ink)}
+.logrow a{color:var(--teal-d);font-weight:700;text-decoration:none;font-size:12.5px}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;background:#fff;padding:1px 6px;font-size:11.5px;font-family:inherit;font-weight:700;color:var(--sub)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>숙제 채점 콘솔</h1>
+    <span class="sub">조준모의고사 화학 I · 객관식 20문항 · 문항당 5점 · 80점 통과</span>
+    <div class="right">
+      <a href="home.html">홈</a>
+      <a href="#" onclick="resetTok();return false">코드 재입력</a>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="row">
+      <div style="max-width:130px">
+        <label>회차</label>
+        <select id="rd" onchange="pickRound()"></select>
+      </div>
+      <div>
+        <label>반</label>
+        <select id="cls" onchange="pickClass()"><option value="">명단 불러오는 중...</option></select>
+      </div>
+      <div style="flex:0;display:flex;align-items:flex-end">
+        <button class="btn ghost" onclick="manualStudent()">직접 입력</button>
+      </div>
+    </div>
+    <div id="chips" class="chips"></div>
+    <p class="note" id="rosterNote" style="margin-top:9px"></p>
+  </div>
+
+  <div class="card" id="entryCard" style="display:none">
+    <div class="stuhead">
+      <span class="nm" id="stuNm"></span>
+      <span class="meta" id="stuMeta"></span>
+      <span class="subrounds" id="stuSub"></span>
+    </div>
+    <div class="row" id="manualRow" style="display:none;margin-bottom:10px">
+      <div><label>이름</label><input type="text" id="mNm" placeholder="홍길동"></div>
+      <div><label>학교</label><input type="text" id="mSc" placeholder="OO중학교"></div>
+      <div style="max-width:110px"><label>학년</label><input type="text" id="mGr" placeholder="2"></div>
+    </div>
+    <p class="note">카드의 마킹을 그대로 옮깁니다. 키보드 <kbd>1</kbd>~<kbd>5</kbd> 입력 시 자동으로 다음 문항으로 넘어갑니다. <kbd>Backspace</kbd> 지우고 뒤로, <kbd>&larr;</kbd><kbd>&rarr;</kbd> 이동.</p>
+    <div class="agrid" id="agrid"></div>
+    <div class="gradebar">
+      <span class="cnt"><span id="cntDone">0</span>/20 입력</span>
+      <span id="gradePrev" class="muted"></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost mini" onclick="clearAll()">전체 지우기</button>
+      <button class="btn pri" id="saveBtn" onclick="gradeAndSave()" disabled>채점하고 저장</button>
+    </div>
+    <div class="statusline" id="statusline"></div>
+  </div>
+
+  <div class="card" id="logCard" style="display:none">
+    <label>이번 세션 저장 기록</label>
+    <div class="loglist" id="loglist"></div>
+  </div>
+</div>
+
+<script>
+var SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+var LINK_SALT='chemistreal::s4lt::9f3Kq2026';
+function tokenFor(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
+function cleanName(s){ return String(s||'').replace(/\s+/g,'').trim(); }
+function normSchool(s){ s=cleanName(s); return s.replace(/중학교$/,'중').replace(/고등학교$/,'고').replace(/초등학교$/,'초'); }
+function normGrade(s){ s=String(s==null?'':s).trim(); var m=s.match(/\d+/); return m?m[0]:s; }
+function keyOf(name,school){ return normSchool(school)+'-'+cleanName(name); }
+function reportBase(){ var p=location.href.split('?')[0].split('#')[0]; return p.slice(0,p.lastIndexOf('/')+1); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* ---- 관리자 코드 (Apps Script 스크립트 속성 ADMIN_TOKEN 값) ---- */
+function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){}
+  if(!t){ t=(prompt('관리자 코드를 입력하세요')||'').trim(); if(t){ try{ localStorage.setItem('dt_admtok',t); }catch(e){} } }
+  return (t||'').trim(); }
+function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
+function resetTok(){ admReset(); location.reload(); }
+
+/* ---- 상태 ---- */
+var HW=null;                 // appdata/hw_jm1.json
+var CLASSES=[];              // names 응답
+var CUR={ round:1, ci:-1, si:-1, manual:false, name:'', school:'', year:'' };
+var ANS=[];                  // 20칸, '1'~'5' 또는 ''
+var AIDX=0;
+var DONE={};                 // studentKey+'#'+round -> true (세션)
+var SUBCACHE={};             // studentKey -> [제출된 jm1 회차...]
+var SAVING=false;
+
+async function boot(){
+  // 회차
+  try{ var res=await fetch('appdata/hw_jm1.json',{cache:'no-store'}); if(res.ok) HW=await res.json(); }catch(e){}
+  var rdSel=document.getElementById('rd'), total=(HW&&HW.rounds_total)||13;
+  var saved=1; try{ saved=Number(localStorage.getItem('dt_hw_round'))||1; }catch(e){}
+  if(saved<1||saved>total) saved=1;
+  var opts=''; for(var i=1;i<=total;i++) opts+='<option value="'+i+'"'+(i===saved?' selected':'')+'>'+i+'회</option>';
+  rdSel.innerHTML=opts; CUR.round=saved;
+  if(!HW){ document.getElementById('rosterNote').innerHTML='<span class="err">채점키(appdata/hw_jm1.json)를 불러오지 못했습니다. 저장소에 파일이 올라갔는지 확인하세요.</span>'; }
+  loadNames();
+}
+function pickRound(){ CUR.round=Number(document.getElementById('rd').value)||1;
+  try{ localStorage.setItem('dt_hw_round',String(CUR.round)); }catch(e){}
+  renderChips(); if(CUR.name) refreshSubNote();
+}
+
+/* ---- 명단 ---- */
+async function loadNames(){
+  var note=document.getElementById('rosterNote'), cs=document.getElementById('cls');
+  var code=admTok();
+  if(!code){ cs.innerHTML='<option value="">명단 없음</option>'; note.textContent='관리자 코드를 입력하면 반 명단이 열립니다. 직접 입력으로도 채점할 수 있습니다.'; return; }
+  try{
+    var r=await fetch(SAVE_URL+'?action=names&code='+encodeURIComponent(code)+'&t='+Date.now(),{cache:'no-store'});
+    var j=await r.json();
+    if(!j||j.ok===false){
+      admReset(); cs.innerHTML='<option value="">명단 없음</option>';
+      note.innerHTML='<span class="err">'+((j&&j.error==='auth')?'관리자 코드가 올바르지 않습니다. 우측 상단 [코드 재입력]으로 다시 시도하세요.':'명단 기능이 아직 설정되지 않았습니다(스크립트 속성 확인).')+'</span> 직접 입력은 가능합니다.';
+      return;
+    }
+    CLASSES=j.classes||[];
+    cs.innerHTML='<option value="">반 선택</option>'+CLASSES.map(function(k,i){return '<option value="'+i+'">'+esc(k.label)+' ('+((k.students||[]).length)+'명)</option>';}).join('');
+    note.textContent='반을 고르고 학생 이름을 누르면 바로 입력이 시작됩니다.';
+  }catch(e){ cs.innerHTML='<option value="">명단 없음</option>'; note.textContent='명단을 불러오지 못했습니다. 직접 입력으로 진행하세요.'; }
+}
+function pickClass(){ CUR.ci=Number(document.getElementById('cls').value); if(isNaN(CUR.ci)) CUR.ci=-1; CUR.si=-1; renderChips(); }
+function renderChips(){
+  var box=document.getElementById('chips'); if(!box) return;
+  var k=CLASSES[CUR.ci];
+  if(!k){ box.innerHTML=''; return; }
+  box.innerHTML=(k.students||[]).map(function(s,i){
+    var key=keyOf(s.name,s.school||'');
+    var done=DONE[key+'#'+CUR.round];
+    var cls='chip'+(i===CUR.si?' cur':'')+(done?' done':'');
+    return '<button type="button" class="'+cls+'" onclick="pickStudent('+i+')">'+esc(s.name)+'</button>';
+  }).join('');
+}
+function pickStudent(i){
+  var k=CLASSES[CUR.ci]; var s=k&&k.students&&k.students[i]; if(!s) return;
+  CUR.si=i; CUR.manual=false;
+  CUR.name=s.name||''; CUR.school=s.school||''; CUR.year=s.year||'';
+  openEntry();
+}
+function manualStudent(){
+  CUR.manual=true; CUR.si=-1; CUR.name=''; CUR.school=''; CUR.year='';
+  openEntry();
+}
+
+/* ---- 입력 화면 ---- */
+function openEntry(){
+  document.getElementById('entryCard').style.display='block';
+  document.getElementById('manualRow').style.display=CUR.manual?'flex':'none';
+  document.getElementById('stuNm').textContent=CUR.manual?'직접 입력':CUR.name;
+  document.getElementById('stuMeta').textContent=CUR.manual?'':((CUR.school||'학교 미기록')+(CUR.year?(' \u00b7 '+CUR.year+'학년'):''));
+  document.getElementById('stuSub').innerHTML='';
+  document.getElementById('statusline').innerHTML='';
+  ANS=[]; for(var i=0;i<20;i++) ANS.push('');
+  AIDX=0; SAVING=false;
+  renderChips(); renderGrid(); refreshBar();
+  if(!CUR.manual) refreshSubNote();
+  var ec=document.getElementById('entryCard');
+  if(ec&&ec.scrollIntoView) ec.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function refreshSubNote(){
+  var el=document.getElementById('stuSub'); if(!el||CUR.manual) return;
+  var key=keyOf(CUR.name,CUR.school);
+  el.innerHTML='<span class="spin"></span>';
+  if(!SUBCACHE[key]){
+    try{
+      var r=await fetch(SAVE_URL+'?student='+encodeURIComponent(key+'-'+tokenFor(key))+'&t='+Date.now(),{cache:'no-store'});
+      var j=await r.json();
+      var set={};
+      (j&&j.rows||[]).forEach(function(row){ if(row.course==='jm1') set[Number(row.round)]=1; });
+      SUBCACHE[key]=Object.keys(set).map(Number).sort(function(a,b){return a-b;});
+    }catch(e){ SUBCACHE[key]=null; }
+  }
+  var subs=SUBCACHE[key];
+  if(!subs){ el.textContent=''; return; }
+  if(!subs.length){ el.textContent='제출 기록 없음'; return; }
+  var over=subs.indexOf(CUR.round)>=0;
+  el.innerHTML='제출된 회차: '+subs.join(', ')+(over?' \u00b7 <b>'+CUR.round+'회 재입력 시 덮어씁니다</b>':'');
+}
+function renderGrid(){
+  var g=document.getElementById('agrid'); if(!g) return;
+  var h='';
+  for(var i=0;i<20;i++){
+    h+='<div class="arow'+(i===AIDX?' cur':'')+'" id="ar'+i+'" onclick="setIdx('+i+')">'
+      +'<span class="no">'+(i+1)+'</span>';
+    for(var v=1;v<=5;v++){
+      h+='<button type="button" class="ob'+(ANS[i]===String(v)?' sel':'')+'" onclick="setAns('+i+','+v+');event.stopPropagation()">'+v+'</button>';
+    }
+    h+='<button type="button" class="clr" title="지우기" onclick="clearAns('+i+');event.stopPropagation()">&times;</button></div>';
+  }
+  g.innerHTML=h;
+}
+function setIdx(i){ AIDX=Math.max(0,Math.min(19,i)); renderGrid(); }
+function setAns(i,v){
+  ANS[i]=(ANS[i]===String(v))?'':String(v);
+  if(ANS[i]!=='') AIDX=Math.min(19,i+1); else AIDX=i;
+  renderGrid(); refreshBar();
+}
+function clearAns(i){ ANS[i]=''; AIDX=i; renderGrid(); refreshBar(); }
+function clearAll(){ for(var i=0;i<20;i++) ANS[i]=''; AIDX=0; renderGrid(); refreshBar(); document.getElementById('statusline').innerHTML=''; }
+function refreshBar(){
+  var done=ANS.filter(function(a){return a!=='';}).length;
+  document.getElementById('cntDone').textContent=done;
+  var btn=document.getElementById('saveBtn'); if(btn) btn.disabled=(done===0)||SAVING;
+  var gp=document.getElementById('gradePrev');
+  var key=hwKey();
+  if(gp){
+    if(key&&done>0){
+      var g=gradeNow(key);
+      gp.innerHTML='<span class="scorepill">'+g.score+'점</span>'+(g.wrong.length?' <span class="wrongpill">오답 '+g.wrong.join(', ')+'번</span>':(done===20?' <span class="ok">전 문항 정답</span>':''));
+    } else gp.textContent='';
+  }
+}
+function hwKey(){ if(!HW||!HW.key) return null; return HW.key[String(CUR.round)]||null; }
+function gradeNow(key){
+  var correct=0,wrong=[];
+  for(var i=0;i<20;i++){
+    if(ANS[i]!=='' && ANS[i]===String(key[i])) correct++;
+    else wrong.push(i+1);
+  }
+  var pt=(HW&&HW.pt)||5;
+  return { correct:correct, wrong:wrong, score:correct*pt };
+}
+document.addEventListener('keydown',function(ev){
+  var ecard=document.getElementById('entryCard');
+  if(!ecard||ecard.style.display==='none') return;
+  var tag=(document.activeElement&&document.activeElement.tagName)||'';
+  if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA') return;
+  if(ev.key>='1'&&ev.key<='5'){ setAns(AIDX,Number(ev.key)); ev.preventDefault(); }
+  else if(ev.key==='Backspace'){ if(ANS[AIDX]==='') AIDX=Math.max(0,AIDX-1); ANS[AIDX]=''; renderGrid(); refreshBar(); ev.preventDefault(); }
+  else if(ev.key==='ArrowRight'||ev.key==='ArrowDown'){ setIdx(AIDX+1); ev.preventDefault(); }
+  else if(ev.key==='ArrowLeft'||ev.key==='ArrowUp'){ setIdx(AIDX-1); ev.preventDefault(); }
+});
+
+/* ---- 채점 + 저장 ---- */
+async function gradeAndSave(){
+  if(SAVING) return;
+  var st=document.getElementById('statusline');
+  var key=hwKey();
+  if(!key){ st.innerHTML='<span class="err">이 회차의 채점키가 없습니다. appdata/hw_jm1.json 을 확인하세요.</span>'; return; }
+  var name=CUR.name, school=CUR.school, year=CUR.year;
+  if(CUR.manual){
+    name=cleanName(document.getElementById('mNm').value);
+    school=document.getElementById('mSc').value;
+    year=document.getElementById('mGr').value;
+  }
+  if(!cleanName(name)){ st.innerHTML='<span class="err">이름을 입력하세요.</span>'; return; }
+  var blanks=ANS.filter(function(a){return a==='';}).length;
+  if(blanks>0 && !confirm('빈 문항 '+blanks+'개는 무응답(오답) 처리됩니다. 이대로 저장할까요?')) return;
+  var g=gradeNow(key);
+  var passLine=(HW&&HW.pass)||80;
+  var sk=keyOf(name,school);
+  var digits=ANS.map(function(a){return a===''?'.':a;}).join('');
+  var payload={
+    studentKey:sk,
+    reportLink:reportBase()+'report.html?student='+sk+'-'+tokenFor(sk),
+    name:cleanName(name), school:normSchool(school), year:normGrade(year),
+    course:'jm1', round:CUR.round, attempt:'정시', isTest:true,
+    score:g.score, pass:g.score>=passLine,
+    correctCount:g.correct, wrongCount:20-g.correct,
+    wrongMis:g.wrong.map(String), wrongAxes:{}, units:[], axes:[],
+    answers:digits
+  };
+  SAVING=true; refreshBar();
+  st.innerHTML='<span class="spin"></span> 저장 중...';
+  var saved=false;
+  try{
+    await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    // 저장 확인 (토큰 조회)
+    try{
+      var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(sk+'-'+tokenFor(sk))+'&t='+Date.now(),{cache:'no-store'});
+      var vj=await vr.json();
+      saved=!!(vj&&vj.rows&&vj.rows.some(function(row){ return row.course==='jm1' && String(row.round)===String(CUR.round) && String(row.answers||'')===digits; }));
+    }catch(e){}
+  }catch(e){}
+  SAVING=false; refreshBar();
+  if(saved){
+    DONE[sk+'#'+CUR.round]=true;
+    SUBCACHE[sk]=null;
+    var okMsg='<span class="ok">시트 저장 확인 완료</span> \u00b7 '+esc(payload.name)+' '+CUR.round+'회 '+g.score+'점'
+      +(payload.pass?' <span class="ok">통과</span>':' <span class="err">미달</span>');
+    addLog(payload);
+    renderChips();
+    autoNext();
+    var st2=document.getElementById('statusline');           // autoNext가 화면을 갈아끼워도 확인 메시지는 유지
+    if(st2) st2.innerHTML=okMsg+(CUR.name&&CUR.name!==payload.name?' <span class="muted">\u00b7 다음: '+esc(CUR.name)+'</span>':'');
+  } else {
+    st.innerHTML='<span class="err">저장 확인에 실패했습니다.</span> 네트워크 또는 배포 상태를 확인한 뒤 [채점하고 저장]을 다시 누르세요. 같은 학생 \u00b7 회차는 덮어쓰기라 중복되지 않습니다.';
+  }
+}
+function addLog(p){
+  document.getElementById('logCard').style.display='block';
+  var d=document.createElement('div'); d.className='logrow';
+  d.innerHTML='<b>'+esc(p.name)+'</b> '+p.round+'회 \u00b7 '+p.score+'점 '+(p.pass?'통과':'미달')
+    +' <a href="'+esc(p.reportLink)+'" target="_blank" rel="noopener">리포트 &rarr;</a>';
+  var box=document.getElementById('loglist'); box.insertBefore(d,box.firstChild);
+}
+function autoNext(){
+  var k=CLASSES[CUR.ci]; if(!k||CUR.manual) return;
+  var students=k.students||[];
+  for(var step=1;step<=students.length;step++){
+    var i=(CUR.si+step)%students.length;
+    var s=students[i];
+    if(!DONE[keyOf(s.name,s.school||'')+'#'+CUR.round]){ pickStudent(i); return; }
+  }
+}
+boot();
+</script>
+</body>
+</html>
