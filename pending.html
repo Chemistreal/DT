@@ -89,9 +89,7 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 <script>
 var STATUS_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
 /* ---- 관리자 코드 (Apps Script 스크립트 속성 ADMIN_TOKEN 값) ---- */
-function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){}
-  if(!t){ t=(prompt('관리자 코드를 입력하세요')||'').trim(); if(t){ try{ localStorage.setItem('dt_admtok',t); }catch(e){} } }
-  return (t||'').trim(); }
+function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){} return (t||'').trim(); }   /* 전체 공개 모드: 관리자 코드 입력 없이 동작 */
 function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
 
 var COURSE={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};

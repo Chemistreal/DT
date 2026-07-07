@@ -135,9 +135,7 @@ function reportBase(){ var p=location.href.split('?')[0].split('#')[0]; return p
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 /* ---- 관리자 코드 (Apps Script 스크립트 속성 ADMIN_TOKEN 값) ---- */
-function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){}
-  if(!t){ t=(prompt('관리자 코드를 입력하세요')||'').trim(); if(t){ try{ localStorage.setItem('dt_admtok',t); }catch(e){} } }
-  return (t||'').trim(); }
+function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){} return (t||'').trim(); }   /* 전체 공개 모드: 관리자 코드 입력 없이 동작 */
 function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
 function resetTok(){ admReset(); location.reload(); }
 
@@ -170,8 +168,7 @@ function pickRound(){ CUR.round=Number(document.getElementById('rd').value)||1;
 /* ---- 명단 ---- */
 async function loadNames(){
   var note=document.getElementById('rosterNote'), cs=document.getElementById('cls');
-  var code=admTok();
-  if(!code){ cs.innerHTML='<option value="">명단 없음</option>'; note.textContent='관리자 코드를 입력하면 반 명단이 열립니다. 직접 입력으로도 채점할 수 있습니다.'; return; }
+  var code=admTok();   /* 전체 공개 모드: 코드가 없어도 그대로 조회 */
   try{
     var r=await fetch(SAVE_URL+'?action=names&code='+encodeURIComponent(code)+'&t='+Date.now(),{cache:'no-store'});
     var j=await r.json();
