@@ -215,7 +215,7 @@ function rowHTML(p){
     +'</div><div class="days '+u+'"><div class="dn">'+p.days+'</div><div class="dl">일 경과<br>('+esc(p.lastDate)+')</div></div></div>';
 }
 
-function render(P, ABS){
+function render(P, ABS, absFail){
   var a=P.active||[], s=P.stale||[];
   _ACTIVE=a.slice();
   var absClasses=(ABS&&ABS.classes||[]).filter(function(c){return c.absent&&c.absent.length;});
@@ -231,7 +231,7 @@ function render(P, ABS){
 
   // 시험 미응시 (roster 미응시자 기준) · 온라인 응시 안내
   h+='<div class="sec-h">시험 미응시 <span class="tag" style="background:var(--red)">'+absN+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 온라인 응시 필요</span></div>';
-  if(!ABS){ h+='<div class="muted-note">미응시자 명단을 불러오지 못했습니다. roster.html에 반 명단이 저장돼 있는지 확인하세요.</div>'; }
+  if(!ABS){ h+= absFail ? '<div class="muted-note">미응시자 명단을 불러오지 못했습니다. 잠시 후 <b>새로고침</b> 해주세요. (서버가 잠깐 응답하지 못한 경우로, 대개 다시 시도하면 됩니다.)</div>' : '<div class="muted-note">등록된 반 명단이 없습니다. roster.html에서 반 명단을 저장하세요.</div>'; }
   else if(!absN){ h+='<div class="empty">이번 회차 시험을 응시하지 않은 학생이 없습니다.</div>'; }
   else{ h+='<div class="muted-note">저장된 반 명단 기준, 이번 회차 시험 응시 기록이 없는 학생입니다. 버튼으로 온라인 응시 안내를 복사해 보내세요. (OX 워밍업이 아니라 정식 60문항 시험입니다.)</div>'; h+=absClasses.map(absentClassHTML).join(''); }
 
@@ -268,18 +268,30 @@ function demoAbs(){
   ]};
 }
 
+function fetchJSON_(url, tries){
+  tries = tries || 3;
+  return fetch(url, {cache:'no-store'}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.text();
+  }).then(function(t){
+    try{ return JSON.parse(t); }catch(e){ throw new Error('bad-json'); }
+  }).catch(function(e){
+    if(tries>1){ return new Promise(function(res){ setTimeout(res, 700); }).then(function(){ return fetchJSON_(url, tries-1); }); }
+    return null;
+  });
+}
 function load(){
   if(Q.has('demo')){ render(demo(), demoAbs()); return; }
   document.getElementById('app').innerHTML='<div class="loading">불러오는 중…</div>';
   var tok=encodeURIComponent(admTok());
   Promise.all([
-    fetch(STATUS_URL+'?action=absentees&token='+tok+'&t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).catch(function(){return null;}),
-    fetch(STATUS_URL+'?action=pending&token='+tok+'&t='+Date.now()).then(function(r){return r.json();}).catch(function(){return null;})
+    fetchJSON_(STATUS_URL+'?action=absentees&token='+tok+'&t='+Date.now()),
+    fetchJSON_(STATUS_URL+'?action=pending&token='+tok+'&t='+Date.now())
   ]).then(function(res){
     var A=res[0], P=res[1];
     if((A&&A.error==='auth')||(P&&P.error==='auth')){ admReset(); document.getElementById('app').innerHTML='<div class="err">관리자 코드가 올바르지 않습니다. 페이지를 새로고침한 뒤 다시 입력해 주세요.</div>'; return; }
     if(!P||!P.ok||!P.pending){ document.getElementById('app').innerHTML='<div class="err">데이터를 불러오지 못했습니다. Apps Script 배포(/exec)와 권한을 확인하세요.</div>'; return; }
-    render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null);
+    render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null, !(A&&A.ok));
   }).catch(function(e){
     document.getElementById('app').innerHTML='<div class="err">연결 실패: '+esc(String(e))+'<br>Apps Script 웹앱이 배포되어 있고 액세스가 "모든 사용자"인지 확인하세요.</div>';
   });
@@ -322,18 +334,19 @@ async function zipRetakePending(btn){
     var zip=new JSZip(); var ok=0, fail=[];
     for(var i=0;i<list.length;i++){
       var s=list[i]; var key=keyFromLink(s.reportLink);
-      btn.textContent='재시지 '+(i+1)+'/'+list.length+' ('+ (s.name||'') +')';
+      var isRe=(s.nextNeeded==='재재시'); var attNo=isRe?3:2; var vlab=isRe?'재재시':'재시';
+      btn.textContent=vlab+'지 '+(i+1)+'/'+list.length+' ('+ (s.name||'') +')';
       try{
-        var rr=await DTRetake.items({key:key, course:s.course, round:s.round});
-        if(!rr || !rr.items.length){ fail.push(s.name||key); continue; }
-        var made=await DTPDF.make({items:rr.items, course:s.course, round:Number(s.round), vlabel:'재시', kind:'exam', scoring:rr.scoring, output:'blob', fname:safeName(s.name)+'.pdf'});
+        var rr=await DTRetake.items({key:key, course:s.course, round:s.round, attemptNo:attNo});
+        if(!rr || !rr.items.length){ fail.push((s.name||key)+(isRe?' (재시 기록 없음)':'')); continue; }
+        var made=await DTPDF.make({items:rr.items, course:s.course, round:Number(s.round), vlabel:vlab, kind:'exam', scoring:rr.scoring, output:'blob', fname:safeName(s.name)+'_'+vlab+'.pdf'});
         zip.file(made.fname, made.blob); ok++;
       }catch(e){ fail.push((s.name||key)+' ('+(e&&e.message?e.message:e)+')'); }
     }
     if(!ok){ btn.textContent=orig; alert('생성된 재시지가 없습니다.'+(fail.length?'\n실패: '+fail.slice(0,5).join(', '):'')); btn.dataset.busy='0'; return; }
     btn.textContent='압축\u2026';
     var out=await zip.generateAsync({type:'blob'});
-    saveBlob(out, '재시지_'+ok+'명.zip');
+    saveBlob(out, '재시·재재시지_'+ok+'명.zip');
     btn.textContent='\u2713 '+ok+'명';
     if(fail.length) alert('일부 실패('+fail.length+'명): '+fail.slice(0,6).join(', ')+'\n(첫 응시 기록이 없으면 재시지를 만들 수 없습니다.)');
   }catch(e){ btn.textContent=orig; alert('ZIP 생성 실패: '+(e&&e.message?e.message:e)); }
