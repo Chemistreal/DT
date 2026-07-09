@@ -238,11 +238,13 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
         var jeong = R.attempts.find(function (a) { return a.attempt === '정시'; });
         var last = R.attempts[R.attempts.length - 1];
         var passedAny = R.attempts.some(function (a) { return a.pass; });
+        var passAtt = null; for (var pi = 0; pi < R.attempts.length; pi++) { if (R.attempts[pi].pass) { passAtt = R.attempts[pi]; break; } }
+        var repr = passAtt || last;   // 대표 시도: 통과한 시도(있으면), 없으면 마지막
         return {
           course: R.course, round: R.round,
           jeongsiScore: jeong ? jeong.score : null,
-          finalScore: last ? last.score : null,
-          finalAttempt: last ? last.attempt : null,
+          finalScore: repr ? repr.score : null,
+          finalAttempt: repr ? repr.attempt : null,
           attemptsCount: R.attempts.length,
           passed: passedAny,
           date: last ? last.date : null
