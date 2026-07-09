@@ -678,7 +678,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 
   // 간격 반복(D8): 과거 회차에 틀린 개념 중 지금 다시 점검할 것. chronic할수록(자주 틀림) 우선(D10 인출강도).
   function spacedReview(rows, currentRound) {
-    var ord = { '정시': 0, '첫번째시험': 0, '이번주 테스트': 0, '첫 응시': 0, '재시': 1, '재재시': 2 };
+    var ord = new Proxy({},{get:function(_o,k){k=String(k);var n=0;for(var i=0;i<k.length;i++){if(k.charAt(i)==='재')n++;}return n;}});  // 시도 순서 = 재 글자 수(무한 단계)
     var byRound = {};
     (rows || []).forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
     var byConcept = {};
@@ -729,7 +729,7 @@ const CRSLBL={ch1:'화학 I',ch2:'화학 II',gc:'일반화학'};
 function josa(w,eul,reul){var c=w.charCodeAt(w.length-1);return w+((c>=44032&&c<=55203&&(c-44032)%28>0)?eul:reul);}
 const axisMap={}; ENGINE_AXES.forEach(a=>axisMap[a.key]=a.name);
 const REPORT_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';   // ★ 배포 후 Apps Script 웹앱 /exec URL (비우면 데모 데이터로 표시)
-const ORD={'정시':0,'첫번째시험':0,'이번주 테스트':0,'첫 응시':0,'재시':1,'재재시':2};
+const ORD=new Proxy({},{get:function(_o,k){k=String(k);var n=0;for(var i=0;i<k.length;i++){if(k.charAt(i)==='재')n++;}return n;}});
 let A, allRows, latest, latestRows, latestWrong, RANK, CU, CX, COHORT=null, QUAD=null;
 const DEMO_RANK={round:10,avg:71,score:88,per100:15,n:22,sd:12,dist:[0,0,0,0,2,3,6,5,3,3]};
 
@@ -1337,7 +1337,7 @@ function render(commit){
     <p class="note" style="margin:8px 0 0">지금까지 <b>${ccum}개</b> 개념을 바로잡았습니다.</p>
     <div class="subhead" style="margin-top:16px">회차별 마무리</div>`:`<div class="subhead">회차별 마무리</div>`}
     ${(function(){
-      var _ord={'정시':0,'첫번째시험':0,'이번주 테스트':0,'첫 응시':0,'재시':1,'재재시':2};
+      var _ord=new Proxy({},{get:function(_o,k){k=String(k);var n=0;for(var i=0;i<k.length;i++){if(k.charAt(i)==='재')n++;}return n;}});
       function _atts(t){ return (allRows||[]).filter(function(r){return r.course===t.course&&Number(r.round)===Number(t.round);}).sort(function(a,b){return (_ord[a.attempt]||0)-(_ord[b.attempt]||0);}); }
       var allP=A.trend.every(function(t){ return _atts(t).some(function(a){return a.pass;}); });
       var rowsH=A.trend.map(function(t){

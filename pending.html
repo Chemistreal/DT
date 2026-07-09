@@ -334,7 +334,7 @@ async function zipRetakePending(btn){
     var zip=new JSZip(); var ok=0, fail=[];
     for(var i=0;i<list.length;i++){
       var s=list[i]; var key=keyFromLink(s.reportLink);
-      var isRe=(s.nextNeeded==='재재시'); var attNo=isRe?3:2; var vlab=isRe?'재재시':'재시';
+      var vlab=String(s.nextNeeded||'재시'); var attNo=0; for(var ci=0;ci<vlab.length;ci++){ if(vlab.charAt(ci)==='재') attNo++; } attNo=attNo+1;  // 재시=2,재재시=3,재재재시=4...
       btn.textContent=vlab+'지 '+(i+1)+'/'+list.length+' ('+ (s.name||'') +')';
       try{
         var rr=await DTRetake.items({key:key, course:s.course, round:s.round, attemptNo:attNo});

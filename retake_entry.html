@@ -68,7 +68,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;backg
     <div class="row">
       <div style="max-width:150px"><label>회차</label><select id="rd" onchange="onPick()"></select></div>
       <div><label>반</label><select id="cls" onchange="pickClass()"><option value="">명단 불러오는 중...</option></select></div>
-      <div style="max-width:130px"><label>시도</label><select id="att" onchange="onPick()"><option value="2">재시</option><option value="3">재재시</option></select></div>
+      <div style="max-width:130px"><label>시도</label><select id="att" onchange="onPick()"><option value="2">재시</option><option value="3">재재시</option><option value="4">재재재시</option><option value="5">재재재재시</option><option value="6">재재재재재시</option></select></div>
       <div style="flex:0;display:flex;align-items:flex-end"><button class="btn ghost" onclick="manualStudent()">직접 입력</button></div>
     </div>
     <div id="chips" class="chips"></div>
@@ -106,7 +106,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;backg
 <script src="retakegen.js"></script>
 <script>
 var SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
-var ATT_LABEL={2:'재시',3:'재재시'};
+function attLabelN(n){ n=Number(n)||2; if(n<=1) return '정시'; var s=''; for(var i=1;i<n;i++) s+='재'; return s+'시'; }  // 2=재시,3=재재시,4=재재재시...
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function reportBase(){var p=location.href.split('?')[0].split('#')[0];return p.slice(0,p.lastIndexOf('/')+1);}
 
@@ -189,13 +189,23 @@ async function loadForStudent(){
   document.getElementById('entryCard').style.display='block';
   document.getElementById('manualRow').style.display=CUR.manual?'flex':'none';
   document.getElementById('stuNm').textContent=CUR.manual?(CUR.name||'직접 입력'):CUR.name;
-  document.getElementById('stuMeta').textContent=(CUR.school||'')+(CUR.year?(' \u00b7 '+CUR.year+'학년'):'')+' \u00b7 '+(ATT_LABEL[CUR.att]||'재시');
+  document.getElementById('stuMeta').textContent=(CUR.school||'')+(CUR.year?(' \u00b7 '+CUR.year+'학년'):'')+' \u00b7 '+(attLabelN(CUR.att));
   document.getElementById('oxgrid').innerHTML=''; document.getElementById('gradebar').style.display='none';
   document.getElementById('statusline').innerHTML='';
   var li=document.getElementById('loadingItems'); li.style.display='block';
   ITEMS=null; KEYARR=null; OX=[]; AIDX=0; SAVING=false;
   try{
-    var rr=await DTRetake.items({key:CUR.key, course:CUR.course, round:CUR.round, attemptNo:CUR.att});
+    // 이미 통과한 회차면 재시 입력 차단 (통과 학생은 재시 볼 필요 없음)
+    var _rows=await DTRetake.fetchRows(CUR.key);
+    var _passed=(_rows||[]).some(function(r){ return r.course===CUR.course && Number(r.round)===CUR.round && r.pass===true; });
+    if(_passed){
+      li.style.display='none';
+      document.getElementById('oxgrid').innerHTML='';
+      document.getElementById('gradebar').style.display='none';
+      document.getElementById('statusline').innerHTML='<span class="ok">이미 통과한 회차입니다.</span> 통과한 학생은 재시를 볼 필요가 없어 입력을 막았습니다. (회차·시도를 다시 확인하세요.)';
+      return;
+    }
+    var rr=await DTRetake.items({key:CUR.key, course:CUR.course, round:CUR.round, attemptNo:CUR.att, rows:_rows});
     li.style.display='none';
     if(!rr || !rr.items || !rr.items.length){
       document.getElementById('oxgrid').innerHTML='';
@@ -266,7 +276,7 @@ async function gradeAndSave(){
   var g=ChemEngine.gradeAttempt(ans, ITEMS, SCORING);
   var forms=await DTRetake.forms('');
   var dx=ChemEngine.diagnose(g, forms);
-  var attLabel=ATT_LABEL[CUR.att]||'재시';
+  var attLabel=attLabelN(CUR.att);
   var sk=ChemEngine.studentKey(CUR.name,CUR.school);
   var link=reportBase()+'report.html?student='+sk+'-'+DTRetake.tokenFor(sk);
   var payload={
@@ -284,7 +294,8 @@ async function gradeAndSave(){
   st.innerHTML='<span class="spin"></span> 저장 중...';
   var saved=false;
   try{
-    await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    var _pr=await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    try{ var _pj=await _pr.json(); if(_pj && _pj.ok===false && _pj.error==='already_passed'){ SAVING=false; refreshBar(); st.innerHTML='<span class="ok">이미 통과한 회차입니다.</span> 서버가 재시 저장을 거부했습니다(통과 학생은 재시 불필요).'; return; } }catch(e){}
     try{
       var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(DTRetake.tokWith(sk))+'&t='+Date.now(),{cache:'no-store'});
       var vj=await vr.json();

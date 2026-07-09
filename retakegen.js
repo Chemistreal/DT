@@ -41,10 +41,13 @@
   function clone_(o) { var c = {}; for (var k in o) if (o.hasOwnProperty(k)) c[k] = o[k]; return c; }
   function parseOX_(s, n) { var a = String(s || '').split('').map(function (ch) { return ch === 'O' ? 'O' : ch === 'X' ? 'X' : ''; }); while (a.length < n) a.push(''); return a; }
 
+  function attLabelN_(n){ if(n<=1) return '재시'; var s=''; for(var i=0;i<n;i++) s+='재'; return s+'시'; }
+
   async function items(opts) {
     var CE = window.ChemEngine;
     if (!CE) throw new Error('ChemEngine 미로드 (chemengine.js 확인)');
     var course = opts.course, round = Number(opts.round), attemptNo = opts.attemptNo || 2, base = opts.base || '';
+    if (attemptNo < 2) attemptNo = 2;
     await loadForms(base);
     var rd = await loadRound(course, round, base);
     if (!rd || !rd.jeongsi || !rd.retakeC) return null;
@@ -58,28 +61,30 @@
     if (!first || !first.answers) return null;
     var keyItems = rd.jeongsi.items;
     var gFirst = CE.gradeAttempt(parseOX_(first.answers, keyItems.length), keyItems, rd.scoring);
-    var wrongCids = {}, wrongStmts = {}, seen = {};
-    gFirst.perItem.forEach(function (p, i) { if (!p.ok && keyItems[i]) { wrongCids[keyItems[i].c] = 1; wrongStmts[CE.norm(keyItems[i].s)] = 1; } });
+    var curWrongCids = {}, curWrongStmts = {}, seen = {};
+    gFirst.perItem.forEach(function (p, i) { if (!p.ok && keyItems[i]) { curWrongCids[keyItems[i].c] = 1; curWrongStmts[CE.norm(keyItems[i].s)] = 1; } });
     keyItems.forEach(function (it) { seen[CE.norm(it.s)] = 1; });
 
-    if (attemptNo <= 2) {
-      var rt = CE.buildRetake(2, rd.retakeC, Object.keys(wrongCids), FORMS, seen, wrongStmts);
-      return { items: (rt && rt.items) || [], first: first, wrongCids: Object.keys(wrongCids), scoring: rd.scoring, attemptNo: 2 };
+    // 재시 레벨 2..attemptNo 를 순서대로 연쇄 재생성 (각 단계는 결정적)
+    var curItems = null;
+    for (var lvl = 2; lvl <= attemptNo; lvl++) {
+      var gen = CE.buildRetake(lvl, rd.retakeC, Object.keys(curWrongCids), FORMS, seen, curWrongStmts);  // seen 을 변형(누적)
+      curItems = (gen && gen.items) || [];
+      if (!curItems.length) return null;
+      if (lvl === attemptNo) break;                              // 목표 레벨 문항 = 이번에 볼 시험
+      // 중간 레벨: 학생의 그 레벨 답안을 채점해 다음 단계 오답 산출
+      var lvlLabel = attLabelN_(lvl - 1);                        // lvl2='재시', lvl3='재재시', lvl4='재재재시'...
+      var row = rows.filter(function (r) { return r.course === course && Number(r.round) === round && r.attempt === lvlLabel; })
+        .sort(function (a, b) { return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(); })[0];
+      if (!row || !row.answers) return null;                     // 그 레벨 기록 없으면 다음 재시 생성 불가
+      var gAtt = CE.gradeAttempt(parseOX_(row.answers, curItems.length), curItems, rd.scoring);
+      var nextWrongCids = {}, nextWrongStmts = {};
+      for (var kk in curWrongStmts) { if (curWrongStmts.hasOwnProperty(kk)) nextWrongStmts[kk] = 1; }   // 이전 오답 문장 계속 회피
+      gAtt.perItem.forEach(function (p, i) { if (!p.ok && curItems[i]) { nextWrongCids[curItems[i].c] = 1; nextWrongStmts[CE.norm(curItems[i].s)] = 1; } });
+      curWrongCids = nextWrongCids; curWrongStmts = nextWrongStmts;
+      // seen 은 buildRetake 가 이미 이 레벨 문장까지 누적함
     }
-
-    // 재재시(attemptNo 3): 재시를 먼저 재생성(같은 로직) -> seen 누적 + 재시 오답 산출
-    var seenR = clone_(seen), wrongStmtsR = clone_(wrongStmts);
-    var reGen = CE.buildRetake(2, rd.retakeC, Object.keys(wrongCids), FORMS, seenR, wrongStmtsR);
-    var reItems = (reGen && reGen.items) || [];
-    var reRow = rows.filter(function (r) { return r.course === course && Number(r.round) === round && r.attempt === '재시'; })
-      .sort(function (a, b) { return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(); })[0];
-    if (!reRow || !reRow.answers || !reItems.length) return null;   // 재시 기록 없으면 재재시 근거 없음
-    var gRe = CE.gradeAttempt(parseOX_(reRow.answers, reItems.length), reItems, rd.scoring);
-    var wrongCids2 = {}, wrongStmts2 = clone_(wrongStmtsR);          // 정시 오답 문장도 계속 재노출 금지
-    gRe.perItem.forEach(function (p, i) { if (!p.ok && reItems[i]) { wrongCids2[reItems[i].c] = 1; wrongStmts2[CE.norm(reItems[i].s)] = 1; } });
-    // seenR 에는 정시+재시 문장이 이미 누적됨 -> 재재시는 이를 모두 피함
-    var rt3 = CE.buildRetake(3, rd.retakeC, Object.keys(wrongCids2), FORMS, seenR, wrongStmts2);
-    return { items: (rt3 && rt3.items) || [], first: first, wrongCids: Object.keys(wrongCids2), scoring: rd.scoring, attemptNo: 3 };
+    return { items: curItems, first: first, wrongCids: Object.keys(curWrongCids), scoring: rd.scoring, attemptNo: attemptNo };
   }
 
   function keyString(its) { return (its || []).map(function (it) { return it.a === 'O' ? 'O' : 'X'; }).join(''); }

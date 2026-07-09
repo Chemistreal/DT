@@ -290,7 +290,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     });
     return out;
   }
-  function order(att) { return (att === '정시' || att === '첫번째시험' || att === '이번주 테스트' || att === '첫 응시') ? 0 : att === '재시' ? 1 : 2; }
+  function order(att) { att = String(att || ''); var n = 0; for (var i = 0; i < att.length; i++) { if (att.charAt(i) === '재') n++; } return n; }
   function latestYear(rs) {
     var y = null, d = '';
     rs.forEach(function (r) { if (r.date && r.date > d) { d = r.date; y = r.year; } });
