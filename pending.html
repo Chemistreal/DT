@@ -82,6 +82,15 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .pdfbtn{border:1px solid var(--gold);color:#7a5d20;background:#fff;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:800;line-height:1.35;cursor:pointer;font-family:inherit;text-align:center;white-space:nowrap}
 .pdfbtn:hover{background:rgba(201,162,39,.08)}
 .pdfbtn[data-busy="1"]{opacity:.7;cursor:progress}
+.hidebtn{margin-top:7px;border:1px solid var(--line);color:var(--muted);background:#fff;border-radius:7px;padding:4px 9px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.hidebtn:hover{border-color:#cbd5e1;color:#4b5563}
+.hidwrap{margin:2px 0 8px}
+.hidwrap details summary{cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:700;padding:6px 2px;list-style:none}
+.hidwrap details summary::-webkit-details-marker{display:none}
+.hidrow{background:#fff;border:1px dashed var(--line);border-radius:9px;padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:#6b7280}
+.hidrow b{color:#374151}
+.unhidebtn{margin-left:auto;border:1px solid var(--gold);color:#7a5d20;background:#fff;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.unhidebtn:hover{background:rgba(201,162,39,.08)}
 </style>
 </head>
 <body>
@@ -202,6 +211,38 @@ function absentClassHTML(c){
   return '<div class="abx-cls">'+head+bc+stus+'</div>';
 }
 
+/* ===== 안내 완료 학생 숨김 (이 브라우저·이 페이지에서만 적용, 서버 데이터 불변) ===== */
+var HIDE_LS='dt_pending_hide_v1';
+function hkey(p){ return [p.course,p.round,p.name,p.nextNeeded].join('|'); }
+function hiddenMap(){ try{ return JSON.parse(localStorage.getItem(HIDE_LS)||'{}')||{}; }catch(e){ return {}; } }
+function saveHidden(m){ try{ localStorage.setItem(HIDE_LS, JSON.stringify(m)); }catch(e){} }
+/* 현재 목록에 더 이상 없는(재시 응시 등으로 해소된) 숨김 키는 자동 정리 */
+function pruneHidden(list){
+  var m=hiddenMap(), live={}, changed=false;
+  (list||[]).forEach(function(p){ live[hkey(p)]=1; });
+  Object.keys(m).forEach(function(k){ if(!live[k]){ delete m[k]; changed=true; } });
+  if(changed) saveHidden(m);
+  return m;
+}
+function hideRow(btn){
+  var k=btn.getAttribute('data-key'); if(!k) return;
+  var m=hiddenMap(); m[k]={t:Date.now()}; saveHidden(m);
+  if(_LASTP) render(_LASTP,_LASTABS,_LASTFAIL);
+}
+function unhideRow(btn){
+  var k=btn.getAttribute('data-key'); if(!k) return;
+  var m=hiddenMap(); delete m[k]; saveHidden(m);
+  if(_LASTP) render(_LASTP,_LASTABS,_LASTFAIL);
+}
+function unhideAll(){
+  saveHidden({});
+  if(_LASTP) render(_LASTP,_LASTABS,_LASTFAIL);
+}
+function hidRowHTML(p){
+  return '<div class="hidrow"><b>'+esc(p.name)+'</b> '+(COURSE[p.course]||esc(p.course))+' '+esc(p.round)+'회 · '+esc(p.nextNeeded)+' 미응시 · '+p.days+'일 경과'
+    +'<button class="unhidebtn" data-key="'+escAttr(hkey(p))+'" onclick="unhideRow(this)">복원</button></div>';
+}
+
 function rowHTML(p){
   var u=urgency(p.days);
   var sub=esc(p.school)+(p.year?' · '+esc(p.year)+'학년':'');
@@ -216,13 +257,20 @@ function rowHTML(p){
     +'<button class="copybtn s2" data-stage="2" data-orig="2단계 · 수 리마인드" onclick="copyShare(this)">2단계 · 수 리마인드</button>'
     +'<button class="copybtn s3" data-stage="3" data-orig="3단계 · 전날 최종" onclick="copyShare(this)">3단계 · 전날 최종</button>'
     +'</div>':'')
-    +'</div><div class="days '+u+'"><div class="dn">'+p.days+'</div><div class="dl">일 경과<br>('+esc(p.lastDate)+')</div></div>'
+    +'</div><div class="days '+u+'"><div class="dn">'+p.days+'</div><div class="dl">일 경과<br>('+esc(p.lastDate)+')</div>'
+    +'<button class="hidebtn" data-key="'+escAttr(hkey(p))+'" title="이 회차 안내 발송 완료 · 이 페이지에서만 숨김 (이 브라우저 한정, 서버 데이터에는 영향 없음)" onclick="hideRow(this)">안내함 · 숨김</button></div>'
     +(p.reportLink?'<div class="pdfc"><button class="pdfbtn" data-name="'+escAttr(p.name)+'" data-course="'+escAttr(p.course)+'" data-round="'+escAttr(p.round)+'" data-next="'+escAttr(p.nextNeeded)+'" data-link="'+escAttr(p.reportLink)+'" onclick="dlStudentPdf(this)">문제·OMR·해설<br>PDF ↓</button></div>':'')
     +'</div>';
 }
 
+var _LASTP=null,_LASTABS=null,_LASTFAIL=false;
 function render(P, ABS, absFail){
-  var a=P.active||[], s=P.stale||[];
+  _LASTP=P; _LASTABS=ABS; _LASTFAIL=absFail;
+  var a0=P.active||[], s0=P.stale||[];
+  var hid=pruneHidden(a0.concat(s0));
+  var a=[], s=[], hidden=[];
+  a0.forEach(function(p){ (hid[hkey(p)]?hidden:a).push(p); });
+  s0.forEach(function(p){ (hid[hkey(p)]?hidden:s).push(p); });
   _ACTIVE=a.slice();
   var absClasses=(ABS&&ABS.classes||[]).filter(function(c){return c.absent&&c.absent.length;});
   var absN=absClasses.reduce(function(t,c){return t+c.absent.length;},0);
@@ -242,8 +290,16 @@ function render(P, ABS, absFail){
   else{ h+='<div class="muted-note">저장된 반 명단 기준, 이번 회차 시험 응시 기록이 없는 학생입니다. 버튼으로 온라인 응시 안내를 복사해 보내세요. (OX 워밍업이 아니라 정식 60문항 시험입니다.)</div>'; h+=absClasses.map(absentClassHTML).join(''); }
 
   h+='<div class="sec-h">재시 필요 <span class="tag">'+a.length+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 오래된 순</span>'+(a.length?'<button class="zipbtn" style="margin-left:auto" onclick="zipRetakePending(this)">재시지 ZIP ('+a.length+'명)</button>':'')+'</div>';
-  if(!a.length){ h+='<div class="empty">2주 이내 재시 미응시 학생이 없습니다.</div>'; }
-  else{ h+='<div class="muted-note">정시(또는 재시) 미통과 후 다음 재시를 아직 보지 않은 학생입니다. 토요일 수업 전에 확인하세요.</div>'; h+=a.map(rowHTML).join(''); }
+  if(!a.length){ h+='<div class="empty">'+(hidden.length?'표시할 재시 미응시 학생이 없습니다. (숨김 '+hidden.length+'명)':'2주 이내 재시 미응시 학생이 없습니다.')+'</div>'; }
+  else{ h+='<div class="muted-note">정시(또는 재시) 미통과 후 다음 재시를 아직 보지 않은 학생입니다. 토요일 수업 전에 확인하세요. 안내를 보낸 학생은 행 오른쪽 <b>안내함 · 숨김</b> 버튼으로 이 페이지에서만 감출 수 있습니다.</div>'; h+=a.map(rowHTML).join(''); }
+
+  if(hidden.length){
+    h+='<div class="hidwrap"><details><summary>안내 완료로 숨긴 학생 '+hidden.length+'명 ▾ <span style="font-weight:600">(이 브라우저에서만 적용)</span></summary>'
+      +'<div class="muted-note">안내 발송 후 숨긴 학생입니다. 서버 데이터에는 영향이 없고 이 페이지 목록에서만 빠집니다. 해당 재시를 응시하면 자동으로 정리되고, 다음 회차에 다시 미응시하면 새 항목으로 다시 나타납니다.</div>'
+      +hidden.map(hidRowHTML).join('')
+      +'<button class="btn" style="width:100%;margin-top:2px" onclick="unhideAll()">모두 복원</button>'
+      +'</details></div>';
+  }
 
   if(s.length){
     h+='<div class="stale"><details><summary>장기 미응시 · 이탈 추정 ('+s.length+'명, 알람 제외) ▾</summary>'
