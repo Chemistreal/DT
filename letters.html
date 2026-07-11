@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chemistreal · 학부모 문자 템플릿 (관리자)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --ink:#16202E; --sub:#61707F; --faint:#8A95A2;
+  --line:#E7E8E2; --line2:#EEF0EA;
+  --teal:#0B6E6E; --teal-d:#0A5A5A; --teal-soft:#E4F0EF; --teal-line:#BFE0DD;
+  --o:#1B8A4C; --o-bg:#E7F5EC; --x:#C0392B; --x-bg:#FBEBE9;
+  --brass:#A9853C; --brass-soft:#F5EEDF;
+  --shadow:0 1px 2px rgba(16,32,46,.04), 0 6px 20px rgba(16,32,46,.04);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font-family:'Pretendard',system-ui,-apple-system,sans-serif; color:var(--ink); background:var(--paper);
+  line-height:1.55; -webkit-text-size-adjust:100%; -webkit-font-smoothing:antialiased; overscroll-behavior-y:none}
+.wrap{max-width:720px; margin:0 auto; padding:14px 14px calc(40px + env(safe-area-inset-bottom))}
+header{position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--paper) 88%, transparent); backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--line)}
+.hd{max-width:720px; margin:0 auto; padding:11px 14px calc(11px + env(safe-area-inset-top)) 14px; display:flex; align-items:center; gap:10px}
+.logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(150deg,var(--teal),var(--teal-d));position:relative;flex:none}
+.logo:after{content:"";position:absolute;inset:7px 7px auto auto;width:7px;height:7px;border-radius:50%;background:var(--brass)}
+.brand{font-weight:800;letter-spacing:-.01em;font-size:15.5px}
+.brand small{display:block;font-weight:500;color:var(--sub);font-size:10.5px;letter-spacing:.01em;margin-top:-2px}
+.admtag{margin-left:auto;font-size:10.5px;color:#fff;background:var(--teal);border-radius:30px;padding:3px 11px;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin:13px 0;box-shadow:var(--shadow)}
+h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+.lede{color:var(--sub);font-size:13.5px;margin:.3em 0 1.1em}
+.note{font-size:12px;color:var(--sub);margin:10px 0 0;line-height:1.5}
+.tabs{display:flex;gap:7px;margin:6px 0 12px}
+.tabs button{flex:1;font-size:13px;padding:8px;border:1px solid var(--line);background:#fff;color:var(--sub);border-radius:9px;cursor:pointer;font-weight:600}
+.tabs button.sel{background:var(--teal);color:#fff;border-color:var(--teal)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px}
+.rchip{position:relative;border:1px solid var(--line);border-radius:11px;padding:11px 4px;text-align:center;cursor:pointer;background:#fff;transition:.12s}
+.rchip:hover{border-color:var(--teal-line);background:var(--teal-soft)}
+.rchip.sel{border-color:var(--teal);background:var(--teal-soft)}
+.rchip .n{font-size:18px;font-weight:800;color:var(--ink)}.rchip .u{font-size:10px;color:var(--sub);display:block}
+.rchip.empty .n{color:var(--faint)}
+.rchip.empty:before{content:"";position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--brass)}
+.legend{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--sub);margin-top:10px}
+.legend i{width:6px;height:6px;border-radius:50%;background:var(--brass);display:inline-block}
+.phead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.ptitle{font-size:15px;font-weight:800}
+.ptitle small{font-weight:600;color:var(--sub);font-size:12px;margin-left:6px}
+.copybtn{font-size:13px;font-weight:700;padding:9px 18px;border:1px solid var(--teal);background:var(--teal);color:#fff;border-radius:9px;cursor:pointer;transition:.12s}
+.copybtn:hover{background:var(--teal-d)}
+.copybtn.copied{background:var(--o);border-color:var(--o)}
+.warnbox{background:var(--brass-soft);border:1px solid #E8DCC0;border-radius:10px;padding:9px 13px;font-size:12px;color:#6B5524;margin:0 0 10px;line-height:1.5}
+.warnbox b{color:#8a6a25}
+textarea.msg{width:100%;min-height:200px;font-family:inherit;font-size:13.5px;line-height:1.7;color:var(--ink);
+  padding:14px 15px;border:1px solid var(--line);border-radius:11px;background:#FDFDFB;resize:vertical}
+textarea.msg:focus{outline:none;border-color:var(--teal-line);background:#fff}
+.editnote{font-size:11.5px;color:var(--faint);margin-top:7px}
+.ghostlink{display:inline-block;font-size:12px;color:var(--sub);border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 13px;text-decoration:none;font-weight:600;margin-top:2px}
+.ghostlink:hover{border-color:var(--teal-line);color:var(--teal)}
+</style></head><body>
+<header><div class="hd"><div class="logo"></div><div class="brand">Chemistreal<small>조준모<span style="letter-spacing:.05em">T</span> · 다원교육 영재관 화학</small></div><div class="admtag">관리자</div></div></header>
+<main class="wrap">
+
+<div class="card">
+  <h1>학부모 문자 템플릿</h1>
+  <p class="lede">과목과 회차를 고르면 그 주 수업 안내 문자 전문이 나옵니다. 필요하면 아래 미리보기에서 바로 고친 뒤 복사하세요.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="rgrid" id="rgrid"></div>
+  <div class="legend"><i></i> 점이 있는 회차는 내용이 아직 입력되지 않아 기본 틀만 나옵니다.</div>
+  <p class="note">회차별 내용 수정: 이 파일(<b>letters.html</b>) 상단 <b>MSGS</b> 블록에서 해당 회차의 topic · items · story · next · 명언을 채우면 됩니다.</p>
+  <p style="margin:12px 0 0"><a class="ghostlink" href="admin.html">← 반 통계 · 문항 분석으로</a> <a class="ghostlink" href="pending.html">재시 미응시 현황</a></p>
+</div>
+
+<div class="card" id="pv" hidden>
+  <div class="phead">
+    <div class="ptitle" id="pvTitle"></div>
+    <button class="copybtn" id="copyBtn" data-orig="문자 복사" onclick="copyMsg(this)">문자 복사</button>
+  </div>
+  <div class="warnbox" id="pvWarn" hidden><b>내용 미입력 회차</b>입니다. 〔 〕 표시 부분을 채우거나, letters.html의 MSGS 블록에 이 회차 내용을 넣어 주세요.</div>
+  <textarea class="msg" id="pvText" spellcheck="false"></textarea>
+  <div class="editnote">미리보기를 직접 고쳐도 복사에 그대로 반영됩니다 (파일에는 저장되지 않음).</div>
+</div>
+
+</main>
+<script>
+/* ============================================================
+   회차별 문자 내용 (여기만 수정하면 됩니다)
+   - topic  : 이번 주 수업 주제 (예: '화학전지')
+   - hw     : 숙제 표기. 비우면 '조준모의고사 N회' 자동
+   - items  : 구체 내용 목록 (번호는 자동으로 붙습니다)
+   - story  : 학습 의미 문단(들). 줄바꿈은 \n 그대로 사용
+   - next   : 다음 주 수업 주제
+   - quoteEn/quoteKo/quoteBy : 과학자 명언 영문 · 한글 번역 · 출처
+   - tie    : 명언과 이번 주제를 잇는 마무리 문장(들)
+   비워 둔 항목은 미리보기에 〔 〕 자리표시로 나옵니다.
+   ============================================================ */
+const MSGS={
+ch1:[
+/* ── 화학Ⅰ 1회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 2회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 3회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 4회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 5회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 6회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 7회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 8회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 9회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 10회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 11회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 12회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 13회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 14회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 15회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅰ 16회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''}
+],
+ch2:[
+/* ── 화학Ⅱ 1회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 2회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 3회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 4회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 5회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 6회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 7회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 8회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 9회 · 예시 원문 (회차 위치가 다르면 해당 회차로 옮기세요) ── */
+{topic:'화학전지',hw:'조준모의고사 9회',
+ items:['화학전지','전압','기전력계산','물의 전기분해','전해질의 선택','도금과 정제'],
+ story:'이번 시간에는 화학전지가 어떻게 전기를 만들어내는지를 중심으로 학습했습니다.\n이 과정을 통해 우리는 반응의 방향성, 전압의 계산, 반응물 선택의 중요성을 논리적으로 분석하고 예측하는 과학적 사고력을 기를 수 있습니다.\n특히 전지의 기전력 계산은 고등학교 화학에서 배우는 깁스 자유에너지, 평형, 자발성 개념과 연결되고,\n전기분해와 도금은 실험 설계, 양적 관계 계산, 물질 변화의 제어로 이어집니다.\n이러한 내용은 단순 암기를 넘어, "어떤 조건에서 반응이 일어날까?", "어떻게 조작하면 원하는 결과를 얻을 수 있을까?" 같은\n탐구적 질문을 던지고 해석하는 능력을 키우는 데 매우 중요합니다.\n화학전지는 단순한 지식이 아니라, 눈에 보이지 않는 전자의 흐름이 세상을 바꾸는 방식을 이해하는 훈련입니다.\n지금 여러분이 배우는 이 작은 개념들이, 언젠가 세상의 흐름을 바꾸는 큰 생각으로 이어질지도 모릅니다.',
+ next:'전기분해',
+ quoteEn:'But still try, for who knows what is possible?',
+ quoteKo:'그래도 계속 시도해보라, 무엇이 가능한지 아무도 모르니까.',
+ quoteBy:'Michael Faraday',
+ tie:'오늘 배운 화학전지의 원리도 결국 한 과학자의 끝없는 ‘시도’에서 시작되었습니다.\n여러분의 질문도 그런 가능성의 시작이 될 수 있습니다.'},
+/* ── 화학Ⅱ 10회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 11회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 12회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 13회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 14회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 15회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 화학Ⅱ 16회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''}
+],
+gc:[
+/* ── 일반화학 1회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 일반화학 2회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 일반화학 3회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 일반화학 4회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 일반화학 5회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''},
+/* ── 일반화학 6회 ── */ {topic:'',hw:'',items:[],story:'',next:'',quoteEn:'',quoteKo:'',quoteBy:'',tie:''}
+]
+};
+/* ============================================================ */
+
+const COURSE={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+let curCourse='ch1', curIdx=null;
+
+function filled(d){ return !!(d && d.topic && d.items && d.items.length); }
+
+/* 문자 조립: 예시 문자 골격 그대로 */
+function buildMsg(course, idx){
+  var d=MSGS[course][idx]||{}, n=idx+1;
+  var ph=function(v,label){ return v && String(v).trim() ? v : '〔'+label+'〕'; };
+  var L=[];
+  L.push('안녕하세요. 화학올림피아드 담당하는 조준모입니다.');
+  L.push('(숙제: '+(d.hw && d.hw.trim() ? d.hw : '조준모의고사 '+n+'회')+')');
+  L.push('이번 주 수업에서는 '+ph(d.topic,'이번 주 주제')+'에 대해 다루었습니다.');
+  L.push('구체적인 내용은 다음과 같습니다.');
+  if(d.items && d.items.length){ d.items.forEach(function(it,i){ L.push((i+1)+'. '+it); }); }
+  else { L.push('1. 〔내용 1〕'); L.push('2. 〔내용 2〕'); L.push('3. 〔내용 3〕'); }
+  L.push(''); L.push('');
+  L.push(ph(d.story,'이번 수업이 갖는 학습적 의미 · 연결되는 상위 개념 · 격려 문단'));
+  L.push('');
+  L.push('다음 주 수업에서는 '+ph(d.next,'다음 주 주제')+'에 대해 다룰 예정입니다.');
+  L.push('충분히 복습한 후 다음 시간에 오길 기다리고있겠습니다.');
+  L.push('"'+ph(d.quoteEn,'과학자 명언 (영문)')+'"');
+  L.push('“'+ph(d.quoteKo,'명언 한글 번역')+'”');
+  L.push('– '+ph(d.quoteBy,'명언 출처'));
+  L.push(ph(d.tie,'명언과 이번 주제를 잇는 마무리 문장'));
+  L.push('감사합니다.');
+  return L.join('\n');
+}
+
+function renderTabs(){
+  var t=document.getElementById('tabs'); t.innerHTML='';
+  Object.keys(MSGS).forEach(function(c){
+    var b=document.createElement('button');
+    b.textContent=COURSE[c]+' ('+MSGS[c].length+'회)';
+    if(c===curCourse) b.classList.add('sel');
+    b.onclick=function(){ curCourse=c; curIdx=null; document.getElementById('pv').hidden=true; renderTabs(); renderGrid(); };
+    t.appendChild(b);
+  });
+}
+function renderGrid(){
+  var g=document.getElementById('rgrid'); g.innerHTML='';
+  MSGS[curCourse].forEach(function(d,i){
+    var c=document.createElement('div');
+    c.className='rchip'+(filled(d)?'':' empty')+(i===curIdx?' sel':'');
+    c.innerHTML='<div class="n">'+(i+1)+'</div><span class="u">회차</span>';
+    c.onclick=function(){ curIdx=i; renderGrid(); renderPreview(); };
+    g.appendChild(c);
+  });
+}
+function renderPreview(){
+  var d=MSGS[curCourse][curIdx];
+  document.getElementById('pv').hidden=false;
+  document.getElementById('pvTitle').innerHTML=COURSE[curCourse]+' '+(curIdx+1)+'회<small>'+(filled(d)?(d.topic||''):'내용 미입력')+'</small>';
+  document.getElementById('pvWarn').hidden=filled(d);
+  var ta=document.getElementById('pvText');
+  ta.value=buildMsg(curCourse,curIdx);
+  ta.style.height='auto'; ta.style.height=Math.min(Math.max(ta.scrollHeight+6,200),720)+'px';
+  document.getElementById('pv').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copyMsg(btn){
+  var msg=document.getElementById('pvText').value; if(!msg) return;
+  var orig=btn.getAttribute('data-orig')||btn.textContent;
+  var done=function(){ btn.textContent='복사됨 ✓'; btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent=orig; btn.classList.remove('copied'); }, 1800); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(msg).then(done).catch(fallback); }
+  else fallback();
+  function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=msg; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done(); }catch(e){ prompt('메시지 복사', msg); } }
+}
+
+renderTabs(); renderGrid();
+</script>
+</body></html>
