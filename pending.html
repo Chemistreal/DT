@@ -78,6 +78,10 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .zipbtn{border:1px solid var(--teal,#0B6E6E);color:var(--teal-d,#0A5A5A);background:#fff;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:8px;white-space:nowrap}
 .zipbtn:hover{background:rgba(11,110,110,.07)}
 .zipbtn[data-busy="1"]{opacity:.7;cursor:progress}
+.pdfc{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px}
+.pdfbtn{border:1px solid var(--gold);color:#7a5d20;background:#fff;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:800;line-height:1.35;cursor:pointer;font-family:inherit;text-align:center;white-space:nowrap}
+.pdfbtn:hover{background:rgba(201,162,39,.08)}
+.pdfbtn[data-busy="1"]{opacity:.7;cursor:progress}
 </style>
 </head>
 <body>
@@ -212,7 +216,9 @@ function rowHTML(p){
     +'<button class="copybtn s2" data-stage="2" data-orig="2단계 · 수 리마인드" onclick="copyShare(this)">2단계 · 수 리마인드</button>'
     +'<button class="copybtn s3" data-stage="3" data-orig="3단계 · 전날 최종" onclick="copyShare(this)">3단계 · 전날 최종</button>'
     +'</div>':'')
-    +'</div><div class="days '+u+'"><div class="dn">'+p.days+'</div><div class="dl">일 경과<br>('+esc(p.lastDate)+')</div></div></div>';
+    +'</div><div class="days '+u+'"><div class="dn">'+p.days+'</div><div class="dl">일 경과<br>('+esc(p.lastDate)+')</div></div>'
+    +(p.reportLink?'<div class="pdfc"><button class="pdfbtn" data-name="'+escAttr(p.name)+'" data-course="'+escAttr(p.course)+'" data-round="'+escAttr(p.round)+'" data-next="'+escAttr(p.nextNeeded)+'" data-link="'+escAttr(p.reportLink)+'" onclick="dlStudentPdf(this)">문제·OMR·해설<br>PDF ↓</button></div>':'')
+    +'</div>';
 }
 
 function render(P, ABS, absFail){
@@ -322,6 +328,24 @@ async function zipExamClass(btn){
     btn.textContent='\u2713 완료';
   }catch(e){ btn.textContent=orig; alert('ZIP 생성 실패: '+(e&&e.message?e.message:e)); }
   setTimeout(function(){ btn.textContent=orig; btn.dataset.busy='0'; },1600);
+}
+
+// 학생별 개인화 재시 문제·OMR·해설 통합 PDF 다운로드 (문자탭 행 우측 버튼)
+async function dlStudentPdf(btn){
+  if(btn.dataset.busy==='1') return; var orig=btn.innerHTML; btn.dataset.busy='1';
+  var name=btn.getAttribute('data-name')||'', course=btn.getAttribute('data-course'), round=Number(btn.getAttribute('data-round'));
+  var vlab=String(btn.getAttribute('data-next')||'재시'); var key=keyFromLink(btn.getAttribute('data-link'));
+  var attNo=0; for(var ci=0;ci<vlab.length;ci++){ if(vlab.charAt(ci)==='재') attNo++; } attNo=attNo+1;  // 재시=2,재재시=3...
+  try{
+    btn.textContent='문항 생성\u2026';
+    var rr=await DTRetake.items({key:key, course:course, round:round, attemptNo:attNo});
+    if(!rr || !rr.items || !rr.items.length) throw new Error('첫 응시 기록이 없어 재시지를 만들 수 없습니다');
+    await DTPDF.make({items:rr.items, course:course, round:round, vlabel:vlab, kind:'full', scoring:rr.scoring,
+      sname:name, fname:safeName(name)+'_'+vlab+'_문제·OMR·해설.pdf',
+      onstep:function(m){ btn.textContent=m||'생성 중\u2026'; }});
+    btn.textContent='\u2713 저장됨';
+  }catch(e){ btn.innerHTML=orig; btn.dataset.busy='0'; alert('PDF 생성 실패: '+(e&&e.message?e.message:e)); return; }
+  setTimeout(function(){ btn.innerHTML=orig; btn.dataset.busy='0'; },1600);
 }
 
 // 재시 필요 학생 -> 각자 개인화 재시지(이름.pdf) ZIP
