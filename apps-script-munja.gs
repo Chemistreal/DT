@@ -21,6 +21,7 @@
      이러면 앱에서 채점 저장이 될 때마다 즉시 문자발송 행이 생긴다.
    ============================================================ */
 
+var MUNJA_SHEET_ID = '1WVK-m8PUVm9Hg7bvxuIrk3_VzxPqO4vym1qpatoSM7s'; // 성적 시트 ID (URL의 /d/와 /edit 사이)
 var MUNJA_TAB = '문자발송';
 var MUNJA_SRC_TAB = '결과';
 var MUNJA_HEADERS = ['시각','이름','학생키','학교','학년','과목','회차','시도','점수','통과','리포트링크','문자내용','발송'];
@@ -29,7 +30,7 @@ var MUNJA_PASS_LINE = 80; // 통과선(점)
 function munjaCourseKo_(c) { return c === 'ch1' ? '화학Ⅰ' : c === 'ch2' ? '화학Ⅱ' : c === 'gc' ? '일반화학' : String(c || ''); }
 
 function munjaSheet_() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var ss = SpreadsheetApp.openById(MUNJA_SHEET_ID);
   var sh = ss.getSheetByName(MUNJA_TAB) || ss.insertSheet(MUNJA_TAB);
   if (sh.getLastRow() === 0) { sh.appendRow(MUNJA_HEADERS); }
   else if (sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), MUNJA_HEADERS.length)).getValues()[0].slice(0, MUNJA_HEADERS.length).join('|') !== MUNJA_HEADERS.join('|')) {
@@ -82,7 +83,7 @@ function munjaMsg_(d) {
 
 /* 결과 탭 → 문자발송 탭 동기화 (멱등 · 몇 번 실행해도 중복 없음) */
 function munjaSyncAll() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var ss = SpreadsheetApp.openById(MUNJA_SHEET_ID);
   var src = ss.getSheetByName(MUNJA_SRC_TAB);
   if (!src || src.getLastRow() < 2) return '결과 탭에 데이터가 없습니다.';
   var data = src.getDataRange().getValues();
