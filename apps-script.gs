@@ -166,7 +166,7 @@ function doPost(e) {
     var existing = findRow_(sh, _key, d.course || '', d.round || '', d.attempt || '');
     if (existing > 0) { sh.getRange(existing, 1, 1, rowVals.length).setValues([rowVals]); } // 멱등: 덮어쓰기
     else { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, 1, rowVals.length).setValues([rowVals]); } // 유령 행 아래가 아니라 실데이터 바로 다음에 기록
-    try { buildSendSheet(); } catch (errS) {}               // 저장 즉시 문자발송 탭 갱신 (기존 형식 그대로)
+    try { buildSendSheet(); } catch (errS) {}               // 실시간: 채점 저장 즉시 문자발송 탭 자동 갱신
     return json_({ ok: true, updated: existing > 0, reportLink: linkOf_(_key) });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
@@ -803,7 +803,6 @@ function reorderColumnsToNew() {
    문자발송 탭 자동 생성 (통과 학생 = 첫 시험 + 통과 시험 / 미통과 = 재시 안내)
    - 편집기에 붙여넣고 buildSendSheet 를 [실행]만 하면 됨 (웹앱 재배포 불필요)
    - '문자발송' 탭이 자동 생성됨(있으면 갱신). SHEET_ID, TAB 은 기존 상수 사용
-   - 채점 저장(doPost) 직후에도 자동 호출되어 항상 최신 상태 유지 (이 부분은 재배포 필요)
    규칙:
      · 정시에 바로 통과       -> "정시 90점 통과" 한 줄
      · 재시(들) 끝에 통과      -> "정시 60점 (미통과)" + "재시 82점 통과" (중간 재시 생략,
@@ -818,8 +817,8 @@ function sendIsFirst_(a) { return attOrd_(a) === 0; }
 
 function sendPassMsg_(name, courseKo, round, firstScore, passScore, passIsFirst, link) {
   var lines = passIsFirst
-    ? ('· 정시 ' + firstScore + '점 통과')
-    : ('· 정시 ' + firstScore + '점 (미통과)\n· 재시 ' + passScore + '점 통과');
+    ? ('\u00b7 정시 ' + firstScore + '점 통과')
+    : ('\u00b7 정시 ' + firstScore + '점 (미통과)\n\u00b7 재시 ' + passScore + '점 통과');
   return '[다원교육 영재관 · 화학 조준모]\n'
     + name + ' 학생 ' + courseKo + ' ' + round + '회 성적표입니다.\n'
     + lines + '\n'
@@ -906,20 +905,10 @@ function buildSendSheet() {
   Logger.log('문자발송(행 정렬): ' + rowsOut.length + '행');
 }
 
-/* (선택) 매일 아침 자동 갱신 트리거 설치 */
+/* 백업 자동 갱신 트리거: 10분 간격 (시트를 손으로 고친 경우까지 커버).
+   실시간 갱신은 doPost가 채점 저장 직후 buildSendSheet를 직접 호출해 처리한다. */
 function setupSendTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'buildSendSheet') ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger('buildSendSheet').timeBased().everyDays(1).atHour(6).create();
-  Logger.log('buildSendSheet 매일 06시 트리거 설치');
-}
-
-/* ★ 1회 실행: 예전 munjaSyncAll(다른 형식 add-on) 트리거를 제거한다.
-   add-on 파일을 지웠거나 이 전문으로 교체했다면 반드시 한 번 실행할 것. */
-function removeMunjaTrigger() {
-  var n = 0;
-  ScriptApp.getProjectTriggers().forEach(function (t) {
-    if (t.getHandlerFunction() === 'munjaSyncAll') { ScriptApp.deleteTrigger(t); n++; }
-  });
-  Logger.log('munjaSyncAll 트리거 ' + n + '개 제거');
-  return 'munjaSyncAll 트리거 ' + n + '개 제거';
+  ScriptApp.newTrigger('buildSendSheet').timeBased().everyMinutes(10).create();
+  Logger.log('buildSendSheet 10분 간격 백업 트리거 설치 (실시간 갱신은 저장 시 doPost가 수행)');
 }
