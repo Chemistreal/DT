@@ -76,7 +76,7 @@
     var h = document.createElement('div');
     h.className = 'dtp-head';
     var title = (COURSE_KO[rd.course] || rd.course) + ' · 누적 OX ' + rd.round + '회 · ' + vlabel
-      + ' · ' + (kind === 'sol' ? '해설 · 공부자료' : '시험지');
+      + ' · ' + (kind === 'sol' ? '해설 · 공부자료' : kind === 'omr' ? 'OMR 답안지' : '시험지');
     var right = '<span class="dtp-hr">조준모의고사 · 다원교육 영재관</span>';
     var line1 = '<div class="dtp-h1"><span>' + esc(title) + '</span>' + right + '</div>';
     var line2 = '';
@@ -86,6 +86,11 @@
         + ' &nbsp; 각 문장이 옳으면 O, 틀리면 X. 60문항 · 합격 ' + (((rd.scoring || {}).pass) || 80) + '점.</div>';
     } else if (first && kind === 'sol') {
       line2 = '<div class="dtp-h2">각 문항의 정답과 해설입니다. 틀린 문항은 바로잡기 문장으로 다시 익히세요.</div>';
+    } else if (first && kind === 'omr') {
+      var nm = (rd._sname ? '<b>' + esc(rd._sname) + '</b>' : '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>');
+      line2 = '<div class="dtp-h2">이름 ' + nm
+        + ' &nbsp; 학교 <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>'
+        + ' &nbsp; 점수 <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u> / 100 &nbsp;·&nbsp; 정답이라고 생각하는 쪽(O 또는 X)을 진하게 칠하세요.</div>';
     }
     h.innerHTML = line1 + line2;
     return h;
@@ -98,6 +103,37 @@
     st.style.cssText = 'position:fixed;left:-99999px;top:0;width:760px;background:#fff;';
     document.body.appendChild(st);
     return st;
+  }
+
+  // OMR 답안지 1페이지 (n문항 · 3열 그리드)
+  function omrPage(stage, rd, vlabel, n) {
+    var p = document.createElement('div');
+    p.className = 'dtp-page';
+    p.appendChild(headerNode(rd, vlabel, 'omr', 1, true));
+    var grid = document.createElement('div');
+    grid.className = 'dtp-omr';
+    var perCol = Math.ceil(n / 3);
+    for (var col = 0; col < 3; col++) {
+      var cd = document.createElement('div');
+      cd.className = 'dtp-omr-col';
+      for (var r = 0; r < perCol; r++) {
+        var q = col * perCol + r + 1;
+        if (q > n) break;
+        var row = document.createElement('div');
+        row.className = 'dtp-omr-row';
+        row.innerHTML = '<span class="dtp-omr-n">' + q + '</span>'
+          + '<span class="dtp-omr-b">O</span><span class="dtp-omr-b">X</span>';
+        cd.appendChild(row);
+      }
+      grid.appendChild(cd);
+    }
+    p.appendChild(grid);
+    var note = document.createElement('div');
+    note.className = 'dtp-omr-note';
+    note.textContent = '표기 후 사진을 찍어 제출하거나, 수업 시간에 제출하세요. 수정 시 이전 표기에 X를 긋고 다시 칠합니다.';
+    p.appendChild(note);
+    stage.appendChild(p);
+    return { el: p, list: null };
   }
 
   // 문항을 페이지로 분배 (측정 기반) -> 페이지별 DOM 배열
@@ -163,7 +199,13 @@
       '.dtp-fix{margin-top:5px;font-size:12.5px;color:#333;background:#FAFAF7;border-left:3px solid #C0392B;border-radius:5px;padding:5px 9px}',
       '.dtp-why{margin-top:5px;font-size:12.5px;color:#444;line-height:1.55}',
       '.dtp-fix b,.dtp-why b{color:#0B6E6E;font-weight:800;margin-right:4px}',
-      '.dtp-foot{position:absolute;right:46px;bottom:12px;font-size:10.5px;color:#aaa}'
+      '.dtp-foot{position:absolute;right:46px;bottom:12px;font-size:10.5px;color:#aaa}',
+      '.dtp-omr{display:flex;gap:26px;margin-top:14px}',
+      '.dtp-omr-col{flex:1}',
+      '.dtp-omr-row{display:flex;align-items:center;gap:12px;padding:7px 4px;border-bottom:1px solid #eee}',
+      '.dtp-omr-n{min-width:26px;text-align:right;font-weight:800;color:#0B6E6E;font-size:13px}',
+      '.dtp-omr-b{width:34px;height:23px;border:1.6px solid #9aa0a6;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#888;font-weight:700}',
+      '.dtp-omr-note{margin-top:16px;font-size:11.5px;color:#777;border-top:1px dashed #ddd;padding-top:10px}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -189,7 +231,21 @@
     var stage = makeStage();
     try {
       step('문서 구성 중\u2026');
-      var pages = paginate(stage, rd, picked.label, opts.kind, picked.items);
+      var pages;
+      if (opts.kind === 'full') {
+        rd._sname = opts.sname || '';
+        pages = paginate(stage, rd, picked.label, 'exam', picked.items);
+        pages.push(omrPage(stage, rd, picked.label, picked.items.length));
+        pages = pages.concat(paginate(stage, rd, picked.label, 'sol', picked.items));
+        // 전체 기준으로 쪽번호 재부여
+        for (var rn = 0; rn < pages.length; rn++) {
+          var ft = pages[rn].el.querySelector('.dtp-foot');
+          if (!ft) { ft = document.createElement('div'); ft.className = 'dtp-foot'; pages[rn].el.appendChild(ft); }
+          ft.textContent = (rn + 1) + ' / ' + pages.length;
+        }
+      } else {
+        pages = paginate(stage, rd, picked.label, opts.kind, picked.items);
+      }
 
       var jsPDF = window.jspdf.jsPDF;
       var pdf = new jsPDF('p', 'mm', 'a4');
@@ -206,7 +262,7 @@
         pdf.addImage(img, 'JPEG', (pw - w) / 2, y, w, hh);
       }
       var fname = opts.fname || ((COURSE_KO[rd.course] || rd.course) + '_' + rd.round + '회_'
-        + (picked.label.replace(/\s+/g, '')) + '_' + (opts.kind === 'sol' ? '해설' : '시험지') + '.pdf');
+        + (picked.label.replace(/\s+/g, '')) + '_' + (opts.kind === 'sol' ? '해설' : opts.kind === 'full' ? '문제·OMR·해설' : '시험지') + '.pdf');
       if (opts.output === 'blob') { step(''); return { blob: pdf.output('blob'), fname: fname }; }
       step('저장 중\u2026');
       pdf.save(fname);
