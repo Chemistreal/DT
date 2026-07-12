@@ -115,19 +115,19 @@ function urgency(days){ return days>=7?'urgent':days>=4?'warn':'ok'; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
 function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-var STAGE_LABEL={'1':'1단계 · 월요일','2':'2단계 · 수요일','3':'3단계 · 수업 전날'};
+var STAGE_LABEL={'1':'1단계 · 월요일','2':'2단계 · 수요일','3':'3단계 · 최종'};
 function shareMsg(d, stage){
   var course=COURSE[d.course]||d.course;
   var head='[다원교육 영재관 · 화학] '+d.name+' 학생';
   var reask='재시는 아이가 틀린 개념만 골라 개별 출제되며, 처음 본 문항과 겹치지 않습니다.';
   var link='▶ '+d.link;
   if(stage==='3'){
-    return head+' 재시 안내 (수업 전날)\n\n'
+    return head+' 재시 최종 안내\n\n'
       +'안녕하세요, 화학 조준모입니다.\n\n'
-      +'내일 수업을 앞두고 마지막으로 안내드립니다. '+course+' '+d.round+'회 재시가 아직 확인되지 않았는데, 내일 수업 전까지는 꼭 마치고 오면 좋겠습니다. 재시로 개념을 정리한 상태로 들어와야 내일 진도가 온전히 이어집니다.\n\n'
+      +'마지막으로 안내드립니다. '+course+' '+d.round+'회 재시가 아직 확인되지 않았습니다. 다음 수업 전까지는 꼭 마치고 오면 좋겠습니다. 재시로 개념을 정리한 상태로 들어와야 다음 진도가 온전히 이어집니다.\n\n'
       +'아래 링크에서 취약 개념 보강 후 재시까지 짧게 마무리해 주세요. '+reask+'\n\n'
       +link+'\n\n'
-      +'오늘 안에 완료해 두시면 내일 수업이 한결 수월합니다. 감사합니다.\n\n조준모 드림';
+      +'미리 완료해 두면 다음 수업이 한결 수월합니다. 감사합니다.\n\n조준모 드림';
   }
   if(stage==='2'){
     return head+' 재시 리마인드\n\n'
@@ -182,7 +182,7 @@ function absentMsg(d, stage){
       +'앞서 안내드린 '+course+' '+d.round+'회 시험이 아직 응시 전이라 다시 한번 챙겨드립니다. 다음 수업은 이 회차 내용을 이어서 진행하기 때문에, 그 전에 응시해 두어야 진도가 온전히 연결됩니다.\n\n'
       +'아래 링크에서 지금 바로 응시할 수 있습니다. 60문항 OX으로 길지 않습니다.\n\n'
       +link+'\n\n'
-      +'오늘 안에 마쳐 두시면 다음 수업이 한결 수월합니다. 감사합니다.\n\n조준모 드림';
+      +'미리 마쳐 두시면 다음 수업이 한결 수월합니다. 감사합니다.\n\n조준모 드림';
   }
   // 1차 안내
   return head+' 시험 안내\n\n'
@@ -255,7 +255,7 @@ function rowHTML(p){
     +'<div class="cglab">카톡 안내 복사</div>'
     +'<button class="copybtn s1" data-stage="1" data-orig="1단계 · 월 안내" onclick="copyShare(this)">1단계 · 월 안내</button>'
     +'<button class="copybtn s2" data-stage="2" data-orig="2단계 · 수 리마인드" onclick="copyShare(this)">2단계 · 수 리마인드</button>'
-    +'<button class="copybtn s3" data-stage="3" data-orig="3단계 · 전날 최종" onclick="copyShare(this)">3단계 · 전날 최종</button>'
+    +'<button class="copybtn s3" data-stage="3" data-orig="3단계 · 최종 안내" onclick="copyShare(this)">3단계 · 최종 안내</button>'
     +'</div>':'')
     +'</div><div class="days '+u+'"><div class="dn">'+p.days+'</div><div class="dl">일 경과<br>('+esc(p.lastDate)+')</div>'
     +'<button class="hidebtn" data-key="'+escAttr(hkey(p))+'" title="이 회차 안내 발송 완료 · 이 페이지에서만 숨김 (이 브라우저 한정, 서버 데이터에는 영향 없음)" onclick="hideRow(this)">안내함 · 숨김</button></div>'
