@@ -197,7 +197,7 @@ function doGet(e) {
   var key = raw, tok = '';
   var li = raw.lastIndexOf('-');
   if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt)) { key = raw.slice(0, li); tok = mt; } }
-  var valid = !tok || tok === tokenFor_(key);   // 기존(무토큰) 링크 호환: 토큰이 있는데 틀린 경우만 차단
+  var valid = !!tok && tok === tokenFor_(key);   // ★보안: 토큰 없는 링크는 차단 (시스템이 만드는 링크는 전부 토큰 포함)
   if (!raw) {
     // 개인정보 보호: 키 없는 전체 조회는 관리자 토큰이 있을 때만(관리 콘솔 전용)
     if (e.parameter.all === '1' && adminOk_(token)) {
@@ -592,8 +592,21 @@ function cleanName_(s) { return String(s == null ? '' : s).replace(/\s+/g, '').t
 function normSchool_(s) { s = cleanName_(s); return s.replace(/중학교$/, '중').replace(/고등학교$/, '고').replace(/초등학교$/, '초'); }
 function normGrade_(s) { s = String(s == null ? '' : s).trim(); var m = s.match(/\d+/); return m ? m[0] : s; }
 function keyOf_(name, school) { return normSchool_(school) + '-' + cleanName_(name); }
-var LINK_SALT = 'chemistreal::s4lt::9f3Kq2026';
-function tokenFor_(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
+/* ★보안: 실제 salt 값은 저장소에 두지 않는다.
+   프로젝트 설정 > 스크립트 속성 > LINK_SALT 에 저장한다. (설정법은 checkLinkSalt 참고)
+   속성이 비어 있으면 리포트 링크 토큰이 전부 무효가 되어 어떤 리포트도 열리지 않는다. */
+var LINK_SALT_FALLBACK = '';
+function linkSalt_() {
+  try { var v = (PropertiesService.getScriptProperties().getProperty('LINK_SALT') || '').trim(); if (v) return v; } catch (e) {}
+  return LINK_SALT_FALLBACK;
+}
+/* 편집기에서 실행해 속성 설정 상태를 확인 */
+function checkLinkSalt() {
+  var v = linkSalt_();
+  var msg = v ? 'LINK_SALT 속성 설정됨 (길이 ' + v.length + ')' : '⚠ LINK_SALT 속성이 비어 있습니다 - 리포트 링크가 전부 열리지 않는 상태';
+  Logger.log(msg); return msg;
+}
+function tokenFor_(base){ var s=String(base||'')+'|'+linkSalt_(),a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
 function linkOf_(key) { return REPORT_BASE_URL + 'report.html?student=' + key + '-' + tokenFor_(key); }
 function setKeyLink_(sh, row, key, link) {
   sh.getRange(row, 6).setValue(key);   // F 학생키
