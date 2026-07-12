@@ -1,0 +1,30 @@
+name: regression-tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install playwright
+        run: npm install --prefix tests
+      - name: Install chromium
+        run: npx --prefix tests playwright install --with-deps chromium
+      - name: Run regression suite
+        run: NODE_PATH=tests/node_modules node tests/run.js
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fail-screenshots
+          path: tests/fail-*.png
+          if-no-files-found: ignore
