@@ -197,10 +197,20 @@ async function assertNoOverflow(page, label) {
   }, { clipboard: true });
 
   /* ── 7. 리포트: 기록 없음(빈 데이터) 경로가 에러 없이 렌더 ── */
-  await test('report · 빈 데이터 상태', async page => {
+  await test('report · 미해석 링크는 데모 대신 오류 표시', async page => {
+    // student 파라미터가 있는데 서버가 못 여는(cumulative:null) 경우: 남의 데모 학생을 보여주면 안 된다.
     await page.goto(BASE + 'report.html?student=demo'); await page.waitForTimeout(1200);
     const text = await page.$eval('#app', e => e.textContent).catch(() => '');
     assert(text.length > 0, '리포트 본문 비어 있음');
+    assert(text.indexOf('조민수') < 0 && text.indexOf('이지호') < 0, '미해석 링크에 데모 학생 데이터가 노출됨');
+    assert(/열 수 없습니다|확인/.test(text), '링크 오류 안내가 표시되지 않음');
+    await assertNoOverflow(page, 'report');
+  });
+  await test('report · 파라미터 없으면 미리보기(데모) 표시', async page => {
+    // 링크 없이 report.html 직접 열기 = 미리보기. 이때만 데모 학생을 보여준다(OG 프리뷰 용).
+    await page.goto(BASE + 'report.html'); await page.waitForTimeout(1200);
+    const text = await page.$eval('#app', e => e.textContent).catch(() => '');
+    assert(text.indexOf('조민수') >= 0, '파라미터 없는 미리보기에서 데모가 사라짐');
     await assertNoOverflow(page, 'report');
   });
 
