@@ -228,10 +228,16 @@ function doGet(e) {
   if (action === 'names') { return namesForStudents_(e.parameter.code); }
   if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
   var raw = (e.parameter.student || '').trim();
-  var key = raw, tok = '';
-  var li = raw.lastIndexOf('-');
-  if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt)) { key = raw.slice(0, li); tok = mt; } }
-  var valid = !!tok && tok === tokenFor_(key);   // ★보안: 토큰 없는 링크는 차단 (시스템이 만드는 링크는 전부 토큰 포함)
+  var key = null;
+  if (raw) {
+    if (/^[0-9a-z]+$/i.test(raw)) {
+      key = findKeyByPubId_(raw);                 // 신규: 불투명 코드(한글·하이픈 없음) → 학생키 역조회
+    } else {
+      var li = raw.lastIndexOf('-');              // 기존: 학교-이름-토큰 (이미 보낸 링크 호환)
+      if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt) && mt === tokenFor_(raw.slice(0, li))) key = raw.slice(0, li); }
+    }
+  }
+  var valid = !!key;   // ★보안: 유효한 코드/토큰이 있어야만 조회
   if (!raw) {
     // 개인정보 보호: 키 없는 전체 조회는 관리자 토큰이 있을 때만(관리 콘솔 전용)
     if (e.parameter.all === '1' && adminOk_(token)) {
@@ -641,7 +647,11 @@ function checkLinkSalt() {
   Logger.log(msg); return msg;
 }
 function tokenFor_(base){ var s=String(base||'')+'|'+linkSalt_(),a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
-function linkOf_(key) { return REPORT_BASE_URL + 'report.html?student=' + key + '-' + tokenFor_(key); }
+/* 불투명 공개 코드: 학교·이름을 드러내지 않는 14자 코드(한글 없음). 클라이언트 pubId와 동일 알고리즘·salt. */
+function pubId_(key){ var s=String(key||'')+'|#pub|'+linkSalt_(),a=2166136261,b=5381,d=52711,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;d=(((d<<5)+d)^c)>>>0;} return ('00000'+a.toString(36)).slice(-6)+('000'+b.toString(36)).slice(-4)+('000'+d.toString(36)).slice(-4); }
+function linkOf_(key) { return REPORT_BASE_URL + 'report.html?student=' + pubId_(key); }  // 신규 링크는 불투명 코드만
+/* 불투명 코드로 학생키를 역조회 (결과 탭의 고유 학생키 순회 매칭) */
+function findKeyByPubId_(code){ var data=sheet_().getDataRange().getValues(), seen={}; for(var i=1;i<data.length;i++){ var k=String(data[i][5]||'').trim(); if(!k||seen[k])continue; seen[k]=1; if(pubId_(k)===code) return k; } return null; }
 function setKeyLink_(sh, row, key, link) {
   sh.getRange(row, 6).setValue(key);   // F 학생키
   sh.getRange(row, 2).setValue(link);  // B 리포트링크
