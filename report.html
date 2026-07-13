@@ -730,6 +730,8 @@ function josa(w,eul,reul){var c=w.charCodeAt(w.length-1);return w+((c>=44032&&c<
 const axisMap={}; ENGINE_AXES.forEach(a=>axisMap[a.key]=a.name);
 const REPORT_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';   // ★ 배포 후 Apps Script 웹앱 /exec URL (비우면 데모 데이터로 표시)
 const ORD=new Proxy({},{get:function(_o,k){k=String(k);var n=0;for(var i=0;i<k.length;i++){if(k.charAt(i)==='재')n++;}return n;}});
+/* 통과한 시도 이후(더 높은 시도)의 재시는 표시하지 않는다 — 통과했으면 재시 불필요. 시도차수 오름차순 정렬된 배열 기준. */
+function _truncPass(arr){var out=[];for(var i=0;i<arr.length;i++){out.push(arr[i]);if(arr[i].pass)break;}return out;}
 let A, allRows, latest, latestRows, latestWrong, RANK, CU, CX, COHORT=null, QUAD=null;
 const DEMO_RANK={round:10,avg:71,score:88,per100:15,n:22,sd:12,dist:[0,0,0,0,2,3,6,5,3,3]};
 
@@ -1100,7 +1102,7 @@ function renderRoundEmbed(course,round){
       A.info=A.info||{name:(allRows[0]||{}).name||'학생',school:(allRows[0]||{}).school||''};
       if(A.trend&&A.trend.length){
         latest=A.trend[A.trend.length-1];
-        latestRows=(allRows||[]).filter(function(r){return r.course===latest.course&&r.round===latest.round;}).sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);});
+        latestRows=_truncPass((allRows||[]).filter(function(r){return r.course===latest.course&&r.round===latest.round;}).sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);}));
         latestWrong=Array.from(new Set(latestRows.reduce(function(acc,r){return acc.concat(r.wrongMis||[]);},[])));
         window._deepWrong=[]; _EMBED=true;
         try{ html=render(false); }catch(e){ html=''; }
@@ -1462,7 +1464,7 @@ async function boot(){
     if(HWROWS.length){ renderHwOnly(); return; }
     document.getElementById('app').innerHTML='<div class="card"><p class="lede">아직 응시 기록이 없습니다. 첫 시험을 채점하면 리포트가 채워집니다.</p></div>'; return; }
   latest=A.trend[A.trend.length-1];
-  latestRows=(allRows||[]).filter(function(r){return r.course===latest.course&&r.round===latest.round;}).sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);});
+  latestRows=_truncPass((allRows||[]).filter(function(r){return r.course===latest.course&&r.round===latest.round;}).sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);}));
   latestWrong=Array.from(new Set(latestRows.reduce(function(acc,r){return acc.concat(r.wrongMis||[]);},[])));
   window._deepWrong=[];
   try{ var _di=await loadRoundItems(latest.course,latest.round); var _da=(latestRows[0]&&latestRows[0].answers)||''; if(_di&&_da){ _di.forEach(function(it,i){ if(_da[i]!==it.a) window._deepWrong.push({c:it.c,unit:it.u,mis:it.mis,s:it.s,f:it.f,w:it.w}); }); } }catch(e){}

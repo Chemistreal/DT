@@ -97,33 +97,39 @@ function compactResultSheet() {
   Logger.log('compactResultSheet: 실데이터 ' + (keep.length - 1) + '행 유지, 빈 행 제거, 시트 축소 + 문자발송 갱신');
 }
 
-/* ★ 편집기에서 1회 실행: 정시(첫 응시)에 통과했는데 그 회차에 재시·재재시 기록이 남은
-   '잘못된 재시 행'을 찾아 삭제한다. (홍선우 케이스 정리용)
-   - 규칙: (학생키·과목·회차) 그룹에서 정시류(재 0개)가 통과면, 그 그룹의 재시류(재 1개+) 행 삭제
-   - 정시가 미통과인 회차의 재시는 정상이므로 건드리지 않음
+/* ★ 편집기에서 1회 실행: 어떤 회차를 이미 통과했는데 그 통과 시도보다 뒤(더 높은 시도)의
+   재시 기록이 남은 '불필요한 재시 행'을 찾아 삭제한다. (통과 후엔 재시 불필요)
+   - 규칙: (학생키·과목·회차) 그룹에서 통과한 시도 중 가장 이른 시도차수(minPassOrd)를 구하고,
+     그 회차에서 시도차수가 minPassOrd보다 큰 행을 삭제한다.
+   - 예: 정시 통과 -> 모든 재시 삭제 / 재시 통과 -> 재재시 이상 삭제 (김영우 케이스)
+   - 정시·통과 시도·그 이전 시도는 보존. 미통과 회차의 재시는 정상이라 건드리지 않음.
    - 삭제된 행은 로그에 남김. 실행 후 색을 쓰면 applySheetColors 재실행 권장. */
 function cleanupPassedRetakes() {
   var sh = sheet_();
   var last = sh.getLastRow(), lastCol = Math.max(19, sh.getLastColumn());
   if (last < 2) { Logger.log('데이터 없음'); return; }
   var data = sh.getRange(1, 1, last, lastCol).getValues();
-  var passedFirst = {};                                    // 그룹키 -> 정시류 통과 여부
+  var minPassOrd = {};                                     // 그룹키 -> 통과한 가장 이른 시도차수
   for (var i = 1; i < data.length; i++) {
     var r = data[i]; var key = String(r[5] || '').trim(); if (!key) continue;
-    if (attOrd_(r[10]) === 0 && r[4] === '통과') passedFirst[key + '#' + r[8] + '#' + r[9]] = true;
+    if (r[4] === '통과') {
+      var gk = key + '#' + r[8] + '#' + r[9], o = attOrd_(r[10]);
+      if (minPassOrd[gk] == null || o < minPassOrd[gk]) minPassOrd[gk] = o;
+    }
   }
   var keep = [data[0].slice(0, 19)];                       // 헤더
   var removed = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i]; var key = String(r[5] || '').trim();
     if (!key) continue;                                    // 빈 행 제외(정리 겸)
-    if (attOrd_(r[10]) >= 1 && passedFirst[key + '#' + r[8] + '#' + r[9]]) {
-      removed.push((r[0] || '') + ' / ' + r[8] + ' ' + r[9] + '회 / ' + r[10] + ' / ' + r[3] + '점');
-      continue;                                            // 삭제 대상: 정시 통과 그룹의 재시류
+    var gk = key + '#' + r[8] + '#' + r[9], mp = minPassOrd[gk];
+    if (mp != null && attOrd_(r[10]) > mp) {
+      removed.push((r[0] || '') + ' / ' + r[8] + ' ' + r[9] + '회 / ' + r[10] + ' / ' + r[3] + '점 (통과 후 불필요)');
+      continue;                                            // 삭제 대상: 통과 시도보다 뒤의 재시
     }
     keep.push(r.slice(0, 19));
   }
-  if (!removed.length) { Logger.log('정리 대상 없음 (정시 통과인데 재시가 남은 행이 없습니다)'); return; }
+  if (!removed.length) { Logger.log('정리 대상 없음 (통과 후 남은 불필요한 재시가 없습니다)'); return; }
   sh.clearContents();
   sh.getRange(1, 1, keep.length, 19).setValues(keep);
   var maxRows = sh.getMaxRows();
@@ -828,10 +834,16 @@ var SEND_COURSE_KO = { ch1: '화학Ⅰ', ch2: '화학Ⅱ', gc: '일반화학' };
 var SEND_ATT_ORDER = { '정시': 0, '첫 응시': 0, '첫번째시험': 0, '이번주 테스트': 0, '재시': 1, '재재시': 2 };
 function sendIsFirst_(a) { return attOrd_(a) === 0; }
 
-function sendPassMsg_(name, courseKo, round, firstScore, passScore, passIsFirst, link) {
-  var lines = passIsFirst
-    ? ('\u00b7 정시 ' + firstScore + '점 통과')
-    : ('\u00b7 정시 ' + firstScore + '점 (미통과)\n\u00b7 재시 ' + passScore + '점 통과');
+function sendPassMsg_(name, courseKo, round, jeongsi, passScore, passAttempt, link) {
+  // jeongsi: 실제 정시(첫 응시) 기록 객체(없으면 null). passAttempt: 통과한 시도 라벨.
+  var lines;
+  if (attOrd_(passAttempt) === 0) {
+    lines = '\u00b7 정시 ' + passScore + '점 통과';                                  // 정시에 바로 통과
+  } else if (jeongsi && !jeongsi.pass) {
+    lines = '\u00b7 정시 ' + jeongsi.score + '점 (미통과)\n\u00b7 재시 ' + passScore + '점 통과'; // 정시 미통과 -> 재시 통과
+  } else {
+    lines = '\u00b7 재시 ' + passScore + '점 통과';                                  // 정시 기록 없이 재시부터 통과
+  }
   return '[다원교육 영재관 · 화학 조준모]\n'
     + name + ' 학생 ' + courseKo + ' ' + round + '회 성적표입니다.\n'
     + lines + '\n'
@@ -850,12 +862,13 @@ function sendRetakeMsg_(name, courseKo, round, firstScore, link) {
 /* (학생키+회차) 한 그룹의 종합 문자 계산 -> {status, msg} */
 function sendSummary_(rowsOfSC) {
   var att = rowsOfSC.slice().sort(function (a, b) { var oa = attOrd_(a.attempt), ob = attOrd_(b.attempt); return oa - ob || a.t - b.t; });
-  var first = att.filter(function (r) { return sendIsFirst_(r.attempt); }).sort(function (a, b) { return a.t - b.t; })[0] || att[0];
-  var passAtt = att.filter(function (r) { return r.pass; }).sort(function (a, b) { var oa = attOrd_(a.attempt), ob = attOrd_(b.attempt); return oa - ob || a.t - b.t; })[0];
+  var jeongsi = att.filter(function (r) { return sendIsFirst_(r.attempt); }).sort(function (a, b) { return a.t - b.t; })[0] || null; // 실제 정시 기록(없으면 null)
+  var passAtt = att.filter(function (r) { return r.pass; }).sort(function (a, b) { var oa = attOrd_(a.attempt), ob = attOrd_(b.attempt); return oa - ob || a.t - b.t; })[0]; // 가장 이른 시도의 통과
   var latest = rowsOfSC.slice().sort(function (a, b) { return b.t - a.t; })[0];
   var name = latest.name, ck = SEND_COURSE_KO[latest.course] || latest.course, round = latest.round, link = latest.link;
-  if (passAtt) return { status: '통과', msg: sendPassMsg_(name, ck, round, first.score, passAtt.score, sendIsFirst_(passAtt.attempt), link) };
-  return { status: '재시 안내', msg: sendRetakeMsg_(name, ck, round, first.score, link) };
+  if (passAtt) return { status: '통과', msg: sendPassMsg_(name, ck, round, jeongsi, passAtt.score, passAtt.attempt, link) };
+  var baseScore = jeongsi ? jeongsi.score : att[0].score;   // 정시 없으면 가장 이른 기록 점수
+  return { status: '재시 안내', msg: sendRetakeMsg_(name, ck, round, baseScore, link) };
 }
 
 /* 결과 시트의 각 행에 대응하는 종합 문자 배열(행 순서 1:1 유지, 숙제/빈행은 빈칸) */
