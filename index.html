@@ -248,6 +248,7 @@ const Store={mem:{},get(k){try{return localStorage.getItem(k)}catch(e){return th
   set(k,v){try{localStorage.setItem(k,v)}catch(e){this.mem[k]=v}},del(k){try{localStorage.removeItem(k)}catch(e){delete this.mem[k]}}};
 const SKEY='chemistreal_session_v1';
 
+var TESTMODE=false;   /* 테스트 모드는 URL ?test=1 로만 켜짐 (수기 채점 실수로 TEST 저장 방지) */
 let S=null, MANIFEST=null, FORMS=null, STUDY=null, courseTab='ch2', SAVE_STATE=null, STUDENT_HIST=null, STUDENT_HIST_KEY=null, STUDENT_WEAK=null, COHORT=null, COHORT_LOADED=false;
 function blank(){return {view:'id',name:'',school:'',grade:'',isTest:false,roundId:null,round:null,
   attemptNo:1,attempts:[],keyItems:[],answers:[],cur:0,graded:null,dx:null,gate:null,seen:{},wrongStmts:{}};}
@@ -703,7 +704,7 @@ function render(){
       <label>이름</label><input id="f_name" value="${S.name}" placeholder="예: 홍길동" autocomplete="off">
       <div class="row2"><div><label>학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중" autocomplete="off"></div>
         <div><label>학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2" inputmode="numeric"></div></div>
-      <div class="toggle"><input type="checkbox" id="f_test" ${S.isTest?'checked':''}><label for="f_test" style="margin:0;color:inherit">테스트 모드 · 예시 학생으로 전 과정 점검 (기록에 테스트로 표시)</label></div>
+      ${TESTMODE?`<div class="toggle" style="color:#b45309;font-weight:600">⚠ 테스트 모드 · 이 학생 기록은 실제 성적에 반영되지 않습니다 (URL의 ?test=1)</div>`:``}
       <div class="btnrow"><button onclick="saveId()">${S.round?'이 학생 채점 시작':'이 학생 시작'}</button></div></div>
       <div style="text-align:center;margin-top:13px;display:flex;gap:8px 16px;justify-content:center;flex-wrap:wrap"><a href="pending.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">재시 미응시 현황 보기 →</a><a href="roster.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">반 명단 · 주말시험 미응시 보기 →</a><a href="hw_grader.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">숙제 채점 (조준모의고사) →</a><a href="pdfs.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">시험지·해설 PDF →</a><a href="retake_entry.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">재시 수기 입력 →</a><a href="letters.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">학부모 문자 템플릿 →</a></div>
       ${cohortPanelHTML()}`;
@@ -820,7 +821,7 @@ function render(){
   if(S.view==='select'){ loadStudentHist(); }
 }
 function saveId(){S.name=$('#f_name').value.trim()||'학생';S.school=$('#f_school').value.trim()||'학교';
-  S.grade=$('#f_grade').value.trim();S.isTest=$('#f_test').checked;if(S.round&&S.roundId&&S.round.jeongsi&&S.round.jeongsi.items){startGrade(S.round.jeongsi.items,1);go('grade');}else{go('select');}}
+  S.grade=$('#f_grade').value.trim();S.isTest=TESTMODE;if(S.round&&S.roundId&&S.round.jeongsi&&S.round.jeongsi.items){startGrade(S.round.jeongsi.items,1);go('grade');}else{go('select');}}
 async function pickRound(file){S.roundId=file;$('#app').innerHTML='<div class="loading">시험 불러오는 중…</div>';
   const rd=await loadRound(file); if(!rd){$('#app').innerHTML='<div class="card"><p>이 회차 데이터는 배포 후 로드됩니다. (미리보기는 화학Ⅱ 7회만 내장)</p><div class="btnrow"><button class="ghost" onclick="go(\'select\')">뒤로</button></div></div>';return;}
   S.round=rd;go('pdf');}
@@ -843,6 +844,7 @@ function adminGate(){
   return false;
 }
 (async function(){ var _q=new URLSearchParams(location.search);
+  TESTMODE=(_q.get('test')==='1');   // 데모/점검용. 없으면 항상 실제 기록으로 저장
   var isRetake=!!_q.get('retake');
   if(isRetake){ document.documentElement.classList.remove('adm-gating'); }   // 학생 재시는 비번 게이트 예외
   else if(!adminGate()){ return; }
