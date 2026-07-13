@@ -297,7 +297,7 @@ function doGet(e) {
       key = findKeyByPubId_(raw);                 // 신규: 불투명 코드(한글·하이픈 없음) → 학생키 역조회
     } else {
       var li = raw.lastIndexOf('-');              // 기존: 학교-이름-토큰 (이미 보낸 링크 호환)
-      if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt) && mt === tokenFor_(raw.slice(0, li))) key = canonKeyOfRaw_(raw.slice(0, li)); }
+      if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt) && tokenOk_(raw.slice(0, li), mt)) key = canonKeyOfRaw_(raw.slice(0, li)); }
     }
   }
   var valid = !!key;   // ★보안: 유효한 코드/토큰이 있어야만 조회
@@ -750,7 +750,15 @@ function checkLinkSalt() {
 function tokenFor_(base){ var s=String(base||'')+'|'+linkSalt_(),a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
 /* 불투명 공개 코드: 학교·이름을 드러내지 않는 14자 코드(한글 없음). 클라이언트 pubId와 동일 알고리즘·salt. */
 function pubId_(key){ var s=String(key||'')+'|#pub|'+linkSalt_(),a=2166136261,b=5381,d=52711,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;d=(((d<<5)+d)^c)>>>0;} return ('00000'+a.toString(36)).slice(-6)+('000'+b.toString(36)).slice(-4)+('000'+d.toString(36)).slice(-4); }
-function linkOf_(key) { return REPORT_BASE_URL + 'report.html?student=' + pubId_(key); }  // 신규 링크는 불투명 코드만
+function linkOf_(key) { return REPORT_BASE_URL + 'report.html?student=' + pubId_(key); }  // 신규 링크는 불투명 코드만(항상 기본 salt로 생성)
+/* 링크 '해석(검증)'용 salt 목록: 기본(속성) + 레거시(빈 salt).
+   예전에 LINK_SALT 속성이 비어 있을 때 만들어 이미 발송한 링크도 계속 열리게 하기 위함.
+   보안을 완전히 조이려면: 모든 링크를 새 salt로 재발송(refreshReportLinks + 문자 재전송)한 뒤 아래 '' 를 제거. */
+function saltList_() { var p = linkSalt_(), out = [p]; if (out.indexOf('') < 0) out.push(''); return out; }
+function pubIdS_(key, salt){ var s=String(key||'')+'|#pub|'+salt,a=2166136261,b=5381,d=52711,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;d=(((d<<5)+d)^c)>>>0;} return ('00000'+a.toString(36)).slice(-6)+('000'+b.toString(36)).slice(-4)+('000'+d.toString(36)).slice(-4); }
+function tokenForS_(base, salt){ var s=String(base||'')+'|'+salt,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
+function pubMatch_(key, code){ var ss=saltList_(); for(var i=0;i<ss.length;i++){ if(pubIdS_(key,ss[i])===code) return true; } return false; }
+function tokenOk_(base, mt){ var ss=saltList_(); for(var i=0;i<ss.length;i++){ if(tokenForS_(base,ss[i])===mt) return true; } return false; }
 /* 불투명 코드로 학생키를 역조회.
    저장된 학생키뿐 아니라, 각 행의 원본(이름,학교)로 만든 키의 코드도 함께 확인한다.
    => 통합(canonicalKey_)으로 학생키가 바뀐 뒤에도, 통합 전 학교명으로 이미 발송한 링크가 계속 열린다. */
@@ -758,9 +766,9 @@ function findKeyByPubId_(code){
   var data=sheet_().getDataRange().getValues(), seenK={}, seenR={};
   for(var i=1;i<data.length;i++){
     var k=String(data[i][5]||'').trim(); if(!k) continue;
-    if(!seenK[k]){ seenK[k]=1; if(pubId_(k)===code) return k; }
+    if(!seenK[k]){ seenK[k]=1; if(pubMatch_(k,code)) return k; }
     var rk=keyOf_(String(data[i][0]||''), String(data[i][6]||''));
-    if(rk && rk!==k && !seenR[rk]){ seenR[rk]=1; if(pubId_(rk)===code) return k; }  // 통합 전 코드 -> 현재 저장 키
+    if(rk && rk!==k && !seenR[rk]){ seenR[rk]=1; if(pubMatch_(rk,code)) return k; }  // 통합 전 코드 -> 현재 저장 키
   }
   return null;
 }
