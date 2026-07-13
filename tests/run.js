@@ -319,6 +319,39 @@ async function assertNoOverflow(page, label) {
     }
   }
 
+  /* ── 레거시 salt 하위호환: 빈 salt로 만든 옛 링크도 속성 설정 후 계속 열려야 한다 ── */
+  {
+    const t0 = Date.now(), name = 'salt · 레거시(빈) 링크 하위호환';
+    try {
+      const gs = fs.readFileSync(path.join(ROOT, 'apps-script.gs'), 'utf8');
+      function grab(fn) {
+        const at = gs.indexOf('function ' + fn);
+        assert(at >= 0, fn + ' 없음');
+        let i = gs.indexOf('{', at), depth = 0, j = i;
+        for (; j < gs.length; j++) { const c = gs[j]; if (c === '{') depth++; else if (c === '}' && --depth === 0) { j++; break; } }
+        return gs.slice(at, j);
+      }
+      const body = ['saltList_', 'pubIdS_', 'tokenForS_', 'pubMatch_', 'tokenOk_'].map(grab).join('\n');
+      const make = new Function('SALT', body + '\nfunction linkSalt_(){ return SALT; }\n' +
+        'return { pubIdS_: pubIdS_, tokenForS_: tokenForS_, pubMatch_: pubMatch_, tokenOk_: tokenOk_ };');
+      const SALT = 'chemistreal::s4lt::9f3Kq2026';
+      const S = make(SALT);
+      const key = '잠실중-김예성';
+      // 빈 salt(레거시)로 만든 코드/토큰이, 속성이 채워진 상태에서도 해석돼야 한다
+      assert(S.pubMatch_(key, S.pubIdS_(key, '')) === true, '레거시(빈 salt) 코드가 안 열림');
+      assert(S.pubMatch_(key, S.pubIdS_(key, SALT)) === true, '기본 salt 코드가 안 열림');
+      assert(S.pubMatch_(key, 'zzzzzzzzzzzzzz') === false, '아무 코드나 열림(보안 구멍)');
+      assert(S.tokenOk_(key, S.tokenForS_(key, '')) === true, '레거시 토큰이 안 열림');
+      assert(S.tokenOk_(key, S.tokenForS_(key, SALT)) === true, '기본 토큰이 안 열림');
+      assert(S.tokenOk_(key, 'zzzzzzzz') === false, '아무 토큰이나 열림(보안 구멍)');
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   await BROWSER.close();
   srv.close();
 
