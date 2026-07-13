@@ -1269,7 +1269,7 @@ function render(commit){
   if(_pre){ _thesis=_pre.trim(); _detail=_week; } else { _thesis=_week; }
   h+=`<div class="card hero">
     <div class="verdict5 ${status.c}"><span class="sig"></span>${status.k} · ${status.t}</div>
-    <div class="who">${A.info.name} · ${A.info.school} · ${CRSLBL[latest.course]||'화학'} 누적 OX 진단</div>
+    <div class="who">${_esc(A.info.name)} · ${_esc(A.info.school)} · ${CRSLBL[latest.course]||'화학'} 누적 OX 진단</div>
     <div class="line">${_thesis}</div>
     ${_detail?`<div class="linesub">${_detail}</div>`:''}
     ${risk.note?`<div class="herosub">${risk.note}</div>`:''}
@@ -1318,7 +1318,7 @@ function render(commit){
   }
 
   // 이번 회차
-  h+=dxDeepHTML((A.info&&A.info.name)||'학생',{wrongConcepts:(window._deepWrong||[])});
+  h+=dxDeepHTML(_esc((A.info&&A.info.name)||'학생'),{wrongConcepts:(window._deepWrong||[])});
   h+=`<div class="card"><h2>이번 회차 · ${latest.round}회</h2>
     <div class="ladder">${latestRows.map(r=>`<div class="lnode ${r.pass?'p':'f'}"><div class="sc mono">${r.score}</div><div class="at">${LBL(r.attempt)}</div><div class="chip">${r.pass?'통과':'통과 전'}</div></div>`).join('')}</div>
     ${latestWrong.length?`<div style="margin-top:14px"><div class="muted" style="margin-bottom:6px">이번 회차에서 바로잡은 개념</div>${latestWrong.map(m=>`<span style="display:inline-block;font-size:12px;background:var(--teal-soft);color:var(--teal-d);border-radius:20px;padding:3px 11px;margin:2px 4px 2px 0;font-weight:600">${m}</span>`).join('')}</div>`:''}</div>`;
@@ -1454,7 +1454,7 @@ async function boot(){
   var demoHard=(new URLSearchParams(location.search).get('demo')==='hard');
   // ★안전장치: 학생 링크(student 파라미터)가 있는데 데이터가 안 열리면(코드 미해석·링크 오류)
   //   절대 데모 학생(조민수 등)을 대신 보여주지 않는다 — 남의 성적으로 오인될 수 있다.
-  if(!A && student){
+  if(!A && sp.has('student')){   // 값이 비어도(?student=) 학생 링크로 열린 것이므로 데모로 대체하지 않는다
     document.getElementById('app').innerHTML='<div class="card"><h1>리포트를 열 수 없습니다</h1>'
       +'<p class="lede">아직 응시 기록이 없거나, 링크가 오래되어 학생 코드가 확인되지 않았습니다. '
       +'받으신 링크를 다시 확인해 주세요. 문제가 계속되면 담당 선생님(조준모T)께 문의해 주세요.</p></div>';
@@ -1476,7 +1476,7 @@ async function boot(){
   latestWrong=Array.from(new Set(latestRows.reduce(function(acc,r){return acc.concat(r.wrongMis||[]);},[])));
   window._deepWrong=[];
   try{ var _di=await loadRoundItems(latest.course,latest.round); var _da=(latestRows[0]&&latestRows[0].answers)||''; if(_di&&_da){ _di.forEach(function(it,i){ if(_da[i]!==it.a) window._deepWrong.push({c:it.c,unit:it.u,mis:it.mis,s:it.s,f:it.f,w:it.w}); }); } }catch(e){}
-  if(demoHard && !window._deepWrong.length){ window._deepWrong=[{c:'CH2-136',unit:'총괄성',mis:'총괄성 정의'},{c:'CH2-149',unit:'총괄성',mis:'총괄성 크기'},{c:'CH2-117',unit:'농도',mis:'몰농도 온도'},{c:'CH2-043',unit:'이상기체',mis:'운동 에너지와 온도'},{c:'CH2-078',unit:'액체',mis:'끓는점 정의'}]; }
+  if(isDemo && demoHard && !window._deepWrong.length){ window._deepWrong=[{c:'CH2-136',unit:'총괄성',mis:'총괄성 정의'},{c:'CH2-149',unit:'총괄성',mis:'총괄성 크기'},{c:'CH2-117',unit:'농도',mis:'몰농도 온도'},{c:'CH2-043',unit:'이상기체',mis:'운동 에너지와 온도'},{c:'CH2-078',unit:'액체',mis:'끓는점 정의'}]; }
   await computeQuad(isDemo);
   render();
   try{ await fillMainSolutions(); }catch(e){}

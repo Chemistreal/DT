@@ -206,6 +206,13 @@ async function assertNoOverflow(page, label) {
     assert(/열 수 없습니다|확인/.test(text), '링크 오류 안내가 표시되지 않음');
     await assertNoOverflow(page, 'report');
   });
+  await test('report · 빈 student 파라미터도 데모 대신 오류', async page => {
+    // ?student= (값 없음)로 열려도 학생 링크이므로 데모(가짜 학생)를 보여주면 안 된다
+    await page.goto(BASE + 'report.html?student='); await page.waitForTimeout(1000);
+    const text = await page.$eval('#app', e => e.textContent).catch(() => '');
+    assert(text.indexOf('조준모T테스트예시자료') < 0, '빈 파라미터에 데모 학생이 노출됨');
+    assert(/열 수 없습니다|확인/.test(text), '링크 오류 안내가 표시되지 않음');
+  });
   await test('report · 파라미터 없으면 미리보기(데모) 표시', async page => {
     // 링크 없이 report.html 직접 열기 = 미리보기. 이때만 데모 학생을 보여준다(OG 프리뷰 용).
     await page.goto(BASE + 'report.html'); await page.waitForTimeout(1200);

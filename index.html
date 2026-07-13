@@ -278,6 +278,7 @@ async function enterRetake(key,course,round){
   var g=ChemEngine.gradeAttempt(ans,items,rd.scoring);
   var dx=ChemEngine.diagnose(g,FORMS);
   S=blank(); S.name=first.name||''; S.school=first.school||''; S.grade=first.year||''; S.round=rd; S.roundId=mrec.data;
+  S.isTest=!!first.isTest;   // 첫 응시가 테스트 기록이면 재시도 테스트로 저장(실제 집계 오염 방지)
   S.keyItems=items; S.answers=ans; S.attemptNo=1; S.graded=g; S.dx=dx;
   g.perItem.forEach(function(p,i){ if(!p.ok && items[i]) S.wrongStmts[ChemEngine.norm(items[i].s)]=1; });
   items.forEach(function(it){ S.seen[ChemEngine.norm(it.s)]=1; });

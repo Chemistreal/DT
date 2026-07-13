@@ -248,7 +248,14 @@ function doPost(e) {
     }
     if (d.action === 'absentee_email') { if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' }); weeklyAbsenteeEmail(); return json_({ ok: true, sent: true }); }
     var sh = sheet_();
+    var _selfKey = keyOf_(d.name || '', d.school || '');
     var _key = canonicalKey_(d.name || '', d.school || '');   // 같은 학생이 학교명을 다르게 적어도 기존 키로 자동 연결
+    // ★오병합 안전장치: 추정 연결(정확 일치가 아닌 학교명 포함관계)로 다른 키에 붙였는데
+    //   그 (과목·회차·시도)가 이미 존재하면, 동명이인의 같은 시험을 덮어쓸 위험이 있다.
+    //   이때는 연결하지 않고 자기 키로 별도 저장한다(같은 회차 자동연결만 보류, 다른 회차 연결은 정상).
+    if (_key !== _selfKey && findRow_(sh, _key, d.course || '', d.round || '', d.attempt || '') > 0) {
+      _key = _selfKey;
+    }
     // 이미 통과한 회차엔 재시(재 포함) 저장 거부 - 통과 학생은 재시 볼 필요 없음
     if (attOrd_(d.attempt || '') >= 1 && !d.isTest && hasPassed_(sh, _key, d.course || '', d.round || '')) {
       return json_({ ok: false, error: 'already_passed', msg: '이미 통과한 회차라 재시가 저장되지 않았습니다.' });
@@ -844,7 +851,10 @@ function setupEditTrigger() {
 }
 
 /** 1회 실행(또는 언제든): 모든 행의 학생키(D)·리포트링크(B)를 이름(A)+학교(E)로 재계산.
- *  기존에 어긋난 링크(예: 서일중학교-고승원)를 학생키에 맞게 일괄 교정합니다. */
+ *  기존에 어긋난 링크(예: 서일중학교-고승원)를 학생키에 맞게 일괄 교정합니다.
+ *  ⚠ 주의: 학생키를 '문자 그대로의 학교'(keyOf_)로 다시 계산하므로, canonicalKey_/mergeSplitStudents 로
+ *     학교명 표기 차이를 합쳐 둔 학생이 다시 갈라집니다. 자동 연결을 쓰는 지금은 되도록 실행하지 마세요.
+ *     링크만 새로 쓰려면 refreshReportLinks() 를 쓰세요(학생키 F는 그대로 두고 B만 갱신). */
 function resyncAllKeysLinks() {
   var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB);
   var last = sh.getLastRow();

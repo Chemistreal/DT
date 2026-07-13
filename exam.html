@@ -555,10 +555,11 @@ async function saveResult(g,dx){
     var saved=false;
     try{
       // 서버가 반환한 정규 링크의 코드로 확인(같은 학생 연결·통합 후에도 정확). 없으면 기존 토큰으로.
-      var _vp=SERVER_LINK?SERVER_LINK.split('student=')[1]:encodeURIComponent(payload.studentKey+'-'+tokenFor(payload.studentKey));
+      var _vp=(SERVER_LINK&&SERVER_LINK.indexOf('student=')>=0)?SERVER_LINK.split('student=')[1]:encodeURIComponent(payload.studentKey+'-'+tokenFor(payload.studentKey));
       var vr=await fetch(SAVE_URL+'?student='+_vp+'&t='+Date.now(),{cache:'no-store'});
       var vj=await vr.json();
-      saved=!!(vj&&vj.rows&&vj.rows.some(function(r){return String(r.course)===String(R.course)&&String(r.round)===String(R.round);}));
+      // 이 회차·이 답안이 실제로 저장됐는지까지 확인(같은 회차 옛 기록만 있어도 통과 처리되는 오탐 방지)
+      saved=!!(vj&&vj.rows&&vj.rows.some(function(r){return String(r.course)===String(R.course)&&String(r.round)===String(R.round)&&String(r.answers||'')===payload.answers;}));
     }catch(_e){ saved=false; }
     SAVE_STATE=saved?'ok':'fail';
   }catch(e){ SAVE_STATE='fail'; }
