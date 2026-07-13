@@ -202,7 +202,7 @@ async function assertNoOverflow(page, label) {
     await page.goto(BASE + 'report.html?student=demo'); await page.waitForTimeout(1200);
     const text = await page.$eval('#app', e => e.textContent).catch(() => '');
     assert(text.length > 0, '리포트 본문 비어 있음');
-    assert(text.indexOf('조민수') < 0 && text.indexOf('이지호') < 0, '미해석 링크에 데모 학생 데이터가 노출됨');
+    assert(text.indexOf('조준모T테스트예시자료') < 0, '미해석 링크에 데모 학생 데이터가 노출됨');
     assert(/열 수 없습니다|확인/.test(text), '링크 오류 안내가 표시되지 않음');
     await assertNoOverflow(page, 'report');
   });
@@ -210,7 +210,7 @@ async function assertNoOverflow(page, label) {
     // 링크 없이 report.html 직접 열기 = 미리보기. 이때만 데모 학생을 보여준다(OG 프리뷰 용).
     await page.goto(BASE + 'report.html'); await page.waitForTimeout(1200);
     const text = await page.$eval('#app', e => e.textContent).catch(() => '');
-    assert(text.indexOf('조민수') >= 0, '파라미터 없는 미리보기에서 데모가 사라짐');
+    assert(text.indexOf('조준모T테스트예시자료') >= 0, '파라미터 없는 미리보기에서 데모가 사라짐');
     await assertNoOverflow(page, 'report');
   });
 
