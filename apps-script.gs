@@ -139,6 +139,34 @@ function cleanupPassedRetakes() {
   Logger.log('cleanupPassedRetakes: ' + removed.length + '행 삭제 + 문자발송 갱신\n' + removed.join('\n'));
 }
 
+/* ★ 편집기에서 1회 실행: 정시(첫 응시)가 테스트(TEST)로 잘못 저장됐는데 같은 회차에
+   실제(비테스트) 재시 기록이 있으면 → 그 정시의 TEST 표시를 지워 실제 기록으로 되돌린다.
+   (관리자가 테스트 모드가 켜진 채로 정시를 수기 채점한 경우 복구용 · 김영우 케이스)
+   - 실제 재시가 있는 정시만 되돌리며, 순수 테스트(재시가 없거나 재시도 TEST)는 그대로 둔다.
+   - 실행 후 문자발송 자동 갱신. */
+function untagMistaggedJeongsi() {
+  var sh = sheet_();
+  var last = sh.getLastRow(); if (last < 2) { Logger.log('데이터 없음'); return; }
+  var data = sh.getRange(1, 1, last, 19).getValues();
+  var hasRealRetake = {};                                   // 그룹키 -> 비테스트 재시 존재
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i]; var key = String(r[5] || '').trim(); if (!key) continue;
+    if (attOrd_(r[10]) >= 1 && r[15] !== 'TEST') hasRealRetake[key + '#' + r[8] + '#' + r[9]] = true;
+  }
+  var fixed = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i]; var key = String(r[5] || '').trim(); if (!key) continue;
+    if (attOrd_(r[10]) === 0 && r[15] === 'TEST' && hasRealRetake[key + '#' + r[8] + '#' + r[9]]) {
+      sh.getRange(i + 1, 16).setValue('');                  // P열(테스트) 비우기 -> 실제 기록으로
+      fixed.push((r[0] || '') + ' / ' + r[8] + ' ' + r[9] + '회 정시 ' + r[3] + '점 (TEST 해제)');
+    }
+  }
+  SpreadsheetApp.flush();
+  if (!fixed.length) { Logger.log('되돌릴 정시 없음 (실제 재시가 딸린 TEST 정시가 없습니다)'); return; }
+  try { buildSendSheet(); } catch (e) {}
+  Logger.log('untagMistaggedJeongsi: ' + fixed.length + '건 TEST 해제 + 문자발송 갱신\n' + fixed.join('\n'));
+}
+
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents);
