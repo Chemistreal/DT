@@ -212,6 +212,24 @@ function mergeSplitStudents() {
   Logger.log('mergeSplitStudents: ' + plan.length + '개 키 통합 + 문자발송 갱신\n' + plan.join('\n'));
 }
 
+/* 결과 탭 B열(리포트링크)을 전부 현재(불투명 코드) 형식으로 다시 쓴다.
+   예전에 저장된 행은 옛 링크(학교-이름-토큰)가 그대로 남아 있으므로, 1회 실행해 코드 링크로 통일한다.
+   각 행의 F열 학생키 기준이라, mergeSplitStudents 로 통합한 뒤 실행하면 통합 학생 코드로 정리된다.
+   (기존 옛 링크도 서버가 계속 해석하므로 이미 발송한 링크는 그대로 열린다.) */
+function refreshReportLinks() {
+  var sh = sheet_(); var last = sh.getLastRow(); if (last < 2) { Logger.log('데이터 없음'); return; }
+  var keys = sh.getRange(2, 6, last - 1, 1).getValues();        // F 학생키
+  var cache = {}, n = 0;
+  var links = keys.map(function (r) {
+    var k = String(r[0] || '').trim(); if (!k) return [''];
+    if (cache[k] == null) cache[k] = linkOf_(k);
+    n++; return [cache[k]];
+  });
+  sh.getRange(2, 2, last - 1, 1).setValues(links);              // B 리포트링크
+  SpreadsheetApp.flush();
+  Logger.log('refreshReportLinks: ' + n + '개 행의 링크를 불투명 코드로 갱신');
+}
+
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents);
