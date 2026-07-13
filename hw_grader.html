@@ -127,6 +127,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;backg
 var SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
 var LINK_SALT='chemistreal::s4lt::9f3Kq2026';
 function tokenFor(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
+function pubId(key){ var s=String(key||'')+'|#pub|'+LINK_SALT,a=2166136261,b=5381,d=52711,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;d=(((d<<5)+d)^c)>>>0;} return ('00000'+a.toString(36)).slice(-6)+('000'+b.toString(36)).slice(-4)+('000'+d.toString(36)).slice(-4); }
 function cleanName(s){ return String(s||'').replace(/\s+/g,'').trim(); }
 function normSchool(s){ s=cleanName(s); return s.replace(/중학교$/,'중').replace(/고등학교$/,'고').replace(/초등학교$/,'초'); }
 function normGrade(s){ s=String(s==null?'':s).trim(); var m=s.match(/\d+/); return m?m[0]:s; }
@@ -315,7 +316,7 @@ async function gradeAndSave(){
   var digits=ANS.map(function(a){return a===''?'.':a;}).join('');
   var payload={
     studentKey:sk,
-    reportLink:reportBase()+'report.html?student='+sk+'-'+tokenFor(sk),
+    reportLink:reportBase()+'report.html?student='+pubId(sk),
     name:cleanName(name), school:normSchool(school), year:normGrade(year),
     course:'jm1', round:CUR.round, attempt:'정시', isTest:true,
     score:g.score, pass:g.score>=passLine,

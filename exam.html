@@ -454,7 +454,8 @@ async function loadRound(c,rd){ R=await loadJSON('round_'+c+'_'+pad2(rd)+'.json'
 function reportBase(){ return location.origin+location.pathname.replace(/[^/]*$/,''); }
 var LINK_SALT='chemistreal::s4lt::9f3Kq2026';
 function tokenFor(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
-function reportLink(){ var k=ChemEngine.studentKey(info.name,info.school); return reportBase()+'report.html?student='+k+'-'+tokenFor(k); }
+function pubId(key){ var s=String(key||'')+'|#pub|'+LINK_SALT,a=2166136261,b=5381,d=52711,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;d=(((d<<5)+d)^c)>>>0;} return ('00000'+a.toString(36)).slice(-6)+('000'+b.toString(36)).slice(-4)+('000'+d.toString(36)).slice(-4); }
+function reportLink(){ var k=ChemEngine.studentKey(info.name,info.school); return reportBase()+'report.html?student='+pubId(k); }
 
 
 /* ---- 반 명단 드롭다운 (STUDENT_CODE 게이트, 실패 시 자유입력 그대로) ---- */

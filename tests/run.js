@@ -216,6 +216,49 @@ async function assertNoOverflow(page, label) {
     await assertNoOverflow(page, 'home');
   });
 
+  /* ── 불투명 리포트 코드: 클라이언트(index/exam/hw)·서버(apps-script) 동일 알고리즘 보장 ──
+     pubId 는 학교·이름을 추론 불가능한 14자 코드로 바꾼다. 네 파일의 구현이 조금이라도
+     어긋나면 발송 링크와 서버 역조회가 맞지 않아 리포트가 안 열린다. 순수 JS 단위 검사. */
+  {
+    const t0 = Date.now(), name = 'pubId · 클라·서버 코드 일치';
+    try {
+      const SALT = 'chemistreal::s4lt::9f3Kq2026';
+      function extract(file, fn) {
+        const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+        const re = new RegExp('function ' + fn + '\\(key\\)\\{[\\s\\S]*?return[\\s\\S]*?\\}', 'm');
+        const m = src.match(re);
+        assert(m, file + ' 에서 ' + fn + ' 추출 실패');
+        // eslint-disable-next-line no-new-func
+        return new Function('LINK_SALT', 'linkSalt_', m[0] + '; return ' + fn + ';')(SALT, () => SALT);
+      }
+      const impls = [
+        ['index.html', extract('index.html', 'pubId')],
+        ['exam.html', extract('exam.html', 'pubId')],
+        ['hw_grader.html', extract('hw_grader.html', 'pubId')],
+        ['apps-script.gs', extract('apps-script.gs', 'pubId_')],
+      ];
+      const keys = ['잠실중-김예성', '과천문원중-최민준', '문원중-최민준', '대치초-홍길동', '서울고-김철수', ''];
+      for (const k of keys) {
+        const outs = impls.map(([, f]) => f(k));
+        for (let i = 1; i < outs.length; i++) {
+          assert(outs[i] === outs[0], impls[i][0] + ' 코드 불일치("' + k + '"): ' + outs[i] + ' ≠ ' + outs[0]);
+        }
+        if (k) {
+          assert(/^[0-9a-z]{14}$/.test(outs[0]), '코드 형식 위반("' + k + '"): ' + outs[0]);
+          assert(!/[가-힣]/.test(outs[0]) && outs[0].indexOf('-') < 0, '코드에 한글/하이픈 노출("' + k + '")');
+        }
+      }
+      // 서로 다른 학생·학교는 서로 다른 코드
+      const uniq = new Set(keys.filter(Boolean).map(k => impls[0][1](k)));
+      assert(uniq.size === keys.filter(Boolean).length, '코드 충돌: 서로 다른 학생이 같은 코드');
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   await BROWSER.close();
   srv.close();
 
