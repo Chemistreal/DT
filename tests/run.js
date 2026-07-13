@@ -128,10 +128,10 @@ async function assertNoOverflow(page, label) {
 
   /* ── 3. 채점 흐름: 학생정보 → 회차 → 60문항 → 채점 → 결과 (시트 POST는 모킹) ── */
   await test('index · 채점 전체 흐름', async page => {
-    await page.goto(BASE + 'index.html'); await page.waitForTimeout(900);
+    await page.goto(BASE + 'index.html?test=1'); await page.waitForTimeout(900);  // 테스트 모드는 URL로만
     assert(await page.$('#f_name'), '학생 정보 화면이 아님');
+    assert(!(await page.$('#f_test')), '테스트 모드 체크박스는 제거되어야 함');
     await page.fill('#f_name', '회귀테스트'); await page.fill('#f_school', '테스트중'); await page.fill('#f_grade', '2');
-    await page.check('#f_test');                       // 테스트 모드
     await page.click('.btnrow button'); await page.waitForTimeout(500);
     assert(await page.$('.rchip'), '회차 선택 화면이 아님');
     await page.click('.rchip');                        // 첫 회차
