@@ -249,7 +249,7 @@ const Store={mem:{},get(k){try{return localStorage.getItem(k)}catch(e){return th
 const SKEY='chemistreal_session_v1';
 
 var TESTMODE=false;   /* 테스트 모드는 URL ?test=1 로만 켜짐 (수기 채점 실수로 TEST 저장 방지) */
-let S=null, MANIFEST=null, FORMS=null, STUDY=null, courseTab='ch2', SAVE_STATE=null, STUDENT_HIST=null, STUDENT_HIST_KEY=null, STUDENT_WEAK=null, COHORT=null, COHORT_LOADED=false;
+let S=null, MANIFEST=null, FORMS=null, STUDY=null, courseTab='ch2', SAVE_STATE=null, STUDENT_HIST=null, STUDENT_HIST_KEY=null, STUDENT_WEAK=null, COHORT=null, COHORT_LOADED=false, SERVER_LINK=null;
 function blank(){return {view:'id',name:'',school:'',grade:'',isTest:false,roundId:null,round:null,
   attemptNo:1,attempts:[],keyItems:[],answers:[],cur:0,graded:null,dx:null,gate:null,seen:{},wrongStmts:{}};}
 
@@ -388,7 +388,7 @@ var LINK_SALT='chemistreal::s4lt::9f3Kq2026';
 function tokenFor(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
 function pubId(key){ var s=String(key||'')+'|#pub|'+LINK_SALT,a=2166136261,b=5381,d=52711,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;d=(((d<<5)+d)^c)>>>0;} return ('00000'+a.toString(36)).slice(-6)+('000'+b.toString(36)).slice(-4)+('000'+d.toString(36)).slice(-4); }
 function tokWith(k){ k=String(k||''); var li=k.lastIndexOf('-'); if(li>0&&/^[0-9a-z]{8}$/.test(k.slice(li+1))) return k; return k+'-'+tokenFor(k); }
-function reportLink(){ var k=ChemEngine.studentKey(S.name,S.school); return reportBase()+'report.html?student='+pubId(k); }
+function reportLink(){ if(SERVER_LINK) return SERVER_LINK; var k=ChemEngine.studentKey(S.name,S.school); return reportBase()+'report.html?student='+pubId(k); }
 function copyReportLink(btn){ var link=reportLink();
   try{ navigator.clipboard.writeText(link).then(function(){flashCopied(btn);},function(){window.prompt('아래 링크를 복사하세요:',link);}); }
   catch(e){ try{window.prompt('아래 링크를 복사하세요:',link);}catch(_){} } }
@@ -538,7 +538,7 @@ function inputScreen(title,sub,submitLabel,onSubmit,showStmt){
 function startGrade(items,attemptNo){S.keyItems=items;S.answers=new Array(items.length).fill('');S.cur=0;S.attemptNo=attemptNo;}
 async function saveResult(g,dx){
   if(!SAVE_URL){ SAVE_STATE=null; updateSaveIndicator(); return; }
-  SAVE_STATE='saving'; updateSaveIndicator();
+  SAVE_STATE='saving'; SERVER_LINK=null; updateSaveIndicator();
   try{
     var payload={ studentKey:ChemEngine.studentKey(S.name,S.school), reportLink:reportLink(), name:S.name, school:S.school, year:S.grade,
       course:S.round.course, round:S.round.round, attempt:S.attempts[S.attempts.length-1].attempt,
@@ -549,7 +549,8 @@ async function saveResult(g,dx){
       axes:(dx.byAxis||[]).map(function(a){return {k:a.key,t:a.total,w:a.wrong};}),
       isTest:!!S.isTest,
       answers:(S.answers||[]).map(function(a){return a==='O'?'O':a==='X'?'X':'.';}).join('') };
-    await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    var _r=await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    try{ var _j=await _r.json(); if(_j&&_j.reportLink){ SERVER_LINK=_j.reportLink; if(S&&(S.view==='report'||S.view==='done')) render(); } }catch(_e){}  // 서버가 같은 학생으로 연결하면 정규 코드 링크로 갱신
     SAVE_STATE='ok';
   }catch(e){ console.warn('[Chemistreal] 시트 저장 실패(네트워크):',e); SAVE_STATE='fail'; }
   updateSaveIndicator();

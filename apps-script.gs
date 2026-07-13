@@ -167,6 +167,51 @@ function untagMistaggedJeongsi() {
   Logger.log('untagMistaggedJeongsi: ' + fixed.length + '건 TEST 해제 + 문자발송 갱신\n' + fixed.join('\n'));
 }
 
+/* 이미 갈라져 저장된 같은 학생(이름 같고 학교명이 포함관계) 1회성 통합.
+   canonicalKey_ 가 도입되기 전에 서로 다른 키로 흩어진 기록을 하나로 모은다.
+   보수적으로: 이름 그룹 안에서 '가장 짧은 학교(코어)'가 나머지 학교 전부의 부분문자열일 때만 통합
+   (동명이인이 서로 무관한 학교면 코어 포함관계가 성립하지 않아 건드리지 않는다).
+   통합 후에도 findKeyByPubId_ 가 통합 전 학교명 기준 코드까지 해석하므로 기존 발송 링크는 그대로 열린다. */
+function mergeSplitStudents() {
+  var sh = sheet_(); var last = sh.getLastRow(); if (last < 2) { Logger.log('데이터 없음'); return; }
+  var data = sh.getRange(1, 1, last, 19).getValues();
+  var idx = {}, firstAt = {};
+  for (var i = 1; i < data.length; i++) {
+    var k = String(data[i][5] || '').trim(); if (!k) continue;
+    var e = idx[k] || (idx[k] = { name: cleanName_(String(data[i][0] || '')), schools: [] });
+    if (!e.name) e.name = cleanName_(String(data[i][0] || ''));
+    var sc = normSchool_(String(data[i][6] || '')); if (sc && e.schools.indexOf(sc) < 0) e.schools.push(sc);
+    var t = (data[i][2] && data[i][2].getTime) ? data[i][2].getTime() : 0;
+    if (firstAt[k] == null || t < firstAt[k]) firstAt[k] = t;
+  }
+  var byName = {};
+  for (var k in idx) { var nm = idx[k].name; if (nm) (byName[nm] = byName[nm] || []).push(k); }
+  var remap = {};                                            // 옛키 -> 정규키
+  var plan = [];
+  for (var nm in byName) {
+    var keys = byName[nm]; if (keys.length < 2) continue;
+    var schools = []; keys.forEach(function (kk) { idx[kk].schools.forEach(function (s) { if (schools.indexOf(s) < 0) schools.push(s); }); });
+    schools.sort(function (a, b) { return a.length - b.length; });
+    var core = schools[0];
+    var cluster = keys.filter(function (kk) { return idx[kk].schools.every(function (s) { return schoolAkin_(core, s); }); });
+    if (cluster.length < 2) continue;
+    var canon = cluster.filter(function (kk) { return kk === core + '-' + nm; })[0]
+      || cluster.slice().sort(function (a, b) { return (firstAt[a] || 0) - (firstAt[b] || 0); })[0];
+    cluster.forEach(function (kk) { if (kk !== canon) { remap[kk] = canon; plan.push(kk + '  =>  ' + canon); } });
+  }
+  if (!plan.length) { Logger.log('통합할 분리 학생 없음'); return; }
+  var link = {};
+  for (var i = 1; i < data.length; i++) {
+    var k = String(data[i][5] || '').trim(); var c = remap[k]; if (!c) continue;
+    sh.getRange(i + 1, 6).setValue(c);                       // F 학생키 = 정규키
+    if (link[c] == null) link[c] = linkOf_(c);
+    sh.getRange(i + 1, 2).setValue(link[c]);                 // B 리포트링크 = 정규 코드
+  }
+  SpreadsheetApp.flush();
+  try { buildSendSheet(); } catch (e) {}
+  Logger.log('mergeSplitStudents: ' + plan.length + '개 키 통합 + 문자발송 갱신\n' + plan.join('\n'));
+}
+
 function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents);
@@ -185,7 +230,7 @@ function doPost(e) {
     }
     if (d.action === 'absentee_email') { if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' }); weeklyAbsenteeEmail(); return json_({ ok: true, sent: true }); }
     var sh = sheet_();
-    var _key = keyOf_(d.name || '', d.school || '');
+    var _key = canonicalKey_(d.name || '', d.school || '');   // 같은 학생이 학교명을 다르게 적어도 기존 키로 자동 연결
     // 이미 통과한 회차엔 재시(재 포함) 저장 거부 - 통과 학생은 재시 볼 필요 없음
     if (attOrd_(d.attempt || '') >= 1 && !d.isTest && hasPassed_(sh, _key, d.course || '', d.round || '')) {
       return json_({ ok: false, error: 'already_passed', msg: '이미 통과한 회차라 재시가 저장되지 않았습니다.' });
@@ -234,7 +279,7 @@ function doGet(e) {
       key = findKeyByPubId_(raw);                 // 신규: 불투명 코드(한글·하이픈 없음) → 학생키 역조회
     } else {
       var li = raw.lastIndexOf('-');              // 기존: 학교-이름-토큰 (이미 보낸 링크 호환)
-      if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt) && mt === tokenFor_(raw.slice(0, li))) key = raw.slice(0, li); }
+      if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt) && mt === tokenFor_(raw.slice(0, li))) key = canonKeyOfRaw_(raw.slice(0, li)); }
     }
   }
   var valid = !!key;   // ★보안: 유효한 코드/토큰이 있어야만 조회
@@ -632,6 +677,44 @@ function cleanName_(s) { return String(s == null ? '' : s).replace(/\s+/g, '').t
 function normSchool_(s) { s = cleanName_(s); return s.replace(/중학교$/, '중').replace(/고등학교$/, '고').replace(/초등학교$/, '초'); }
 function normGrade_(s) { s = String(s == null ? '' : s).trim(); var m = s.match(/\d+/); return m ? m[0] : s; }
 function keyOf_(name, school) { return normSchool_(school) + '-' + cleanName_(name); }
+/* 학교명 포함관계 판정: 한쪽이 다른 쪽을 포함하면 같은 학교로 본다.
+   예) '문원중' 과 '과천문원중'(지역명만 덧붙음) => true. 너무 짧은(2자 이하) 공통은 오연결 방지 차 제외. */
+function schoolAkin_(a, b) {
+  a = String(a || ''); b = String(b || '');
+  if (!a || !b) return false;
+  if (a === b) return true;
+  var s = a.length <= b.length ? a : b, l = a.length <= b.length ? b : a;
+  return s.length >= 3 && l.indexOf(s) >= 0;
+}
+/* 이미 저장된 학생들 { 학생키 -> { name(정리), schools:[정규학교...] } } */
+function studentIndex_() {
+  var data = sheet_().getDataRange().getValues(), idx = {};
+  for (var i = 1; i < data.length; i++) {
+    var k = String(data[i][5] || '').trim(); if (!k) continue;
+    var e = idx[k] || (idx[k] = { name: cleanName_(String(data[i][0] || '')), schools: [] });
+    var sc = normSchool_(String(data[i][6] || ''));
+    if (sc && e.schools.indexOf(sc) < 0) e.schools.push(sc);
+    if (!e.name) e.name = cleanName_(String(data[i][0] || ''));
+  }
+  return idx;
+}
+/* 같은 학생 자동 연결 + 오병합 방지.
+   - 이름이 같고 학교명이 포함관계인 기존 학생이 정확히 1명 => 그 학생키로 통합
+   - 없으면 신규(자기 키), 2명 이상 모호하면 연결하지 않고 자기 키 유지(다른 동명이인 보호) */
+function canonicalKey_(name, school) {
+  var self = keyOf_(name, school), cn = cleanName_(name), ns = normSchool_(school);
+  if (!cn) return self;
+  var idx = studentIndex_();
+  if (idx[self]) return self;                       // 완전 동일 학교 => 그대로
+  var hits = [];
+  for (var k in idx) {
+    if (idx[k].name !== cn) continue;
+    for (var j = 0; j < idx[k].schools.length; j++) {
+      if (schoolAkin_(idx[k].schools[j], ns)) { hits.push(k); break; }
+    }
+  }
+  return hits.length === 1 ? hits[0] : self;        // 유일 매칭만 연결, 0개/2개+ 는 분리 유지
+}
 /* ★보안: 실제 salt 값은 저장소에 두지 않는다.
    프로젝트 설정 > 스크립트 속성 > LINK_SALT 에 저장한다. (설정법은 checkLinkSalt 참고)
    속성이 비어 있으면 리포트 링크 토큰이 전부 무효가 되어 어떤 리포트도 열리지 않는다. */
@@ -650,8 +733,31 @@ function tokenFor_(base){ var s=String(base||'')+'|'+linkSalt_(),a=2166136261,b=
 /* 불투명 공개 코드: 학교·이름을 드러내지 않는 14자 코드(한글 없음). 클라이언트 pubId와 동일 알고리즘·salt. */
 function pubId_(key){ var s=String(key||'')+'|#pub|'+linkSalt_(),a=2166136261,b=5381,d=52711,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;d=(((d<<5)+d)^c)>>>0;} return ('00000'+a.toString(36)).slice(-6)+('000'+b.toString(36)).slice(-4)+('000'+d.toString(36)).slice(-4); }
 function linkOf_(key) { return REPORT_BASE_URL + 'report.html?student=' + pubId_(key); }  // 신규 링크는 불투명 코드만
-/* 불투명 코드로 학생키를 역조회 (결과 탭의 고유 학생키 순회 매칭) */
-function findKeyByPubId_(code){ var data=sheet_().getDataRange().getValues(), seen={}; for(var i=1;i<data.length;i++){ var k=String(data[i][5]||'').trim(); if(!k||seen[k])continue; seen[k]=1; if(pubId_(k)===code) return k; } return null; }
+/* 불투명 코드로 학생키를 역조회.
+   저장된 학생키뿐 아니라, 각 행의 원본(이름,학교)로 만든 키의 코드도 함께 확인한다.
+   => 통합(canonicalKey_)으로 학생키가 바뀐 뒤에도, 통합 전 학교명으로 이미 발송한 링크가 계속 열린다. */
+function findKeyByPubId_(code){
+  var data=sheet_().getDataRange().getValues(), seenK={}, seenR={};
+  for(var i=1;i<data.length;i++){
+    var k=String(data[i][5]||'').trim(); if(!k) continue;
+    if(!seenK[k]){ seenK[k]=1; if(pubId_(k)===code) return k; }
+    var rk=keyOf_(String(data[i][0]||''), String(data[i][6]||''));
+    if(rk && rk!==k && !seenR[rk]){ seenR[rk]=1; if(pubId_(rk)===code) return k; }  // 통합 전 코드 -> 현재 저장 키
+  }
+  return null;
+}
+/* 토큰 링크의 원본 키(학교-이름)를 현재 저장(정규) 키로 해석.
+   변형 학교명으로 만든 옛 토큰 링크도 통합된 정규 키로 이어져, 리포트가 흩어지지 않고 한 학생으로 모인다. */
+function canonKeyOfRaw_(rawKey){
+  rawKey = String(rawKey || ''); if(!rawKey) return null;
+  var data=sheet_().getDataRange().getValues();
+  for(var i=1;i<data.length;i++){
+    var st=String(data[i][5]||'').trim(); if(!st) continue;
+    if(st===rawKey) return st;                                            // 이미 그 키로 저장됨
+    if(keyOf_(String(data[i][0]||''), String(data[i][6]||''))===rawKey) return st;  // 변형 학교 -> 저장 키
+  }
+  return rawKey;                                                          // 아직 기록 없는 키는 그대로(빈 리포트)
+}
 function setKeyLink_(sh, row, key, link) {
   sh.getRange(row, 6).setValue(key);   // F 학생키
   sh.getRange(row, 2).setValue(link);  // B 리포트링크

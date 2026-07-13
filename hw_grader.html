@@ -328,10 +328,12 @@ async function gradeAndSave(){
   st.innerHTML='<span class="spin"></span> 저장 중...';
   var saved=false;
   try{
-    await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
-    // 저장 확인 (토큰 조회)
+    var _pr=await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
+    try{ var _pj=await _pr.json(); if(_pj&&_pj.reportLink) payload.reportLink=_pj.reportLink; }catch(e){}  // 같은 학생 연결 시 정규 코드 링크로
+    // 저장 확인: 서버가 반환한 정규 링크의 코드로(통합 후에도 정확), 없으면 기존 토큰으로
     try{
-      var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(sk+'-'+tokenFor(sk))+'&t='+Date.now(),{cache:'no-store'});
+      var _vp=payload.reportLink&&payload.reportLink.indexOf('student=')>=0?payload.reportLink.split('student=')[1]:encodeURIComponent(sk+'-'+tokenFor(sk));
+      var vr=await fetch(SAVE_URL+'?student='+_vp+'&t='+Date.now(),{cache:'no-store'});
       var vj=await vr.json();
       saved=!!(vj&&vj.rows&&vj.rows.some(function(row){ return row.course==='jm1' && String(row.round)===String(CUR.round) && String(row.answers||'')===digits; }));
     }catch(e){}
