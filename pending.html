@@ -83,6 +83,9 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .pdfbtn:hover{background:rgba(201,162,39,.08)}
 .pdfbtn[data-busy="1"]{opacity:.7;cursor:progress}
 .hidebtn{margin-top:7px;border:1px solid var(--line);color:var(--muted);background:#fff;border-radius:7px;padding:4px 9px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.roundedit{border:1px solid var(--line);color:#6b7280;background:#fff;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.roundedit:hover{border-color:var(--gold);color:#7a5d20}
+.roundedit.on{border-color:var(--gold);color:#7a5d20;background:rgba(201,162,39,.08)}
 .hidebtn:hover{border-color:#cbd5e1;color:#4b5563}
 .hidwrap{margin:2px 0 8px}
 .hidwrap details summary{cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:700;padding:6px 2px;list-style:none}
@@ -114,6 +117,17 @@ var Q=new URLSearchParams(location.search);
 function urgency(days){ return days>=7?'urgent':days>=4?'warn':'ok'; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
 function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* 반별 시험 회차 수동 지정(브라우저 저장). 서버 자동 감지가 틀릴 때 화면에서 바로 고친다. */
+function absOv(){ try{ return JSON.parse(localStorage.getItem('dt_absov')||'{}')||{}; }catch(e){ return {}; } }
+function setAbsRound(label){
+  var cur=absOv();
+  var v=window.prompt('"'+label+'" 반의 시험 회차를 입력하세요.\n(비우고 확인하면 자동 감지로 되돌립니다)', cur[label]!=null?cur[label]:'');
+  if(v===null) return;
+  v=String(v).trim();
+  if(v===''){ delete cur[label]; } else { var n=Number(v); if(isNaN(n)||n<0){ alert('회차 숫자를 입력하세요.'); return; } cur[label]=n; }
+  try{ localStorage.setItem('dt_absov', JSON.stringify(cur)); }catch(e){}
+  load();   // 지정한 회차로 미응시 다시 조회
+}
 
 var STAGE_LABEL={'1':'1단계 · 월요일','2':'2단계 · 수요일','3':'3단계 · 최종'};
 function shareMsg(d, stage){
@@ -195,8 +209,10 @@ function absentMsg(d, stage){
 
 function absentClassHTML(c){
   var el=examLink(c.course, c.round);
+  var ovOn=(absOv()[c.label]!=null);
   var head='<div class="abx-head"><span class="abx-nm">'+esc(c.label)+'</span>'
     +'<span class="abx-badge">'+(COURSE[c.course]||esc(c.course))+' '+esc(c.round)+'회</span>'
+    +'<button class="roundedit'+(ovOn?' on':'')+'" data-label="'+escAttr(c.label)+'" onclick="setAbsRound(this.getAttribute(\'data-label\'))" title="이 반의 시험 회차를 직접 지정">'+(ovOn?'회차 수동 ✎':'회차 수정')+'</button>'
     +'<span class="abx-cnt">미응시 '+c.absent.length+'/'+c.total+'명</span>'
     +'<button class="zipbtn" data-course="'+escAttr(c.course)+'" data-round="'+Number(c.round)+'" data-label="'+escAttr(c.label)+'" data-absent="'+escAttr(JSON.stringify(c.absent))+'" onclick="zipExamClass(this)">시험지 ZIP</button></div>';
   var bc='<div class="copygrp abx-bc" data-kind="exam" data-name="" data-course="'+escAttr(c.course)+'" data-round="'+escAttr(c.round)+'" data-link="'+escAttr(el)+'">'
@@ -347,7 +363,7 @@ function load(){
   document.getElementById('app').innerHTML='<div class="loading">불러오는 중…</div>';
   var tok=encodeURIComponent(admTok());
   Promise.all([
-    fetchJSON_(STATUS_URL+'?action=absentees&token='+tok+'&t='+Date.now()),
+    fetchJSON_(STATUS_URL+'?action=absentees&token='+tok+'&ov='+encodeURIComponent(JSON.stringify(absOv()))+'&t='+Date.now()),
     fetchJSON_(STATUS_URL+'?action=pending&token='+tok+'&t='+Date.now())
   ]).then(function(res){
     var A=res[0], P=res[1];

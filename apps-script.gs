@@ -294,7 +294,7 @@ function doGet(e) {
   var token = (e.parameter.token || '').trim();
   if (action === 'pending') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, pending: computePending_(14) }); }
   if (action === 'roster') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, classes: getRoster_() }); }
-  if (action === 'absentees') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, absentees: computeAbsentees_(8) }); }
+  if (action === 'absentees') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); var _ov = {}; try { _ov = JSON.parse(e.parameter.ov || '{}') || {}; } catch (e2) {} return json_({ ok: true, absentees: computeAbsentees_(8, _ov) }); }
   if (action === 'names') { return namesForStudents_(e.parameter.code); }
   if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
   var raw = (e.parameter.student || '').trim();
@@ -593,15 +593,25 @@ function setRoster_(classes) {
 function norm_(s) { return String(s || '').replace(/\s+/g, ''); }
 function studentName_(key) { var s = String(key || ''); var i = s.lastIndexOf('-'); return i >= 0 ? s.slice(i + 1) : s; }
 function currentRoundForClass_(all, course, students, withinDays) {
-  var now = Date.now(), lim = withinDays * 86400000, best = null;
+  var now = Date.now(), lim = withinDays * 86400000;
   var set = {};
   (students || []).forEach(function (nm) { set[norm_(nm)] = 1; });
+  var cnt = {}, latest = {};                              // 회차 -> 응시 인원 수 / 마지막 응시일
   all.forEach(function (r) {
     if (r.course !== course || r.isTest) return;
     var t = r.date ? new Date(r.date).getTime() : 0;
     if (now - t > lim) return;
     if (!(set[norm_(r.name)] || set[norm_(studentName_(r.studentKey))])) return;  // 이 반 학생 응시만
-    if (best == null || r.round > best) best = r.round;
+    cnt[r.round] = (cnt[r.round] || 0) + 1;
+    if (!latest[r.round] || t > latest[r.round]) latest[r.round] = t;
+  });
+  // 가장 높은 회차(max)가 아니라, '이번 주 반이 실제로 가장 많이 본 회차'를 고른다.
+  // (반 학생 한 명이 더 높은 회차 기록을 갖고 있어도 그것 때문에 회차가 잘못 잡히지 않게)
+  var best = null;
+  Object.keys(cnt).forEach(function (rd) {
+    rd = Number(rd);
+    if (best == null) { best = rd; return; }
+    if (cnt[rd] > cnt[best] || (cnt[rd] === cnt[best] && latest[rd] > latest[best])) best = rd;  // 최빈, 동률이면 최근
   });
   return best;
 }
@@ -615,17 +625,19 @@ function currentRoundFor_(all, course, withinDays) {
   });
   return best;
 }
-function computeAbsentees_(withinDays) {
+function computeAbsentees_(withinDays, overrides) {
   withinDays = withinDays || 8;
+  overrides = overrides || {};                              // { 반라벨: 회차 } — pending.html 수동 지정
   var data = sheet_().getDataRange().getValues(); data.shift();
   var all = data.map(mapRow_).filter(function (r) { return r.studentKey; });
   var classes = getRoster_(), roundCache = {}, out = [];
   classes.forEach(function (k) {
     var course = k.course || courseOf_(k.label), total = (k.students || []).length;
     if (!course) { out.push({ label: k.label, course: '', round: null, absent: [], present: 0, total: total, note: '과목 미인식' }); return; }
-    var round;
-    if (k.round === 0 || k.round) round = Number(k.round);
-    else round = currentRoundForClass_(all, course, k.students, withinDays);
+    var round, ov = overrides[k.label];
+    if (ov != null && ov !== '') round = Number(ov);        // 1순위: 화면에서 직접 지정한 회차
+    else if (k.round === 0 || k.round) round = Number(k.round);  // 2순위: 명단(roster) 고정 회차
+    else round = currentRoundForClass_(all, course, k.students, withinDays);  // 3순위: 자동(최빈 회차)
     if (round == null) { out.push({ label: k.label, course: course, round: null, absent: [], present: 0, total: total, noExam: true }); return; }
     var took = {};
     all.forEach(function (r) {
