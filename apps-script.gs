@@ -716,12 +716,19 @@ function normGrade_(s) { s = String(s == null ? '' : s).trim(); var m = s.match(
 function keyOf_(name, school) { return normSchool_(school) + '-' + cleanName_(name); }
 /* 학교명 포함관계 판정: 한쪽이 다른 쪽을 포함하면 같은 학교로 본다.
    예) '문원중' 과 '과천문원중'(지역명만 덧붙음) => true. 너무 짧은(2자 이하) 공통은 오연결 방지 차 제외. */
+function schoolCore_(s) { return String(s || '').replace(/(중|고|초)$/, ''); }        // 학교종류 접미 제거
+function schoolType_(s) { var m = String(s || '').match(/(중|고|초)$/); return m ? m[1] : ''; }
 function schoolAkin_(a, b) {
   a = String(a || ''); b = String(b || '');
   if (!a || !b) return false;
   if (a === b) return true;
+  // (1) 지역명 접두 포함관계: 문원중 ⊂ 과천문원중
   var s = a.length <= b.length ? a : b, l = a.length <= b.length ? b : a;
-  return s.length >= 3 && l.indexOf(s) >= 0;
+  if (s.length >= 3 && l.indexOf(s) >= 0) return true;
+  // (2) 학교종류 접미(중/고/초) 유무만 다른 경우: 휘문 vs 휘문중 (종류가 서로 다르면 X: 휘문중 vs 휘문고)
+  var ca = schoolCore_(a), cb = schoolCore_(b), ta = schoolType_(a), tb = schoolType_(b);
+  if (ca && ca === cb && (ta === '' || tb === '' || ta === tb)) return true;
+  return false;
 }
 /* 이미 저장된 학생들 { 학생키 -> { name(정리), schools:[정규학교...] } } */
 function studentIndex_() {
