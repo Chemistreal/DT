@@ -289,7 +289,7 @@ async function assertNoOverflow(page, label) {
         for (; j < gs.length; j++) { const c = gs[j]; if (c === '{') depth++; else if (c === '}' && --depth === 0) { j++; break; } }
         return gs.slice(at, j);
       }
-      const body = ['cleanName_', 'normSchool_', 'keyOf_', 'schoolAkin_', 'canonicalKey_'].map(grab).join('\n');
+      const body = ['cleanName_', 'normSchool_', 'keyOf_', 'schoolCore_', 'schoolType_', 'schoolAkin_', 'canonicalKey_'].map(grab).join('\n');
       // studentIndex_ 는 시트를 읽으므로 테스트가 주입하는 인덱스로 대체
       const make = new Function('INDEX',
         body + '\nfunction studentIndex_(){ return INDEX; }\n' +
@@ -301,6 +301,8 @@ async function assertNoOverflow(page, label) {
       assert(F.schoolAkin_('대치중', '청담중') === false, '무관 학교 오인식');
       assert(F.schoolAkin_('중', '과천문원중') === false, '2자 이하 공통 오연결(가드 실패)');
       assert(F.schoolAkin_('문원중', '문원고') === false, '중/고 구분 실패');
+      assert(F.schoolAkin_('휘문', '휘문중') === true, '학교종류 접미 유무만 다른 경우 미인식(휘문/휘문중)');
+      assert(F.schoolAkin_('휘문중', '휘문고') === false, '동일 지역명 다른 학교종류 오인식(휘문중/휘문고)');
 
       // 기존: 문원중-최민준 한 명. 과천문원중으로 다시 오면 그 키로 연결
       const idxOne = { '문원중-최민준': { name: '최민준', schools: ['문원중'] } };
