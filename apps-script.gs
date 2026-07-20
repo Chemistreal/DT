@@ -1137,3 +1137,62 @@ function setupSendTrigger() {
   ScriptApp.newTrigger('buildSendSheet').timeBased().everyMinutes(10).create();
   Logger.log('buildSendSheet 10분 간격 백업 트리거 설치 (실시간 갱신은 저장 시 doPost가 수행)');
 }
+
+/* ============================================================
+   일일 자동 유지보수 + 트리거 원클릭 설치
+   ------------------------------------------------------------
+   dailyMaintenance : 매일 새벽 4시(KST) 자동 실행되는 청소차.
+     신규 제출은 doPost가 실시간으로 자동 연결·문자 갱신하지만,
+     과거 데이터 정리(분리 학생 병합, 통과 후 재재시 제거, 정시 오태깅
+     정정, 링크 재생성)는 이 함수가 매일 알아서 돌린다.
+     → 더 이상 mergeSplitStudents 등을 손으로 실행할 필요 없음.
+   setupAllTriggers : 편집기에서 딱 1회 실행 → 모든 트리거 설치(중복 자동 제거)
+   triggerStatus    : 현재 설치된 트리거 목록 확인(로그)
+   ============================================================ */
+function dailyMaintenance() {
+  var steps = [
+    ['mergeSplitStudents',    mergeSplitStudents],     // 학교명 표기차로 갈라진 학생 병합
+    ['cleanupPassedRetakes',  cleanupPassedRetakes],   // 통과했는데 남은 재시·재재시 행 제거
+    ['untagMistaggedJeongsi', untagMistaggedJeongsi],  // 정시 오태깅 정정
+    ['refreshReportLinks',    refreshReportLinks],     // 병합 반영해 성적표 링크 재생성
+    ['buildSendSheet',        buildSendSheet]          // 문자발송 탭 최신화
+  ];
+  var report = [];
+  steps.forEach(function (s) {
+    try { s[1](); report.push(s[0] + ' OK'); }
+    catch (err) { report.push(s[0] + ' 실패: ' + err); }
+  });
+  Logger.log('dailyMaintenance · ' + report.join(' / '));
+}
+
+function setupMaintenanceTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'dailyMaintenance') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('dailyMaintenance').timeBased()
+    .everyDays(1).atHour(4).inTimezone('Asia/Seoul').create();
+  Logger.log('dailyMaintenance 매일 04시(KST) 트리거 설치 완료');
+}
+
+function setupAllTriggers() {
+  var jobs = [
+    ['setupEditTrigger',        setupEditTrigger,        '시트 직접 수정 시 키·링크 동기화'],
+    ['setupSendTrigger',        setupSendTrigger,        '문자발송 탭 10분 백업 갱신'],
+    ['setupColorTrigger',       setupColorTrigger,       '시트 색상 자동 적용'],
+    ['setupMaintenanceTrigger', setupMaintenanceTrigger, '매일 04시 데이터 청소'],
+    ['setupWeeklyTrigger',      setupWeeklyTrigger,      '매주 수 18시 재시 미응시 메일'],
+    ['setupAbsenteeTrigger',    setupAbsenteeTrigger,    '매주 월 18시 결석 메일']
+  ];
+  jobs.forEach(function (j) {
+    try { j[1](); Logger.log('✔ ' + j[0] + ' — ' + j[2]); }
+    catch (err) { Logger.log('✘ ' + j[0] + ' 실패: ' + err); }
+  });
+  triggerStatus();
+}
+
+function triggerStatus() {
+  var ts = ScriptApp.getProjectTriggers();
+  if (!ts.length) { Logger.log('설치된 트리거 없음 — setupAllTriggers()를 실행하세요'); return; }
+  ts.forEach(function (t) { Logger.log('트리거: ' + t.getHandlerFunction() + ' · ' + t.getEventType()); });
+  Logger.log('총 ' + ts.length + '개 트리거 설치됨');
+}
