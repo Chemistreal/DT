@@ -743,12 +743,15 @@ function indirectHint(ol){ var GEN='어떤 것이 변하면 이게 달라지는�
   var driver=bold.split(/많을수록|클수록|작을수록|높을수록|낮을수록|적을수록|강할수록|약할수록|일수록|=|→|↑|↓|면 |:|·/)[0].replace(/[↑↓]/g,'').trim();
   if(driver && driver.length>=2 && driver.length<=16) return "핵심 단서: '"+driver+"'. 여기서 출발해 스스로 풀어보게 해 주세요";
   return GEN; }
-function rankMsg(rk){ var d=rk.score-rk.avg; var dt=d>=0?('반 평균보다 '+d+'점 높습니다'):('반 평균보다 '+(-d)+'점 낮습니다');
+function rankMsg(rk){ var d=rk.score-rk.avg; var dt=d>=0?('반 평균보다 '+pt(d)+'점 높습니다'):('반 평균보다 '+pt(-d)+'점 낮습니다');
   if(rk.per100<=10) return '최상위권입니다. 반에서 상위 약 '+rk.per100+'%에 듭니다. '+dt+'.';
   if(rk.per100<=30) return '상위권입니다. 상위 약 '+rk.per100+'% 위치이고, '+dt+'.';
   if(rk.per100<=50) return '평균 이상입니다. 상위 약 '+rk.per100+'%입니다. '+dt+'.';
   return '지금은 평균 부근입니다. '+dt+'. 첫 응시 이후 강의록과 재시가 최종 점수를 끌어올립니다.'; }
-function sc1(n){ return n==null?n:Math.round(n*10)/10; }
+/* 점수는 늘 소수 둘째 자리까지 적는다(셋째 자리에서 반올림).
+   그냥 빼서 붙이면 부동소수점 찌꺼기가 그대로 나간다 — 학부모가 받은 문구에
+   '반 평균보다 0.29999999999999716점 높습니다' 라고 찍혔다. */
+function pt(n){ if(n==null||n==='') return n; var v=Number(n); return isFinite(v)?v.toFixed(2):n; }
 function distHist(rk){
   if(!(rk.dist && rk.dist.some(function(v){return v>0;}))) return '';
   var mx=Math.max.apply(null,rk.dist);
@@ -767,8 +770,8 @@ function distHist(rk){
 function rankCard(rk){ return `<div class="card rankcard">
   <div class="rankhead">${rk.round}회 · 첫 응시 석차</div>
   <div class="rankrow">
-    <div class="rcell"><div class="rv">${sc1(rk.avg)}</div><div class="rl">반 평균</div></div>
-    <div class="rcell me"><div class="rv">${sc1(rk.score)}</div><div class="rl">우리 아이</div></div>
+    <div class="rcell"><div class="rv">${pt(rk.avg)}</div><div class="rl">반 평균</div></div>
+    <div class="rcell me"><div class="rv">${pt(rk.score)}</div><div class="rl">우리 아이</div></div>
     <div class="rcell"><div class="rv"><span class="pre">상위</span>${rk.per100}<span class="u">%</span></div><div class="rl">반 전체 기준</div></div>
   </div>
   ${distHist(rk)}
@@ -858,7 +861,7 @@ function qualCard(){ var rec=latest.finalScore-latest.jeongsiScore; var band, ms
   else { band='성장 구간'; msg='이번 회차도 통과했습니다. 꾸준히 올라오고 있고, 이번 주 핵심 처방으로 한 단계 더 갈 수 있어요.'; }
   return `<div class="card qualcard"><div class="rankhead">이번 회차 · ${latest.round}회</div>
     <div class="qualrow"><div class="qbadge">${band}</div>
-      ${rec>0?`<div class="qmetric"><span class="qv">+${sc1(rec)}</span><span class="ql">첫 응시 → 최종</span></div>`:''}</div>
+      ${rec>0?`<div class="qmetric"><span class="qv">+${pt(rec)}</span><span class="ql">첫 응시 → 최종</span></div>`:''}</div>
     <div class="rankmsg">${msg}</div>${retakeCTA()}</div>`; }
 function riskAssess(){ var t=A.trend||[], reasons=[], level='안정', note='';
   var fs=t.map(function(x){return x.finalScore;}).filter(function(v){return v!=null;});
@@ -901,8 +904,8 @@ function svgTrend(){
   const passLbl='';
   const jline=T.map((t,i)=>`${X(i)},${Y(t.jeongsiScore)}`).join(' ');
   const fline=T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ');
-  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#A9853C" font-family="JetBrains Mono">${sc1(t.jeongsiScore)}</text>`:'');}).join('');
-  const fdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.finalScore)}" r="4" fill="#0B6E6E"/><text x="${X(i)}" y="${Y(t.finalScore)-9}" text-anchor="${anc}" font-size="10" font-weight="700" fill="#0B6E6E" font-family="JetBrains Mono">${sc1(t.finalScore)}</text>`;}).join('');
+  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#A9853C" font-family="JetBrains Mono">${pt(t.jeongsiScore)}</text>`:'');}).join('');
+  const fdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.finalScore)}" r="4" fill="#0B6E6E"/><text x="${X(i)}" y="${Y(t.finalScore)-9}" text-anchor="${anc}" font-size="10" font-weight="700" fill="#0B6E6E" font-family="JetBrains Mono">${pt(t.finalScore)}</text>`;}).join('');
   const xlab=T.map((t,i)=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#61707F" font-family="JetBrains Mono">${t.round}회</text>`).join('');
   const farea=`${X(0)},${Y(0)} `+T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ')+` ${X(n-1)},${Y(0)}`;
   // A8 주석: 가장 큰 정시→최종 회복 지점 강조
@@ -911,7 +914,7 @@ function svgTrend(){
   if(recs.length){ var r0=recs[0], i=r0.i, t=r0.t, midY=(Y(t.jeongsiScore)+Y(t.finalScore))/2;
     var last=(i===n-1), lx=last?X(i)-7:X(i)+7, anc=last?'end':'start';
     annot=`<line x1="${X(i)}" y1="${Y(t.jeongsiScore)}" x2="${X(i)}" y2="${Y(t.finalScore)}" stroke="#A9853C" stroke-width="1" opacity=".45"/>`
-      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#A9853C" font-family="JetBrains Mono">재시 +${sc1(r0.rec)}</text>`;
+      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#A9853C" font-family="JetBrains Mono">재시 +${pt(r0.rec)}</text>`;
   }
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="회차별 점수 추이">
     <polygon points="${farea}" fill="#0B6E6E" opacity=".06"/>
@@ -1202,7 +1205,7 @@ function roundCardsHTML(){
   if(_EMBED) return '';
   if(!A||!A.trend||!A.trend.length) return '';
   var LB=['정시','재시','재재시'], AR='<span class="rc-arrow">\u2192</span>';
-  function chip(lab,score,pass){return '<span class="rc-att'+(pass?' pass':'')+'">'+lab+' <b>'+sc1(score)+'</b>'+(pass?' \u2713':'')+'</span>';}
+  function chip(lab,score,pass){return '<span class="rc-att'+(pass?' pass':'')+'">'+lab+' <b>'+pt(score)+'</b>'+(pass?' \u2713':'')+'</span>';}
   function attemptsOf(t){return (allRows||[]).filter(function(r){return r.course===t.course&&Number(r.round)===Number(t.round);}).sort(function(a,b){return (ORD[a.attempt]||0)-(ORD[b.attempt]||0);});}
   var cards=A.trend.slice().sort(function(a,b){return b.round-a.round;}).map(function(t){
     var atts=attemptsOf(t), chips, mis=[];
@@ -1240,13 +1243,13 @@ function render(commit){
   // HERO
   var _pd=document.getElementById('pubdate'); if(_pd)_pd.textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'})+' 발행';
   var finals=A.trend.map(function(t){return t.finalScore;}).filter(function(v){return v!=null;});
-  var avgRec=(function(){var ds=A.trend.filter(function(t){return t.jeongsiScore!=null&&t.finalScore!=null&&t.finalScore>t.jeongsiScore;});return ds.length?Math.round(ds.reduce(function(s,t){return s+(t.finalScore-t.jeongsiScore);},0)/ds.length):0;})();
+  var avgRec=(function(){var ds=A.trend.filter(function(t){return t.jeongsiScore!=null&&t.finalScore!=null&&t.finalScore>t.jeongsiScore;});return ds.length?ds.reduce(function(s,t){return s+(t.finalScore-t.jeongsiScore);},0)/ds.length:0;})();
   var allPass=A.passedRounds===A.trend.length;
   var risk=riskAssess();
   var status=risk.level==='안정'?{k:'안정',c:'st-ok',t:'꾸준히 전진 중'}:risk.level==='주의'?{k:'주의',c:'st-warn',t:risk.reasons[0]||'살펴볼 신호 있음'}:{k:'집중 관리',c:'st-no',t:risk.reasons[0]||'재시로 채우는 중'};
   // ── 히어로 한 줄: 점수 궤적 4경우 + 회복탄력성 논제 (정확·품격) ──
   var _js=latest.jeongsiScore, _fs=latest.finalScore, _rec=_fs-_js;
-  var _jsD=sc1(_js), _fsD=sc1(_fs);
+  var _jsD=pt(_js), _fsD=pt(_fs);
   var _pre='';
   if(allPass && A.trend.length>1){
     _pre = (avgRec>=8)
@@ -1261,9 +1264,9 @@ function render(commit){
   } else if(latest.passed && _rec>0){
     _week = '이번 회차는 첫 시도 '+_jsD+'점에서 재시로 <b>'+_fsD+'점</b>까지 끌어올려 통과했습니다.';
   } else if(_rec>0){
-    _week = '이번 회차는 '+_jsD+'점에서 <b>'+_fsD+'점</b>까지 좁혔고, 통과선까지 '+sc1(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
+    _week = '이번 회차는 '+_jsD+'점에서 <b>'+_fsD+'점</b>까지 좁혔고, 통과선까지 '+pt(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
   } else {
-    _week = '이번 회차 첫 시도는 <b>'+_fsD+'점</b>, 통과선까지 '+sc1(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
+    _week = '이번 회차 첫 시도는 <b>'+_fsD+'점</b>, 통과선까지 '+pt(80-_fs)+'점을 남겨두고 있습니다. 강의록을 다진 뒤 재시로 채웁니다.';
   }
   var _thesis, _detail='';
   if(_pre){ _thesis=_pre.trim(); _detail=_week; } else { _thesis=_week; }
@@ -1276,7 +1279,7 @@ function render(commit){
     <div class="herorow">
       <div class="stat">
         <div><div class="k">${A.passedRounds}/${A.trend.length}</div><div class="l">통과 회차</div></div>
-        ${avgRec>0?`<div><div class="k">+${avgRec}</div><div class="l">재시로 올린 점수</div></div>`:`<div><div class="k">${A.trend.length*60}</div><div class="l">점검한 문항</div></div>`}
+        ${avgRec>0?`<div><div class="k">+${pt(avgRec)}</div><div class="l">재시로 올린 점수</div></div>`:`<div><div class="k">${A.trend.length*60}</div><div class="l">점검한 문항</div></div>`}
         <div><div class="k">1~${A.coverageRound}</div><div class="l">지금까지 다룬 회차</div></div>
       </div>
       <div class="sparkbox">${spark(finals,84,34)}<div class="sparkl">최종 점수 추이</div></div>
@@ -1296,13 +1299,13 @@ function render(commit){
     var _half=Math.ceil(_js.length/2), _fh=_js.slice(0,_half), _lh=_js.slice(_half);
     var _fhA=_fh.reduce(function(a,v){return a+v;},0)/(_fh.length||1);
     var _lhA=_lh.length?_lh.reduce(function(a,v){return a+v;},0)/_lh.length:_fhA;
-    var _jsDelta=Math.round(_lhA-_fhA);
+    var _jsDelta=_lhA-_fhA;
     var _t3v,_t3l;
     if(_masteredN>0){_t3v=String(_masteredN);_t3l='탄탄한 단원';}
-    else if(avgRec>0){_t3v='+'+avgRec;_t3l='재시 평균 상승';}
+    else if(avgRec>0){_t3v='+'+pt(avgRec);_t3l='재시 평균 상승';}
     else {_t3v=String(_n);_t3l='응시 회차';}
     var _gline=_jsDelta>=3
-      ? '첫 응시 실력이 학기 초보다 평균 <b>+'+_jsDelta+'점</b> 올랐습니다. 재시 없이도 맞히는 문제가 늘고 있다는 뜻입니다.'
+      ? '첫 응시 실력이 학기 초보다 평균 <b>+'+pt(_jsDelta)+'점</b> 올랐습니다. 재시 없이도 맞히는 문제가 늘고 있다는 뜻입니다.'
       : '매 회차 약점을 바로잡으며 실력을 다지고 있습니다. 고친 개념이 곧 다음 회차의 실력이 됩니다.';
     h+=`<div class="card growth"><h2>한 학기 성장${_span?' · '+_span:''}</h2>
       <div class="growthrow">
@@ -1320,7 +1323,7 @@ function render(commit){
   // 이번 회차
   h+=dxDeepHTML(_esc((A.info&&A.info.name)||'학생'),{wrongConcepts:(window._deepWrong||[])});
   h+=`<div class="card"><h2>이번 회차 · ${latest.round}회</h2>
-    <div class="ladder">${latestRows.map(r=>`<div class="lnode ${r.pass?'p':'f'}"><div class="sc mono">${r.score}</div><div class="at">${LBL(r.attempt)}</div><div class="chip">${r.pass?'통과':'통과 전'}</div></div>`).join('')}</div>
+    <div class="ladder">${latestRows.map(r=>`<div class="lnode ${r.pass?'p':'f'}"><div class="sc mono">${pt(r.score)}</div><div class="at">${LBL(r.attempt)}</div><div class="chip">${r.pass?'통과':'통과 전'}</div></div>`).join('')}</div>
     ${latestWrong.length?`<div style="margin-top:14px"><div class="muted" style="margin-bottom:6px">이번 회차에서 바로잡은 개념</div>${latestWrong.map(m=>`<span style="display:inline-block;font-size:12px;background:var(--teal-soft);color:var(--teal-d);border-radius:20px;padding:3px 11px;margin:2px 4px 2px 0;font-weight:600">${m}</span>`).join('')}</div>`:''}</div>`;
 
   // 잘하고 있는 부분 · 적응형 (부진 학생도 진짜 긍정 앵커 보장, 가짜 칭찬 금지)
@@ -1335,7 +1338,7 @@ function render(commit){
     var sTitle, sLead;
     if(avgRec>0){
       sTitle='끌어올리는 힘';
-      sLead='점수만 보면 아직이지만, 약한 곳을 만날 때마다 재시로 끌어올립니다. 재시 평균 <b>+'+avgRec+'점</b>'+(ccum>0?', 지금까지 <b>'+ccum+'개</b> 개념을 바로잡았습니다.':'.');
+      sLead='점수만 보면 아직이지만, 약한 곳을 만날 때마다 재시로 끌어올립니다. 재시 평균 <b>+'+pt(avgRec)+'점</b>'+(ccum>0?', 지금까지 <b>'+ccum+'개</b> 개념을 바로잡았습니다.':'.');
     } else {
       sTitle='여기서부터 채워 갑니다';
       sLead='이제 막 시작이라 점수는 낮지만, 어디를 채우면 되는지 정확히 보입니다.'+(latestWrong.length?' 이번 회차에만 <b>'+latestWrong.length+'개</b> 개념을 바로잡았어요.':'');
@@ -1506,7 +1509,7 @@ function hwQuickHTML(){
   var badge=hwWeeklyOn();
   var total=(HWMETA&&HWMETA.rounds_total)||13;
   var slots=''; for(var i=1;i<=total;i++){ var row=by[i];
-    slots+='<span class="hwslot'+(row?(row.pass?' done':' half'):'')+'" title="'+i+'회'+(row?(' \u00b7 '+row.score+'점'):' \u00b7 미제출')+'">'+i+'</span>'; }
+    slots+='<span class="hwslot'+(row?(row.pass?' done':' half'):'')+'" title="'+i+'회'+(row?(' \u00b7 '+pt(row.score)+'점'):' \u00b7 미제출')+'">'+i+'</span>'; }
   return '<div class="card hwq"><button type="button" class="hwqbtn" onclick="toggleHwPanel()">'+
     '<span class="hwqt">숙제 제출 \u00b7 피드백 보기</span>'+
     (badge?'<span class="hwbadge on">이번 주 제출</span>':'<span class="hwbadge">이번 주 미제출</span>')+
@@ -1541,7 +1544,7 @@ function hwDetailHTML(row){
   var meta=HWMETA||{}, keyArr=((meta.key||{})[String(row.round)])||null;
   var ri=null; ((meta.rounds)||[]).forEach(function(o){ if(Number(o.r)===Number(row.round)) ri=o; });
   var ans=String(row.answers||'');
-  var head='<div class="hwsum"><b>'+row.round+'회</b> \u00b7 <span class="hwscore">'+sc1(row.score)+'점</span> '+
+  var head='<div class="hwsum"><b>'+row.round+'회</b> \u00b7 <span class="hwscore">'+pt(row.score)+'점</span> '+
     (row.pass?'<span class="hwpass on">통과</span>':'<span class="hwpass off">미달 \u00b7 80점 이상 통과</span>')+
     (row.date?'<span class="hwdt">'+new Date(row.date).toLocaleDateString('ko-KR')+'</span>':'')+'</div>';
   var solNote=ri?('<div class="hwsol">워크북 해설 p.'+ri.sol_page+'~ 에서 풀이를 확인하세요.</div>'):'';

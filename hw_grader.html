@@ -124,6 +124,10 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;backg
 </div>
 
 <script>
+/* 점수는 늘 소수 둘째 자리까지(셋째 자리에서 반올림). 그냥 붙이면
+   0.29999999999999716 같은 부동소수점 찌꺼기가 그대로 화면에 나간다. */
+function pt(n){ if(n==null||n==='') return n; var v=Number(n); return isFinite(v)?v.toFixed(2):n; }
+
 var SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
 var LINK_SALT='chemistreal::s4lt::9f3Kq2026';
 function tokenFor(base){ var s=String(base||'')+'|'+LINK_SALT,a=2166136261,b=5381,i,c; for(i=0;i<s.length;i++){c=s.charCodeAt(i);a^=c;a=(a*16777619)>>>0;b=((b*33)^c)>>>0;} return ((a.toString(36)+'00000').slice(0,5))+((b.toString(36)+'000').slice(0,3)); }
@@ -270,7 +274,7 @@ function refreshBar(){
   if(gp){
     if(key&&done>0){
       var g=gradeNow(key);
-      gp.innerHTML='<span class="scorepill">'+g.score+'점</span>'+(g.wrong.length?' <span class="wrongpill">오답 '+g.wrong.join(', ')+'번</span>':(done===20?' <span class="ok">전 문항 정답</span>':''));
+      gp.innerHTML='<span class="scorepill">'+pt(g.score)+'점</span>'+(g.wrong.length?' <span class="wrongpill">오답 '+g.wrong.join(', ')+'번</span>':(done===20?' <span class="ok">전 문항 정답</span>':''));
     } else gp.textContent='';
   }
 }
@@ -342,7 +346,7 @@ async function gradeAndSave(){
   if(saved){
     DONE[sk+'#'+CUR.round]=true;
     SUBCACHE[sk]=null;
-    var okMsg='<span class="ok">시트 저장 확인 완료</span> \u00b7 '+esc(payload.name)+' '+CUR.round+'회 '+g.score+'점'
+    var okMsg='<span class="ok">시트 저장 확인 완료</span> \u00b7 '+esc(payload.name)+' '+CUR.round+'회 '+pt(g.score)+'점'
       +(payload.pass?' <span class="ok">통과</span>':' <span class="err">미달</span>');
     addLog(payload);
     renderChips();
@@ -356,7 +360,7 @@ async function gradeAndSave(){
 function addLog(p){
   document.getElementById('logCard').style.display='block';
   var d=document.createElement('div'); d.className='logrow';
-  d.innerHTML='<b>'+esc(p.name)+'</b> '+p.round+'회 \u00b7 '+p.score+'점 '+(p.pass?'통과':'미달')
+  d.innerHTML='<b>'+esc(p.name)+'</b> '+p.round+'회 \u00b7 '+pt(p.score)+'점 '+(p.pass?'통과':'미달')
     +' <a href="'+esc(p.reportLink)+'" target="_blank" rel="noopener">리포트 &rarr;</a>';
   var box=document.getElementById('loglist'); box.insertBefore(d,box.firstChild);
 }

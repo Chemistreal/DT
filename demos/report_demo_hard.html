@@ -540,17 +540,19 @@ function indirectHint(ol){ var GEN='어떤 것이 변하면 이게 달라지는�
   var driver=bold.split(/많을수록|클수록|작을수록|높을수록|낮을수록|적을수록|강할수록|약할수록|일수록|=|→|↑|↓|면 |:|·/)[0].replace(/[↑↓]/g,'').trim();
   if(driver && driver.length>=2 && driver.length<=16) return "핵심 단서: '"+driver+"'. 여기서 출발해 스스로 풀어보게 해 주세요";
   return GEN; }
-function rankMsg(rk){ var d=rk.score-rk.avg; var dt=d>=0?('반 평균보다 '+d+'점 높습니다'):('반 평균보다 '+(-d)+'점 낮습니다');
+function rankMsg(rk){ var d=rk.score-rk.avg; var dt=d>=0?('반 평균보다 '+pt(d)+'점 높습니다'):('반 평균보다 '+pt(-d)+'점 낮습니다');
   if(rk.per100<=10) return '최상위권입니다. 반에서 상위 약 '+rk.per100+'%에 듭니다. '+dt+'.';
   if(rk.per100<=30) return '상위권입니다. 상위 약 '+rk.per100+'% 위치이고, '+dt+'.';
   if(rk.per100<=50) return '평균 이상입니다. 상위 약 '+rk.per100+'%입니다. '+dt+'.';
   return '지금은 평균 부근입니다. '+dt+'. 재시로 최종 점수를 끌어올리고 있습니다.'; }
 function sc1(n){ return n==null?n:Math.round(n*10)/10; }
+// 점수는 소수 둘째 자리까지(report.html 과 같은 규칙)
+function pt(n){ if(n==null||n==='') return n; var v=Number(n); return isFinite(v)?v.toFixed(2):n; }
 function rankCard(rk){ return `<div class="card rankcard">
   <div class="rankhead">${rk.round}회 · 첫 응시 석차</div>
   <div class="rankrow">
-    <div class="rcell"><div class="rv">${sc1(rk.avg)}</div><div class="rl">반 평균</div></div>
-    <div class="rcell me"><div class="rv">${sc1(rk.score)}</div><div class="rl">우리 아이</div></div>
+    <div class="rcell"><div class="rv">${pt(rk.avg)}</div><div class="rl">반 평균</div></div>
+    <div class="rcell me"><div class="rv">${pt(rk.score)}</div><div class="rl">우리 아이</div></div>
     <div class="rcell"><div class="rv"><span class="pre">상위</span>${rk.per100}<span class="u">%</span></div><div class="rl">반 전체 기준</div></div>
   </div>
   <div class="rankmsg">${rankMsg(rk)}</div>

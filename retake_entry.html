@@ -3,7 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>try{if(localStorage.getItem('dt_admgate')!=='ok')document.documentElement.classList.add('adm-gating');}catch(e){document.documentElement.classList.add('adm-gating');}</script>
+<script>
+/* 점수는 늘 소수 둘째 자리까지(셋째 자리에서 반올림). 그냥 붙이면
+   0.29999999999999716 같은 부동소수점 찌꺼기가 그대로 화면에 나간다. */
+function pt(n){ if(n==null||n==='') return n; var v=Number(n); return isFinite(v)?v.toFixed(2):n; }
+try{if(localStorage.getItem('dt_admgate')!=='ok')document.documentElement.classList.add('adm-gating');}catch(e){document.documentElement.classList.add('adm-gating');}</script>
 <style>html.adm-gating body{visibility:hidden}</style>
 <title>재시 수기 입력 · Chemistreal</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -246,7 +250,7 @@ function refreshBar(){
   var btn=document.getElementById('saveBtn'); if(btn) btn.disabled=(done===0)||SAVING;
   var gp=document.getElementById('gradePrev');
   if(gp && ITEMS){
-    if(done>0){ var s=scoreNow(); gp.innerHTML='<span class="scorepill">'+s.score+'점</span>'+(s.wrong.length?' <span style="color:var(--x)">오답 '+s.wrong.length+'</span>':(done===ITEMS.length?' <span class="ok">전 문항 정답</span>':'')); }
+    if(done>0){ var s=scoreNow(); gp.innerHTML='<span class="scorepill">'+pt(s.score)+'점</span>'+(s.wrong.length?' <span style="color:var(--x)">오답 '+s.wrong.length+'</span>':(done===ITEMS.length?' <span class="ok">전 문항 정답</span>':'')); }
     else gp.textContent='';
   }
 }
@@ -305,7 +309,7 @@ async function gradeAndSave(){
   SAVING=false; refreshBar();
   if(saved){
     DONE[sk+'#'+CUR.course+CUR.round+'#'+CUR.att]=true;
-    var okMsg='<span class="ok">시트 저장 확인</span> \u00b7 '+esc(CUR.name)+' '+CUR.round+'회 '+attLabel+' '+g.score+'점'+(g.pass?' <span class="ok">통과</span>':' <span class="err">미달</span>');
+    var okMsg='<span class="ok">시트 저장 확인</span> \u00b7 '+esc(CUR.name)+' '+CUR.round+'회 '+attLabel+' '+pt(g.score)+'점'+(g.pass?' <span class="ok">통과</span>':' <span class="err">미달</span>');
     addLog(CUR.name, CUR.round, attLabel, g.score, g.pass, link);
     renderChips();
     st.innerHTML=okMsg;
@@ -316,7 +320,7 @@ async function gradeAndSave(){
 function addLog(name,round,att,score,pass,link){
   document.getElementById('logCard').style.display='block';
   var d=document.createElement('div'); d.className='logrow';
-  d.innerHTML='<b>'+esc(name)+'</b> '+round+'회 '+att+' \u00b7 '+score+'점 '+(pass?'통과':'미달')+' <a href="'+esc(link)+'" target="_blank" rel="noopener">리포트 &rarr;</a>';
+  d.innerHTML='<b>'+esc(name)+'</b> '+round+'회 '+att+' \u00b7 '+pt(score)+'점 '+(pass?'통과':'미달')+' <a href="'+esc(link)+'" target="_blank" rel="noopener">리포트 &rarr;</a>';
   var box=document.getElementById('loglist'); box.insertBefore(d,box.firstChild);
 }
 boot();
