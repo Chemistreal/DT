@@ -752,6 +752,10 @@ function rankMsg(rk){ var d=rk.score-rk.avg; var dt=d>=0?('반 평균보다 '+pt
    그냥 빼서 붙이면 부동소수점 찌꺼기가 그대로 나간다 — 학부모가 받은 문구에
    '반 평균보다 0.29999999999999716점 높습니다' 라고 찍혔다. */
 function pt(n){ if(n==null||n==='') return n; var v=Number(n); return isFinite(v)?v.toFixed(2):n; }
+/* 그래프 안에 찍는 숫자. 점 위에 겹쳐 놓는 자리라 소수 두 자리(85.00)를
+   그대로 쓰면 라벨끼리 붙어 읽히지 않는다. 여기서만 정수로 줄인다 —
+   본문·표의 점수는 pt() 그대로 소수 두 자리다. */
+function ptc(n){ if(n==null||n==='') return n; var v=Number(n); return isFinite(v)?String(Math.round(v)):n; }
 function distHist(rk){
   if(!(rk.dist && rk.dist.some(function(v){return v>0;}))) return '';
   var mx=Math.max.apply(null,rk.dist);
@@ -904,8 +908,8 @@ function svgTrend(){
   const passLbl='';
   const jline=T.map((t,i)=>`${X(i)},${Y(t.jeongsiScore)}`).join(' ');
   const fline=T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ');
-  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#A9853C" font-family="JetBrains Mono">${pt(t.jeongsiScore)}</text>`:'');}).join('');
-  const fdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.finalScore)}" r="4" fill="#0B6E6E"/><text x="${X(i)}" y="${Y(t.finalScore)-9}" text-anchor="${anc}" font-size="10" font-weight="700" fill="#0B6E6E" font-family="JetBrains Mono">${pt(t.finalScore)}</text>`;}).join('');
+  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#A9853C" font-family="JetBrains Mono">${ptc(t.jeongsiScore)}</text>`:'');}).join('');
+  const fdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.finalScore)}" r="4" fill="#0B6E6E"/><text x="${X(i)}" y="${Y(t.finalScore)-9}" text-anchor="${anc}" font-size="10" font-weight="700" fill="#0B6E6E" font-family="JetBrains Mono">${ptc(t.finalScore)}</text>`;}).join('');
   const xlab=T.map((t,i)=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#61707F" font-family="JetBrains Mono">${t.round}회</text>`).join('');
   const farea=`${X(0)},${Y(0)} `+T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ')+` ${X(n-1)},${Y(0)}`;
   // A8 주석: 가장 큰 정시→최종 회복 지점 강조
@@ -914,7 +918,7 @@ function svgTrend(){
   if(recs.length){ var r0=recs[0], i=r0.i, t=r0.t, midY=(Y(t.jeongsiScore)+Y(t.finalScore))/2;
     var last=(i===n-1), lx=last?X(i)-7:X(i)+7, anc=last?'end':'start';
     annot=`<line x1="${X(i)}" y1="${Y(t.jeongsiScore)}" x2="${X(i)}" y2="${Y(t.finalScore)}" stroke="#A9853C" stroke-width="1" opacity=".45"/>`
-      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#A9853C" font-family="JetBrains Mono">재시 +${pt(r0.rec)}</text>`;
+      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#A9853C" font-family="JetBrains Mono">재시 +${ptc(r0.rec)}</text>`;
   }
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="회차별 점수 추이">
     <polygon points="${farea}" fill="#0B6E6E" opacity=".06"/>

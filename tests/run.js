@@ -251,6 +251,18 @@ async function assertNoOverflow(page, label) {
     // 어디에도 소수 셋째 자리가 붙은 '…점' 은 없어야 한다
     const junk = (text.match(/\d+\.\d{3,}점/g) || []);
     assert(junk.length === 0, '찌꺼기가 남았다: ' + junk.slice(0, 3).join(', '));
+
+    /* 그래프 안에 찍는 숫자만은 정수다. 점 위에 겹쳐 놓는 자리라 85.00 을
+       그대로 쓰면 라벨끼리 붙어 읽히지 않는다. 본문·표는 위처럼 두 자리. */
+    const ptc = await page.evaluate(() => [ptc(85), ptc(85.4), ptc(85.6), ptc(0), ptc(null)]);
+    assert(ptc[0] === '85' && ptc[1] === '85' && ptc[2] === '86' && ptc[3] === '0',
+           '그래프 라벨은 정수 → ' + ptc.join(','));
+    assert(ptc[4] === null, '빈 값은 그대로 둔다');
+    const svgNums = await page.$$eval('.chartwrap svg text',
+      es => es.map(e => e.textContent).filter(t => /\d/.test(t)));
+    assert(svgNums.length > 0, '추세 그래프에 숫자 라벨이 없다');
+    const dotty = svgNums.filter(t => /\d\.\d/.test(t));
+    assert(dotty.length === 0, '그래프 라벨에 소수가 남았다: ' + dotty.slice(0, 3).join(', '));
   });
 
   /* ── 8. 홈: 타일 링크 무결성 (가리키는 파일이 전부 존재) ── */
