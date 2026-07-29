@@ -12,6 +12,9 @@ var HEADERS = ['이름','리포트링크','시각','점수','통과','학생키'
    ADMIN_TOKEN  : 관리자 코드. roster/pending/absentees 조회, 명단 저장, 전체 조회(all=1), exclude, 메일 발송.
    STUDENT_CODE : 반 코드. exam/hw_grader 의 이름 드롭다운(action=names)에만 사용, 성적 조회 권한과 무관.
    속성이 비어 있으면 해당 기능은 잠김(fail-closed). 학생 저장 POST 와 토큰 리포트 조회는 영향 없음. */
+/* 점수는 늘 소수 둘째 자리까지(셋째 자리에서 반올림).
+   그냥 붙이면 0.29999999999999716 같은 찌꺼기가 문자로 그대로 나간다. */
+function pt_(n) { if (n == null || n === '') return n; var v = Number(n); return isFinite(v) ? v.toFixed(2) : n; }
 function adminToken_() { try { return (PropertiesService.getScriptProperties().getProperty('ADMIN_TOKEN') || '').trim(); } catch (e) { return ''; } }
 function adminOk_(t) { return true; }   /* 전체 공개 모드: 관리자 토큰 없이 실행. 원복하려면 아래 한 줄로 되돌리기 ->  var need = adminToken_(); return need !== '' && String(t || '').trim() === need; */
 function studentCode_() { try { return (PropertiesService.getScriptProperties().getProperty('STUDENT_CODE') || '').trim(); } catch (e) { return ''; } }
@@ -534,7 +537,7 @@ function weeklyPendingEmail() {
     var lines = active.map(function (p) {
       var urgent = p.days >= 7 ? '[독촉] ' : '';
       return '· ' + urgent + p.name + ' (' + p.school + (p.year ? ' ' + p.year + '학년' : '') + ') · '
-        + courseKo_(p.course) + ' ' + p.round + '회 · ' + p.lastAttempt + ' ' + p.score + '점 미통과 → '
+        + courseKo_(p.course) + ' ' + p.round + '회 · ' + p.lastAttempt + ' ' + pt_(p.score) + '점 미통과 → '
         + p.nextNeeded + ' 미응시 (' + p.days + '일 경과)';
     });
     body = '재시 미응시 학생 ' + active.length + '명입니다.' + exNote
@@ -1037,11 +1040,11 @@ function sendPassMsg_(name, courseKo, round, jeongsi, passScore, passAttempt, li
   // jeongsi: 실제 정시(첫 응시) 기록 객체(없으면 null). passAttempt: 통과한 시도 라벨.
   var lines;
   if (attOrd_(passAttempt) === 0) {
-    lines = '\u00b7 정시 ' + passScore + '점 통과';                                  // 정시에 바로 통과
+    lines = '\u00b7 정시 ' + pt_(passScore) + '점 통과';                                  // 정시에 바로 통과
   } else if (jeongsi && !jeongsi.pass) {
-    lines = '\u00b7 정시 ' + jeongsi.score + '점 (미통과)\n\u00b7 재시 ' + passScore + '점 통과'; // 정시 미통과 -> 재시 통과
+    lines = '\u00b7 정시 ' + pt_(jeongsi.score) + '점 (미통과)\n\u00b7 재시 ' + pt_(passScore) + '점 통과'; // 정시 미통과 -> 재시 통과
   } else {
-    lines = '\u00b7 재시 ' + passScore + '점 통과';                                  // 정시 기록 없이 재시부터 통과
+    lines = '\u00b7 재시 ' + pt_(passScore) + '점 통과';                                  // 정시 기록 없이 재시부터 통과
   }
   return '[다원교육 영재관 · 화학 조준모]\n'
     + name + ' 학생 ' + courseKo + ' ' + round + '회 성적표입니다.\n'
@@ -1052,7 +1055,7 @@ function sendPassMsg_(name, courseKo, round, jeongsi, passScore, passAttempt, li
 function sendRetakeMsg_(name, courseKo, round, firstScore, link) {
   return '[다원교육 영재관 · 화학] ' + name + ' 학생 재시 안내\n\n'
     + '안녕하세요, 화학 조준모입니다.\n\n'
-    + name + ' 학생이 ' + courseKo + ' ' + round + '회 정시에서 ' + firstScore + '점으로 통과선(80점)에 조금 못 미쳤습니다. 저희 반은 틀린 개념을 다시 잡아 통과까지 마무리하는 재시 과정을 둡니다.\n\n'
+    + name + ' 학생이 ' + courseKo + ' ' + round + '회 정시에서 ' + pt_(firstScore) + '점으로 통과선(80점)에 조금 못 미쳤습니다. 저희 반은 틀린 개념을 다시 잡아 통과까지 마무리하는 재시 과정을 둡니다.\n\n'
     + '아래 링크에서 취약 개념만 강의록으로 보강한 뒤 재시를 보면 됩니다. 재시는 틀린 개념만 골라 개별 출제되며, 처음 본 문항과 겹치지 않습니다.\n\n'
     + '▶ ' + link + '\n\n'
     + '이번 주 안에 마무리하면 다음 회차를 편하게 이어갈 수 있습니다. 감사합니다.\n\n조준모 드림';

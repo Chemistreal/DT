@@ -221,6 +221,38 @@ async function assertNoOverflow(page, label) {
     await assertNoOverflow(page, 'report');
   });
 
+  /* ── 7.5 점수 표기: 소수 둘째 자리까지 ──────────────────────────
+     학부모가 받은 성적표에 이렇게 찍혔다.
+       "반 평균보다 0.29999999999999716점 높습니다"
+     점수를 그냥 빼서 문자열에 붙이면 부동소수점 찌꺼기가 그대로 나간다.
+     pt() 가 셋째 자리에서 반올림해 늘 00.00 꼴로 적는다. */
+  await test('report · 점수는 소수 둘째 자리까지', async page => {
+    await page.goto(BASE + 'report.html'); await page.waitForTimeout(1400);
+
+    // 실제로 신고된 값과, 흔한 경계들
+    const got = await page.evaluate(() => [
+      pt(0.29999999999999716), pt(85), pt(0), pt(-0.29999999999999716),
+      pt(79.995), pt(1 / 3), pt(null), pt(''),
+    ]);
+    assert(got[0] === '0.30', '0.2999… → ' + got[0]);
+    assert(got[1] === '85.00', '정수도 두 자리로 → ' + got[1]);
+    assert(got[2] === '0.00', '0 → ' + got[2]);
+    assert(got[3] === '-0.30', '음수 → ' + got[3]);
+    assert(got[5] === '0.33', '1/3 → ' + got[5]);
+    assert(got[6] === null && got[7] === '', '빈 값은 그대로 둔다');
+
+    /* 화면에 나간 문장을 직접 본다. 본문 전체를 정규식으로 훑으면 SVG 라벨이
+       서로 붙어 '0088.0082' 같은 가짜 일치가 생긴다 — 문장을 지목한다. */
+    const text = await page.$eval('#app', e => e.textContent);
+    const cls = text.match(/반 평균보다 [^점]*점/);
+    if (cls) assert(/^반 평균보다 -?\d+\.\d{2}점$/.test(cls[0]), '반 평균 문구: ' + cls[0]);
+    const near = text.match(/통과선까지 [^점]*점/);
+    if (near) assert(/^통과선까지 -?\d+\.\d{2}점$/.test(near[0]), '통과선 문구: ' + near[0]);
+    // 어디에도 소수 셋째 자리가 붙은 '…점' 은 없어야 한다
+    const junk = (text.match(/\d+\.\d{3,}점/g) || []);
+    assert(junk.length === 0, '찌꺼기가 남았다: ' + junk.slice(0, 3).join(', '));
+  });
+
   /* ── 8. 홈: 타일 링크 무결성 (가리키는 파일이 전부 존재) ── */
   await test('home · 타일 링크 무결성', async page => {
     await page.goto(BASE + 'home.html'); await page.waitForTimeout(400);
