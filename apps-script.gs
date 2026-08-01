@@ -1273,3 +1273,151 @@ function triggerStatus() {
   ts.forEach(function (t) { Logger.log('트리거: ' + t.getHandlerFunction() + ' · ' + t.getEventType()); });
   Logger.log('총 ' + ts.length + '개 트리거 설치됨');
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   깃허브 자동 저장
+   ----------------------------------------------------------------------
+   응시·재시 기록은 여태 이 시트에만 있었다. 잘못 지우거나 덮어써도 되돌릴
+   방법이 없었다. 매일 한 벌 깃허브에 커밋한다 — 커밋 이력이 곧 "언제 무엇이
+   바뀌었나" 이고, 잘못 건드린 날 이전으로 되돌릴 수 있다.
+
+   저장소는 공개다. **이름은 싣지 않는다** — 학생키를 코드로 바꾼다.
+   같은 학생은 늘 같은 코드라 날짜별 백업을 견줄 수 있고, 코드만으로는 누구인지
+   알 수 없다. 이름↔코드 표는 이 시트의 '_이름코드' 탭에만 둔다.
+
+   반 명단도 주 1회 남긴다. 지금은 시트에서 바뀌면 이전 상태를 알 방법이 없다.
+
+   설치(한 번만): 스크립트 속성에 GITHUB_TOKEN → setupBackupTriggers() 실행.
+   토큰이 없으면 아무것도 안 하고 넘어간다(채점은 그대로 돌아간다).
+   ══════════════════════════════════════════════════════════════════════ */
+
+var GH_OWNER = 'Chemistreal', GH_REPO = 'DT', GH_BRANCH = 'main';
+var CODE_TAB = '_이름코드';
+
+function _ghToken_() {
+  try { return (PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN') || '').trim(); }
+  catch (e) { return ''; }
+}
+function _ghPut_(path, text, message) {
+  var token = _ghToken_();
+  if (!token) throw new Error('GITHUB_TOKEN 스크립트 속성이 없습니다');
+  var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/contents/' + path;
+  var sha = '';
+  try {
+    var got = UrlFetchApp.fetch(api + '?ref=' + GH_BRANCH, {
+      method: 'get', muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' } });
+    if (got.getResponseCode() === 200) sha = JSON.parse(got.getContentText()).sha || '';
+  } catch (e) {}
+  var body = { message: message || ('자동 저장: ' + path), branch: GH_BRANCH,
+               content: Utilities.base64Encode(text, Utilities.Charset.UTF_8) };
+  if (sha) body.sha = sha;
+  var res = UrlFetchApp.fetch(api, {
+    method: 'put', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' },
+    payload: JSON.stringify(body) });
+  var code = res.getResponseCode();
+  if (code >= 300) throw new Error('깃허브 저장 실패 ' + code + ': ' + res.getContentText().slice(0, 200));
+  return true;
+}
+/* 소금은 이 프로젝트에만 있다. 한 번 만들면 바꾸지 않는다 — 바꾸면 예전
+   백업의 코드와 이어지지 않는다. */
+function _codeSalt_() {
+  var p = PropertiesService.getScriptProperties();
+  var s = p.getProperty('CODE_SALT');
+  if (!s) { s = Utilities.getUuid(); p.setProperty('CODE_SALT', s); }
+  return s;
+}
+function _codeOf_(studentKey) {
+  var k = String(studentKey || '').trim();
+  if (!k) return '';
+  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, k + '|' + _codeSalt_(),
+                                    Utilities.Charset.UTF_8);
+  var s = '';
+  for (var i = 0; i < raw.length && s.length < 12; i++) s += ('0' + (raw[i] & 255).toString(36)).slice(-2);
+  return 's' + s.slice(0, 11);
+}
+function _rememberCode_(ss, map) {
+  var sh = ss.getSheetByName(CODE_TAB);
+  if (!sh) { sh = ss.insertSheet(CODE_TAB); sh.appendRow(['코드', '학생키', '이름', '처음 본 날']);
+             sh.getRange(1, 1, 1, 4).setFontWeight('bold'); sh.setFrozenRows(1); }
+  var have = {};
+  if (sh.getLastRow() > 1)
+    sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().forEach(function (r) { have[String(r[0])] = 1; });
+  var add = [];
+  for (var code in map) if (!have[code]) add.push([code, map[code].key, map[code].name, new Date()]);
+  if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, 4).setValues(add);
+  return add.length;
+}
+
+/* ── ① 응시·재시 기록 일일 백업 ─────────────────────────────────────── */
+function dailyBackup() {
+  if (!_ghToken_()) { Logger.log('[백업] GITHUB_TOKEN 없음 — 건너뜀'); return; }
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(TAB);
+  if (!sh || sh.getLastRow() < 2) { Logger.log('[백업] 기록 없음'); return; }
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, HEADERS.length).getValues();
+  var map = {}, out = [];
+  rows.forEach(function (r) {
+    var rec = mapRow_(r);
+    var code = _codeOf_(rec.studentKey);
+    if (!code) return;
+    map[code] = { key: rec.studentKey, name: rec.name };
+    out.push({
+      code: code, school: rec.school, year: rec.year,
+      course: rec.course, round: rec.round, attempt: rec.attempt,
+      score: rec.score, pass: rec.pass, isTest: rec.isTest,
+      date: (rec.date instanceof Date) ? rec.date.toISOString() : String(rec.date || ''),
+      wrongMis: rec.wrongMis, units: rec.units, answers: rec.answers
+      /* 이름·리포트링크는 싣지 않는다. 링크는 학생키에서 만들어지므로 코드만
+         있으면 되고, 이름은 애초에 나갈 이유가 없다. */
+    });
+  });
+  _rememberCode_(ss, map);
+  var day = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  _ghPut_('backup/' + day + '.json',
+    JSON.stringify({ savedAt: new Date().toISOString(), n: out.length,
+      note: '이름은 코드로 바꿔 저장. 이름↔코드 표는 시트의 ' + CODE_TAB + ' 탭에만 있다.',
+      rows: out }, null, 1),
+    '자동 백업 ' + day + ' · ' + out.length + '건');
+  Logger.log('[백업] ' + day + ' · ' + out.length + '건');
+}
+
+/* ── ④ 반 명단 스냅숏 ─────────────────────────────────────────────────
+   시트에서 명단이 바뀌면 이전 상태를 알 방법이 없다. 주 1회 남겨 둔다.
+   반 이름·과목·인원만 싣고 **학생 이름은 코드로** 바꾼다. */
+function rosterSnapshot() {
+  if (!_ghToken_()) return;
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var classes = getRoster_() || [];
+  if (!classes.length) { Logger.log('[명단] 비어 있음'); return; }
+  var map = {};
+  var out = classes.map(function (k) {
+    var codes = (k.students || []).map(function (nm) {
+      var key = canonKeyOfRaw_(String(nm || ''));
+      var code = _codeOf_(key || nm);
+      if (code) map[code] = { key: key || String(nm || ''), name: String(nm || '') };
+      return code;
+    }).filter(String);
+    return { label: k.label, course: k.course, n: codes.length, students: codes };
+  });
+  _rememberCode_(ss, map);
+  var day = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  _ghPut_('backup/roster-' + day + '.json',
+    JSON.stringify({ savedAt: new Date().toISOString(), classes: out }, null, 1),
+    '반 명단 스냅숏 ' + day + ' · ' + out.length + '반');
+  Logger.log('[명단] ' + out.length + '반');
+}
+
+function setupBackupTriggers() {
+  var want = { dailyBackup: 1, rosterSnapshot: 1 };
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (want[t.getHandlerFunction()]) ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('dailyBackup').timeBased()
+    .everyDays(1).atHour(3).inTimezone('Asia/Seoul').create();
+  ScriptApp.newTrigger('rosterSnapshot').timeBased()
+    .onWeekDay(ScriptApp.WeekDay.SUNDAY).atHour(21).inTimezone('Asia/Seoul').create();
+  Logger.log('설치 완료 · 백업 매일 03시 · 명단 스냅숏 일 21시 (KST)');
+  if (!_ghToken_()) Logger.log('⚠ GITHUB_TOKEN 스크립트 속성이 아직 없습니다');
+}
