@@ -1421,3 +1421,62 @@ function setupBackupTriggers() {
   Logger.log('설치 완료 · 백업 매일 03시 · 명단 스냅숏 일 21시 (KST)');
   if (!_ghToken_()) Logger.log('⚠ GITHUB_TOKEN 스크립트 속성이 아직 없습니다');
 }
+
+/* ── 설정이 맞았는지 한 번에 확인 ─────────────────────────────────────
+   토큰을 넣고 실행하면 무엇이 되고 무엇이 안 되는지 한 번에 알려 준다.
+   실제로 파일을 쓰지는 않는다. 개인 정보는 찍지 않는다(실행 기록도 남는다). */
+function checkBackupSetup() {
+  var L = ['── 깃허브 자동 저장 설정 점검 ──'], bad = 0;
+  var token = _ghToken_();
+  if (!token) {
+    L.push('✗ GITHUB_TOKEN 없음');
+    L.push('   → 프로젝트 설정 › 스크립트 속성에 GITHUB_TOKEN 추가');
+    L.push('   → github.com › Settings › Developer settings ›');
+    L.push('      Personal access tokens › Fine-grained');
+    L.push('      Repository access: ' + GH_OWNER + '/' + GH_REPO);
+    L.push('      Permissions › Repository › Contents: Read and write');
+    Logger.log(L.join('\n')); return;
+  }
+  L.push('✓ GITHUB_TOKEN 있음 (' + token.length + '자)');
+
+  var api = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO, res;
+  try {
+    res = UrlFetchApp.fetch(api, { muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' } });
+  } catch (e) { L.push('✗ 깃허브에 닿지 못함: ' + e); Logger.log(L.join('\n')); return; }
+  var code = res.getResponseCode();
+  if (code === 401) { L.push('✗ 토큰이 유효하지 않습니다(401)'); bad++; }
+  else if (code === 404) { L.push('✗ 저장소를 못 찾습니다(404) — 토큰의 Repository access 확인'); bad++; }
+  else if (code !== 200) { L.push('✗ 깃허브 응답 ' + code); bad++; }
+  else {
+    var repo = JSON.parse(res.getContentText()), perm = repo.permissions || {};
+    L.push('✓ 저장소 확인 · ' + repo.full_name + (repo['private'] ? ' (비공개)' : ' (공개)'));
+    if (perm.push) L.push('✓ 쓰기 권한 있음');
+    else { L.push('✗ 쓰기 권한 없음 — Contents 를 Read and write 로'); bad++; }
+    if (!repo['private']) L.push('  ※ 공개 저장소입니다 — 그래서 이름 대신 코드를 싣습니다');
+  }
+
+  var ss = SpreadsheetApp.openById(SHEET_ID), sh = ss.getSheetByName(TAB);
+  if (!sh || sh.getLastRow() < 2) { L.push('✗ 기록 탭(' + TAB + ')이 비어 있습니다'); bad++; }
+  else {
+    L.push('✓ 기록 ' + (sh.getLastRow() - 1) + '줄 읽힘');
+    var first = mapRow_(sh.getRange(2, 1, 1, HEADERS.length).getValues()[0]);
+    var c = _codeOf_(first.studentKey);
+    L.push(c ? ('✓ 학생키 → 코드 됨 (예: ' + c + ')') : '✗ 코드가 안 만들어집니다');
+    if (!c) bad++;
+  }
+  var cls = (getRoster_() || []).length;
+  L.push(cls ? ('✓ 반 명단 ' + cls + '반') : '✗ 반 명단이 비어 있습니다(roster.html 에서 저장)');
+  if (!cls) bad++;
+
+  var have = {};
+  ScriptApp.getProjectTriggers().forEach(function (t) { have[t.getHandlerFunction()] = 1; });
+  ['dailyBackup', 'rosterSnapshot'].forEach(function (f) {
+    if (have[f]) L.push('✓ 자동 실행 걸림 · ' + f);
+    else { L.push('✗ 자동 실행 안 걸림 · ' + f + ' → setupBackupTriggers() 실행'); bad++; }
+  });
+  L.push(bad ? ('\n▲ ' + bad + '가지를 고쳐야 합니다.')
+             : '\n● 모두 정상입니다. 오늘 밤부터 저절로 올라갑니다.');
+  L.push('   지금 바로 한 번 올려 보려면 dailyBackup() 을 실행하세요.');
+  Logger.log(L.join('\n'));
+}
