@@ -19,6 +19,10 @@ jobs:
         run: npm install --prefix tests
       - name: Install chromium
         run: npx --prefix tests playwright install --with-deps chromium
+      # 앱스크립트 행동 검사. 여태 CI 에 안 걸려 있어서 기대값이 코드와 어긋난 채
+      # 오래 굳어 있었다(옛 링크 형식·무토큰 조회). 만들어 놓고 안 돌리면 없는 것과 같다.
+      - name: 앱스크립트 행동 (인증 · JSONP · 저장)
+        run: node tests/test_gs.js
       - name: Run regression suite
         run: NODE_PATH=tests/node_modules node tests/run.js
       - name: Upload failure screenshots

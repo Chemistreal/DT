@@ -48,7 +48,18 @@ const ctx = {
     newConditionalFormatRule() { const b = { whenTextEqualTo(){return b;}, whenFormulaSatisfied(){return b;}, setBackground(){return b;}, setFontColor(){return b;}, setRanges(){return b;}, build(){return {};} }; return b; },
     flush() {}
   },
-  ContentService: { createTextOutput: s => ({ setMimeType() { return { _json: s }; } }), MimeType: { JSON: 'json' } },
+  /* 실제 ContentService 에 가깝게. 예전 흉내는 MIME 을 통째로 버려서, 응답을
+     JSONP 로 감쌌는지 JSON 그대로 줬는지 검사할 방법이 아예 없었다. */
+  ContentService: {
+    createTextOutput: s => ({
+      _text: s,
+      setMimeType(m) { this._mime = m; return this; },
+      getContent() { return this._text; },
+      getMimeType() { return this._mime; },
+      get _json() { return this._text; },
+    }),
+    MimeType: { JSON: 'JSON', JAVASCRIPT: 'JAVASCRIPT' },
+  },
   PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in PROPS ? PROPS[k] : null) }) },
   Utilities: { formatDate: () => 'x' },
   ScriptApp: { getProjectTriggers: () => [], deleteTrigger() {}, WeekDay: { WEDNESDAY: 3, MONDAY: 1 },
@@ -60,7 +71,8 @@ const ctx = {
 vm.createContext(ctx);
 vm.runInContext(src, ctx);
 
-const J = out => JSON.parse(out._json);
+/* 콜백으로 감싼 응답도 읽을 수 있게. 감싼 것을 그대로 JSON.parse 하면 터진다. */
+const J = out => JSON.parse(String(out._json).replace(/^[A-Za-z_$][\w$]*\(/, '').replace(/\);?$/, ''));
 let pass = 0, fail = 0;
 function T(name, cond, extra) {
   if (cond) { pass++; console.log('  ok  ' + name); }
@@ -102,10 +114,40 @@ const s = JSON.stringify(r);
 T('실명/학교/실키 미노출', s.indexOf('홍길동') < 0 && s.indexOf('휘문중') < 0 && s.indexOf('단대부중') < 0);
 T('익명키 s1/s2 + wrongMis/units 유지', r.rows[0].studentKey === 's1' && !!r.rows[0].wrongMis && !!r.rows[0].units);
 
+console.log('[4-2] JSONP — 통합 셸이 <script> 로 부른다');
+/* 셸(exam/hub.html)은 CORS 가 없는 앱스크립트를 <script src=...&callback=fn> 으로
+   부른다. 콜백을 무시하고 순수 JSON 을 주면 받는 쪽 브라우저가 그걸 자바스크립트로
+   실행하려다 `Unexpected token ':'` 로 죽고, 콜백은 영영 안 불린다 —
+   실제로 그래서 셸의 DT 칸이 처음부터 '…' 였고 DT 학생이 명단에 안 합쳐졌다. */
+{
+  const out = ctx.doGet({ parameter: { action: 'cohortmis', callback: '__hubcb' } });
+  const txt = out.getContent();
+  T('콜백을 주면 감싸 준다', /^__hubcb\(\{/.test(txt) && /\);$/.test(txt));
+  T('감쌌으면 자바스크립트로 내려보낸다', out.getMimeType() === 'JAVASCRIPT');
+  T('감싼 안쪽은 원래 JSON', (() => {
+    const inner = txt.replace(/^__hubcb\(/, '').replace(/\);$/, '');
+    const o = JSON.parse(inner); return o.ok === true && Array.isArray(o.rows);
+  })());
+  // DT 자신의 화면들은 fetch 로 부른다 — 콜백이 없으면 예전 그대로여야 한다
+  const plain = ctx.doGet({ parameter: { action: 'cohortmis' } });
+  T('콜백이 없으면 순수 JSON', plain.getContent().charAt(0) === '{' && plain.getMimeType() === 'JSON');
+  // 아무 문자열이나 그대로 붙이면 응답에 남의 코드를 실어 보내는 셈이 된다
+  const bad = ctx.doGet({ parameter: { action: 'cohortmis', callback: 'alert(1)//' } });
+  T('식별자가 아닌 콜백은 무시', bad.getContent().charAt(0) === '{');
+  // 읽기 창구 전부가 같은 통로를 쓴다(하나만 빠지면 그 칸만 조용히 빈다)
+  ['pending', 'names', 'passed'].forEach(function (a) {
+    const o = ctx.doGet({ parameter: { action: a, callback: '__hubcb' } });
+    T(a + ' 도 감싸 준다', /^__hubcb\(/.test(o.getContent()));
+  });
+}
+
 console.log('[5] 토큰 리포트 조회');
 const key = '휘문중-홍길동', tok = ctx.tokenFor_(key);
 r = J(ctx.doGet({ parameter: { student: key } }));
-T('무토큰(기존 배포 링크) -> 정상 조회 (레거시 호환)', r.ok === true && r.rows.length === 2 && r.cumulative !== null && r.rank !== null);
+/* 예전에는 '학교-이름' 만으로도 열렸다(옛 링크 호환). 지금은 유효한 코드나
+   토큰이 있어야만 열린다 — 이름만 알면 남의 리포트를 볼 수 있었기 때문이다.
+   이 검사는 그 조임이 풀리지 않았는지를 지킨다. */
+T('무토큰(이름만) -> 차단', r.ok === true && r.rows.length === 0 && r.cumulative === null);
 r = J(ctx.doGet({ parameter: { student: key + '-' + tok } }));
 T('정토큰 -> 해당 학생 rows + 집계', r.rows.length === 2 && r.rows.every(x => x.studentKey === key) && r.cumulative !== null);
 T('cumulative는 jm1(TEST) 제외 trend', r.cumulative.trend.length === 1 && r.cumulative.trend[0].course === 'ch1');
@@ -121,7 +163,12 @@ const before = SHEETS['결과']._rows.length;
 const hwPayload = { name: '김민준', school: '단대부중학교', year: '중2', course: 'jm1', round: 3, attempt: '정시', isTest: true,
   score: 90, pass: true, correctCount: 18, wrongCount: 2, wrongMis: ['4', '9'], wrongAxes: {}, units: [], axes: [], answers: '13122117332133141431' };
 r = J(ctx.doPost({ postData: { contents: JSON.stringify(hwPayload) } }));
-T('숙제 저장 ok + 토큰 reportLink 반환', r.ok === true && /report\.html\?student=단대부중-김민준-[0-9a-z]{8}$/.test(r.reportLink));
+/* 링크에 학교·이름을 그대로 적으면 카톡 미리보기·주소창·방문 기록에 남는다.
+   지금은 불투명 코드(14자, 한글 없음)만 싣는다. */
+T('숙제 저장 ok + 불투명 코드 reportLink 반환',
+  r.ok === true && /report\.html\?student=[0-9a-z]{14}$/.test(r.reportLink));
+T('리포트 링크에 이름·학교가 안 들어간다',
+  r.reportLink.indexOf('김민준') < 0 && r.reportLink.indexOf('단대부중') < 0);
 T('행 추가 (신 순서: D점수 I과목 J회차 S답안)', (() => {
   const rows = SHEETS['결과']._rows, last = rows[rows.length - 1];
   return rows.length === before + 1 && last[3] === 90 && last[5] === '단대부중-김민준' && last[6] === '단대부중' && last[7] === '2' && last[8] === 'jm1' && last[9] === 3 && last[15] === 'TEST' && last[18] === '13122117332133141431';
@@ -175,7 +222,10 @@ var snap = JSON.stringify(SHEETS['결과']._rows);
 ctx.reorderColumnsToNew();
 T('멱등성: 재실행해도 동일', JSON.stringify(SHEETS['결과']._rows) === snap);
 r = J(ctx.doGet({ parameter: { student: '서일중-고승원' } }));
-T('마이그레이션 후 무토큰 기존 링크로 실데이터 조회', r.ok===true && r.rows.length===1 && r.rows[0].name==='고승원'
+// 마이그레이션과 무관하게, 이름만으로는 못 연다(위 [5] 와 같은 규칙)
+T('마이그레이션 뒤에도 이름만으로는 차단', r.ok===true && r.rows.length===0 && r.cumulative===null);
+r = J(ctx.doGet({ parameter: { student: ctx.pubId_('서일중-고승원') } }));
+T('마이그레이션 후 불투명 코드로 실데이터 조회', r.ok===true && r.rows.length===1 && r.rows[0].name==='고승원'
   && r.rows[0].score===61.7 && r.rows[0].course==='ch2' && Number(r.rows[0].round)===15
   && r.cumulative!==null && r.cumulative.trend.length===1 && r.cumulative.trend[0].course==='ch2');
 r = J(ctx.doGet({ parameter: { student: '서일중-고승원-' + ctx.tokenFor_('서일중-고승원') } }));
