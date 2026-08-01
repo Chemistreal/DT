@@ -28,8 +28,27 @@ function sheet_() {
   }
   return sh;
 }
+/* ── 응답 ────────────────────────────────────────────────────────────
+   기본은 순수 JSON 이다. DT 자신의 화면들은 fetch 로 부르므로 그대로면 된다.
+
+   그런데 통합 셸(exam/hub.html)은 **JSONP 로 부른다** — <script> 를 붙여
+   콜백이 불리기를 기다린다. 여기서 콜백을 무시하고 JSON 을 그대로 주면,
+   받는 쪽 브라우저가 `{"ok":true,...}` 를 자바스크립트로 실행하려다
+   `Unexpected token ':'` 로 죽는다. 콜백은 영영 안 불리고 12초 뒤 시간 초과다.
+
+   그래서 셸의 DT 칸은 처음부터 '…' 나 '—' 였고, DT 반 학생은 명단에 한 명도
+   안 합쳐졌다. 파이널·KMChC 는 둘 다 콜백을 감싸 주는데 여기만 빠져 있었다.
+
+   callback 이 오면 감싸 준다. 이름이 식별자 모양일 때만 — 아무 문자열이나
+   그대로 붙이면 응답에 남의 코드를 실어 보내는 셈이 된다. */
+var _CB_ = '';
 function json_(o) {
-  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+  var s = JSON.stringify(o);
+  if (/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(_CB_)) {
+    return ContentService.createTextOutput(_CB_ + '(' + s + ');')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  return ContentService.createTextOutput(s).setMimeType(ContentService.MimeType.JSON);
 }
 function metaSheet_() { var ss = SpreadsheetApp.openById(SHEET_ID); return ss.getSheetByName('_meta') || ss.insertSheet('_meta'); }
 function getExcluded_() { try { var v = metaSheet_().getRange(1, 1).getValue(); return v ? JSON.parse(v) : []; } catch (e) { return []; } }
@@ -234,6 +253,7 @@ function refreshReportLinks() {
 }
 
 function doPost(e) {
+  _CB_ = '';                      // 쓰기는 JSONP 로 부르지 않는다
   try {
     var d = JSON.parse(e.postData.contents);
     if (d.action === 'exclude') {
@@ -295,6 +315,8 @@ function mapRow_(r) {
 function doGet(e) {
   var action = (e.parameter.action || '').trim();
   var token = (e.parameter.token || '').trim();
+  /* JSONP 로 부르는 쪽(통합 셸)이 있다. 이 요청의 콜백 이름을 json_ 에 넘긴다. */
+  _CB_ = String((e.parameter && e.parameter.callback) || '').trim();
   if (action === 'pending') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, pending: computePending_(14) }); }
   if (action === 'roster') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, classes: getRoster_() }); }
   if (action === 'absentees') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); var _ov = {}; try { _ov = JSON.parse(e.parameter.ov || '{}') || {}; } catch (e2) {} return json_({ ok: true, absentees: computeAbsentees_(8, _ov) }); }
