@@ -298,6 +298,11 @@ function doGet(e) {
   if (action === 'pending') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, pending: computePending_(14) }); }
   if (action === 'roster') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, classes: getRoster_() }); }
   if (action === 'absentees') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); var _ov = {}; try { _ov = JSON.parse(e.parameter.ov || '{}') || {}; } catch (e2) {} return json_({ ok: true, absentees: computeAbsentees_(8, _ov) }); }
+  /* 통과한 학생. 안 한 학생만 모으던 창구 옆에 나란히 둔다 — 잘한 아이에게도
+     문자가 가야 한다. days 로 기간을 좁힌다(기본 14일). */
+  if (action === 'passed') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
+    var _pd = Number(e.parameter.days || 14) || 14;
+    return json_({ ok: true, passed: computePassed_(_pd) }); }
   if (action === 'names') { return namesForStudents_(e.parameter.code); }
   if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
   var raw = (e.parameter.student || '').trim();
@@ -520,6 +525,53 @@ function computePending_(activeDays) {
     stale: pend.filter(function (p) { return !p.active; }),
     activeDays: activeDays, generatedAt: Utilities.formatDate(now, 'Asia/Seoul', 'yyyy-MM-dd HH:mm')
   };
+}
+
+/* ============================================================
+   통과한 학생
+   ------------------------------------------------------------
+   여태 알림은 **안 한 학생**만 모았다. 재시 미응시, 시험 미응시. 그래서
+   선생님이 손으로 보내는 문자도 늘 독촉이었다. 통과한 학생에게는 아무것도
+   가지 않는다 — 잘한 아이가 가장 조용한 셈이다.
+
+   통과 기록은 이미 시트에 있다(E열). 안 한 학생을 뽑는 것과 똑같은 방식으로
+   한 학생을 뽑아 준다. 여기서 정하는 것은 하나, **대표 시도**다.
+   정시에 통과했으면 정시, 재시로 통과했으면 그 재시 — 통과한 시도 중 가장
+   이른 것이다. 나중 시도를 대표로 삼으면 '재재시에 통과' 처럼 읽힌다.
+   ============================================================ */
+function computePassed_(days) {
+  days = days || 14;
+  var data = sheet_().getDataRange().getValues(); data.shift();
+  var all = data.map(mapRow_).filter(function (r) { return !r.isTest && r.studentKey; });
+  var excluded = getExcluded_();
+  var groups = {};
+  all.forEach(function (r) {
+    if (excluded.indexOf(exKey_(r.studentKey, r.course, r.round)) >= 0) return;
+    var k = r.studentKey + '#' + r.course + '#' + r.round;
+    (groups[k] || (groups[k] = [])).push(r);
+  });
+  var now = new Date(), out = [];
+  Object.keys(groups).forEach(function (k) {
+    var rows = groups[k], best = null, bo = 99;
+    rows.forEach(function (r) {
+      if (!r.pass) return;
+      var o = attOrd_(r.attempt);
+      if (o < bo) { bo = o; best = r; }        // 통과한 시도 중 가장 이른 것
+    });
+    if (!best) return;                          // 아직 통과 전이면 여기 없다
+    var d = best.date ? new Date(best.date) : now;
+    var ago = Math.floor((now - d) / 86400000);
+    if (ago > days) return;                     // 오래된 것까지 쌓으면 볼 수가 없다
+    out.push({
+      studentKey: best.studentKey, name: best.name, school: best.school, year: best.year,
+      course: best.course, round: best.round, attempt: best.attempt,
+      tries: bo + 1,                            // 몇 번 만에 통과했나(1 = 정시)
+      score: best.score, reportLink: best.reportLink || '',
+      date: Utilities.formatDate(d, 'Asia/Seoul', 'M/d'), days: ago
+    });
+  });
+  out.sort(function (a, b) { return a.days - b.days || String(a.name).localeCompare(String(b.name), 'ko'); });
+  return { passed: out, days: days, generatedAt: Utilities.formatDate(now, 'Asia/Seoul', 'yyyy-MM-dd HH:mm') };
 }
 
 /* 매주 수요일 18시(KST) 자동 발송 · setupWeeklyTrigger() 를 한 번 실행해 트리거 등록 */

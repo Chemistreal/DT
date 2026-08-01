@@ -75,6 +75,12 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .copybtn.a1{border-left-color:#3b82f6}
 .copybtn.a2{border-left-color:#8b5cf6}
 .copybtn.abc{border-left-color:var(--gold)}
+.copybtn.pass{border-left-width:3px;border-left-color:var(--green);width:100%;text-align:center}
+.row.pass{border-left-color:var(--green)}
+.rpass{color:var(--green);font-weight:800}
+.rtry{font-size:11px;font-weight:700;color:var(--muted);background:#f1f5f9;border-radius:5px;padding:1px 6px;margin-left:2px}
+.rtry.one{color:#0B6E39;background:#eef7f0}
+.stat.pss .n{color:var(--green)}
 .zipbtn{border:1px solid var(--teal,#0B6E6E);color:var(--teal-d,#0A5A5A);background:#fff;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:8px;white-space:nowrap}
 .zipbtn:hover{background:rgba(11,110,110,.07)}
 .zipbtn[data-busy="1"]{opacity:.7;cursor:progress}
@@ -156,13 +162,41 @@ function shareMsg(d, stage){
     +link+'\n\n'
     +'누적 시험이라 이번 주 안에 마무리하면 다음 회차가 훨씬 수월합니다. 감사합니다.\n\n조준모 드림';
 }
+/* ── 통과한 학생에게 보내는 문자 ────────────────────────────────────
+   여태 이 페이지에서 복사할 수 있는 것은 전부 독촉이었다 — 재시 안내,
+   시험 안내, 리마인드, 최종 안내. 통과한 학생에게는 아무것도 가지 않았다.
+   잘한 아이가 가장 조용한 셈이다.
+
+   한 번에 통과한 것과 재시로 마무리한 것은 다른 이야기다. 재시로 통과한
+   학생에게 "한 번에 넘겼다" 고 쓰면 안 읽어 본 티가 난다. 시도 수로 가른다. */
+function passMsg(d){
+  var course=COURSE[d.course]||d.course;
+  var sc=Number(d.score), tries=Number(d.tries)||1;
+  var head='[다원교육 영재관 · 화학] '+d.name+' 학생 통과 안내';
+  var how;
+  if(tries<=1){
+    how=d.name+' 학생이 '+course+' '+d.round+'회 '+(d.att||'정시')+'에서 '+d.score+'점으로 통과했습니다. '
+      +(sc>=100?'만점입니다. ':(sc>=95?'거의 흐트러짐이 없었습니다. ':''))
+      +'재시 없이 한 번에 통과선(80점)을 넘겼습니다.';
+  }else{
+    how=d.name+' 학생이 '+course+' '+d.round+'회 '+(d.att||'재시')+'에서 '+d.score+'점으로 통과했습니다. '
+      +'정시에서 놓친 개념을 다시 잡아 통과까지 마무리했습니다. 틀린 것을 그냥 넘기지 않고 끝까지 메운 과정이라, '
+      +'점수보다 그 과정이 남습니다.';
+  }
+  return head+'\n\n'
+    +'안녕하세요, 화학 조준모입니다.\n\n'
+    +how+'\n\n'
+    +(d.link?('아래 리포트에서 문항별 결과와 개념별 정리를 확인하실 수 있습니다.\n\n▶ '+d.link+'\n\n'):'')
+    +'누적 시험이라 이번 회차를 깔끔히 넘긴 것이 다음 회차에 그대로 이어집니다. 감사합니다.\n\n조준모 드림';
+}
 function copyShare(btn){
   var stage=btn.getAttribute('data-stage')||'1';
   var host=btn.closest('.copygrp')||btn.parentNode;
   var d={ name:host.getAttribute('data-name'), course:host.getAttribute('data-course'), round:host.getAttribute('data-round'),
-    att:host.getAttribute('data-att'), score:host.getAttribute('data-score'), next:host.getAttribute('data-next'), link:host.getAttribute('data-link') };
+    att:host.getAttribute('data-att'), score:host.getAttribute('data-score'), next:host.getAttribute('data-next'),
+    tries:host.getAttribute('data-tries'), link:host.getAttribute('data-link') };
   var kind=host.getAttribute('data-kind')||'retake';
-  var msg=(kind==='exam')?absentMsg(d, stage):shareMsg(d, stage); if(!msg) return;
+  var msg=(kind==='exam')?absentMsg(d, stage):(kind==='pass')?passMsg(d):shareMsg(d, stage); if(!msg) return;
   var orig=btn.getAttribute('data-orig')||btn.textContent;
   var done=function(){ btn.textContent='복사됨 ✓'; btn.classList.add('copied');
     setTimeout(function(){ btn.textContent=orig; btn.classList.remove('copied'); }, 1800); };
@@ -278,9 +312,31 @@ function rowHTML(p){
     +'</div>';
 }
 
-var _LASTP=null,_LASTABS=null,_LASTFAIL=false;
-function render(P, ABS, absFail){
+/* 통과한 학생 한 줄. 독촉 줄과 달리 경과일·숨김·PDF 가 필요 없다 —
+   보낼 문자 하나면 끝이다. */
+function passRowHTML(p){
+  var sub=esc(p.school)+(p.year?' · '+esc(p.year)+'학년':'');
+  var tries=Number(p.tries)||1;
+  return '<div class="row pass"><div class="rinfo">'
+    +'<div class="rname">'+esc(p.name)+'</div>'
+    +'<div class="rsub">'+sub+'</div>'
+    +'<div class="rwhat"><b>'+(COURSE[p.course]||esc(p.course))+' '+esc(p.round)+'회</b> · '
+      +esc(p.attempt)+' <span class="rpass">'+esc(p.score)+'점 통과</span>'
+      +(tries>1?' <span class="rtry">재시로 마무리</span>':' <span class="rtry one">한 번에</span>')+'</div>'
+    +'<div class="copygrp" data-kind="pass" data-name="'+escAttr(p.name)+'" data-course="'+escAttr(p.course)+'"'
+      +' data-round="'+escAttr(p.round)+'" data-att="'+escAttr(p.attempt)+'" data-score="'+escAttr(p.score)+'"'
+      +' data-tries="'+escAttr(tries)+'" data-link="'+escAttr(p.reportLink||'')+'">'
+    +'<button class="copybtn pass" data-orig="통과 문자 복사" onclick="copyShare(this)">통과 문자 복사</button>'
+    +'</div></div>'
+    +'<div class="days ok"><div class="dn">'+esc(p.score)+'</div><div class="dl">점<br>('+esc(p.date)+')</div></div>'
+    +'</div>';
+}
+
+var _LASTP=null,_LASTABS=null,_LASTFAIL=false,_LASTPASS=null;
+function render(P, ABS, absFail, PASS){
   _LASTP=P; _LASTABS=ABS; _LASTFAIL=absFail;
+  if(PASS!==undefined) _LASTPASS=PASS;
+  PASS=_LASTPASS;
   var a0=P.active||[], s0=P.stale||[];
   var hid=pruneHidden(a0.concat(s0));
   var a=[], s=[], hidden=[];
@@ -291,10 +347,12 @@ function render(P, ABS, absFail){
   var absN=absClasses.reduce(function(t,c){return t+c.absent.length;},0);
   var gen=document.getElementById('gen'); if(gen) gen.textContent='갱신 '+(P.generatedAt||(ABS&&ABS.generatedAt)||'');
   var h='';
+  var pass=(PASS&&PASS.passed)||[];
   h+='<div class="bar">'
     +'<div class="stat exabs"><div class="n">'+absN+'</div><div class="l">시험 미응시</div></div>'
     +'<div class="stat act"><div class="n">'+a.length+'</div><div class="l">재시 필요 (2주 내)</div></div>'
     +'<div class="stat stl"><div class="n">'+s.length+'</div><div class="l">이탈 추정 (2주+)</div></div>'
+    +'<div class="stat pss"><div class="n">'+pass.length+'</div><div class="l">통과 (2주 내)</div></div>'
     +'<div class="stat"><div class="n">'+(P.activeDays||14)+'</div><div class="l">기준 일수</div></div></div>';
   h+='<div class="tools"><button class="btn p" onclick="load()">새로고침</button></div>';
 
@@ -314,6 +372,17 @@ function render(P, ABS, absFail){
       +hidden.map(hidRowHTML).join('')
       +'<button class="btn" style="width:100%;margin-top:2px" onclick="unhideAll()">모두 복원</button>'
       +'</details></div>';
+  }
+
+  /* 통과한 학생. 독촉 목록 아래에 둔다 — 급한 것부터 보고, 그다음에 챙긴다. */
+  h+='<div class="sec-h">통과 <span class="tag" style="background:var(--green)">'+pass.length+'</span>'
+    +'<span style="font-weight:600;color:var(--muted);font-size:11.5px">· 최근 2주 · 최근 순</span></div>';
+  if(!PASS){ h+='<div class="muted-note">통과 목록을 불러오지 못했습니다. <b>새로고침</b> 해주세요.</div>'; }
+  else if(!pass.length){ h+='<div class="empty">최근 2주 안에 통과한 학생이 없습니다.</div>'; }
+  else{
+    h+='<div class="muted-note">최근 2주 안에 통과선(80점)을 넘긴 학생입니다. 여태 이 페이지에서 복사할 수 있는 것은 전부 독촉이었는데, '
+      +'통과한 학생에게도 한 줄 보낼 수 있게 두었습니다. <b>한 번에 통과</b>와 <b>재시로 마무리</b>는 문구가 다릅니다.</div>';
+    h+=pass.map(passRowHTML).join('');
   }
 
   if(s.length){
@@ -345,6 +414,15 @@ function demoAbs(){
   ]};
 }
 
+function demoPass(){
+  var R='https://chemistreal.github.io/DT/report.html?student=';
+  return { days:14, generatedAt:'2026-06-20 14:30', passed:[
+    {name:'김서준',school:'휘문중',year:'2',course:'ch2',round:7,attempt:'정시',tries:1,score:96,date:'6/19',days:1,reportLink:R+'demoP1'},
+    {name:'이하윤',school:'대원국제중',year:'3',course:'ch1',round:12,attempt:'재시',tries:2,score:84,date:'6/18',days:2,reportLink:R+'demoP2'},
+    {name:'박하람',school:'중대부중',year:'2',course:'gc',round:3,attempt:'정시',tries:1,score:100,date:'6/16',days:4,reportLink:R+'demoP3'}
+  ]};
+}
+
 function fetchJSON_(url, tries){
   tries = tries || 3;
   return fetch(url, {cache:'no-store'}).then(function(r){
@@ -358,17 +436,19 @@ function fetchJSON_(url, tries){
   });
 }
 function load(){
-  if(Q.has('demo')){ render(demo(), demoAbs()); return; }
+  if(Q.has('demo')){ render(demo(), demoAbs(), false, demoPass()); return; }
   document.getElementById('app').innerHTML='<div class="loading">불러오는 중…</div>';
   var tok=encodeURIComponent(admTok());
   Promise.all([
     fetchJSON_(STATUS_URL+'?action=absentees&token='+tok+'&ov='+encodeURIComponent(JSON.stringify(absOv()))+'&t='+Date.now()),
-    fetchJSON_(STATUS_URL+'?action=pending&token='+tok+'&t='+Date.now())
+    fetchJSON_(STATUS_URL+'?action=pending&token='+tok+'&t='+Date.now()),
+    /* 통과 목록은 못 받아도 나머지를 막지 않는다 — 급한 것은 독촉 쪽이다. */
+    fetchJSON_(STATUS_URL+'?action=passed&token='+tok+'&days=14&t='+Date.now())
   ]).then(function(res){
-    var A=res[0], P=res[1];
+    var A=res[0], P=res[1], S=res[2];
     if((A&&A.error==='auth')||(P&&P.error==='auth')){ admReset(); document.getElementById('app').innerHTML='<div class="err">관리자 코드가 올바르지 않습니다. 페이지를 새로고침한 뒤 다시 입력해 주세요.</div>'; return; }
     if(!P||!P.ok||!P.pending){ document.getElementById('app').innerHTML='<div class="err">데이터를 불러오지 못했습니다. Apps Script 배포(/exec)와 권한을 확인하세요.</div>'; return; }
-    render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null, !(A&&A.ok));
+    render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null, !(A&&A.ok), (S&&S.ok&&S.passed)?S.passed:null);
   }).catch(function(e){
     document.getElementById('app').innerHTML='<div class="err">연결 실패: '+esc(String(e))+'<br>Apps Script 웹앱이 배포되어 있고 액세스가 "모든 사용자"인지 확인하세요.</div>';
   });

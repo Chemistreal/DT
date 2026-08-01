@@ -46,6 +46,7 @@ async function controlNetwork(context) {
       let body = { ok: true };
       if (url.includes('action=pending')) body = { ok: true, pending: { active: [], stale: [], activeDays: 14, generatedAt: 'TEST' } };
       else if (url.includes('action=absentees')) body = { ok: true, absentees: { classes: [], generatedAt: 'TEST' } };
+      else if (url.includes('action=passed')) body = { ok: true, passed: { passed: [], days: 14, generatedAt: 'TEST' } };
       else if (url.includes('action=cohortmis')) body = { ok: true, rows: [] };
       else if (url.includes('student=')) body = { ok: true, student: 'demo', rows: [], excluded: [], cumulative: null, rank: null, cohort: null };
       else if (route.request().method() === 'POST') body = { ok: true, updated: false, reportLink: 'https://example.test/report' };
@@ -161,6 +162,38 @@ async function assertNoOverflow(page, label) {
     await page.click('.copybtn.abc'); await page.waitForTimeout(250);   // 반 전체 공지
     const bc = await page.evaluate(() => navigator.clipboard.readText());
     assert(bc.includes('exam.html?c='), '반 공지에 응시 링크 없음');
+  }, { clipboard: true });
+
+  /* ── 4-2. 통과한 학생에게 보내는 문자 ──────────────────────────────
+     여태 이 페이지에서 복사할 수 있는 것은 전부 독촉이었다 — 재시 안내,
+     시험 안내, 리마인드, 최종 안내. 통과한 학생에게는 아무것도 가지 않았다.
+
+     한 번에 통과한 것과 재시로 마무리한 것은 다른 이야기다. 재시로 통과한
+     학생에게 "한 번에 넘겼다" 고 쓰면 안 읽어 본 티가 난다. */
+  await test('pending · 통과 문자 복사', async page => {
+    await page.goto(BASE + 'pending.html?demo'); await page.waitForTimeout(500);
+    const n = await page.$$eval('.copybtn.pass', b => b.length);
+    assert(n >= 2, '통과 문자 버튼이 없다: ' + n);
+
+    // 첫 줄 = 한 번에 통과(정시), 둘째 줄 = 재시로 통과
+    await page.click('.copybtn.pass'); await page.waitForTimeout(250);
+    const one = await page.evaluate(() => navigator.clipboard.readText());
+    assert(one.includes('조준모'), '통과 문자 복사 실패');
+    assert(one.includes('통과 안내'), '제목에 통과 안내 없음');
+    assert(one.includes('한 번에'), '정시 통과인데 문구가 다르다');
+    assert(!/재시로|다시 잡아/.test(one), '정시 통과에 재시 문구가 섞였다');
+    // 독촉 문구가 섞이면 축하 문자가 아니다
+    assert(!/미통과|아직 확인되지|안내드립니다\n/.test(one), '통과 문자에 독촉 문구 잔존');
+    assert(!/오늘|내일|전날/.test(one), '발송일 가정 표현 잔존');
+
+    await page.click('.copybtn.pass >> nth=1'); await page.waitForTimeout(250);
+    const two = await page.evaluate(() => navigator.clipboard.readText());
+    assert(/재시/.test(two), '재시 통과인데 재시 문구가 없다');
+    assert(!two.includes('한 번에'), '재시 통과에 "한 번에" 가 들어갔다');
+    assert(two !== one, '두 문자가 똑같다');
+
+    // 리포트 링크가 있어야 학부모가 결과를 열어 본다
+    assert(/report\.html\?student=/.test(one), '통과 문자에 리포트 링크 없음');
   }, { clipboard: true });
 
   /* ── 5. 미응시 현황: 안내 완료 숨김 → 새로고침 유지 → 복원 ── */
