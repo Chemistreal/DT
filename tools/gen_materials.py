@@ -61,7 +61,7 @@ def build():
         rounds = {}
         for kkey, _kname, pfx in KINDS:
             pat = re.compile(r'^%s_%s_round(\d+)\.(html|pdf)$' % (re.escape(pfx), re.escape(ckey)))
-            for fn in os.listdir(ROOT):
+            for fn in sorted(os.listdir(ROOT)):
                 m = pat.match(fn)
                 if not m:
                     continue
@@ -72,7 +72,7 @@ def build():
         tc = TRUTH_COURSE.get(ckey)
         if tc and os.path.isdir(os.path.join(ROOT, TRUTH_DIR)):
             pat = re.compile(r'^%s_round(\d+)_truthbook_bw\.pdf$' % re.escape(tc))
-            for fn in os.listdir(os.path.join(ROOT, TRUTH_DIR)):
+            for fn in sorted(os.listdir(os.path.join(ROOT, TRUTH_DIR))):
                 m = pat.match(fn)
                 if not m:
                     continue
@@ -100,7 +100,10 @@ def build():
 
 def main():
     data = build()
-    text = json.dumps(data, ensure_ascii=False, indent=1) + '\n'
+    # 키 차례를 고정한다. 예전에는 os.listdir 가 돌려주는 차례를 그대로 따라가서
+    # 같은 파일인데 기계마다 {"pdf":..,"html":..} / {"html":..,"pdf":..} 로 갈렸다.
+    # 내 컴퓨터에서는 --check 가 통과하는데 CI 에서만 빨간불이 떴다.
+    text = json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True) + '\n'
     if '--check' in sys.argv:
         old = open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else ''
         if old != text:

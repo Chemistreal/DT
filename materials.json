@@ -1,5 +1,879 @@
 {
- "note": "파일 이름에서 만든다. 손으로 고치지 말 것 — tools/gen_materials.py",
+ "courses": [
+  {
+   "key": "ch1",
+   "name": "화학Ⅰ",
+   "rounds": [
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round01.html",
+       "pdf": "haeseol_ch1_round01.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round01.html",
+       "pdf": "munje_ch1_round01.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round01.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round01_truthbook_bw.pdf"
+      }
+     },
+     "round": 1
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round02.html",
+       "pdf": "haeseol_ch1_round02.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round02.html",
+       "pdf": "munje_ch1_round02.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round02.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round02_truthbook_bw.pdf"
+      }
+     },
+     "round": 2
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round03.html",
+       "pdf": "haeseol_ch1_round03.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round03.html",
+       "pdf": "munje_ch1_round03.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round03.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round03_truthbook_bw.pdf"
+      }
+     },
+     "round": 3
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round04.html",
+       "pdf": "haeseol_ch1_round04.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round04.html",
+       "pdf": "munje_ch1_round04.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round04.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round04_truthbook_bw.pdf"
+      }
+     },
+     "round": 4
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round05.html",
+       "pdf": "haeseol_ch1_round05.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round05.html",
+       "pdf": "munje_ch1_round05.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round05.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round05_truthbook_bw.pdf"
+      }
+     },
+     "round": 5
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round06.html",
+       "pdf": "haeseol_ch1_round06.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round06.html",
+       "pdf": "munje_ch1_round06.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round06.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round06_truthbook_bw.pdf"
+      }
+     },
+     "round": 6
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round07.html",
+       "pdf": "haeseol_ch1_round07.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round07.html",
+       "pdf": "munje_ch1_round07.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round07.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round07_truthbook_bw.pdf"
+      }
+     },
+     "round": 7
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round08.html",
+       "pdf": "haeseol_ch1_round08.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round08.html",
+       "pdf": "munje_ch1_round08.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round08.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round08_truthbook_bw.pdf"
+      }
+     },
+     "round": 8
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round09.html",
+       "pdf": "haeseol_ch1_round09.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round09.html",
+       "pdf": "munje_ch1_round09.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round09.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round09_truthbook_bw.pdf"
+      }
+     },
+     "round": 9
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round10.html",
+       "pdf": "haeseol_ch1_round10.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round10.html",
+       "pdf": "munje_ch1_round10.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round10.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round10_truthbook_bw.pdf"
+      }
+     },
+     "round": 10
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round11.html",
+       "pdf": "haeseol_ch1_round11.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round11.html",
+       "pdf": "munje_ch1_round11.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round11.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round11_truthbook_bw.pdf"
+      }
+     },
+     "round": 11
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round12.html",
+       "pdf": "haeseol_ch1_round12.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round12.html",
+       "pdf": "munje_ch1_round12.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round12.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round12_truthbook_bw.pdf"
+      }
+     },
+     "round": 12
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round13.html",
+       "pdf": "haeseol_ch1_round13.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round13.html",
+       "pdf": "munje_ch1_round13.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round13.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round13_truthbook_bw.pdf"
+      }
+     },
+     "round": 13
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round14.html",
+       "pdf": "haeseol_ch1_round14.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round14.html",
+       "pdf": "munje_ch1_round14.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round14.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round14_truthbook_bw.pdf"
+      }
+     },
+     "round": 14
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round15.html",
+       "pdf": "haeseol_ch1_round15.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round15.html",
+       "pdf": "munje_ch1_round15.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round15.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round15_truthbook_bw.pdf"
+      }
+     },
+     "round": 15
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round16.html",
+       "pdf": "haeseol_ch1_round16.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round16.html",
+       "pdf": "munje_ch1_round16.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round16.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round16_truthbook_bw.pdf"
+      }
+     },
+     "round": 16
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round17.html",
+       "pdf": "haeseol_ch1_round17.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round17.html",
+       "pdf": "munje_ch1_round17.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round17.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round17_truthbook_bw.pdf"
+      }
+     },
+     "round": 17
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch1_round18.html",
+       "pdf": "haeseol_ch1_round18.pdf"
+      },
+      "munje": {
+       "html": "munje_ch1_round18.html",
+       "pdf": "munje_ch1_round18.pdf"
+      },
+      "omr": {
+       "html": "omr_ch1_round18.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1_round18_truthbook_bw.pdf"
+      }
+     },
+     "round": 18
+    }
+   ]
+  },
+  {
+   "key": "ch2",
+   "name": "화학Ⅱ",
+   "rounds": [
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch2_round01.html",
+       "pdf": "haeseol_ch2_round01.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round01.html",
+       "pdf": "munje_ch2_round01.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round01.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round01_truthbook_bw.pdf"
+      }
+     },
+     "round": 1
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch2_round02.html",
+       "pdf": "haeseol_ch2_round02.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round02.html",
+       "pdf": "munje_ch2_round02.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round02.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round02_truthbook_bw.pdf"
+      }
+     },
+     "round": 2
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch2_round03.html",
+       "pdf": "haeseol_ch2_round03.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round03.html",
+       "pdf": "munje_ch2_round03.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round03.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round03_truthbook_bw.pdf"
+      }
+     },
+     "round": 3
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch2_round04.html",
+       "pdf": "haeseol_ch2_round04.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round04.html",
+       "pdf": "munje_ch2_round04.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round04.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round04_truthbook_bw.pdf"
+      }
+     },
+     "round": 4
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch2_round05.html",
+       "pdf": "haeseol_ch2_round05.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round05.html",
+       "pdf": "munje_ch2_round05.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round05.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round05_truthbook_bw.pdf"
+      }
+     },
+     "round": 5
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch2_round06.html",
+       "pdf": "haeseol_ch2_round06.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round06.html",
+       "pdf": "munje_ch2_round06.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round06.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round06_truthbook_bw.pdf"
+      }
+     },
+     "round": 6
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_ch2_round07.html",
+       "pdf": "haeseol_ch2_round07.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round07.html",
+       "pdf": "munje_ch2_round07.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round07.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round07_truthbook_bw.pdf"
+      }
+     },
+     "round": 7
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round08.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round08.html",
+       "pdf": "munje_ch2_round08.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round08.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round08_truthbook_bw.pdf"
+      }
+     },
+     "round": 8
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round09.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round09.html",
+       "pdf": "munje_ch2_round09.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round09.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round09_truthbook_bw.pdf"
+      }
+     },
+     "round": 9
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round10.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round10.html",
+       "pdf": "munje_ch2_round10.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round10.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round10_truthbook_bw.pdf"
+      }
+     },
+     "round": 10
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round11.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round11.html",
+       "pdf": "munje_ch2_round11.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round11.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round11_truthbook_bw.pdf"
+      }
+     },
+     "round": 11
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round12.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round12.html",
+       "pdf": "munje_ch2_round12.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round12.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round12_truthbook_bw.pdf"
+      }
+     },
+     "round": 12
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round13.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round13.html",
+       "pdf": "munje_ch2_round13.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round13.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round13_truthbook_bw.pdf"
+      }
+     },
+     "round": 13
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round14.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round14.html",
+       "pdf": "munje_ch2_round14.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round14.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round14_truthbook_bw.pdf"
+      }
+     },
+     "round": 14
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round15.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round15.html",
+       "pdf": "munje_ch2_round15.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round15.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round15_truthbook_bw.pdf"
+      }
+     },
+     "round": 15
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round16.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round16.html",
+       "pdf": "munje_ch2_round16.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round16.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round16_truthbook_bw.pdf"
+      }
+     },
+     "round": 16
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round17.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round17.html",
+       "pdf": "munje_ch2_round17.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round17.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round17_truthbook_bw.pdf"
+      }
+     },
+     "round": 17
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch2_round18.pdf"
+      },
+      "munje": {
+       "html": "munje_ch2_round18.html",
+       "pdf": "munje_ch2_round18.pdf"
+      },
+      "omr": {
+       "html": "omr_ch2_round18.html"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem2_round18_truthbook_bw.pdf"
+      }
+     },
+     "round": 18
+    }
+   ]
+  },
+  {
+   "key": "gc",
+   "name": "일반화학",
+   "rounds": [
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round01.html",
+       "pdf": "haeseol_gc_round01.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round01.html",
+       "pdf": "munje_gc_round01.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round01.html"
+      }
+     },
+     "round": 1
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round02.html",
+       "pdf": "haeseol_gc_round02.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round02.html",
+       "pdf": "munje_gc_round02.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round02.html"
+      }
+     },
+     "round": 2
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round03.html",
+       "pdf": "haeseol_gc_round03.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round03.html",
+       "pdf": "munje_gc_round03.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round03.html"
+      }
+     },
+     "round": 3
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round04.html",
+       "pdf": "haeseol_gc_round04.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round04.html",
+       "pdf": "munje_gc_round04.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round04.html"
+      }
+     },
+     "round": 4
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round05.html",
+       "pdf": "haeseol_gc_round05.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round05.html",
+       "pdf": "munje_gc_round05.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round05.html"
+      }
+     },
+     "round": 5
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round06.html",
+       "pdf": "haeseol_gc_round06.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round06.html",
+       "pdf": "munje_gc_round06.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round06.html"
+      }
+     },
+     "round": 6
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round07.html",
+       "pdf": "haeseol_gc_round07.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round07.html",
+       "pdf": "munje_gc_round07.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round07.html"
+      }
+     },
+     "round": 7
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round08.html",
+       "pdf": "haeseol_gc_round08.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round08.html",
+       "pdf": "munje_gc_round08.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round08.html"
+      }
+     },
+     "round": 8
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round09.html",
+       "pdf": "haeseol_gc_round09.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round09.html",
+       "pdf": "munje_gc_round09.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round09.html"
+      }
+     },
+     "round": 9
+    },
+    {
+     "files": {
+      "haeseol": {
+       "html": "haeseol_gc_round10.html",
+       "pdf": "haeseol_gc_round10.pdf"
+      },
+      "munje": {
+       "html": "munje_gc_round10.html",
+       "pdf": "munje_gc_round10.pdf"
+      },
+      "omr": {
+       "html": "omr_gc_round10.html"
+      }
+     },
+     "round": 10
+    }
+   ]
+  }
+ ],
+ "extra": [
+  {
+   "name": "PDF 모음",
+   "path": "pdfs.html"
+  },
+  {
+   "name": "안내문",
+   "path": "letters.html"
+  },
+  {
+   "name": "개념 지도",
+   "path": "concept_map.html"
+  },
+  {
+   "name": "챌린지",
+   "path": "challenge.html"
+  },
+  {
+   "name": "OMR 정답표",
+   "path": "OMR_answer_keys.html"
+  }
+ ],
  "kinds": [
   {
    "key": "munje",
@@ -18,879 +892,5 @@
    "name": "오답노트"
   }
  ],
- "courses": [
-  {
-   "key": "ch1",
-   "name": "화학Ⅰ",
-   "rounds": [
-    {
-     "round": 1,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round01.pdf",
-       "html": "munje_ch1_round01.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round01.pdf",
-       "html": "haeseol_ch1_round01.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round01.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round01_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 2,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round02.pdf",
-       "html": "munje_ch1_round02.html"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round02.html",
-       "pdf": "haeseol_ch1_round02.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round02.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round02_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 3,
-     "files": {
-      "munje": {
-       "html": "munje_ch1_round03.html",
-       "pdf": "munje_ch1_round03.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round03.html",
-       "pdf": "haeseol_ch1_round03.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round03.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round03_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 4,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round04.pdf",
-       "html": "munje_ch1_round04.html"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round04.html",
-       "pdf": "haeseol_ch1_round04.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round04.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round04_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 5,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round05.pdf",
-       "html": "munje_ch1_round05.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round05.pdf",
-       "html": "haeseol_ch1_round05.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round05.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round05_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 6,
-     "files": {
-      "munje": {
-       "html": "munje_ch1_round06.html",
-       "pdf": "munje_ch1_round06.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round06.html",
-       "pdf": "haeseol_ch1_round06.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round06.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round06_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 7,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round07.pdf",
-       "html": "munje_ch1_round07.html"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round07.html",
-       "pdf": "haeseol_ch1_round07.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round07.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round07_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 8,
-     "files": {
-      "munje": {
-       "html": "munje_ch1_round08.html",
-       "pdf": "munje_ch1_round08.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round08.pdf",
-       "html": "haeseol_ch1_round08.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round08.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round08_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 9,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round09.pdf",
-       "html": "munje_ch1_round09.html"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round09.html",
-       "pdf": "haeseol_ch1_round09.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round09.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round09_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 10,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round10.pdf",
-       "html": "munje_ch1_round10.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round10.pdf",
-       "html": "haeseol_ch1_round10.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round10.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round10_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 11,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round11.pdf",
-       "html": "munje_ch1_round11.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round11.pdf",
-       "html": "haeseol_ch1_round11.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round11.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round11_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 12,
-     "files": {
-      "munje": {
-       "html": "munje_ch1_round12.html",
-       "pdf": "munje_ch1_round12.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round12.html",
-       "pdf": "haeseol_ch1_round12.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round12.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round12_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 13,
-     "files": {
-      "munje": {
-       "html": "munje_ch1_round13.html",
-       "pdf": "munje_ch1_round13.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round13.pdf",
-       "html": "haeseol_ch1_round13.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round13.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round13_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 14,
-     "files": {
-      "munje": {
-       "html": "munje_ch1_round14.html",
-       "pdf": "munje_ch1_round14.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round14.pdf",
-       "html": "haeseol_ch1_round14.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round14.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round14_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 15,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round15.pdf",
-       "html": "munje_ch1_round15.html"
-      },
-      "haeseol": {
-       "html": "haeseol_ch1_round15.html",
-       "pdf": "haeseol_ch1_round15.pdf"
-      },
-      "omr": {
-       "html": "omr_ch1_round15.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round15_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 16,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round16.pdf",
-       "html": "munje_ch1_round16.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round16.pdf",
-       "html": "haeseol_ch1_round16.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round16.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round16_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 17,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round17.pdf",
-       "html": "munje_ch1_round17.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round17.pdf",
-       "html": "haeseol_ch1_round17.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round17.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round17_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 18,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch1_round18.pdf",
-       "html": "munje_ch1_round18.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch1_round18.pdf",
-       "html": "haeseol_ch1_round18.html"
-      },
-      "omr": {
-       "html": "omr_ch1_round18.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem1_round18_truthbook_bw.pdf"
-      }
-     }
-    }
-   ]
-  },
-  {
-   "key": "ch2",
-   "name": "화학Ⅱ",
-   "rounds": [
-    {
-     "round": 1,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round01.pdf",
-       "html": "munje_ch2_round01.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round01.pdf",
-       "html": "haeseol_ch2_round01.html"
-      },
-      "omr": {
-       "html": "omr_ch2_round01.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round01_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 2,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round02.html",
-       "pdf": "munje_ch2_round02.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round02.pdf",
-       "html": "haeseol_ch2_round02.html"
-      },
-      "omr": {
-       "html": "omr_ch2_round02.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round02_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 3,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round03.html",
-       "pdf": "munje_ch2_round03.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_ch2_round03.html",
-       "pdf": "haeseol_ch2_round03.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round03.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round03_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 4,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round04.html",
-       "pdf": "munje_ch2_round04.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round04.pdf",
-       "html": "haeseol_ch2_round04.html"
-      },
-      "omr": {
-       "html": "omr_ch2_round04.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round04_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 5,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round05.html",
-       "pdf": "munje_ch2_round05.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_ch2_round05.html",
-       "pdf": "haeseol_ch2_round05.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round05.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round05_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 6,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round06.html",
-       "pdf": "munje_ch2_round06.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_ch2_round06.html",
-       "pdf": "haeseol_ch2_round06.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round06.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round06_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 7,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round07.pdf",
-       "html": "munje_ch2_round07.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round07.pdf",
-       "html": "haeseol_ch2_round07.html"
-      },
-      "omr": {
-       "html": "omr_ch2_round07.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round07_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 8,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round08.pdf",
-       "html": "munje_ch2_round08.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round08.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round08.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round08_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 9,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round09.html",
-       "pdf": "munje_ch2_round09.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round09.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round09.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round09_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 10,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round10.pdf",
-       "html": "munje_ch2_round10.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round10.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round10.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round10_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 11,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round11.pdf",
-       "html": "munje_ch2_round11.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round11.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round11.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round11_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 12,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round12.pdf",
-       "html": "munje_ch2_round12.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round12.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round12.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round12_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 13,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round13.html",
-       "pdf": "munje_ch2_round13.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round13.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round13.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round13_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 14,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round14.pdf",
-       "html": "munje_ch2_round14.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round14.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round14.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round14_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 15,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round15.html",
-       "pdf": "munje_ch2_round15.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round15.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round15.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round15_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 16,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round16.html",
-       "pdf": "munje_ch2_round16.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round16.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round16.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round16_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 17,
-     "files": {
-      "munje": {
-       "pdf": "munje_ch2_round17.pdf",
-       "html": "munje_ch2_round17.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round17.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round17.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round17_truthbook_bw.pdf"
-      }
-     }
-    },
-    {
-     "round": 18,
-     "files": {
-      "munje": {
-       "html": "munje_ch2_round18.html",
-       "pdf": "munje_ch2_round18.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_ch2_round18.pdf"
-      },
-      "omr": {
-       "html": "omr_ch2_round18.html"
-      },
-      "truthbook": {
-       "pdf": "truthbooks/chem2_round18_truthbook_bw.pdf"
-      }
-     }
-    }
-   ]
-  },
-  {
-   "key": "gc",
-   "name": "일반화학",
-   "rounds": [
-    {
-     "round": 1,
-     "files": {
-      "munje": {
-       "pdf": "munje_gc_round01.pdf",
-       "html": "munje_gc_round01.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_gc_round01.pdf",
-       "html": "haeseol_gc_round01.html"
-      },
-      "omr": {
-       "html": "omr_gc_round01.html"
-      }
-     }
-    },
-    {
-     "round": 2,
-     "files": {
-      "munje": {
-       "html": "munje_gc_round02.html",
-       "pdf": "munje_gc_round02.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_gc_round02.html",
-       "pdf": "haeseol_gc_round02.pdf"
-      },
-      "omr": {
-       "html": "omr_gc_round02.html"
-      }
-     }
-    },
-    {
-     "round": 3,
-     "files": {
-      "munje": {
-       "html": "munje_gc_round03.html",
-       "pdf": "munje_gc_round03.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_gc_round03.pdf",
-       "html": "haeseol_gc_round03.html"
-      },
-      "omr": {
-       "html": "omr_gc_round03.html"
-      }
-     }
-    },
-    {
-     "round": 4,
-     "files": {
-      "munje": {
-       "pdf": "munje_gc_round04.pdf",
-       "html": "munje_gc_round04.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_gc_round04.pdf",
-       "html": "haeseol_gc_round04.html"
-      },
-      "omr": {
-       "html": "omr_gc_round04.html"
-      }
-     }
-    },
-    {
-     "round": 5,
-     "files": {
-      "munje": {
-       "html": "munje_gc_round05.html",
-       "pdf": "munje_gc_round05.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_gc_round05.html",
-       "pdf": "haeseol_gc_round05.pdf"
-      },
-      "omr": {
-       "html": "omr_gc_round05.html"
-      }
-     }
-    },
-    {
-     "round": 6,
-     "files": {
-      "munje": {
-       "html": "munje_gc_round06.html",
-       "pdf": "munje_gc_round06.pdf"
-      },
-      "haeseol": {
-       "pdf": "haeseol_gc_round06.pdf",
-       "html": "haeseol_gc_round06.html"
-      },
-      "omr": {
-       "html": "omr_gc_round06.html"
-      }
-     }
-    },
-    {
-     "round": 7,
-     "files": {
-      "munje": {
-       "pdf": "munje_gc_round07.pdf",
-       "html": "munje_gc_round07.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_gc_round07.pdf",
-       "html": "haeseol_gc_round07.html"
-      },
-      "omr": {
-       "html": "omr_gc_round07.html"
-      }
-     }
-    },
-    {
-     "round": 8,
-     "files": {
-      "munje": {
-       "html": "munje_gc_round08.html",
-       "pdf": "munje_gc_round08.pdf"
-      },
-      "haeseol": {
-       "html": "haeseol_gc_round08.html",
-       "pdf": "haeseol_gc_round08.pdf"
-      },
-      "omr": {
-       "html": "omr_gc_round08.html"
-      }
-     }
-    },
-    {
-     "round": 9,
-     "files": {
-      "munje": {
-       "pdf": "munje_gc_round09.pdf",
-       "html": "munje_gc_round09.html"
-      },
-      "haeseol": {
-       "pdf": "haeseol_gc_round09.pdf",
-       "html": "haeseol_gc_round09.html"
-      },
-      "omr": {
-       "html": "omr_gc_round09.html"
-      }
-     }
-    },
-    {
-     "round": 10,
-     "files": {
-      "munje": {
-       "pdf": "munje_gc_round10.pdf",
-       "html": "munje_gc_round10.html"
-      },
-      "haeseol": {
-       "html": "haeseol_gc_round10.html",
-       "pdf": "haeseol_gc_round10.pdf"
-      },
-      "omr": {
-       "html": "omr_gc_round10.html"
-      }
-     }
-    }
-   ]
-  }
- ],
- "extra": [
-  {
-   "path": "pdfs.html",
-   "name": "PDF 모음"
-  },
-  {
-   "path": "letters.html",
-   "name": "안내문"
-  },
-  {
-   "path": "concept_map.html",
-   "name": "개념 지도"
-  },
-  {
-   "path": "challenge.html",
-   "name": "챌린지"
-  },
-  {
-   "path": "OMR_answer_keys.html",
-   "name": "OMR 정답표"
-  }
- ]
+ "note": "파일 이름에서 만든다. 손으로 고치지 말 것 — tools/gen_materials.py"
 }
