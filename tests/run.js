@@ -318,6 +318,38 @@ async function assertNoOverflow(page, label) {
      회차를 새로 만들면 새 태그가 생긴다. 그때 설명을 안 쓰면 여기서 빨간불이
      난다 — 그게 이 검사의 목적이다.
      ══════════════════════════════════════════════════════════════ */
+  /* 이 문단은 **매주** 학부모에게 간다. 상황별 변형이 둘뿐이면 같은 상황이
+     이어질 때 격주로 같은 글이 가고, 두 주 연달아 같으면 그때부터 안 읽힌다.
+     (게다가 chronic 은 늘 [0] 만 쓰고 있어서 뱅크를 늘려도 안 나왔다.) */
+  await test('내용 · 매주 가는 문구가 되풀이되지 않는다', async page => {
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => {
+      const sizes = {};
+      Object.keys(RXBANK.openers).forEach(k => { sizes['openers.' + k] = RXBANK.openers[k].length; });
+      Object.keys(RXBANK.chronic).forEach(k => { sizes['chronic.' + k] = RXBANK.chronic[k].length; });
+      sizes['closers'] = RXBANK.closers.length;
+      /* 뽑는 규칙 자체를 확인한다: 지난 회차와 같은 자리를 고르면 비켜서야 한다. */
+      const arr = ['a', 'b', 'c', 'd', 'e'];
+      const same = _rxPick(arr, 7, 7);          // 같은 씨앗 → 비켜서야 한다
+      const alone = _rxPick(['only'], 7, 7);    // 하나뿐이면 비킬 곳이 없다
+      const noPrev = _rxPick(arr, 7, null);     // 첫 회차엔 피할 것이 없다
+      return { sizes, same, alone, noPrev, plain: arr[7 % arr.length] };
+    });
+    Object.keys(r.sizes).forEach(k => {
+      const need = k.indexOf('chronic') === 0 ? 2 : 5;
+      assert(r.sizes[k] >= need, k + ' 변형이 ' + r.sizes[k] + '개뿐 (최소 ' + need + ')');
+    });
+    assert(r.same !== r.plain, '지난 회차와 같은 문단을 다시 고른다');
+    assert(r.alone === 'only', '변형이 하나뿐일 때 비어 버린다');
+    assert(r.noPrev === r.plain, '첫 회차에서 괜히 비켜선다');
+
+    /* 뱅크에 넣어 놓고 안 쓰면 없는 것과 같다. */
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    assert(/RXBANK\.chronic\.many\[0\]/.test(src) === false, 'chronic 이 첫 문단만 쓴다');
+    assert(/_rxPick\(RXBANK\.chronic\.many/.test(src), 'chronic 을 골라 쓰지 않는다');
+  });
+
   await test('내용 · 짚은 개념에는 설명이 있다', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
     const dictOf = name => {
