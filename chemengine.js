@@ -247,6 +247,45 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
                targeted: !!wrong[it.c] && !subbed, substituted: subbed,
                swapped: norm(pick.s) !== norm(it.s), reusedWrong: !!wrongStmts[norm(pick.s)] };
     });
+
+    /* ── 틀린 개념이 재시에 아예 안 나오던 문제 ────────────────────────
+       재시 묶음(retakeC)은 회차마다 고정인데, 세어 보니 그 묶음이 정시 개념의
+       **55.9%만** 담고 있었다. 학생이 틀린 개념이 나머지 44% 쪽이면, "틀린
+       개념만 골라 새 문항으로 확인" 한다면서 **그 개념을 한 번도 안 묻는다.**
+
+       새 문항을 만들 필요는 없다 — 빠진 개념 1,008개가 **전부 forms_bank 에
+       문항을 갖고 있다.** 배치 문제였다.
+
+       그래서: 학생이 **맞힌** 개념이 차지한 자리를, 아직 안 나온 **틀린** 개념으로
+       바꾼다. 맞힌 개념은 상대적으로 확인할 이유가 적고, 재시의 목적은 틀린
+       곳을 다시 묻는 것이다. 바꿀 문항이 없으면 그 자리는 그대로 둔다. */
+    var inSet = {}; items.forEach(function (x) { if (wrong[x.c]) inSet[x.c] = 1; });
+    var missing = Object.keys(wrong).filter(function (c) {
+      return !inSet[c] && (formsBank[c] && (formsBank[c].forms || []).length);
+    });
+    if (missing.length) {
+      /* 자리를 고르는 순서: (1) 맞힌 개념 자리, (2) **이미 다른 자리에 나온**
+         개념이 한 번 더 차지한 자리. (2)를 안 쓰면 많이 틀린 학생일수록 바꿀
+         자리가 없어 빠지는 개념이 늘어난다 — 오답률 80%에서 40개가 그랬다.
+         이미 한 번 나온 개념을 두 번 묻는 것보다, 아직 한 번도 안 물은 개념을
+         묻는 편이 낫다. */
+      var firstAt = {};
+      items.forEach(function (x, ix) { if (firstAt[x.c] == null) firstAt[x.c] = ix; });
+      for (var s2 = 0; s2 < items.length && missing.length; s2++) {
+        var dupSlot = firstAt[items[s2].c] !== s2;     // 그 개념의 두 번째 이후 자리
+        if (wrong[items[s2].c] && !dupSlot) continue;  // 틀린 개념의 첫 자리는 지킨다
+        var c2 = missing[0], fb2 = formsBank[c2];
+        var p2 = nwFresh(fb2) || nwUnused(fb2);
+        if (!p2) { missing.shift(); s2--; continue; }  // 낼 문항이 없으면 다음 개념으로
+        usedThis[norm(p2.s)] = 1; seenStatements[norm(p2.s)] = 1;
+        if (firstAt[c2] == null) firstAt[c2] = s2;
+        items[s2] = { c: c2, u: items[s2].u, mis: (fb2 && fb2.m) || '',
+                      a: p2.a, s: p2.s, f: p2.f, w: p2.w,
+                      targeted: true, substituted: false, swapped: true,
+                      reusedWrong: !!wrongStmts[norm(p2.s)], filledGap: true };
+        missing.shift();
+      }
+    }
     return { items: items, seenStatements: seenStatements, n: items.length };
   }
 

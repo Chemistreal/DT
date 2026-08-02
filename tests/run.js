@@ -330,6 +330,65 @@ async function assertNoOverflow(page, label) {
      60문항 중 5~6문항을 **그대로 다시** 봤다. 기억으로 답하면 확인이 안 되고,
      무엇보다 한 약속이 깨진다. 아낄 것은 form 이 아니라 약속이다.
      ══════════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════════
+     재시는 **그 학생이 틀린 개념**을 다시 묻는 시험이다. 그런데 재시 묶음
+     (retakeC)은 회차마다 고정이고, 세어 보니 그 묶음이 정시 개념의 **55.9%만**
+     담고 있었다 — 학생이 틀린 개념이 나머지 44% 쪽이면 "틀린 개념만 골라 새
+     문항으로 확인" 한다면서 **그 개념을 한 번도 안 묻는다.**
+
+     새 문항을 만들 필요는 없었다. 빠진 개념 1,008개가 **전부 forms_bank 에
+     문항을 갖고 있다** — 배치 문제였다.
+     ══════════════════════════════════════════════════════════════ */
+  await test('재시 · 틀린 개념이 빠지지 않는다', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const AD = path.join(ROOT, 'appdata');
+    const norm = x => (x || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
+    const FBraw = JSON.parse(fs.readFileSync(path.join(AD, 'forms_bank.json'), 'utf8'));
+    const FB = FBraw.forms || FBraw;
+
+    let wrongTot = 0, covered = 0, sims = 0, notSixty = 0, dupInTest = 0;
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).sort().forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      const j = (d.jeongsi && d.jeongsi.items) || [], rc = d.retakeC || [];
+      if (!j.length || !rc.length) return;
+      /* 조금 틀린 학생부터 많이 틀린 학생까지 — 어느 쪽에서도 빠지면 안 된다. */
+      [0.1, 0.3, 0.5, 0.8].forEach(frac => {
+        const seen = {}; j.forEach(it => { seen[norm(it.s)] = 1; });
+        const wrong = [], ws = {};
+        j.forEach((it, i) => { if ((i % 10) / 10 < frac) { wrong.push(it.c); ws[norm(it.s)] = 1; } });
+        const W = {}; wrong.forEach(c => { W[c] = 1; });
+        const r = E.buildRetake(2, rc, wrong, FB, Object.assign({}, seen), ws);
+        sims++;
+        const got = {}; r.items.forEach(x => { got[x.c] = 1; });
+        Object.keys(W).forEach(c => { wrongTot++; if (got[c]) covered++; });
+        /* 채점이 성립하려면 문항 수가 그대로여야 한다(1.6667 × 60 = 100). */
+        if (r.items.length !== 60) notSixty++;
+        /* 한 시험 안에서 같은 문장이 두 번 나오면 안 된다. */
+        const uniq = {}; r.items.forEach(x => { uniq[norm(x.s)] = 1; });
+        if (Object.keys(uniq).length !== r.items.length) dupInTest++;
+      });
+    });
+    const pct = 100 * covered / wrongTot;
+    console.log('  시뮬 ' + sims + '회 · 틀린 개념 ' + wrongTot + '개 중 재시에 나온 것 ' +
+                covered + ' (' + pct.toFixed(1) + '%)');
+    assert(sims >= 150, '시뮬레이션이 제대로 안 돌았다');
+    assert(notSixty === 0, '문항 수가 60이 아닌 재시 ' + notSixty + '건');
+    assert(dupInTest === 0, '한 시험 안에 같은 문장이 두 번 나온 재시 ' + dupInTest + '건');
+    /* form 이 동난 개념은 낼 문항이 없어 빠질 수 있다(지금 748개 중 2개).
+       0 으로 못 박으면 검사가 거짓말이 되므로, 눈에 띄는 선으로 둔다. */
+    assert(pct >= 99.5, '틀린 개념이 재시에 나오는 비율이 ' + pct.toFixed(1) + '% (이전 55.9%)');
+
+    const src = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    assert(/filledGap: true/.test(src), '빈 자리를 채우는 표시가 사라졌다');
+    /* 이미 틀린 개념이 잡은 **첫** 자리를 빼앗으면 안 된다 — 그 개념이 도로
+       빠진다. 다만 같은 개념이 두 번 차지한 자리는 내줘도 된다(그래야 많이 틀린
+       학생도 빠지는 개념이 없다 — 오답률 80%에서 40개가 그랬다). */
+    assert(/if \(wrong\[items\[s2\]\.c\] && !dupSlot\) continue;/.test(src),
+      '틀린 개념의 첫 자리를 지킨다는 조건이 사라졌다');
+    assert(/var dupSlot = firstAt\[items\[s2\]\.c\] !== s2;/.test(src),
+      '두 번째 이후 자리를 가리는 규칙이 사라졌다');
+  });
+
   await test('재시 · 같은 문제는 다시 나오지 않는다', async () => {
     const E = require(path.join(ROOT, 'chemengine.js'));
     const norm = x => (x || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
