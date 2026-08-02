@@ -591,6 +591,30 @@ async function assertNoOverflow(page, label) {
      ℃(U+2103)는 CJK 호환용이라 유니코드가 쓰지 말라고 권하고, 글꼴에 따라
      작은 크기에서 뭉개지며, "°C" 로 찾으면 안 걸린다. exam 저장소도 같은
      방향(°C)으로 모았으니 두 앱이 다시 갈리지 않게 지킨다. */
+  /* 주기율표는 휴대폰에서 610px 이 화면 밖에 있는데 **잘렸다는 표시가 없었다.**
+     시험 중에 여는 학생은 1~6족만 보고 나머지가 있는 줄 모른다. 안내는
+     실제로 잘릴 때만 떠야 한다 — 넓은 화면에서 "옆으로 미세요" 도 거짓말이다. */
+  await test('exam · 주기율표가 잘리면 잘렸다고 말한다', async page => {
+    for (const [w, cut] of [[390, true], [1200, false]]) {
+      await page.setViewportSize({ width: w, height: 844 });
+      await page.goto(BASE + 'exam.html');
+      await page.waitForTimeout(700);
+      await page.evaluate(() => document.getElementById('cxpBtn').click());
+      await page.waitForTimeout(400);
+      const st = await page.evaluate(() => {
+        const c = document.querySelector('.cxpCard'), h = document.querySelector('.cxpHint');
+        const sc = document.querySelector('.cxpScroll');
+        return { cut: c.classList.contains('cut'),
+                 hint: h ? getComputedStyle(h).display !== 'none' : false,
+                 over: sc.scrollWidth > sc.clientWidth + 4 };
+      });
+      assert(st.over === cut, w + 'px 에서 잘림 여부가 예상과 다르다: ' + st.over);
+      assert(st.cut === cut, w + 'px 에서 잘림 표시가 ' + st.cut);
+      assert(st.hint === cut, w + 'px 에서 안내가 ' + st.hint + ' — 안 잘리는데 띄우면 거짓말이다');
+    }
+    await page.setViewportSize({ width: 1280, height: 900 });
+  });
+
   await test('내용 · 온도 표기가 한 가지다', async () => {
     const AD = path.join(ROOT, 'appdata');
     const bad = [];
