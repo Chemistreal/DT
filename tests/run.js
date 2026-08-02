@@ -318,6 +318,246 @@ async function assertNoOverflow(page, label) {
      회차를 새로 만들면 새 태그가 생긴다. 그때 설명을 안 쓰면 여기서 빨간불이
      난다 — 그게 이 검사의 목적이다.
      ══════════════════════════════════════════════════════════════ */
+  /* 이 문단은 **매주** 학부모에게 간다. 상황별 변형이 둘뿐이면 같은 상황이
+     이어질 때 격주로 같은 글이 가고, 두 주 연달아 같으면 그때부터 안 읽힌다.
+     (게다가 chronic 은 늘 [0] 만 쓰고 있어서 뱅크를 늘려도 안 나왔다.) */
+  /* ══════════════════════════════════════════════════════════════
+     학생 화면과 성적표가 **약속**한다: "틀린 개념만 골라 강의록으로 다시 잡은 뒤,
+     새 문항으로 확인합니다(**같은 문제는 다시 나오지 않습니다**)."
+
+     그런데 buildRetake 는 맞힌 개념에서 `seenStatements` 를 안 봤다("form 절약").
+     retakeC 문장의 13%가 정시 문장과 글자까지 같아서, 정시를 30% 틀린 학생이
+     60문항 중 5~6문항을 **그대로 다시** 봤다. 기억으로 답하면 확인이 안 되고,
+     무엇보다 한 약속이 깨진다. 아낄 것은 form 이 아니라 약속이다.
+     ══════════════════════════════════════════════════════════════ */
+  /* ══════════════════════════════════════════════════════════════
+     재시는 **그 학생이 틀린 개념**을 다시 묻는 시험이다. 그런데 재시 묶음
+     (retakeC)은 회차마다 고정이고, 세어 보니 그 묶음이 정시 개념의 **55.9%만**
+     담고 있었다 — 학생이 틀린 개념이 나머지 44% 쪽이면 "틀린 개념만 골라 새
+     문항으로 확인" 한다면서 **그 개념을 한 번도 안 묻는다.**
+
+     새 문항을 만들 필요는 없었다. 빠진 개념 1,008개가 **전부 forms_bank 에
+     문항을 갖고 있다** — 배치 문제였다.
+     ══════════════════════════════════════════════════════════════ */
+  await test('재시 · 틀린 개념이 빠지지 않는다', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const AD = path.join(ROOT, 'appdata');
+    const norm = x => (x || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
+    const FBraw = JSON.parse(fs.readFileSync(path.join(AD, 'forms_bank.json'), 'utf8'));
+    const FB = FBraw.forms || FBraw;
+
+    let wrongTot = 0, covered = 0, sims = 0, notSixty = 0, dupInTest = 0;
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).sort().forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      const j = (d.jeongsi && d.jeongsi.items) || [], rc = d.retakeC || [];
+      if (!j.length || !rc.length) return;
+      /* 조금 틀린 학생부터 많이 틀린 학생까지 — 어느 쪽에서도 빠지면 안 된다. */
+      [0.1, 0.3, 0.5, 0.8].forEach(frac => {
+        const seen = {}; j.forEach(it => { seen[norm(it.s)] = 1; });
+        const wrong = [], ws = {};
+        j.forEach((it, i) => { if ((i % 10) / 10 < frac) { wrong.push(it.c); ws[norm(it.s)] = 1; } });
+        const W = {}; wrong.forEach(c => { W[c] = 1; });
+        const r = E.buildRetake(2, rc, wrong, FB, Object.assign({}, seen), ws);
+        sims++;
+        const got = {}; r.items.forEach(x => { got[x.c] = 1; });
+        Object.keys(W).forEach(c => { wrongTot++; if (got[c]) covered++; });
+        /* 채점이 성립하려면 문항 수가 그대로여야 한다(1.6667 × 60 = 100). */
+        if (r.items.length !== 60) notSixty++;
+        /* 한 시험 안에서 같은 문장이 두 번 나오면 안 된다. */
+        const uniq = {}; r.items.forEach(x => { uniq[norm(x.s)] = 1; });
+        if (Object.keys(uniq).length !== r.items.length) dupInTest++;
+      });
+    });
+    const pct = 100 * covered / wrongTot;
+    console.log('  시뮬 ' + sims + '회 · 틀린 개념 ' + wrongTot + '개 중 재시에 나온 것 ' +
+                covered + ' (' + pct.toFixed(1) + '%)');
+    assert(sims >= 150, '시뮬레이션이 제대로 안 돌았다');
+    assert(notSixty === 0, '문항 수가 60이 아닌 재시 ' + notSixty + '건');
+    assert(dupInTest === 0, '한 시험 안에 같은 문장이 두 번 나온 재시 ' + dupInTest + '건');
+    /* form 이 동난 개념은 낼 문항이 없어 빠질 수 있다(지금 748개 중 2개).
+       0 으로 못 박으면 검사가 거짓말이 되므로, 눈에 띄는 선으로 둔다. */
+    assert(pct >= 99.5, '틀린 개념이 재시에 나오는 비율이 ' + pct.toFixed(1) + '% (이전 55.9%)');
+
+    const src = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    assert(/filledGap: true/.test(src), '빈 자리를 채우는 표시가 사라졌다');
+    /* 이미 틀린 개념이 잡은 **첫** 자리를 빼앗으면 안 된다 — 그 개념이 도로
+       빠진다. 다만 같은 개념이 두 번 차지한 자리는 내줘도 된다(그래야 많이 틀린
+       학생도 빠지는 개념이 없다 — 오답률 80%에서 40개가 그랬다). */
+    assert(/if \(wrong\[items\[s2\]\.c\] && !dupSlot\) continue;/.test(src),
+      '틀린 개념의 첫 자리를 지킨다는 조건이 사라졌다');
+    assert(/var dupSlot = firstAt\[items\[s2\]\.c\] !== s2;/.test(src),
+      '두 번째 이후 자리를 가리는 규칙이 사라졌다');
+  });
+
+  await test('재시 · 같은 문제는 다시 나오지 않는다', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const norm = x => (x || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
+    const AD = path.join(ROOT, 'appdata');
+    const FBraw = JSON.parse(fs.readFileSync(path.join(AD, 'forms_bank.json'), 'utf8'));
+    const FB = FBraw.forms || FBraw;
+
+    let items = 0, repeat = 0, rounds = 0, worst = ['', 0];
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).sort().forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      const j = (d.jeongsi && d.jeongsi.items) || [], rc = d.retakeC || [];
+      if (!j.length || !rc.length) return;
+      rounds++;
+      const seen = {}; j.forEach(it => { seen[norm(it.s)] = 1; });
+      /* 합격선 바로 밑에서 떨어진 전형적인 재시 응시자(30% 오답)를 흉내 낸다. */
+      const wrong = [], wrongStmts = {};
+      j.forEach((it, i) => { if (i % 10 < 3) { wrong.push(it.c); wrongStmts[norm(it.s)] = 1; } });
+      const r = E.buildRetake(2, rc, wrong, FB, Object.assign({}, seen), wrongStmts);
+      let rep = 0;
+      r.items.forEach(it => { items++; if (seen[norm(it.s)]) { rep++; repeat++; } });
+      if (rep > worst[1]) worst = [f, rep];
+    });
+    console.log('  회차 ' + rounds + ' · 재시 ' + items + '문항 중 이미 본 문장 ' + repeat +
+                '개 (최악 ' + worst[0].replace(/round_|\.json/g, '') + ' ' + worst[1] + ')');
+    assert(rounds >= 40 && items >= 2000, '회차 자료를 제대로 못 읽었다');
+    /* form 이 동난 개념은 원본으로 돌아갈 수밖에 없다(그때는 다른 개념으로도 못
+       바꾼다). 그런 자리를 0 으로 못 박으면 검사가 거짓말이 되므로, 눈에 띄면
+       바로 알 수 있는 선(회차당 1문항 미만)으로 둔다. 지금은 46회차 통틀어 2개다. */
+    assert(repeat <= rounds, '이미 본 문장이 재시에 ' + repeat + '개 (회차당 1개를 넘음) · 최악 ' + worst[0]);
+    assert(worst[1] <= 3, worst[0] + ' 한 회차에만 ' + worst[1] + '개');
+
+    /* 규칙 자체도 본다 — 맞힌 개념이라고 seen 을 건너뛰면 안 된다. */
+    const src = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    assert(/!usedThis\[norm\(orig\.s\)\] && !seenStatements\[norm\(orig\.s\)\]/.test(src),
+      '맞힌 개념에서 이미 본 문장을 다시 거른다는 조건이 사라졌다');
+  });
+
+  /* 오답 뒤에 읽는 해설이 개념 이름만 던지면 도움이 안 된다. 고쳐 놓은 것이
+     되돌아가지 않게 못 박는다(재어 보고 고른 것들이다). */
+  await test('내용 · 해설이 정의를 되풀이하지 않는다', async () => {
+    /* 정의형 O문항의 해설이 그 정의의 **이름**만 되뇌는 자리가 38종 78문항
+       있었다 — "끓는점은 증기 압력이 외부 압력과 같아지는 온도이다" → `끓는점의
+       정의.` 학생은 이미 그 문장을 읽었고, 알고 싶은 것은 그래서 무엇이 달라지는가다.
+       (짧다고 다 나쁜 것은 아니다 — `H⁺가 많다.` 처럼 이유를 말하는 해설은 그대로 뒀다.) */
+    const AD = path.join(ROOT, 'appdata');
+    const NAME = /^[가-힣A-Za-z0-9·\s]{2,16}(정의|법칙|원리|규칙)\.?$/;
+    const hit = [];
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      [d.jeongsi].concat(d.retakeC || []).forEach(b => {
+        if (!b || !Array.isArray(b.items)) return;
+        b.items.forEach(it => {
+          const w = String((it && it.w) || '').trim();
+          if (NAME.test(w)) hit.push(f.replace(/round_|\.json/g, '') + ' ' + it.n + ' → ' + w);
+        });
+      });
+    });
+    assert(hit.length === 0, '개념 이름만 던지는 해설 ' + hit.length + '건: ' + hit.slice(0, 4).join(' / '));
+  });
+
+  await test('내용 · 해설이 이름만 던지지 않는다', async () => {
+    const AD = path.join(ROOT, 'appdata');
+    const bad = { '확장옥텟 분자의 입체 구조.': 0, '오비탈 양자수.': 0 };
+    let n = 0;
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).forEach(f => {
+      const t = fs.readFileSync(path.join(AD, f), 'utf8');
+      Object.keys(bad).forEach(k => { const m = t.split('"w": "' + k + '"').length - 1; bad[k] += m; });
+      n++;
+    });
+    assert(n >= 40, '회차 자료를 못 읽었다');
+    /* '확장옥텟 분자의 입체 구조.' 는 SF₄·PF₅·ClF₃… 열 분자에 같은 문구가 붙어
+       있었다 — 정답이 O 든 X 든 똑같아서 무엇이 틀렸는지 알 길이 없었다.
+       '오비탈 양자수.' 는 스핀양자수 문항에 붙은 **다른 개념 이름**이었다. */
+    Object.keys(bad).forEach(k => assert(bad[k] === 0, '되돌아온 해설: "' + k + '" ' + bad[k] + '건'));
+  });
+
+  await test('내용 · 매주 가는 문구가 되풀이되지 않는다', async page => {
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => {
+      const sizes = {};
+      Object.keys(RXBANK.openers).forEach(k => { sizes['openers.' + k] = RXBANK.openers[k].length; });
+      Object.keys(RXBANK.chronic).forEach(k => { sizes['chronic.' + k] = RXBANK.chronic[k].length; });
+      sizes['closers'] = RXBANK.closers.length;
+      /* 뽑는 규칙 자체를 확인한다: 지난 회차와 같은 자리를 고르면 비켜서야 한다. */
+      const arr = ['a', 'b', 'c', 'd', 'e'];
+      const same = _rxPick(arr, 7, 7);          // 같은 씨앗 → 비켜서야 한다
+      const alone = _rxPick(['only'], 7, 7);    // 하나뿐이면 비킬 곳이 없다
+      const noPrev = _rxPick(arr, 7, null);     // 첫 회차엔 피할 것이 없다
+      return { sizes, same, alone, noPrev, plain: arr[7 % arr.length] };
+    });
+    Object.keys(r.sizes).forEach(k => {
+      const need = k.indexOf('chronic') === 0 ? 2 : 5;
+      assert(r.sizes[k] >= need, k + ' 변형이 ' + r.sizes[k] + '개뿐 (최소 ' + need + ')');
+    });
+    assert(r.same !== r.plain, '지난 회차와 같은 문단을 다시 고른다');
+    assert(r.alone === 'only', '변형이 하나뿐일 때 비어 버린다');
+    assert(r.noPrev === r.plain, '첫 회차에서 괜히 비켜선다');
+
+    /* 뱅크에 넣어 놓고 안 쓰면 없는 것과 같다. */
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    assert(/RXBANK\.chronic\.many\[0\]/.test(src) === false, 'chronic 이 첫 문단만 쓴다');
+    assert(/_rxPick\(RXBANK\.chronic\.many/.test(src), 'chronic 을 골라 쓰지 않는다');
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     "반복해서 막히는 개념" 은 서로 다른 회차에서 **같은 이름**의 오개념을
+     틀렸을 때만 뜬다. 이름이 갈려 있으면 같은 곳에서 세 번 막혀도 신호가 없다.
+
+     세어 보니 793종 가운데 474종(59.8%)이 단 한 회차에만 있어서, 문항
+     602개(21.8%)는 아무리 틀려도 구조적으로 신호를 못 냈다 — 갈린 이유는
+     대부분 조사와 어순(`몰농도 온도`/`몰농도와 온도`)이었다.
+     ══════════════════════════════════════════════════════════════ */
+  await test('내용 · 같은 개념이 이름 때문에 갈리지 않는다', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const AD = path.join(ROOT, 'appdata');
+    const used = {}, rounds = {};
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      const key = d.course + '#' + d.round;
+      [d.jeongsi].concat(d.retakeC || []).forEach(b => {
+        if (!b || !Array.isArray(b.items)) return;
+        b.items.forEach(it => {
+          const m = String((it && it.mis) || '').trim(); if (!m) return;
+          used[m] = (used[m] || 0) + 1;
+          (rounds[m] || (rounds[m] = {}))[key] = 1;
+        });
+      });
+    });
+    const nRound = m => Object.keys(rounds[m] || {}).length;
+    const merged = {};
+    Object.keys(rounds).forEach(m => {
+      const c = E.misCanon(m);
+      Object.keys(rounds[m]).forEach(k => { (merged[c] || (merged[c] = {}))[k] = 1; });
+    });
+    const blockedBefore = Object.keys(used).filter(m => nRound(m) < 2)
+      .reduce((t, m) => t + used[m], 0);
+    const blockedAfter = Object.keys(used)
+      .filter(m => Object.keys(merged[E.misCanon(m)] || {}).length < 2)
+      .reduce((t, m) => t + used[m], 0);
+    console.log('  신호를 못 내던 문항 ' + blockedBefore + ' → ' + blockedAfter +
+                ' · 매핑 ' + Object.keys(E.MIS_CANON).length + '개');
+    assert(blockedAfter < blockedBefore, '이름 정리가 아무것도 살리지 못했다');
+    assert(blockedAfter <= 520, '아직 ' + blockedAfter + '문항이 신호를 못 낸다');
+
+    /* ⚠ 이름만 닮고 개념이 다른 것을 합치면 남의 약점이 섞인다. 사람이 빼 둔
+       것들이 실수로 다시 들어오면 여기서 걸린다. */
+    [['원자 구성', '원자핵 구성'], ['몰농도 정의', '몰랄 농도 정의'],
+     ['전자 전이', '전자 이동'], ['끓는점 오름', '어는점 내림'],
+     ['반응 차수', '반응 지수'], ['원자 수 세기', '원소 수 세기']]
+      .forEach(([a, b]) => assert(E.misCanon(a) !== E.misCanon(b),
+        '다른 개념을 합쳤다: ' + a + ' / ' + b));
+
+    /* 대표 이름으로 바뀐 뒤에도 설명을 찾을 수 있어야 한다 — 못 찾으면
+       "3개 회차 반복" 을 짚어 놓고 도움을 못 준다. */
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const one = JSON.parse(src.match(/const ONELINE=(\{[\s\S]*?\});\n/)[1]);
+    const core = JSON.parse(src.match(/const CORE=(\{[\s\S]*?\});\n/)[1]);
+    const noHelp = Object.keys(E.MIS_CANON).map(k => E.MIS_CANON[k])
+      .filter(t => !one[t] || !core[t]);
+    assert(noHelp.length === 0, '대표 이름에 설명이 없다: ' + noHelp.slice(0, 4).join(' / '));
+
+    /* 자료(mis)와 해설 사전은 손대지 않는다 — 시트에 쌓인 지난 기록이 옛 이름이라,
+       집계에서만 바꿔야 지난 학기까지 같이 살아난다. */
+    const eng = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    assert(/var mk = misCanon\(m\);/.test(eng), '집계에서 대표 이름을 안 쓴다');
+    assert(Object.keys(used).some(m => E.MIS_CANON[m]), '자료의 태그가 매핑에 안 걸린다');
+  });
+
   await test('내용 · 짚은 개념에는 설명이 있다', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
     const dictOf = name => {

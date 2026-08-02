@@ -6,6 +6,40 @@
 (function (root) {
   'use strict';
 
+  /* ══════════════════════════════════════════════════════════════
+     같은 개념이 다른 이름으로 흩어져 있다
+
+     "반복해서 막히는 개념"은 **서로 다른 회차에서 같은 이름의 오개념을 틀렸을
+     때**만 뜬다(아래 chronic). 그런데 이름이 갈려 있으면 같은 곳에서 세 번을
+     막혀도 신호가 안 난다 — 세어 보니 오개념 793종 가운데 **474종(59.8%)이 단
+     한 회차에만 있어서**, 문항 602개(21.8%)는 아무리 틀려도 구조적으로 신호를
+     못 냈다.
+
+     갈린 이유는 표기와 어순이다: `몰농도 온도`/`몰농도와 온도`,
+     `압력과 끓는점`/`끓는점과 압력`, `옥텟규칙`/`옥텟 규칙`, `몰질량`/`질량 계산`
+     (문항 문장이 글자까지 같다).
+
+     [자료는 고치지 않는다]
+     `mis` 원본은 그대로 둔다. 해설·오답노트는 지금 이름 그대로 나가야 하고,
+     무엇보다 **시트에 이미 쌓인 지난 학기 기록**이 옛 이름으로 적혀 있다.
+     집계할 때만 대표 이름으로 바꿔 보면 지난 기록까지 같이 살아난다.
+
+     [넣은 것만 넣었다]
+     묶음마다 증거를 요구했다 — 조사·어순만 다르거나(토큰 집합 동일), 문항의
+     정답 문장이 실제로 겹치거나, 한쪽 이름이 다른 쪽을 통째로 품는 경우.
+     ⚠ `원자 구성`(양성자+중성자+전자)과 `원자핵 구성`(핵=양성자+중성자)처럼
+     이름만 닮고 개념이 다른 것은 **뺐다.** 애매한 27묶음은 사람이 볼 몫으로
+     남겼다 — 자동으로 합치면 남의 개념이 섞인다.
+
+     ⚠ `불활성 기체 → 비활성 기체` 는 표기 통일이라 **자료 쪽도 고쳤다.** 그래도
+     여기 남겨 둔다 — 시트에 이미 쌓인 지난 기록은 옛 표기로 적혀 있어서, 이
+     줄이 없으면 그 학생의 지난 회차가 다른 개념으로 갈린다. */
+  var MIS_CANON = {"불활성 기체":"비활성 기체","Kp": "Kc-Kp 관계","Kw 일정성": "Kw","Kw 적용": "Kw","Kw와 온도": "Kw","VSEPR 구조": "VSEPR","VSEPR 원리": "VSEPR","강한 장": "강한 장과 스핀","결합 에너지 적용": "결합 에너지","결합 에너지로 ΔH": "결합 에너지","공유결합": "공유 결합","공유결합 판정": "공유 결합","그레이엄": "그레이엄 법칙","농도와 총괄성": "총괄성 정의","돌턴 분압": "돌턴 법칙","동위원소 vs 동중원소": "동위원소","동위원소 전자": "동위원소","동위원소 정의": "동위원소","동위원소 판정": "동위원소","동적 평형": "동적 평형 개념","동적 평형 예": "동적 평형 개념","동적 평형 정의": "동적 평형 개념","르샤틀리에": "르샤틀리에 정의","르샤틀리에 활용": "르샤틀리에 정의","몰농도와 온도": "몰농도 온도","몰랄 농도": "몰랄 농도 정의","몰랄 농도 의미": "몰랄 농도 정의","몰분율 정의": "몰분율","물 이온곱": "물의 이온곱","물질 분류": "물질 분류 판정","반감기 계산": "반감기","반데르발스": "반데르발스 상수","반데르발스 식": "반데르발스 상수","반응 속도 정의": "반응 속도","반응 속도 표현": "반응 속도","반응 지수": "반응 지수 방향","반응 지수 활용": "반응 지수 방향","반응엔탈피": "반응엔탈피 계산","반응엔탈피 정의": "반응엔탈피 계산","반응지수": "반응 지수 방향","배위수": "배위수와 구조","분자 결정 녹는점": "분자 결정","분자 루이스 구조": "루이스 구조","분자결정": "분자 결정","분자결정 비교": "분자 결정","브뢴스테드 정의": "브뢴스테드-라우리","비금속 전기음성도": "전기음성도","실험식 구하기": "실험식 도출","실험식-분자식": "실험식·분자식 관계","실험식→분자식": "실험식·분자식 관계","아레니우스 식": "아레니우스","알짜 이온 반응": "알짜 이온 반응식","압력과 기체 용해도": "기체 용해도와 압력","압축 인자 해석": "압축 인자","에스터 성질": "에스터","에스터화": "에스터","열역학 제2법칙": "제2법칙","오비탈 기호": "오비탈","오비탈 모양": "오비탈","옥텟규칙": "옥텟 규칙","온도와 기체 용해도": "기체 용해도와 온도","용해도 정의": "용해도","용해성": "용해성 규칙","운동론": "운동 에너지와 온도","원자 반지름 비교": "원자 반지름","원자 번호": "원자번호","원자량": "원자량 정의","원자량 단위": "원자량 정의","유효숫자 연산": "유효숫자","유효핵전하 주기성": "유효핵전하","이상 기체": "상태 방정식","이온결정": "이온 결정","이온결정 배열": "이온 결정","이온결정 성질": "이온 결정","이온결합": "이온 결합","이온결합 판정": "이온 결합","이온화 에너지 비교": "이온화 에너지","이온화 에너지 주기성": "이온화 에너지","일정 성분비": "일정 성분비 적용","일정 성분비 범위": "일정 성분비 적용","일정 성분비 법칙": "일정 성분비 적용","입자 전하비": "입자 전하","자발성": "자발성 판단","자발성 결정": "자발성 판단","자발성 방향": "자발성 판단","자유 에너지": "깁스 자유 에너지","전기분해": "전기분해 전극","전기음성도 비교": "전기음성도","전기음성도 주기성": "전기음성도","전자 보존": "전자 균형","정·역반응 ΔH": "정·역반응","정·역반응 열": "정·역반응","제곱평균제곱근 속력": "vrms","족과 원자가 전자": "원자가 전자","질량 계산": "몰질량","질량 보존 법칙": "질량 보존","질량수 계산": "질량수","질소": "질소 안정성","총괄성": "총괄성 정의","총괄성 관계": "총괄성 정의","총괄성 크기": "총괄성 정의","카복실산": "카복실산 성질","카복실산 반응": "카복실산 성질","카복실산 예": "카복실산 성질","파울리 배타원리": "파울리 원리","퍼센트 농도 정의": "퍼센트 농도","퍼센트 농도와 온도": "퍼센트 농도 온도","평형 상수": "평형 상수 의미","평형 상수 해석": "평형 상수 의미","헤스 법칙 적용": "헤스 법칙","헨리 법칙 계산": "헨리 법칙","헨리 법칙 한계": "헨리 법칙","화학반응식 계수": "계수 규칙","희석 계산": "희석"};
+  function misCanon(m) {
+    var k = (m == null ? '' : String(m)).trim();
+    return MIS_CANON[k] || k;
+  }
+
   // ---------- 공통 유틸 ----------
   function norm(s) {            // 문장 정규화(공백·괄호 미세차 흡수) → 중복 판별용
     return (s || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
@@ -193,9 +227,20 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
         p = nwFresh(fb) || nwUnused(fb);
         if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w };
       } else {
-        // 맞힌 개념: 원본 유지(form 절약), 충돌 시에만 비오답 form으로
-        if (!usedThis[norm(orig.s)] && !wrongStmts[norm(orig.s)]) pick = orig;
-        else { p = nwUnused(fb); if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w }; }
+        /* 맞힌 개념: 예전에는 원본을 그대로 뒀다(form 절약). 그런데 학생 화면과
+           성적표는 **"같은 문제는 다시 나오지 않습니다"** 라고 약속한다.
+           재어 보니 retakeC 문장의 13%가 정시 문장과 글자까지 같아서, 30%를
+           틀린 학생이 60문항 중 5~6문항을 **그대로 다시** 보고 있었다.
+           맞힌 개념이라도 이미 본 문장이면 기억으로 답하게 되어 확인이 안 된다.
+
+           그래서 순서를 뒤집는다: 안 본 문장을 먼저 찾고, form 이 동났을 때만
+           원본으로 돌아간다. 아낄 것은 form 이 아니라 약속이다.
+           (그다음 자리는 subForm 이 재노출 0 을 보장하고, 원본은 최후다.) */
+        if (!usedThis[norm(orig.s)] && !seenStatements[norm(orig.s)] && !wrongStmts[norm(orig.s)]) pick = orig;
+        else {
+          p = nwFresh(fb) || nwUnused(fb);
+          if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w };
+        }
       }
       if (!pick) { var sub = subForm(); if (sub) { pick = sub; subbed = true; } }  // 소진 → 범위 내 다른 개념으로 대체
       if (!pick) pick = orig;                                                       // 최후(이론상 도달 안 함)
@@ -206,6 +251,45 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
                targeted: !!wrong[it.c] && !subbed, substituted: subbed,
                swapped: norm(pick.s) !== norm(it.s), reusedWrong: !!wrongStmts[norm(pick.s)] };
     });
+
+    /* ── 틀린 개념이 재시에 아예 안 나오던 문제 ────────────────────────
+       재시 묶음(retakeC)은 회차마다 고정인데, 세어 보니 그 묶음이 정시 개념의
+       **55.9%만** 담고 있었다. 학생이 틀린 개념이 나머지 44% 쪽이면, "틀린
+       개념만 골라 새 문항으로 확인" 한다면서 **그 개념을 한 번도 안 묻는다.**
+
+       새 문항을 만들 필요는 없다 — 빠진 개념 1,008개가 **전부 forms_bank 에
+       문항을 갖고 있다.** 배치 문제였다.
+
+       그래서: 학생이 **맞힌** 개념이 차지한 자리를, 아직 안 나온 **틀린** 개념으로
+       바꾼다. 맞힌 개념은 상대적으로 확인할 이유가 적고, 재시의 목적은 틀린
+       곳을 다시 묻는 것이다. 바꿀 문항이 없으면 그 자리는 그대로 둔다. */
+    var inSet = {}; items.forEach(function (x) { if (wrong[x.c]) inSet[x.c] = 1; });
+    var missing = Object.keys(wrong).filter(function (c) {
+      return !inSet[c] && (formsBank[c] && (formsBank[c].forms || []).length);
+    });
+    if (missing.length) {
+      /* 자리를 고르는 순서: (1) 맞힌 개념 자리, (2) **이미 다른 자리에 나온**
+         개념이 한 번 더 차지한 자리. (2)를 안 쓰면 많이 틀린 학생일수록 바꿀
+         자리가 없어 빠지는 개념이 늘어난다 — 오답률 80%에서 40개가 그랬다.
+         이미 한 번 나온 개념을 두 번 묻는 것보다, 아직 한 번도 안 물은 개념을
+         묻는 편이 낫다. */
+      var firstAt = {};
+      items.forEach(function (x, ix) { if (firstAt[x.c] == null) firstAt[x.c] = ix; });
+      for (var s2 = 0; s2 < items.length && missing.length; s2++) {
+        var dupSlot = firstAt[items[s2].c] !== s2;     // 그 개념의 두 번째 이후 자리
+        if (wrong[items[s2].c] && !dupSlot) continue;  // 틀린 개념의 첫 자리는 지킨다
+        var c2 = missing[0], fb2 = formsBank[c2];
+        var p2 = nwFresh(fb2) || nwUnused(fb2);
+        if (!p2) { missing.shift(); s2--; continue; }  // 낼 문항이 없으면 다음 개념으로
+        usedThis[norm(p2.s)] = 1; seenStatements[norm(p2.s)] = 1;
+        if (firstAt[c2] == null) firstAt[c2] = s2;
+        items[s2] = { c: c2, u: items[s2].u, mis: (fb2 && fb2.m) || '',
+                      a: p2.a, s: p2.s, f: p2.f, w: p2.w,
+                      targeted: true, substituted: false, swapped: true,
+                      reusedWrong: !!wrongStmts[norm(p2.s)], filledGap: true };
+        missing.shift();
+      }
+    }
     return { items: items, seenStatements: seenStatements, n: items.length };
   }
 
@@ -258,7 +342,10 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
       var misRounds = {};
       rs.forEach(function (r) {
         (r.wrongMis || []).forEach(function (m) {
-          (misRounds[m] || (misRounds[m] = {}))[r.course + '#' + r.round] = 1;
+          /* 집계에서만 대표 이름으로 본다 — 화면에 적히는 이름은 여기서 정하고,
+             자료(mis)와 해설 사전은 손대지 않는다. */
+          var mk = misCanon(m);
+          (misRounds[mk] || (misRounds[mk] = {}))[r.course + '#' + r.round] = 1;
         });
       });
       var chronic = Object.keys(misRounds).map(function (m) {
@@ -322,6 +409,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
   var api = {
     norm: norm, studentKey: studentKey, axisOf: axisOf, axisName: axisName, AXES: AXES,
     gradeAttempt: gradeAttempt, notCorrectConcepts: notCorrectConcepts,
+    misCanon: misCanon, MIS_CANON: MIS_CANON,
     diagnose: diagnose, buildGate: buildGate, buildRetake: buildRetake, cumulative: cumulative,
     spacedReview: spacedReview
   };
