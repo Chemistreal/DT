@@ -15,24 +15,33 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{ --paper:#FAFAF7;--surface:#FFFFFF;--ink:#16202E;--sub:#61707F;--faint:#8A95A2;--line:#E7E8E2;--line2:#EEF0EA;
-  --teal:#0B6E6E;--teal-d:#0A5A5A;--teal-soft:#E4F0EF;--teal-line:#BFE0DD;--o:#1B8A4C;--o-bg:#E7F5EC;--x:#C0392B;--x-bg:#FBEBE9;
-  --brass:#A9853C;--brass-soft:#F5EEDF;--shadow:0 1px 2px rgba(16,32,46,.04),0 6px 20px rgba(16,32,46,.05);}
+/* ── 학부모가 휴대폰으로 읽는 문서다 ──────────────────────────────
+   재어 보니 9~11px 글씨가 서른여섯 군데였고, --faint 는 종이색 위에서
+   2.91:1 이었다(본문 글씨는 4.5:1 이 필요하다). 그 색으로 적힌 것이
+   장식이 아니라 '응시 인원이 적은 회차에도 위치가 흔들리지 않게…' 같은
+   **읽어야 할 설명**이라 더 문제였다. 바닥을 11.5px 로 올리고, 색조는
+   그대로 둔 채 밝기만 낮춰 4.5:1 을 맞춘다.
+   ⚠ 대비는 **글씨가 실제로 얹히는 바탕** 위에서 재야 한다. --sub 는
+   종이색 위에서는 4.86:1 로 넉넉한데, 옅은 옥색 카드(#E4F0EF) 위에서는
+   4.36:1 로 떨어진다 — 종이색 위에서만 재면 이걸 놓친다. */
+:root{ --paper:#FAFAF7;--surface:#FFFFFF;--ink:#16202E;--sub:#5F6D7C;--faint:#626D7B;--line:#E7E8E2;--line2:#EEF0EA;
+  --teal:#0B6E6E;--teal-d:#0A5A5A;--teal-soft:#E4F0EF;--teal-line:#BFE0DD;--o:#197E46;--o-bg:#E7F5EC;--x:#C0392B;--x-bg:#FBEBE9;
+  --brass:#85682F;--brass-soft:#F5EEDF;--shadow:0 1px 2px rgba(16,32,46,.04),0 6px 20px rgba(16,32,46,.05);}
 *{box-sizing:border-box}html,body{margin:0}
 body{font-family:'Pretendard',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;-webkit-font-smoothing:antialiased}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-feature-settings:"tnum"}
 .wrap{max-width:680px;margin:0 auto;padding:0 14px calc(60px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line)}
 .hd{max-width:680px;margin:0 auto;padding:11px 14px;display:flex;align-items:center;gap:10px}
 .logo{width:24px;height:24px;border-radius:7px;background:linear-gradient(150deg,var(--teal),var(--teal-d));position:relative;flex:none}
 .logo:after{content:"";position:absolute;inset:6px 6px auto auto;width:6px;height:6px;border-radius:50%;background:var(--brass)}
 .dawon-logo{height:30px;width:auto;display:block;flex:none}
-.brand{font-weight:800;font-size:14px;letter-spacing:-.01em}.brand small{display:block;font-weight:500;color:var(--sub);font-size:10px;margin-top:-2px}
+.brand{font-weight:800;font-size:14px;letter-spacing:-.01em}.brand small{display:block;font-weight:500;color:var(--sub);font-size:11.5px;margin-top:-2px}
 .seg{margin-left:auto;display:flex;background:var(--line2);border-radius:9px;padding:3px}
 .seg button{border:0;background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:var(--sub);padding:6px 12px;border-radius:7px;cursor:pointer}
 .seg button.on{background:var(--surface);color:var(--teal);box-shadow:var(--shadow)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:13px 0;box-shadow:var(--shadow)}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--teal);font-weight:700;text-transform:uppercase}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.08em;color:var(--teal);font-weight:700;text-transform:uppercase}
 h2{font-size:12px;letter-spacing:.05em;color:var(--teal);font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:7px}
 h2:before{content:"";width:14px;height:2px;background:var(--teal);border-radius:2px}
 .muted{color:var(--faint);font-size:11.5px}.note{color:var(--sub);font-size:11.5px}
@@ -45,7 +54,7 @@ h2:before{content:"";width:14px;height:2px;background:var(--teal);border-radius:
 .signname{font-weight:800;color:var(--ink);margin-top:4px;font-size:13.5px;letter-spacing:-.01em}
 /* HERO */
 .hero{background:linear-gradient(160deg,#0B6E6E,#0A5A5A);color:#fff;border:0;padding:22px 20px}
-.hero .eyebrow{color:#9FD8D3}
+.hero .eyebrow{color:#C0E6E2}
 .hero .who{font-size:13px;color:#CDE7E4;margin-bottom:3px}
 .hero .line{font-size:20px;font-weight:800;line-height:1.38;letter-spacing:-.015em;margin:7px 0 0}
 .hero .linesub{font-size:15px;font-weight:600;line-height:1.45;color:#CDE7E4;margin:7px 0 0}
@@ -54,50 +63,50 @@ h2:before{content:"";width:14px;height:2px;background:var(--teal);border-radius:
 .hero .sub{font-size:12.5px;color:#BFE0DD;margin-top:8px}
 .hero .stat{display:flex;gap:18px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.18)}
 .hero .stat div .k{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;line-height:1}
-.hero .stat div .l{font-size:10.5px;color:#9FD8D3;margin-top:3px}
+.hero .stat div .l{font-size:11.5px;color:#C0E6E2;margin-top:3px}
 /* 이번 회차 ladder */
 .ladder{display:flex;align-items:stretch;gap:0;margin:6px 0 2px}
 .lnode{flex:1;text-align:center;position:relative}
 .lnode .sc{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:800}
-.lnode .at{font-size:10.5px;color:var(--sub);margin-top:2px}
-.lnode .chip{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px;margin-top:4px}
+.lnode .at{font-size:11.5px;color:var(--sub);margin-top:2px}
+.lnode .chip{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 6px;border-radius:20px;margin-top:4px}
 .lnode.f .sc{color:var(--x)}.lnode.f .chip{background:var(--x-bg);color:var(--x)}
 .lnode.p .sc{color:var(--o)}.lnode.p .chip{background:var(--o-bg);color:var(--o)}
 .lnode:not(:last-child):after{content:"→";position:absolute;right:-7px;top:6px;color:var(--faint);font-size:13px}
 /* SVG chart */
 .chartwrap{margin:2px -4px 0}
 svg{width:100%;height:auto;display:block;overflow:visible}
-.legend{display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--sub)}
+.legend{display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11.5px;color:var(--sub)}
 .legend i{display:inline-block;width:16px;height:0;border-top-width:2px;border-top-style:solid;vertical-align:middle;margin-right:5px}
 /* axis bars */
 .abar{display:flex;align-items:center;gap:10px;margin:9px 0}
 .abar .ax{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:12px;color:#fff;background:var(--teal);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
 .abar .an{font-size:12.5px;width:120px;flex:none}
 .abar .at{flex:1;height:9px;background:var(--line2);border-radius:9px;overflow:hidden}.abar .at i{display:block;height:100%;background:linear-gradient(90deg,var(--teal-line),var(--teal));border-radius:9px}
-.abar .av{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--sub);width:24px;text-align:right;flex:none}
+.abar .av{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--sub);width:24px;text-align:right;flex:none}
 .abar.lead .ax{background:var(--x)}.abar.lead .at i{background:linear-gradient(90deg,#E8A99F,var(--x))}
 /* prescription */
 .rx{border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:11px;padding:13px 14px;margin:10px 0;background:#fff}
 .rx .top{display:flex;align-items:center;gap:8px}
-.rx .nm{font-weight:700;font-size:14px}.rx .freq{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--x);background:var(--x-bg);padding:2px 8px;border-radius:20px;margin-left:auto;font-weight:700}
+.rx .nm{font-weight:700;font-size:14px}.rx .freq{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--x);background:var(--x-bg);padding:2px 8px;border-radius:20px;margin-left:auto;font-weight:700}
 .rx .ol{font-size:12.5px;color:#33414e;margin-top:7px;background:var(--brass-soft);border-radius:8px;padding:9px 11px}
 .rx .ol b{color:var(--ink)}
 /* mastery / 성실도 */
 .kv{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:9px 0;border-bottom:1px solid var(--line2)}.kv:last-child{border-bottom:0}.kv .r{color:var(--sub);font-size:12px}
 .dots{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
-.adot{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;border:1px solid var(--line)}
+.adot{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;border:1px solid var(--line)}
 .adot.p{background:var(--o-bg);color:var(--o);border-color:var(--o-bg)}
 .adot.r{background:var(--brass-soft);color:var(--brass);border-color:#E9DCC0}
 /* teacher only */
 .t-only{display:none}
 table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
-th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line2)}th{font-size:10.5px;color:var(--faint);font-weight:700;letter-spacing:.03em}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line2)}th{font-size:11.5px;color:var(--faint);font-weight:700;letter-spacing:.03em}
 td.mono,th.mono{font-family:'JetBrains Mono',monospace}
 .copy{display:flex;gap:8px;align-items:center;margin-top:8px}
 .copy textarea{flex:1;font-family:'Pretendard',sans-serif;font-size:12.5px;border:1px solid var(--line);border-radius:9px;padding:10px;resize:none;height:62px;color:var(--ink)}
 .copy button{background:var(--teal);color:#fff;border:0;border-radius:9px;font-family:inherit;font-weight:700;font-size:12px;padding:0 14px;cursor:pointer;align-self:stretch}
-.foot{text-align:center;padding:18px 0 6px;color:var(--faint);font-size:11px}
-.live{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:20px;padding:4px 11px;margin-top:6px}
+.foot{text-align:center;padding:18px 0 6px;color:var(--faint);font-size:11.5px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--teal);background:var(--teal-soft);border:1px solid var(--teal-line);border-radius:20px;padding:4px 11px;margin-top:6px}
 .live .pulse{width:7px;height:7px;border-radius:50%;background:var(--o);box-shadow:0 0 0 0 rgba(27,138,76,.5);animation:pl 2s infinite}
 @keyframes pl{0%{box-shadow:0 0 0 0 rgba(27,138,76,.5)}70%{box-shadow:0 0 0 6px rgba(27,138,76,0)}100%{box-shadow:0 0 0 0 rgba(27,138,76,0)}}
 .verdict5{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#fff;margin-bottom:8px}
@@ -105,19 +114,19 @@ td.mono,th.mono{font-family:'JetBrains Mono',monospace}
 .verdict5.st-ok .sig{background:#7CE3A6}.verdict5.st-warn .sig{background:#F2C879}.verdict5.st-no .sig{background:#F0998C}
 .herorow{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.18)}
 .herorow .stat{margin-top:0;padding-top:0;border-top:0}
-.sparkbox{color:#BFE0DD;text-align:right;flex:none}.sparkbox .sparkl{font-size:9.5px;color:#9FD8D3;margin-top:3px}
+.sparkbox{color:#BFE0DD;text-align:right;flex:none}.sparkbox .sparkl{font-size:11.5px;color:#C0E6E2;margin-top:3px}
 .todo{border-left:4px solid var(--brass)}
 .todohead{display:flex;align-items:center;gap:9px;margin-bottom:8px;flex-wrap:wrap}
-.todotag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.04em;color:#fff;background:var(--brass);padding:3px 9px;border-radius:20px}
+.todotag{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:#fff;background:var(--brass);padding:3px 9px;border-radius:20px}
 .todomis{font-size:15px;font-weight:700}
 .todointro{font-size:12.5px;color:var(--sub);line-height:1.6;margin:0 0 11px}
 .todocore{font-size:13px;color:#33414e;background:var(--brass-soft);border-radius:9px;padding:10px 12px;margin-bottom:9px}.todocore b{color:var(--ink)}
 .todohome{font-size:13px;color:var(--ink);background:var(--teal-soft);border-radius:9px;padding:10px 12px}.todohome b{color:var(--teal-d)}
-.tlab{display:block;font-size:10.5px;font-weight:700;letter-spacing:.03em;margin-bottom:5px;opacity:.9}
+.tlab{display:block;font-size:11.5px;font-weight:700;letter-spacing:.03em;margin-bottom:5px;opacity:.9}
 .todocore .tlab{color:var(--brass)}.todohome .tlab{color:var(--teal-d)}
 .hintq{color:var(--brass);font-weight:600}
 .todoguide b{color:var(--ink)}.gmuted{color:var(--faint);font-size:11.5px}
-.cbtnnote{font-size:11px;color:var(--faint);margin:9px 0 0;text-align:center;line-height:1.5}
+.cbtnnote{font-size:11.5px;color:var(--faint);margin:9px 0 0;text-align:center;line-height:1.5}
 .todoguide{font-size:12px;color:var(--sub);margin-top:9px;line-height:1.55;background:var(--line2);border-radius:9px;padding:9px 12px}
 @media (prefers-reduced-motion: reduce){ .live .pulse{animation:none} html{scroll-behavior:auto} }
 .printbtn{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--teal);background:var(--surface);border:1.5px solid var(--teal-line);border-radius:10px;padding:9px 16px;cursor:pointer}
@@ -130,18 +139,18 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .quad .qh{font-size:11.5px;color:var(--sub);font-weight:700}
 .quad .qn{font-size:24px;font-weight:800;margin:2px 0;font-family:'JetBrains Mono',monospace}
 .quad .qcell.alert .qn{color:var(--x)}.quad .qcell.good .qn{color:var(--teal-d)}
-.quad .qs{font-size:11px;color:var(--faint)}
+.quad .qs{font-size:11.5px;color:var(--faint)}
 .qptitle{font-size:12px;color:var(--sub);font-weight:700;margin:12px 0 6px}
 .qplist{display:flex;flex-direction:column;gap:7px}
 .qprow{font-size:12.5px;color:var(--ink);line-height:1.45;padding:8px 11px;background:var(--x-bg);border:1px solid #EFD8D3;border-radius:9px}
-.qprow .qpu{display:block;font-size:10.5px;color:var(--x);font-weight:700;margin-bottom:2px}
+.qprow .qpu{display:block;font-size:11.5px;color:var(--x);font-weight:700;margin-bottom:2px}
 .qdepth{font-size:12.5px;color:var(--sub);margin-top:12px;padding:11px 13px;background:var(--teal-soft);border-radius:10px;line-height:1.55}
 .qdepth b{color:var(--teal-d)}
 .pqlead{font-size:13px;color:var(--ink);background:var(--brass-soft);border:1px solid #E9DCC0;border-radius:9px;padding:9px 12px;margin:2px 0 10px}.pqlead b{color:var(--brass)}
 .pqrow{padding:9px 0;border-bottom:1px solid var(--line2)}
 .pqrow:last-child{border-bottom:0}
 .pqhead{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}
-.pqfirst{font-size:10px;font-weight:800;color:#fff;background:var(--x);border-radius:20px;padding:2px 8px}
+.pqfirst{font-size:11.5px;font-weight:800;color:#fff;background:var(--x);border-radius:20px;padding:2px 8px}
 .pqdetail{font-size:12px;color:var(--sub);line-height:1.5;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .pqchip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:7px;padding:3px 9px;border:1px solid transparent}
 .pqchip.pq-lo{background:var(--x-bg);color:var(--x);border-color:#EFD8D3}
@@ -163,34 +172,34 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 }
 .heatrow{display:flex;align-items:center;gap:10px;margin:6px 0}.heatrow .hu{font-size:12.5px;width:78px;flex:none}
 .heatrow .hbar{flex:1;height:10px;background:var(--line2);border-radius:8px;overflow:hidden}.heatrow .hbar i{display:block;height:100%;border-radius:8px}
-.heatrow .hv{font-size:10.5px;color:var(--sub);width:44px;text-align:right;flex:none}
+.heatrow .hv{font-size:11.5px;color:var(--sub);width:44px;text-align:right;flex:none}
 .radarwrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.radarwrap svg{max-width:280px}
 .radarleg{flex:1;min-width:150px}.radarleg .rl{display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 0}
-.radarleg .rk{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:11px;color:#fff;background:var(--teal);width:24px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none}
+.radarleg .rk{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:11.5px;color:#fff;background:var(--teal);width:24px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex:none}
 .radarleg .rk.off{background:#C8D0D8}
 .herosub{font-size:12px;color:#CDE7E4;margin-top:8px;line-height:1.5}
-.hmeta{margin-left:auto;text-align:right}.hmeta .hdate{font-size:11px;color:var(--sub);font-family:'JetBrains Mono',monospace}.hmeta .hsub{font-size:11.5px;color:var(--ink);font-weight:600}
+.hmeta{margin-left:auto;text-align:right}.hmeta .hdate{font-size:11.5px;color:var(--sub);font-family:'JetBrains Mono',monospace}.hmeta .hsub{font-size:11.5px;color:var(--ink);font-weight:600}
 .card.warn{border-left:4px solid #D98324;background:linear-gradient(180deg,#FFF9F2,var(--surface))}
 .card.warn h2{color:#9A5A12}.warnlist{margin:6px 0 0;padding-left:18px}.warnlist li{font-size:13px;color:#5A4A38;margin:4px 0}
 .rankcard{background:linear-gradient(180deg,#F2F8F7,var(--surface));border-left:4px solid var(--teal)}
-.rankhead{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--teal-d);margin-bottom:12px}
+.rankhead{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--teal-d);margin-bottom:12px}
 .rankrow{display:flex;gap:8px}
 .rcell{flex:1;text-align:center;padding:13px 6px;background:var(--surface);border-radius:12px;border:1px solid var(--line)}
 .rcell.me{background:var(--teal);border-color:var(--teal)}
 .rcell .rv{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:800;color:var(--ink);line-height:1}
 .rcell.me .rv{color:#fff}.rcell .rv .u{font-size:13px;font-weight:700;opacity:.65}.rcell .rv .pre{font-size:13px;font-weight:700;opacity:.6;margin-right:1px}
-.rcell .rl{font-size:11px;color:var(--sub);margin-top:6px}.rcell.me .rl{color:#CDE7E4}
+.rcell .rl{font-size:11.5px;color:var(--sub);margin-top:6px}.rcell.me .rl{color:#CDE7E4}
 .rankmsg{font-size:13px;color:var(--ink);margin-top:12px;line-height:1.55;background:var(--teal-soft);border-radius:9px;padding:10px 12px}
-.ranknote{font-size:10.5px;color:var(--faint);margin-top:8px;line-height:1.5;text-align:center}
+.ranknote{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.5;text-align:center}
 .disthist{margin:14px 0 2px}
-.dhcap{font-size:10.5px;color:var(--sub);font-weight:600;margin-bottom:7px;text-align:center}
+.dhcap{font-size:11.5px;color:var(--sub);font-weight:600;margin-bottom:7px;text-align:center}
 .dhbars{display:flex;align-items:flex-end;gap:3px;height:62px;padding:0 2px}
 .dhbar{flex:1;display:flex;align-items:flex-end;height:100%}
 .dhbar i{width:100%;background:var(--line);border-radius:3px 3px 0 0;min-height:0}
 .dhbar.avg i{background:var(--faint)}
 .dhbar.me i{background:var(--teal)}
-.dhaxis{display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-top:5px;padding:0 1px}
-.dhleg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--sub);margin-top:9px;justify-content:center;flex-wrap:wrap}
+.dhaxis{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint);margin-top:5px;padding:0 1px}
+.dhleg{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--sub);margin-top:9px;justify-content:center;flex-wrap:wrap}
 .dhleg .dk{width:9px;height:9px;border-radius:2px;background:var(--line);display:inline-block;margin-left:6px}
 .dhleg .dk:first-child{margin-left:0}
 .dhleg .dk.me{background:var(--teal)}.dhleg .dk.avg{background:var(--faint)}
@@ -199,7 +208,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .gcell{flex:1;text-align:center;padding:12px 6px;background:var(--teal-soft);border-radius:11px}
 .gcell .gv{font-family:'JetBrains Mono',monospace;font-size:27px;font-weight:800;color:var(--teal-d);line-height:1}
 .gcell .gv .gu{font-size:13px;font-weight:700;opacity:.55}
-.gcell .gl{font-size:11px;color:var(--sub);margin-top:6px}
+.gcell .gl{font-size:11.5px;color:var(--sub);margin-top:6px}
 /* 틀린 것 옆에 고칠 것을 둔다. 손가락으로 짚는 자리라 넉넉히 잡는다. */
 .matrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .matlink{display:inline-block;padding:10px 16px;border:1px solid var(--brass);border-radius:10px;
@@ -215,7 +224,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .qmetric .ql{font-size:11.5px;color:var(--sub)}
 .rvrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line2)}
 .rvrow:last-child{border-bottom:0}.rvm{font-size:13px;font-weight:600}
-.rvg{font-size:11px;color:var(--faint);font-family:'JetBrains Mono',monospace}
+.rvg{font-size:11.5px;color:var(--faint);font-family:'JetBrains Mono',monospace}
 .card.strength{border-left:4px solid var(--o)}
 .strchips{display:flex;flex-wrap:wrap;gap:7px}
 .strchip{font-size:12.5px;background:var(--o-bg);color:#1B6B3C;border-radius:20px;padding:5px 12px;font-weight:600}
@@ -224,7 +233,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .cbtn:hover{filter:brightness(1.06);box-shadow:0 4px 14px rgba(169,133,60,.32)}
 .cbtn .cgo{font-family:'JetBrains Mono',monospace;font-size:12.5px;white-space:nowrap;font-weight:800}
 .dxroot{margin:16px 0 6px;padding:16px 0 2px;border-top:2px solid var(--brass)}
-.dxeyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:9px}
+.dxeyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:9px}
 .dxthesis{font-size:17.5px;line-height:1.52;color:var(--ink);margin:0 0 13px;letter-spacing:-.01em;font-weight:400}
 .dxthesis b{font-weight:700}
 .dxconv{margin:10px 0;padding:14px 12px 8px;background:#FCFAF6;border:1px solid var(--line);border-radius:10px}
@@ -233,7 +242,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .dxbars{display:flex;flex-direction:column;gap:8px}
 .dxbar{display:grid;grid-template-columns:132px 1fr 36px;align-items:center;gap:10px}
 .dxbn{font-size:12.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dxbn .rt{font-style:normal;font-size:9.5px;color:var(--brass);margin-left:5px;font-weight:700}
+.dxbn .rt{font-style:normal;font-size:11.5px;color:var(--brass);margin-left:5px;font-weight:700}
 .dxbt{height:7px;background:#EDEEE8;border-radius:4px;overflow:hidden}
 .dxbt i{display:block;height:100%;background:linear-gradient(90deg,var(--brass),#86692f);border-radius:4px}
 .dxbv{font-size:11.5px;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums}
@@ -243,7 +252,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .dxarc-h{font-size:12px;font-weight:700;color:var(--brass);letter-spacing:.02em;margin-bottom:8px}
 .dxarc-r{margin:0 0 7px;font-size:12.5px;line-height:1.5;color:#3a4654}
 .dxarc-r:last-child{margin-bottom:0}
-.dxarc-l{display:block;font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--x);margin-bottom:2px}
+.dxarc-l{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--x);margin-bottom:2px}
 .dxarc-l.b{color:var(--o)}
 
 
@@ -256,7 +265,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .rcard.unpassed{background:#FCFBF8;}
 .rc-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:9px;}
 .rc-round{font-weight:800;font-size:15px;color:var(--ink);}
-.rc-now{display:inline-block;font-size:11px;font-weight:800;color:#0B6E6E;border:1px solid #0B6E6E;border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:1px;}
+.rc-now{display:inline-block;font-size:11.5px;font-weight:800;color:#0B6E6E;border:1px solid #0B6E6E;border-radius:20px;padding:1px 8px;margin-left:6px;vertical-align:1px;}
 .rc-right{display:flex;align-items:center;gap:9px;white-space:nowrap;}
 .rc-date{font-size:12px;color:var(--sub);font-family:'JetBrains Mono',monospace;}
 .rc-verdict{font-size:12px;font-weight:800;padding:2px 9px;border-radius:20px;}
@@ -269,7 +278,7 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .rc-att.pass b{color:#0B6E6E;}
 .rc-arrow{color:#C9C6BE;font-size:12px;margin:0 3px;}
 .rc-mis{margin-top:10px;display:flex;align-items:center;flex-wrap:wrap;gap:6px;}
-.rc-mislab{font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--sub);}
+.rc-mislab{font-size:11.5px;font-weight:800;letter-spacing:.05em;color:var(--sub);}
 .rc-mispill{font-size:12px;color:#8A3B2E;background:rgba(178,60,46,.07);border:1px solid rgba(178,60,46,.2);border-radius:20px;padding:2px 9px;}
 .rc-mis.clean{color:var(--sub);font-size:12px;font-weight:500;}
 .rcard.rc-clickable{cursor:pointer;transition:border-color .12s,box-shadow .12s;}
@@ -297,11 +306,11 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .sol.u{border-left:3px solid #C9C6BE;}
 .sol-h{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:5px;}
 .sol-n{font-weight:800;font-size:14px;color:#16202E;min-width:20px;}
-.sol-mark{font-size:11px;font-weight:800;padding:1px 8px;border-radius:20px;}
+.sol-mark{font-size:11.5px;font-weight:800;padding:1px 8px;border-radius:20px;}
 .sol-mark.w{color:#B23C2E;background:rgba(178,60,46,.10);}
 .sol-mark.c{color:#0B6E6E;background:rgba(11,110,110,.10);}
 .sol-ans{font-size:12px;color:var(--sub);font-weight:700;font-family:'JetBrains Mono',monospace;}
-.sol-mis{font-size:11px;color:#8A3B2E;background:rgba(178,60,46,.07);border:1px solid rgba(178,60,46,.18);border-radius:20px;padding:1px 8px;margin-left:auto;}
+.sol-mis{font-size:11.5px;color:#8A3B2E;background:rgba(178,60,46,.07);border:1px solid rgba(178,60,46,.18);border-radius:20px;padding:1px 8px;margin-left:auto;}
 .sol-s{font-size:13.5px;color:#16202E;line-height:1.5;}
 .sol-w{margin-top:6px;font-size:12.5px;color:#4A4A4A;line-height:1.55;background:#F7F5EF;border-radius:7px;padding:7px 10px;}
 .sol-w b{color:#16202E;}
@@ -311,11 +320,11 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .misgrp{margin-bottom:15px;}
 .misgrp-h{display:flex;align-items:center;gap:8px;margin:0 0 7px;padding-bottom:5px;border-bottom:2px solid #16202E;}
 .misgrp-t{font-weight:800;font-size:14px;color:#B23C2E;}
-.misgrp-c{font-size:11px;font-weight:800;color:#fff;background:#B23C2E;border-radius:20px;padding:1px 9px;}
+.misgrp-c{font-size:11.5px;font-weight:800;color:#fff;background:#B23C2E;border-radius:20px;padding:1px 9px;}
 .wrongpick{color:#B23C2E;}
 .oxwrap{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;}
 .oxtable{flex:1;min-width:220px;border-collapse:collapse;font-size:13px;}
-.oxtable th{font-size:11px;font-weight:800;color:var(--sub);letter-spacing:.04em;padding:5px 6px;border-bottom:2px solid #16202E;text-align:center;}
+.oxtable th{font-size:11.5px;font-weight:800;color:var(--sub);letter-spacing:.04em;padding:5px 6px;border-bottom:2px solid #16202E;text-align:center;}
 .oxtable td{padding:4px 6px;text-align:center;border-bottom:1px solid #EEEBE3;font-family:'JetBrains Mono',monospace;}
 .oxtable .tn{color:#16202E;font-weight:700;width:34px;}
 .oxtable .tc{color:#4A4A4A;font-weight:700;}
@@ -748,11 +757,20 @@ function indirectHint(ol){ var GEN='어떤 것이 변하면 이게 달라지는�
   var driver=bold.split(/많을수록|클수록|작을수록|높을수록|낮을수록|적을수록|강할수록|약할수록|일수록|=|→|↑|↓|면 |:|·/)[0].replace(/[↑↓]/g,'').trim();
   if(driver && driver.length>=2 && driver.length<=16) return "핵심 단서: '"+driver+"'. 여기서 출발해 스스로 풀어보게 해 주세요";
   return GEN; }
+/* 아래쪽 학생에게도 사실대로 적는다. 예전에는 어느 자리든 '지금은 평균
+   부근입니다' 로 끝났는데, 상위 90% 인 아이에게 그 말은 사실이 아니고 —
+   사실이 아닌 말은 나머지 문장까지 못 믿게 만든다.
+   대신 **다음에 무엇을 하면 되는지**를 같이 적는다. DT 는 첫 응시가 끝이
+   아니라 재시로 채우는 시험이라, 그 말이 위로가 아니라 사실이다. */
 function rankMsg(rk){ var d=rk.score-rk.avg; var dt=d>=0?('반 평균보다 '+pt(d)+'점 높습니다'):('반 평균보다 '+pt(-d)+'점 낮습니다');
   if(rk.per100<=10) return '최상위권입니다. 반에서 상위 약 '+rk.per100+'%에 듭니다. '+dt+'.';
   if(rk.per100<=30) return '상위권입니다. 상위 약 '+rk.per100+'% 위치이고, '+dt+'.';
   if(rk.per100<=50) return '평균 이상입니다. 상위 약 '+rk.per100+'%입니다. '+dt+'.';
-  return '지금은 평균 부근입니다. '+dt+'. 첫 응시 이후 강의록과 재시가 최종 점수를 끌어올립니다.'; }
+  if(rk.per100<=70) return '지금은 반 가운데 아래입니다. 상위 약 '+rk.per100+'%이고, '+dt+
+    '. 첫 응시 이후 강의록과 재시가 최종 점수를 끌어올립니다.';
+  return '지금은 반에서 아래쪽입니다. 상위 약 '+rk.per100+'%이고, '+dt+
+    '. 여기서부터 채워 갑니다 — 이 시험은 첫 응시 점수보다 **재시로 무엇을 잡았는지**가 더 중요합니다. '+
+    '아래 취약 개념부터 하나씩 잡으면 됩니다.'; }
 /* 점수는 늘 소수 둘째 자리까지 적는다(셋째 자리에서 반올림).
    그냥 빼서 붙이면 부동소수점 찌꺼기가 그대로 나간다 — 학부모가 받은 문구에
    '반 평균보다 0.29999999999999716점 높습니다' 라고 찍혔다. */
@@ -785,8 +803,24 @@ function rankCard(rk){ return `<div class="card rankcard">
   </div>
   ${distHist(rk)}
   <div class="rankmsg">${rankMsg(rk)}</div>
+  ${(function(){
+     /* 석차를 모두에게 보여 주기로 하면서, 예전에 석차 대신 뜨던 카드(qualCard)가
+        가진 두 가지를 여기로 옮겨 온다 — 첫 응시 → 최종 회복 점수와 재시 단추.
+        **가장 필요한 학생에게서 재시 단추가 사라지면** 안 된다. */
+     var rec=(latest&&latest.finalScore!=null&&latest.jeongsiScore!=null)?(latest.finalScore-latest.jeongsiScore):0;
+     var band=(latest&&latest.passed)?'':'<div class="qbadge" style="margin-top:12px;display:inline-block">다지기 단계</div>';
+     var recH=rec>0?`<div class="qmetric" style="margin-top:10px"><span class="qv">+${pt(rec)}</span><span class="ql">첫 응시 → 최종</span></div>`:'';
+     return band+recH+retakeCTA();
+   })()}
   <p class="ranknote">응시 인원이 적은 회차에도 위치가 흔들리지 않도록 보정한 값입니다.</p></div>`; }
-function showRank(rk){ return !!(rk && rk.n>=5 && rk.score>rk.avg && rk.score>=80); }
+/* ── 석차는 잘한 학생만 보는 것이 아니다 ─────────────────────────────
+   예전 조건은 `rk.score>rk.avg && rk.score>=80` 이었다. 반 평균보다 높고 80점을
+   넘어야만 석차 카드가 떴다 — **어려워하는 아이의 학부모는 우리 아이가 어디쯤인지
+   영영 못 봤다.** 좋은 소식만 보여 주면, 보여 준 것도 못 믿게 된다.
+
+   남는 조건은 사람 수뿐이다. 다섯 명이 안 되면 '상위 50%' 가 뜻이 없고,
+   두세 명일 때는 그 말이 곧 누구인지를 가리킨다(같은 반 학부모끼리 안다). */
+function showRank(rk){ return !!(rk && rk.n>=5); }
 function retakeCTA(){ if(latest.passed) return ''; var stu=new URLSearchParams(location.search).get('student'); if(!stu) return ''; return `<a class="retakebtn" href="index.html?retake=${encodeURIComponent(stu)}&c=${latest.course}&r=${latest.round}">지금 재시 보기 →</a><p class="retaken">틀린 개념만 골라 강의록으로 다시 잡은 뒤, 새 문항으로 확인합니다(같은 문제는 다시 나오지 않습니다). 이번 주에 끝내면 다음 회차가 한결 수월해집니다.</p>`; }
 /* ===== 이번 주 처방 코멘트 (서술형 · 문단 뱅크) =====
    추이 패턴 x 만성 오개념 x 취약 축 조합으로 개인화 문단을 조립한다.
@@ -948,7 +982,7 @@ function aggFromRows(){ var u={},ax={};
     (first.axes||[]).forEach(function(x){var o=ax[x.k]||(ax[x.k]={t:0,w:0});o.t+=x.t;o.w+=x.w;}); });
   return {units:Object.keys(u).map(function(k){return u[k];}), axes:ax}; }
 function unitHeat(units){ return units.slice().sort(function(a,b){var ma=a.t?a.w/a.t:0,mb=b.t?b.w/b.t:0;return mb-ma||b.t-a.t;}).map(function(u){
-  var m=u.t?(u.t-u.w)/u.t:0, pct=Math.round(m*100), col=m>=0.85?'#1B8A4C':m>=0.6?'#7FB069':m>=0.4?'#E0A458':'#C0392B';
+  var m=u.t?(u.t-u.w)/u.t:0, pct=Math.round(m*100), col=m>=0.85?'#197E46':m>=0.6?'#7FB069':m>=0.4?'#E0A458':'#C0392B';
   return '<div class="heatrow"><span class="hu">'+u.u+'</span><span class="hbar"><i style="width:'+pct+'%;background:'+col+'"></i></span><span class="hv mono">'+(u.t-u.w)+'/'+u.t+'</span></div>'; }).join(''); }
 function svgTrend(){
   const T=A.trend, W=620,H=210, ml=30,mr=14,mt=14,mb=28;
@@ -960,7 +994,7 @@ function svgTrend(){
   const passLbl='';
   const jline=T.map((t,i)=>`${X(i)},${Y(t.jeongsiScore)}`).join(' ');
   const fline=T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ');
-  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#A9853C" font-family="JetBrains Mono">${ptc(t.jeongsiScore)}</text>`:'');}).join('');
+  const jdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.jeongsiScore)}" r="3" fill="#fff" stroke="#9FC9C4" stroke-width="1.5"/>`+(t.jeongsiScore!==t.finalScore?`<text x="${X(i)}" y="${Y(t.jeongsiScore)+15}" text-anchor="${anc}" font-size="9" fill="#85682F" font-family="JetBrains Mono">${ptc(t.jeongsiScore)}</text>`:'');}).join('');
   const fdots=T.map((t,i)=>{var anc=i===0?'start':(i===n-1?'end':'middle');return `<circle cx="${X(i)}" cy="${Y(t.finalScore)}" r="4" fill="#0B6E6E"/><text x="${X(i)}" y="${Y(t.finalScore)-9}" text-anchor="${anc}" font-size="10" font-weight="700" fill="#0B6E6E" font-family="JetBrains Mono">${ptc(t.finalScore)}</text>`;}).join('');
   const xlab=T.map((t,i)=>`<text x="${X(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#61707F" font-family="JetBrains Mono">${t.round}회</text>`).join('');
   const farea=`${X(0)},${Y(0)} `+T.map((t,i)=>`${X(i)},${Y(t.finalScore)}`).join(' ')+` ${X(n-1)},${Y(0)}`;
@@ -969,8 +1003,8 @@ function svgTrend(){
   var annot='';
   if(recs.length){ var r0=recs[0], i=r0.i, t=r0.t, midY=(Y(t.jeongsiScore)+Y(t.finalScore))/2;
     var last=(i===n-1), lx=last?X(i)-7:X(i)+7, anc=last?'end':'start';
-    annot=`<line x1="${X(i)}" y1="${Y(t.jeongsiScore)}" x2="${X(i)}" y2="${Y(t.finalScore)}" stroke="#A9853C" stroke-width="1" opacity=".45"/>`
-      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#A9853C" font-family="JetBrains Mono">재시 +${ptc(r0.rec)}</text>`;
+    annot=`<line x1="${X(i)}" y1="${Y(t.jeongsiScore)}" x2="${X(i)}" y2="${Y(t.finalScore)}" stroke="#85682F" stroke-width="1" opacity=".45"/>`
+      +`<text x="${lx}" y="${midY+3}" text-anchor="${anc}" font-size="9.5" font-weight="700" fill="#85682F" font-family="JetBrains Mono">재시 +${ptc(r0.rec)}</text>`;
   }
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="회차별 점수 추이">
     <polygon points="${farea}" fill="#0B6E6E" opacity=".06"/>
@@ -1117,7 +1151,7 @@ function _convSVG(nSym,nRoot){
   const rys=[]; for(let i=0;i<nRoot;i++) rys.push(H/2-((nRoot-1)*44)/2+i*44);
   let paths=''; ys.forEach(function(y,i){var ry=rys[i%nRoot]; paths+='<path d="M'+left+','+y.toFixed(0)+' C260,'+y.toFixed(0)+' 330,'+ry.toFixed(0)+' '+right+','+ry.toFixed(0)+'"/>';});
   let dots=''; ys.forEach(function(y){dots+='<circle cx="'+left+'" cy="'+y.toFixed(0)+'" r="3.2"/>';});
-  let nodes=''; rys.forEach(function(ry){nodes+='<circle cx="'+right+'" cy="'+ry.toFixed(0)+'" r="6.5" fill="#FCFAF6" stroke="#A9853C" stroke-width="2"/>';});
+  let nodes=''; rys.forEach(function(ry){nodes+='<circle cx="'+right+'" cy="'+ry.toFixed(0)+'" r="6.5" fill="#FCFAF6" stroke="#85682F" stroke-width="2"/>';});
   return '<svg viewBox="0 0 640 '+H+'" width="100%"><g stroke="#C7B68F" stroke-width="1.1" fill="none" opacity="0.7">'+paths+'</g><g fill="#B7B0A1">'+dots+'</g><g>'+nodes+'</g><text x="'+left+'" y="'+(H-2)+'" fill="#8A95A2" font-size="12">표면 오답 '+nSym+'</text><text x="'+right+'" y="'+(H-2)+'" fill="#86692f" font-size="12" text-anchor="middle">핵심 원인 '+nRoot+'</text></svg>';
 }
 function dxDeepHTML(name,dx){

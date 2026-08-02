@@ -301,6 +301,65 @@ async function assertNoOverflow(page, label) {
   /* 파이널 성적표는 틀린 문항마다 해설·동형문제를 걸어 준다. DT 성적표는
      "총괄성 크기를 틀렸습니다" 까지만 말하고 **갈 곳을 안 줬다** — 자료는 이
      저장소에 다 있는데도. 학부모는 문자로 받은 링크 하나뿐이라 더 볼 수 없다. */
+  /* 눈으로 보면 "좀 흐린가?" 로 끝나고, 흐린 채로 남는다. 재서 정한다.
+     학부모가 휴대폰으로 읽는 문서라 여기서 아끼면 안 읽힌다. */
+  await test('report · 글씨는 눈이 아니라 자로 정한다', async () => {
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const lum = h => { h = h.replace('#',''); const a = [0,2,4].map(i => parseInt(h.slice(i,i+2),16)/255)
+      .map(v => v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
+      return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2]; };
+    const ratio = (a,b) => { const x = lum(a), y = lum(b);
+      return (Math.max(x,y)+0.05) / (Math.min(x,y)+0.05); };
+    const v = n => (src.match(new RegExp('--' + n + ':(#[0-9A-Fa-f]{6})')) || [])[1];
+
+    /* 재어 보니 9~11px 이 서른여섯 군데였다. 바닥을 정하고 지킨다. */
+    const small = (src.match(/font-size:(\d+(?:\.\d+)?)px/g) || [])
+      .map(x => Number(x.replace(/[^\d.]/g, ''))).filter(n => n < 11.5);
+    assert(small.length === 0, '11.5px 미만 글씨 ' + small.length + '개: ' + small.slice(0,6).join(','));
+
+    const paper = v('paper'), sub = v('sub'), faint = v('faint');
+    /* ⚠ 대비는 **글씨가 실제로 얹히는 바탕** 위에서 재야 한다. 종이색 위에서만
+       재면 옅은 옥색·크림 카드 위에서 4.5 를 못 넘기는 것을 놓친다 —
+       실제로 그렇게 놓치고 있었다. */
+    const bgs = [paper, '#FFFFFF', '#E4F0EF', '#EEF0EA', '#FBEBE9'];
+    bgs.forEach(bg => {
+      assert(ratio(sub, bg) >= 4.5, '--sub 가 ' + bg + ' 위에서 ' + ratio(sub,bg).toFixed(2) + ':1');
+      assert(ratio(faint, bg) >= 4.5, '--faint 가 ' + bg + ' 위에서 ' + ratio(faint,bg).toFixed(2) + ':1');
+    });
+    /* 놋쇠색은 두 가지로 쓰인다 — 흰 글씨를 얹는 바탕, 그리고 크림 위의 글씨. */
+    const brass = (src.match(/#85682F/) || [])[0];
+    assert(brass, '놋쇠색이 바뀌었다면 아래 두 조건을 다시 재세요');
+    assert(ratio('#FFFFFF', brass) >= 4.5, '놋쇠 바탕에 흰 글씨 ' + ratio('#FFFFFF',brass).toFixed(2) + ':1');
+    assert(ratio(brass, '#F5EEDF') >= 4.5, '크림 위 놋쇠 글씨 ' + ratio(brass,'#F5EEDF').toFixed(2) + ':1');
+    /* 반투명 머리는 밑으로 지나가는 내용에 따라 대비가 달라진다. 늘 같아야 한다. */
+    assert(/header\{[^}]*background:var\(--paper\)/.test(src), '머리가 반투명으로 되돌아갔다');
+  });
+
+  /* 예전에는 반 평균보다 높고 80점을 넘어야만 석차가 떴다 — 어려워하는 아이의
+     학부모는 우리 아이가 어디쯤인지 영영 못 봤다. */
+  await test('report · 석차는 잘한 학생만 보는 것이 아니다', async page => {
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => ({
+      low:  showRank({ n: 12, score: 41, avg: 78, per100: 92 }),
+      high: showRank({ n: 12, score: 95, avg: 78, per100: 5 }),
+      few:  showRank({ n: 3,  score: 95, avg: 78, per100: 5 }),
+      msgLow: rankMsg({ score: 41, avg: 78, per100: 92 }),
+      msgMid: rankMsg({ score: 70, avg: 78, per100: 62 }),
+    }));
+    assert(r.low === true, '아래쪽 학생에게 석차를 안 보여 준다');
+    assert(r.high === true, '위쪽 학생에게도 보여야 한다');
+    /* 다섯 명이 안 되면 '상위 50%' 가 뜻이 없고, 그 말이 곧 누구인지를 가리킨다. */
+    assert(r.few === false, '사람이 적은데 석차를 보여 준다');
+    /* 상위 92% 인 아이에게 '평균 부근입니다' 는 사실이 아니고, 사실이 아닌 말은
+       나머지 문장까지 못 믿게 만든다. */
+    assert(/아래쪽/.test(r.msgLow), '아래쪽 학생에게 사실대로 안 적는다: ' + r.msgLow);
+    assert(/평균 부근/.test(r.msgLow) === false, '틀린 말을 적는다: ' + r.msgLow);
+    assert(/가운데 아래/.test(r.msgMid), '중간 아래를 안 적는다: ' + r.msgMid);
+    /* 가장 필요한 학생에게서 재시 단추가 사라지면 안 된다. */
+    assert(/retakeCTA/.test(await page.evaluate(() => rankCard.toString())), '석차 카드에 재시 단추가 없다');
+  });
+
   await test('report · 틀린 것 옆에 고칠 자료를 둔다', async page => {
     await page.route('**/materials.json', route => route.fulfill({
       status: 200, contentType: 'application/json',
