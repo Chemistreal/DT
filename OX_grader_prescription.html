@@ -185,7 +185,7 @@
   <!-- 영역별 -->
   <div class="panel hide" id="areas">
     <h2><span class="n">4</span> ◆ 영역별 점수 분석 (원점수)</h2>
-    <table id="areaTbl"><thead><tr><th>영역(단원)</th><th class="num">맞음/전체</th><th class="num">원점수</th><th style="width:34%">성취도</th></tr></thead><tbody></tbody></table>
+    <table id="areaTbl"><thead><tr><th scope="col">영역(단원)</th><th scope="col" class="num">맞음/전체</th><th scope="col" class="num">원점수</th><th scope="col" style="width:34%">성취도</th></tr></thead><tbody></tbody></table>
   </div>
 
   <!-- 전국 비교 -->
@@ -210,7 +210,7 @@
   <div class="panel hide" id="masteryPanel">
     <h2><span class="n">7</span> 개념 숙달 현황 (라운드 누적)</h2>
     <div id="masteryNote" class="hint" style="margin-bottom:12px"></div>
-    <table id="mTbl"><thead><tr><th>개념</th><th>단원</th><th class="num">누적 정답</th><th class="num">정답률</th><th>상태</th></tr></thead><tbody></tbody></table>
+    <table id="mTbl"><thead><tr><th scope="col">개념</th><th scope="col">단원</th><th scope="col" class="num">누적 정답</th><th scope="col" class="num">정답률</th><th scope="col">상태</th></tr></thead><tbody></tbody></table>
   </div>
 
   <!-- 다음 재시 -->
@@ -726,7 +726,7 @@ function showHist(){
   if(!name){ $('#histOut').textContent='학생 이름을 입력하세요.'; return; }
   const rec=studentRec(name);
   if(!rec.attempts.length){ $('#histOut').innerHTML=`<b>${name}</b> 응시 기록 없음.`; return; }
-  let h=`<table><thead><tr><th>일시</th><th>시험</th><th>버전</th><th>난이도</th><th class="num">점수</th><th class="num">정답</th></tr></thead><tbody>`;
+  let h=`<table><thead><tr><th scope="col">일시</th><th scope="col">시험</th><th scope="col">버전</th><th scope="col">난이도</th><th scope="col" class="num">점수</th><th scope="col" class="num">정답</th></tr></thead><tbody>`;
   rec.attempts.slice().reverse().forEach(a=>{
     const pass=a.score>=PASS;
     h+=`<tr><td>${a.when}</td><td>${a.round}</td><td>${a.version}</td><td>${({A:'심화',B:'표준',C:'기본'})[a.diff]||a.diff}</td>
@@ -802,7 +802,7 @@ function showItems(){
   note.innerHTML=`문항 ${rows.length}개 · 응답 누적 ${totalResp}건 · 은퇴 후보 <b style="color:var(--bad)">${weak.length}개</b>`;
   // 약한 문항 우선 정렬(심각도 → 변별력 낮은 순)
   rows.sort((a,b)=> b.sev-a.sev || ((a.rpb??1)-(b.rpb??1)));
-  let h=`<table><thead><tr><th>개념</th><th>문장</th><th class="num">응답</th><th class="num">정답률</th><th class="num">변별력</th><th>판정</th></tr></thead><tbody>`;
+  let h=`<table><thead><tr><th scope="col">개념</th><th scope="col">문장</th><th scope="col" class="num">응답</th><th scope="col" class="num">정답률</th><th scope="col" class="num">변별력</th><th scope="col">판정</th></tr></thead><tbody>`;
   rows.slice(0,40).forEach(r=>{
     const pPct=Math.round(r.p*100);
     const rpbTxt=r.rpb===null?'<span style="color:var(--ink2)">표본 부족</span>':r.rpb.toFixed(2);
