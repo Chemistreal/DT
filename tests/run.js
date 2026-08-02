@@ -428,6 +428,27 @@ async function assertNoOverflow(page, label) {
 
   /* 오답 뒤에 읽는 해설이 개념 이름만 던지면 도움이 안 된다. 고쳐 놓은 것이
      되돌아가지 않게 못 박는다(재어 보고 고른 것들이다). */
+  await test('내용 · 해설이 정의를 되풀이하지 않는다', async () => {
+    /* 정의형 O문항의 해설이 그 정의의 **이름**만 되뇌는 자리가 38종 78문항
+       있었다 — "끓는점은 증기 압력이 외부 압력과 같아지는 온도이다" → `끓는점의
+       정의.` 학생은 이미 그 문장을 읽었고, 알고 싶은 것은 그래서 무엇이 달라지는가다.
+       (짧다고 다 나쁜 것은 아니다 — `H⁺가 많다.` 처럼 이유를 말하는 해설은 그대로 뒀다.) */
+    const AD = path.join(ROOT, 'appdata');
+    const NAME = /^[가-힣A-Za-z0-9·\s]{2,16}(정의|법칙|원리|규칙)\.?$/;
+    const hit = [];
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      [d.jeongsi].concat(d.retakeC || []).forEach(b => {
+        if (!b || !Array.isArray(b.items)) return;
+        b.items.forEach(it => {
+          const w = String((it && it.w) || '').trim();
+          if (NAME.test(w)) hit.push(f.replace(/round_|\.json/g, '') + ' ' + it.n + ' → ' + w);
+        });
+      });
+    });
+    assert(hit.length === 0, '개념 이름만 던지는 해설 ' + hit.length + '건: ' + hit.slice(0, 4).join(' / '));
+  });
+
   await test('내용 · 해설이 이름만 던지지 않는다', async () => {
     const AD = path.join(ROOT, 'appdata');
     const bad = { '확장옥텟 분자의 입체 구조.': 0, '오비탈 양자수.': 0 };
