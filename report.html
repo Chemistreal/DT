@@ -168,6 +168,11 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   h2,.subhead{break-after:avoid}
   .rx,.heatrow,.kv,.rvrow,.gcell,.strchip,.legend,.intro{break-inside:avoid}
   .chartwrap{break-inside:avoid}
+  /* 문항별 정오 표는 한 쪽 안에 들어가는 크기(≈904px)인데 쪽 경계에 걸려
+     반으로 잘리고 있었다. 감싼 카드가 한 쪽보다 커서 카드 규칙이 안 먹는다.
+     표 자체를 붙들고, 줄도 가운데서 안 끊기게 한다. */
+  .oxwrap,.oxtable{break-inside:avoid}
+  tr,.matrow,.solrow{break-inside:avoid}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 .heatrow{display:flex;align-items:center;gap:10px;margin:6px 0}.heatrow .hu{font-size:12.5px;width:78px;flex:none}
