@@ -242,6 +242,42 @@ async function assertNoOverflow(page, label) {
     assert(/열 수 없습니다|확인/.test(text), '링크 오류 안내가 표시되지 않음');
     await assertNoOverflow(page, 'report');
   });
+  /* 못 물어본 것과 기록이 없는 것은 다르다. 앱스크립트가 줄을 세우는 동안
+     학부모가 링크를 누르면 이 한 번뿐인 요청이 줄에 걸려 실패하는데, 여태
+     화면에는 "링크가 오래되어…" 가 떴다 — 링크는 멀쩡한데 학부모는 링크를
+     의심하고 선생님께 문의한다. */
+  await test('report · 못 물어본 것을 링크 탓으로 돌리지 않는다', async page => {
+    let asked = 0;
+    await page.route('**/macros/s/**', route => {
+      if (/student=/.test(route.request().url())) { asked++; return route.abort(); }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    });
+    await page.goto(BASE + 'report.html?student=abc');
+    await page.waitForTimeout(6000);
+    /* 한 번 실패했다고 포기하면 줄이 빠진 뒤에도 못 연다. */
+    assert(asked >= 2, '한 번만 묻고 포기했다 (' + asked + '회)');
+    const text = await page.$eval('#app', e => e.textContent).catch(() => '');
+    assert(/링크에는 문제가 없습니다/.test(text), '링크 탓으로 읽히는 안내: ' + text.slice(0, 80));
+    assert(/오래되어/.test(text) === false, '멀쩡한 링크를 오래됐다고 한다');
+    assert(await page.$('#retryRep'), '다시 시도할 길이 없다');
+    /* 남의 성적을 보여 주는 일은 여전히 없어야 한다. */
+    assert(text.indexOf('조준모T테스트예시자료') < 0, '데모 학생이 노출됨');
+    await assertNoOverflow(page, 'report-fail');
+  });
+
+  await test('report · 서버가 기록 없다고 답하면 그렇게 적는다', async page => {
+    await page.route('**/macros/s/**', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, cumulative: null, rows: [] }) }));
+    await page.goto(BASE + 'report.html?student=abc');
+    await page.waitForTimeout(1500);
+    const text = await page.$eval('#app', e => e.textContent).catch(() => '');
+    /* 이때는 링크·기록을 확인하라는 원래 안내가 맞다. */
+    assert(/열 수 없습니다/.test(text), '원래 안내가 안 뜬다: ' + text.slice(0, 80));
+    assert(/링크에는 문제가 없습니다/.test(text) === false, '못 물어본 것으로 잘못 읽는다');
+    assert(text.indexOf('조준모T테스트예시자료') < 0, '데모 학생이 노출됨');
+  });
+
   await test('report · 빈 student 파라미터도 데모 대신 오류', async page => {
     // ?student= (값 없음)로 열려도 학생 링크이므로 데모(가짜 학생)를 보여주면 안 된다
     await page.goto(BASE + 'report.html?student='); await page.waitForTimeout(1000);
@@ -262,6 +298,124 @@ async function assertNoOverflow(page, label) {
        "반 평균보다 0.29999999999999716점 높습니다"
      점수를 그냥 빼서 문자열에 붙이면 부동소수점 찌꺼기가 그대로 나간다.
      pt() 가 셋째 자리에서 반올림해 늘 00.00 꼴로 적는다. */
+  /* 파이널 성적표는 틀린 문항마다 해설·동형문제를 걸어 준다. DT 성적표는
+     "총괄성 크기를 틀렸습니다" 까지만 말하고 **갈 곳을 안 줬다** — 자료는 이
+     저장소에 다 있는데도. 학부모는 문자로 받은 링크 하나뿐이라 더 볼 수 없다. */
+  /* 눈으로 보면 "좀 흐린가?" 로 끝나고, 흐린 채로 남는다. 재서 정한다.
+     학부모가 휴대폰으로 읽는 문서라 여기서 아끼면 안 읽힌다. */
+  await test('report · 글씨는 눈이 아니라 자로 정한다', async () => {
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const lum = h => { h = h.replace('#',''); const a = [0,2,4].map(i => parseInt(h.slice(i,i+2),16)/255)
+      .map(v => v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4));
+      return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2]; };
+    const ratio = (a,b) => { const x = lum(a), y = lum(b);
+      return (Math.max(x,y)+0.05) / (Math.min(x,y)+0.05); };
+    const v = n => (src.match(new RegExp('--' + n + ':(#[0-9A-Fa-f]{6})')) || [])[1];
+
+    /* 재어 보니 9~11px 이 서른여섯 군데였다. 바닥을 정하고 지킨다. */
+    const small = (src.match(/font-size:(\d+(?:\.\d+)?)px/g) || [])
+      .map(x => Number(x.replace(/[^\d.]/g, ''))).filter(n => n < 11.5);
+    assert(small.length === 0, '11.5px 미만 글씨 ' + small.length + '개: ' + small.slice(0,6).join(','));
+
+    const paper = v('paper'), sub = v('sub'), faint = v('faint');
+    /* ⚠ 대비는 **글씨가 실제로 얹히는 바탕** 위에서 재야 한다. 종이색 위에서만
+       재면 옅은 옥색·크림 카드 위에서 4.5 를 못 넘기는 것을 놓친다 —
+       실제로 그렇게 놓치고 있었다. */
+    const bgs = [paper, '#FFFFFF', '#E4F0EF', '#EEF0EA', '#FBEBE9'];
+    bgs.forEach(bg => {
+      assert(ratio(sub, bg) >= 4.5, '--sub 가 ' + bg + ' 위에서 ' + ratio(sub,bg).toFixed(2) + ':1');
+      assert(ratio(faint, bg) >= 4.5, '--faint 가 ' + bg + ' 위에서 ' + ratio(faint,bg).toFixed(2) + ':1');
+    });
+    /* 놋쇠색은 두 가지로 쓰인다 — 흰 글씨를 얹는 바탕, 그리고 크림 위의 글씨. */
+    const brass = (src.match(/#85682F/) || [])[0];
+    assert(brass, '놋쇠색이 바뀌었다면 아래 두 조건을 다시 재세요');
+    assert(ratio('#FFFFFF', brass) >= 4.5, '놋쇠 바탕에 흰 글씨 ' + ratio('#FFFFFF',brass).toFixed(2) + ':1');
+    assert(ratio(brass, '#F5EEDF') >= 4.5, '크림 위 놋쇠 글씨 ' + ratio(brass,'#F5EEDF').toFixed(2) + ':1');
+    /* 반투명 머리는 밑으로 지나가는 내용에 따라 대비가 달라진다. 늘 같아야 한다. */
+    assert(/header\{[^}]*background:var\(--paper\)/.test(src), '머리가 반투명으로 되돌아갔다');
+  });
+
+  /* 예전에는 반 평균보다 높고 80점을 넘어야만 석차가 떴다 — 어려워하는 아이의
+     학부모는 우리 아이가 어디쯤인지 영영 못 봤다. */
+  await test('report · 석차는 잘한 학생만 보는 것이 아니다', async page => {
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => ({
+      low:  showRank({ n: 12, score: 41, avg: 78, per100: 92 }),
+      high: showRank({ n: 12, score: 95, avg: 78, per100: 5 }),
+      few:  showRank({ n: 3,  score: 95, avg: 78, per100: 5 }),
+      msgLow: rankMsg({ score: 41, avg: 78, per100: 92 }),
+      msgMid: rankMsg({ score: 70, avg: 78, per100: 62 }),
+    }));
+    assert(r.low === true, '아래쪽 학생에게 석차를 안 보여 준다');
+    assert(r.high === true, '위쪽 학생에게도 보여야 한다');
+    /* 다섯 명이 안 되면 '상위 50%' 가 뜻이 없고, 그 말이 곧 누구인지를 가리킨다. */
+    assert(r.few === false, '사람이 적은데 석차를 보여 준다');
+    /* 상위 92% 인 아이에게 '평균 부근입니다' 는 사실이 아니고, 사실이 아닌 말은
+       나머지 문장까지 못 믿게 만든다. */
+    assert(/아래쪽/.test(r.msgLow), '아래쪽 학생에게 사실대로 안 적는다: ' + r.msgLow);
+    assert(/평균 부근/.test(r.msgLow) === false, '틀린 말을 적는다: ' + r.msgLow);
+    assert(/가운데 아래/.test(r.msgMid), '중간 아래를 안 적는다: ' + r.msgMid);
+    /* 가장 필요한 학생에게서 재시 단추가 사라지면 안 된다. */
+    assert(/retakeCTA/.test(await page.evaluate(() => rankCard.toString())), '석차 카드에 재시 단추가 없다');
+  });
+
+  await test('report · 틀린 것 옆에 고칠 자료를 둔다', async page => {
+    await page.route('**/materials.json', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ courses: [
+        { key: 'ch2', name: '화학Ⅱ', rounds: [
+          { round: 10, files: {
+              munje: { html: 'munje_ch2_round10.html' },
+              haeseol: { pdf: 'haeseol_ch2_round10.pdf' },      // HTML 이 없는 회차
+              truthbook: { pdf: 'truthbooks/chem2_round10_truthbook_bw.pdf' } } },
+          { round: 11, files: { munje: { html: 'munje_ch2_round11.html' } } } ] } ] }) }));
+    await page.goto(BASE + 'report.html');                 // 데모(마지막 회차 10회 · ch2)
+    await page.waitForTimeout(1800);
+    const m = await page.evaluate(() => ({
+      head: [].map.call(document.querySelectorAll('h2'), e => e.textContent)
+              .filter(t => /이 회차 자료/.test(t))[0] || '',
+      links: [].map.call(document.querySelectorAll('.matlink'),
+                         e => [e.textContent, e.getAttribute('href')]),
+    }));
+    assert(/화학Ⅱ 10회/.test(m.head), '어느 회차 자료인지 안 적는다: ' + m.head);
+    assert(m.links.length === 3, '자료 링크가 셋이 아니다: ' + JSON.stringify(m.links));
+    /* 해설 HTML 이 없는 회차는 PDF 라고 적어야 한다 — 눌러 보고 알게 하지 않는다. */
+    assert(/해설 \(PDF\)/.test(m.links[0][0]), '해설이 PDF 인 것을 안 적는다: ' + m.links[0][0]);
+    assert(m.links[0][1] === 'haeseol_ch2_round10.pdf', '해설 주소가 틀렸다');
+    /* 손가락으로 짚는 자리다. */
+    const box = await page.$eval('.matlink', e => e.getBoundingClientRect().height);
+    assert(box >= 36, '누를 자리가 좁다: ' + box);
+    await assertNoOverflow(page, 'report-mats');
+  });
+
+  await test('report · 없는 자료 주소를 지어내지 않는다', async page => {
+    /* 화학Ⅱ 는 문제지·OMR 이 18회까지 있는데 해설 HTML 은 7회까지뿐이다.
+       회차 번호로 이름을 지어내면 404 로 끝난다 — 목록에 있는 것만 건다. */
+    await page.route('**/materials.json', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ courses: [ { key: 'ch2', name: '화학Ⅱ', rounds: [
+        { round: 10, files: { munje: { html: 'munje_ch2_round10.html' } } } ] } ] }) }));
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1800);
+    const links = await page.evaluate(() =>
+      [].map.call(document.querySelectorAll('.matlink'), e => e.textContent));
+    assert(links.length === 1 && /문제지/.test(links[0]), '없는 자료를 걸었다: ' + JSON.stringify(links));
+  });
+
+  await test('report · 목록을 못 읽으면 칸을 접는다', async page => {
+    /* 빈 링크를 보여 주느니 안 보여 준다. */
+    await page.route('**/materials.json', route => route.abort());
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1800);
+    const n = await page.evaluate(() => document.querySelectorAll('.matlink').length);
+    const heads = await page.evaluate(() =>
+      [].map.call(document.querySelectorAll('h2'), e => e.textContent).filter(t => /이 회차 자료/.test(t)).length);
+    assert(n === 0 && heads === 0, '목록도 없이 칸이 떴다');
+    /* 나머지 성적표는 그대로 살아 있어야 한다. */
+    assert(await page.$eval('#app', e => e.textContent.length) > 500, '성적표가 통째로 죽었다');
+  });
+
   await test('report · 점수는 소수 둘째 자리까지', async page => {
     await page.goto(BASE + 'report.html'); await page.waitForTimeout(1400);
 
