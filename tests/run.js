@@ -844,6 +844,38 @@ async function assertNoOverflow(page, label) {
     assert(st.banner === '', '멀쩡한데 배너가 뜬다: ' + st.banner);
   }, { adminGate: true });
 
+  /* 명단 화면에서 배운 것을 관리자 콘솔에도 건다. 여기도 읽기가 실패하면
+     adminRows 를 빈 배열로 덮고 "저장된 실전 응시 0건" 을 띄우고 있었다 —
+     선생님이 그것을 '아무도 안 봤다' 로 읽으면 엉뚱한 판단이 따라온다. */
+  await test('admin · 못 물어본 것을 없는 것처럼 말하지 않는다', async page => {
+    await page.route('**/macros/s/**', route => route.abort());
+    await page.goto(BASE + 'admin.html');
+    await page.waitForTimeout(4500);   // 세 번 물어보고 700·1400ms 쉰다
+    const st = await page.evaluate(() => ({
+      load: admLoad,
+      rows: adminRows,
+      banner: !!document.querySelector('#app .banner'),
+      retry: !!document.querySelector('#app .banner button'),
+      note: (document.querySelector('#app .note') || {}).textContent || '',
+    }));
+    assert(st.load === 'fail', '상태가 fail 이 아니다: ' + st.load);
+    /* 빈 배열로 덮으면 아래 통계가 전부 0 이 된다. null 로 남겨야 한다. */
+    assert(st.rows === null, '실패인데 기록을 빈 배열로 덮었다');
+    assert(st.banner, '못 불러왔다는 말이 없다');
+    assert(st.retry, '다시 불러오는 길이 없다');
+    assert(!/0건/.test(st.note), '"0건" 이라고 말한다: ' + st.note);
+
+    /* 못 읽은 상태의 제외 목록 위에서 저장하면 서버 쪽을 엉뚱하게 덮는다. */
+    let posted = 0;
+    await page.route('**/macros/s/**', route => {
+      if (route.request().method() === 'POST') posted++;
+      return route.abort();
+    });
+    await page.evaluate(() => { adminRound = { course: 'ch1', round: 1 }; toggleExclude('x', false); });
+    await page.waitForTimeout(600);
+    assert(posted === 0, '막아 뒀는데 저장이 나갔다 (' + posted + '건)');
+  }, { adminGate: true });
+
   await test('home · 타일 링크 무결성', async page => {
     await page.goto(BASE + 'home.html'); await page.waitForTimeout(400);
     const hrefs = await page.$$eval('a.tile', as => as.map(a => a.getAttribute('href')));
