@@ -27,6 +27,7 @@ function makeSheet(name, rows) {
   };
 }
 
+const TRIGGERS = [], MAILS = [], DATEKEY = { v: 'x' };
 const HEADERS = ['이름','리포트링크','시각','점수','통과','학생키','학교','학년','과목','회차','시도','맞음','틀림','오개념','축','테스트','단원상세','축상세','답안'];
 const D1 = new Date('2026-07-01T01:00:00Z'), D2 = new Date('2026-07-04T01:00:00Z');
 const SHEETS = {
@@ -60,12 +61,20 @@ const ctx = {
     }),
     MimeType: { JSON: 'JSON', JAVASCRIPT: 'JAVASCRIPT' },
   },
-  PropertiesService: { getScriptProperties: () => ({ getProperty: k => (k in PROPS ? PROPS[k] : null) }) },
-  Utilities: { formatDate: () => 'x' },
-  ScriptApp: { getProjectTriggers: () => [], deleteTrigger() {}, WeekDay: { WEDNESDAY: 3, MONDAY: 1 },
-    newTrigger: () => ({ timeBased: () => ({ onWeekDay: () => ({ atHour: () => ({ inTimezone: () => ({ create() {} }) }) }), everyDays: () => ({ atHour: () => ({ create() {} }) }) }), forSpreadsheet: () => ({ onEdit: () => ({ create() {} }) }) })
+  /* 쓰기도 받는다. 토큰·트리거 확인 표시를 스스로 적어 두기 때문이다. */
+  PropertiesService: { getScriptProperties: () => ({
+    getProperty: k => (k in PROPS ? PROPS[k] : null),
+    setProperty: (k, v) => { PROPS[k] = v; },
+  }) },
+  Utilities: { formatDate: () => DATEKEY.v, getUuid: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+  /* 무엇이 걸렸는지 세어야 '스스로 건다'를 확인할 수 있다. 어떤 순서로 불러도
+     받도록 아무 메서드나 자기 자신을 돌려주고, create() 에서만 기록한다. */
+  ScriptApp: { getProjectTriggers: () => TRIGGERS.map(f => ({ getHandlerFunction: () => f })),
+    deleteTrigger() {}, WeekDay: { WEDNESDAY: 3, MONDAY: 1 },
+    newTrigger: fn => { const o = new Proxy({}, { get: (_, k) =>
+      k === 'create' ? (() => { TRIGGERS.push(fn); return {}; }) : (() => o) }); return o; }
   },
-  MailApp: { sendEmail() {} },
+  MailApp: { sendEmail: (to, subj, body) => { MAILS.push({ to, subj, body }); } },
   Logger: { log() {} }
 };
 vm.createContext(ctx);
@@ -231,5 +240,106 @@ T('마이그레이션 후 불투명 코드로 실데이터 조회', r.ok===true 
 r = J(ctx.doGet({ parameter: { student: '서일중-고승원-' + ctx.tokenFor_('서일중-고승원') } }));
 T('토큰 링크도 동일 데이터', r.rows.length===1 && r.rows[0].name==='고승원');
 
-console.log('\n결과: pass=' + pass + ' fail=' + fail);
+
+console.log('[9] 성적표를 열어 봤는가');
+{
+  /* 따로 창구를 만들지 않는다. 학부모 링크는 report.html?student=<코드> 이고
+     그 화면이 이미 이 창구를 부른다. **코드 모양으로 들어온 것만** 센다. */
+  /* 앞선 [8] 이 시트를 마이그레이션 자료로 갈아 끼운다. 그 뒤에도 남아 있는
+     학생으로 본다 — 없는 학생으로 부르면 키가 안 풀려 아무것도 안 세인다. */
+  const key = '서일중-고승원';
+  const pub = ctx.pubId_(key);
+  const before = (ctx.views_()[key] || {}).n || 0;
+  ctx.doGet({ parameter: { student: pub } });
+  const after1 = (ctx.views_()[key] || {}).n || 0;
+  T('학부모 코드로 열면 센다', after1 === before + 1, `${before} -> ${after1}`);
+  ctx.doGet({ parameter: { student: pub } });
+  T('두 번 열면 두 번 센다', ((ctx.views_()[key] || {}).n || 0) === before + 2);
+
+  /* 선생님 화면은 '학교-이름-토큰' 으로 부른다. 그것까지 세면 열람 수가
+     선생님 조회로 부풀어 아무 뜻이 없어진다. */
+  const n0 = (ctx.views_()[key] || {}).n || 0;
+  ctx.doGet({ parameter: { student: key + '-' + ctx.tokenFor_(key) } });
+  T('선생님 조회는 안 센다', ((ctx.views_()[key] || {}).n || 0) === n0);
+
+  const v = J(ctx.doGet({ parameter: { action: 'views' } }));
+  /* 셸은 학생키를 만들 줄 모른다(그건 이쪽 규칙이다). 이름·학교를 함께
+     실어 보내야 셸이 자기 명단과 맞출 수 있다. */
+  T('views 가 이름·학교와 함께 온다',
+    v.ok === true && v.views.some(x => x.studentKey === key && !!x.name && !!x.school),
+    JSON.stringify(v.views));
+}
+
+console.log('[10] 반별 인원 · 수입');
+{
+  const d = ctx.incomeNow_();
+  /* 자리(반 등록 수)와 사람(실인원)을 따로 센다. 한 학생이 두 반을 들으면
+     자리는 2, 사람은 1이다. */
+  T('자리와 사람을 따로 센다', typeof d.seats === 'number' && typeof d.heads === 'number',
+    JSON.stringify(d));
+  T('총액은 자리 × 단가', d.monthly === d.seats * d.per);
+  T('단가 기본값은 16만원', d.per === 160000);
+
+  /* 수입 창구만은 진짜 토큰을 받는다 — adminOk_ 는 지금 전체 공개라 아무나
+     통과한다(명단·점수 창구가 그렇다). 수입은 종류가 다르다. */
+  let r2 = J(ctx.doGet({ parameter: { action: 'income' } }));
+  T('토큰 없이는 거절', r2.ok === false && r2.error === 'auth', JSON.stringify(r2));
+  r2 = J(ctx.doGet({ parameter: { action: 'income', t: 'wrong' } }));
+  T('틀린 토큰도 거절', r2.ok === false && r2.error === 'auth');
+  r2 = J(ctx.doGet({ parameter: { action: 'income', t: ctx.incomeToken_() } }));
+  T('맞는 토큰이면 준다', r2.ok === true && !!r2.income && Array.isArray(r2.history));
+
+  /* 손으로 정하게 하면 안 정한 채로 지나간다(이 저장소의 자동배포 시크릿이
+     정확히 그랬다). 없으면 스스로 만든다. */
+  T('토큰이 없으면 스스로 만든다', (ctx.incomeToken_() || '').length >= 8, ctx.incomeToken_());
+
+  const ym0 = ctx.monthlyIncomeSnapshot();
+  const h1 = ctx.incomeHistory_().length;
+  ctx.monthlyIncomeSnapshot();
+  /* 같은 달을 두 번 적으면 한 달이 두 번 세어져 추이가 거짓말을 한다. */
+  T('같은 달은 덮어쓴다(줄이 안 늘어난다)', ctx.incomeHistory_().length === h1,
+    `${h1} -> ${ctx.incomeHistory_().length}`);
+}
+
+console.log('[11] 트리거를 스스로 건다');
+{
+  /* "편집기에서 이 함수를 한 번 실행하세요" 는 안 하게 된다 — 이 저장소의
+     자동배포 시크릿이 정확히 그렇게 비어 있었다. */
+  TRIGGERS.length = 0; delete PROPS.TRIG_CHECKED;
+  ctx.doGet({ parameter: { action: 'cohortmis' } });
+  T('선생님 창구를 부르면 걸린다',
+    TRIGGERS.includes('dailyBrief') && TRIGGERS.includes('monthlyIncomeSnapshot'),
+    JSON.stringify(TRIGGERS));
+  const n = TRIGGERS.length;
+  ctx.doGet({ parameter: { action: 'cohortmis' } });
+  T('같은 날 두 번 보지 않는다', TRIGGERS.length === n);
+
+  /* 트리거를 거는 데는 권한이 하나 더 필요하다. 그것 때문에 학부모 화면이
+     막히면 본말이 뒤집힌다 — 학부모 경로에서는 아예 살피지 않는다. */
+  TRIGGERS.length = 0; delete PROPS.TRIG_CHECKED;
+  ctx.doGet({ parameter: { student: ctx.pubId_('서일중-고승원') } });
+  T('학부모 경로에서는 안 건드린다', TRIGGERS.length === 0, JSON.stringify(TRIGGERS));
+}
+
+console.log('[12] 아침 요약');
+{
+  MAILS.length = 0;
+  ctx.dailyBrief();
+  /* 챙길 것이 없는 날에도 메일이 오면, 며칠 만에 안 읽고 넘기게 된다.
+     조용한 날은 아예 안 보낸다 — 그래야 오는 날에 눈이 간다. */
+  const P = ctx.computePending_(14);
+  let A = { classes: [] }; try { A = ctx.computeAbsentees_(8, {}) || A; } catch (e) {}
+  const work = ((P && P.active) || []).length
+             + (A.classes || []).reduce((t, c) => t + ((c.absent || []).length), 0);
+  T('챙길 것이 없으면 안 보낸다', work ? MAILS.length === 1 : MAILS.length === 0,
+    `할일 ${work} · 메일 ${MAILS.length}`);
+  if (MAILS[0]) {
+    T('수입 토큰을 알려 준다', MAILS[0].body.indexOf(ctx.incomeToken_()) >= 0);
+    T('허브 주소를 넣는다', MAILS[0].body.indexOf('hub.html') >= 0);
+  }
+  /* 토큰은 아침 메일이 유일한 전달 경로다 — 만들어지긴 하는지 따로 본다. */
+  T('토큰이 늘 같은 값이다', ctx.incomeToken_() === ctx.incomeToken_() && !!ctx.incomeToken_());
+}
+
+console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

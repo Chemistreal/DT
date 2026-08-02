@@ -317,6 +317,9 @@ function doGet(e) {
   var token = (e.parameter.token || '').trim();
   /* JSONP 로 부르는 쪽(통합 셸)이 있다. 이 요청의 콜백 이름을 json_ 에 넘긴다. */
   _CB_ = String((e.parameter && e.parameter.callback) || '').trim();
+  /* 선생님 화면이 부르는 창구에서만 트리거를 살핀다. 학부모 성적표 경로
+     (?student=)는 action 이 없으므로 여기 안 걸린다. */
+  if (action) ensureTriggers_();
   if (action === 'pending') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, pending: computePending_(14) }); }
   if (action === 'roster') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, classes: getRoster_() }); }
   if (action === 'absentees') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); var _ov = {}; try { _ov = JSON.parse(e.parameter.ov || '{}') || {}; } catch (e2) {} return json_({ ok: true, absentees: computeAbsentees_(8, _ov) }); }
@@ -327,6 +330,15 @@ function doGet(e) {
     return json_({ ok: true, passed: computePassed_(_pd) }); }
   if (action === 'names') { return namesForStudents_(e.parameter.code); }
   if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
+  if (action === 'views') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, views: viewsList_() }); }
+  /* 수입은 명단·점수와 다른 종류다. 이 창구만은 **진짜 토큰**을 받는다
+     (adminOk_ 는 지금 전체 공개라 아무나 통과한다). 속성이 비어 있으면 아예 닫는다. */
+  if (action === 'income') {
+    var need = incomeToken_();
+    if (!need) return json_({ ok: false, error: 'no_token', msg: '스크립트 속성 INCOME_TOKEN 을 정하세요.' });
+    if (String(e.parameter.t || '').trim() !== need) return json_({ ok: false, error: 'auth' });
+    return json_({ ok: true, income: incomeNow_(), history: incomeHistory_() });
+  }
   var raw = (e.parameter.student || '').trim();
   var key = null;
   if (raw) {
@@ -338,6 +350,11 @@ function doGet(e) {
     }
   }
   var valid = !!key;   // ★보안: 유효한 코드/토큰이 있어야만 조회
+  /* 학부모가 성적표를 열었는지를 여기서 센다. 따로 창구를 만들지 않는다 —
+     학부모 링크는 report.html?student=<코드> 이고 그 화면이 이미 이 창구를
+     부른다. 코드 모양(영숫자만)으로 들어온 것만 세므로, '학교-이름-토큰' 으로
+     부르는 선생님 화면은 저절로 빠진다. report.html 은 한 줄도 안 고친다. */
+  if (valid && /^[0-9a-z]+$/i.test(raw)) logView_(key);
   if (!raw) {
     // 개인정보 보호: 키 없는 전체 조회는 관리자 토큰이 있을 때만(관리 콘솔 전용)
     if (e.parameter.all === '1' && adminOk_(token)) {
@@ -1479,4 +1496,277 @@ function checkBackupSetup() {
              : '\n● 모두 정상입니다. 오늘 밤부터 저절로 올라갑니다.');
   L.push('   지금 바로 한 번 올려 보려면 dailyBackup() 을 실행하세요.');
   Logger.log(L.join('\n'));
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   성적표를 열어 봤는가 · 아침 요약
+   ------------------------------------------------------------------
+   [왜 이것부터인가]
+   문자를 보내도 학부모가 성적표를 열었는지 알 길이 없었다. "안내를 못 받았다"
+   는 말에 댈 근거가 없고, 다시 보내야 할 사람이 누구인지도 모른다. 학원에서
+   실제로 곤란해지는 자리는 여기다.
+
+   [따로 창구를 만들지 않는다]
+   학부모 링크는 report.html?student=<코드> 이고, 그 화면이 이미 이 창구를
+   부른다. **코드 모양(영숫자만)으로 들어온 조회만** 센다 — 선생님 화면은
+   '학교-이름-토큰' 으로 부르므로 저절로 갈린다. report.html 은 안 고친다.
+
+   [세는 것은 열람뿐이다]
+   누가 언제 몇 번 열었나만 남긴다. 무엇을 봤는지·얼마나 머물렀는지는 안 센다 —
+   필요하지 않고, 남기면 지워야 할 것이 늘어난다.
+   ══════════════════════════════════════════════════════════════════ */
+var VIEW_TAB = '_열람';
+function viewSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(VIEW_TAB);
+  if (!sh) { sh = ss.insertSheet(VIEW_TAB); sh.appendRow(['학생키', '마지막열람', '횟수']); }
+  return sh;
+}
+/* 열람 기록이 실패해도 성적표는 떠야 한다. 학부모가 보는 화면이 기록 때문에
+   막히면 본말이 뒤집힌다 — 그래서 통째로 감싼다. */
+function logView_(key) {
+  if (!key) return;
+  try {
+    var sh = viewSheet_(), last = sh.getLastRow();
+    var data = last > 1 ? sh.getRange(2, 1, last - 1, 3).getValues() : [];
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][0] || '').trim() === key) {
+        sh.getRange(i + 2, 2).setValue(new Date());
+        sh.getRange(i + 2, 3).setValue((Number(data[i][2]) || 0) + 1);
+        return;
+      }
+    }
+    sh.appendRow([key, new Date(), 1]);
+  } catch (e) {}
+}
+function views_() {
+  var out = {};
+  try {
+    var sh = viewSheet_(), last = sh.getLastRow();
+    if (last < 2) return out;
+    sh.getRange(2, 1, last - 1, 3).getValues().forEach(function (r) {
+      var k = String(r[0] || '').trim(); if (!k) return;
+      var t = r[1] ? new Date(r[1]).getTime() : 0;
+      out[k] = { ts: t, at: t ? Utilities.formatDate(new Date(t), 'Asia/Seoul', 'M/d HH:mm') : '',
+                 n: Number(r[2]) || 0 };
+    });
+  } catch (e) {}
+  return out;
+}
+/* 셸은 학생키를 만들 줄 모른다(그건 이쪽 규칙이다). 이름·학교를 함께 실어
+   보내 셸이 자기 명단과 맞출 수 있게 한다. */
+function viewsList_() {
+  var v = views_(), sh = sheet_(), last = sh.getLastRow();
+  if (last < 2) return [];
+  var data = sh.getRange(2, 1, last - 1, 7).getValues(), seen = {}, out = [];
+  for (var i = data.length - 1; i >= 0; i--) {          // 최근 줄의 이름·학교를 쓴다
+    var k = String(data[i][5] || '').trim();
+    if (!k || seen[k] || !v[k]) continue;
+    seen[k] = 1;
+    out.push({ studentKey: k, name: String(data[i][0] || ''), school: String(data[i][6] || ''),
+               at: v[k].at, ts: v[k].ts, n: v[k].n });
+  }
+  out.sort(function (a, b) { return b.ts - a.ts; });
+  return out;
+}
+
+/* ── 아침에 한 통 ──────────────────────────────────────────────────
+   셸은 **열어야** 안다. 안 열면 미응시도 재시도 그대로 쌓인다. 아침에 한 통이
+   오면 열지 않아도 오늘 챙길 것을 안다.
+   주간 메일(weeklyPendingEmail)이 이미 있지만 그건 주 단위라 '오늘' 을 못 짚는다. */
+function dailyBrief() {
+  var P = computePending_(14), active = (P && P.active) || [];
+  var A = {}; try { A = computeAbsentees_(8, {}) || {}; } catch (e) {}
+  var classes = (A.classes || []).filter(function (c) { return (c.absent || []).length; });
+  var absN = classes.reduce(function (t, c) { return t + c.absent.length; }, 0);
+  var passed = [];
+  try { var PS = computePassed_(1); passed = (PS && (PS.passed || PS)) || []; } catch (e) {}
+  /* 성적표를 한 번도 안 열어 본 재시 대상. 문자를 보냈는데 안 열었다면 그
+     문자는 닿지 않은 것이다 — 다시 보낼 사람이 바로 여기다. */
+  var V = views_();
+  var unseen = active.filter(function (p) { return !V[p.studentKey]; });
+
+  var today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'M/d(E)');
+  if (!absN && !active.length && !passed.length) return;      // 조용한 날은 안 보낸다
+  var subj = '[Chemistreal] ' + today + ' · 미응시 ' + absN + ' · 재시 ' + active.length
+           + (passed.length ? ' · 통과 ' + passed.length : '');
+  var L = [];
+  if (absN) {
+    L.push('■ 시험 미응시 ' + absN + '명');
+    classes.forEach(function (c) {
+      L.push('  · ' + c.label + ' (' + courseKo_(c.course) + ' ' + c.round + '회) — ' + c.absent.join(', '));
+    });
+    L.push('');
+  }
+  if (active.length) {
+    L.push('■ 재시 미완료 ' + active.length + '명');
+    active.slice(0, 20).forEach(function (p) {
+      L.push('  · ' + (p.days >= 7 ? '[독촉] ' : '') + p.name + ' (' + p.school + ') · '
+        + courseKo_(p.course) + ' ' + p.round + '회 · ' + pt_(p.score) + '점 → ' + p.nextNeeded
+        + ' (' + p.days + '일)');
+    });
+    if (active.length > 20) L.push('  … 그 밖 ' + (active.length - 20) + '명');
+    L.push('');
+  }
+  if (unseen.length) {
+    L.push('■ 성적표를 아직 안 열어 본 학생 ' + unseen.length + '명');
+    L.push('  ' + unseen.map(function (p) { return p.name; }).join(', '));
+    L.push('  (안내가 닿지 않았을 수 있습니다)');
+    L.push('');
+  }
+  if (passed.length) {
+    L.push('■ 어제 통과 ' + passed.length + '명');
+    L.push('  ' + passed.map(function (p) { return p.name; }).join(', '));
+    L.push('');
+  }
+  L.push('통합관리: https://chemistreal.github.io/exam/hub.html');
+  L.push('');
+  /* 수입 추이 창구의 열쇠. 손으로 정하게 하면 안 정한 채로 지나가므로 스스로
+     만들고 여기로 알려 준다. 이 메일은 선생님 편지함으로만 간다. */
+  L.push('수입 월별 추이 토큰: ' + incomeToken_());
+  L.push('');
+  L.push('- Chemistreal 자동 알림 (매일 07시 30분)');
+  MailApp.sendEmail(PENDING_EMAIL_TO, subj, L.join('\n'));
+}
+/* ★ 편집기에서 한 번만 실행 → 매일 07:30(KST) 트리거 등록(중복 자동 제거) ★ */
+function setupDailyTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'dailyBrief') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('dailyBrief').timeBased().atHour(7).nearMinute(30)
+    .everyDays(1).inTimezone('Asia/Seoul').create();
+  return '등록 완료: 매일 07:30(KST) dailyBrief';
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   반별 인원 · 월 수입 예정 · 달마다 남기는 추이
+   ------------------------------------------------------------------
+   [무엇을 세나]
+   반 명단(_roster)이 원본이다. 두 가지를 따로 센다 —
+     자리(seats)  반에 등록된 수. 한 학생이 화학Ⅰ·Ⅱ 를 다 들으면 **2** 다.
+     사람(heads)  이름이 겹치는 것을 지운 실인원.
+   수업료는 반 단위로 받으므로 총액은 **자리** 로 센다. 둘 다 보여 주지 않으면
+   "42명인데 왜 44명분이지?" 를 매달 다시 헤아리게 된다.
+
+   [왜 달마다 남기나]
+   지금 인원은 명단을 보면 안다. 그런데 **지난달에 몇 명이었나**는 명단이
+   덮여 쓰이는 순간 사라진다. 추이는 지나간 뒤에는 못 만든다 — 그래서 매달
+   1일에 그날의 숫자를 한 줄로 남긴다. 단가도 함께 남긴다(단가가 바뀌어도
+   지난 달 금액이 거슬러 바뀌면 안 된다).
+
+   [공개 범위]
+   이 창구만은 진짜 토큰을 받는다. 명단·점수 창구는 지금 전체 공개인데,
+   수입은 그것과 종류가 다르다.
+   ══════════════════════════════════════════════════════════════════ */
+var FEE_TAB = '_수입';
+var FEE_DEFAULT = 160000;
+/* 손으로 정하게 하면 안 정한 채로 지나간다(이 저장소의 자동배포 시크릿이
+   정확히 그랬다). 없으면 스스로 만들고, 만든 값은 아침 요약 메일로 알려 준다 —
+   그 메일은 선생님 편지함으로만 간다. */
+function incomeToken_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var v = (props.getProperty('INCOME_TOKEN') || '').trim();
+    if (!v) { v = Utilities.getUuid().replace(/-/g, '').slice(0, 10); props.setProperty('INCOME_TOKEN', v); }
+    return v;
+  } catch (e) { return ''; }
+}
+function feePer_() {
+  try { var v = Number(PropertiesService.getScriptProperties().getProperty('FEE_PER_STUDENT')); if (isFinite(v) && v > 0) return v; } catch (e) {}
+  return FEE_DEFAULT;
+}
+function feeSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(FEE_TAB);
+  if (!sh) { sh = ss.insertSheet(FEE_TAB); sh.appendRow(['연월', '자리수', '실인원', '단가', '월수입예정', '반별']); }
+  return sh;
+}
+function incomeNow_() {
+  var classes = getRoster_() || [];
+  var per = feePer_(), seats = 0, names = {}, rows = [];
+  classes.forEach(function (c) {
+    var st = c.students || [], n = st.length;
+    seats += n;
+    st.forEach(function (x) {
+      var nm = String((x && x.name) || x || '').replace(/\s+/g, '').trim();
+      if (nm) names[nm] = 1;
+    });
+    rows.push({ label: c.label, course: c.course, n: n, amount: n * per });
+  });
+  var heads = 0; for (var k in names) heads++;
+  return { per: per, seats: seats, heads: heads, monthly: seats * per, classes: rows };
+}
+/* 매달 1일에 그날의 숫자를 한 줄. 같은 달을 두 번 적지 않는다(손으로 다시
+   돌려도 덮어쓴다) — 안 그러면 한 달이 두 번 세어져 추이가 거짓말을 한다. */
+function monthlyIncomeSnapshot() {
+  var now = new Date();
+  var ym = Utilities.formatDate(now, 'Asia/Seoul', 'yyyy-MM');
+  var d = incomeNow_();
+  var perClass = JSON.stringify(d.classes.map(function (c) { return [c.label, c.n]; }));
+  var sh = feeSheet_(), last = sh.getLastRow();
+  var rowsv = last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues() : [];
+  for (var i = 0; i < rowsv.length; i++) {
+    if (String(rowsv[i][0] || '').trim() === ym) {
+      sh.getRange(i + 2, 1, 1, 6).setValues([[ym, d.seats, d.heads, d.per, d.monthly, perClass]]);
+      return ym + ' 갱신 · 자리 ' + d.seats + ' · ' + d.monthly.toLocaleString() + '원';
+    }
+  }
+  sh.appendRow([ym, d.seats, d.heads, d.per, d.monthly, perClass]);
+  return ym + ' 기록 · 자리 ' + d.seats + ' · ' + d.monthly.toLocaleString() + '원';
+}
+function incomeHistory_() {
+  var out = [];
+  try {
+    var sh = feeSheet_(), last = sh.getLastRow();
+    if (last < 2) return out;
+    sh.getRange(2, 1, last - 1, 6).getValues().forEach(function (r) {
+      var ym = String(r[0] || '').trim(); if (!ym) return;
+      var classes = []; try { classes = JSON.parse(r[5] || '[]'); } catch (e) {}
+      out.push({ ym: ym, seats: Number(r[1]) || 0, heads: Number(r[2]) || 0,
+                 per: Number(r[3]) || 0, monthly: Number(r[4]) || 0, classes: classes });
+    });
+    out.sort(function (a, b) { return a.ym < b.ym ? -1 : a.ym > b.ym ? 1 : 0; });
+  } catch (e) {}
+  return out;
+}
+/* ── 트리거를 스스로 건다 ──────────────────────────────────────────
+   "편집기에서 이 함수를 한 번 실행하세요" 는 안 하게 된다 — 이 저장소의
+   자동배포 시크릿이 정확히 그렇게 비어 있었다. 창구가 불릴 때 없으면 건다.
+
+   ⚠ 두 가지를 지킨다.
+   - **선생님 화면이 부르는 창구에서만** 살핀다. 학부모 성적표(?student=)
+     경로에서는 건드리지 않는다 — 트리거를 거는 데는 권한이 하나 더 필요한데,
+     그것 때문에 학부모 화면이 막히면 본말이 뒤집힌다.
+   - 하루 한 번만 본다. 부를 때마다 트리거 목록을 읽으면 그만큼 느려진다.
+   실패해도 조용히 지나간다(손으로 걸 수 있는 함수를 그대로 남겨 둔다). */
+function ensureTriggers_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+    if (props.getProperty('TRIG_CHECKED') === today) return;
+    props.setProperty('TRIG_CHECKED', today);
+    var want = { dailyBrief: 1, monthlyIncomeSnapshot: 1 };
+    ScriptApp.getProjectTriggers().forEach(function (t) { delete want[t.getHandlerFunction()]; });
+    if (want.dailyBrief) {
+      ScriptApp.newTrigger('dailyBrief').timeBased()
+        .atHour(7).nearMinute(30).everyDays(1).inTimezone('Asia/Seoul').create();
+    }
+    if (want.monthlyIncomeSnapshot) {
+      ScriptApp.newTrigger('monthlyIncomeSnapshot').timeBased()
+        .onMonthDay(1).atHour(6).inTimezone('Asia/Seoul').create();
+    }
+  } catch (e) {}
+}
+
+/* ★ 편집기에서 한 번만 실행 → 매달 1일 06시(KST) 기록 트리거 등록 ★ */
+function setupMonthlyIncomeTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'monthlyIncomeSnapshot') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('monthlyIncomeSnapshot').timeBased()
+    .onMonthDay(1).atHour(6).inTimezone('Asia/Seoul').create();
+  monthlyIncomeSnapshot();                       // 이번 달치를 지금 한 줄 남긴다
+  return '등록 완료: 매달 1일 06시 monthlyIncomeSnapshot (이번 달은 방금 기록)';
 }
