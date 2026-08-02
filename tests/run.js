@@ -587,6 +587,21 @@ async function assertNoOverflow(page, label) {
     assert(Object.keys(used).some(m => E.MIS_CANON[m]), '자료의 태그가 매핑에 안 걸린다');
   });
 
+  /* 온도 표기가 두 글자로 갈려 있었다: °C 384곳 · ℃ 38곳.
+     ℃(U+2103)는 CJK 호환용이라 유니코드가 쓰지 말라고 권하고, 글꼴에 따라
+     작은 크기에서 뭉개지며, "°C" 로 찾으면 안 걸린다. exam 저장소도 같은
+     방향(°C)으로 모았으니 두 앱이 다시 갈리지 않게 지킨다. */
+  await test('내용 · 온도 표기가 한 가지다', async () => {
+    const AD = path.join(ROOT, 'appdata');
+    const bad = [];
+    fs.readdirSync(AD).filter(f => f.endsWith('.json')).forEach(f => {
+      const t = fs.readFileSync(path.join(AD, f), 'utf8');
+      const n = (t.match(/\u2103/g) || []).length;
+      if (n) bad.push(f + '(' + n + '곳)');
+    });
+    assert(bad.length === 0, '℃ 로 남아 있다 — °C 로 모은다: ' + bad.slice(0, 5).join(', '));
+  });
+
   await test('내용 · 짚은 개념에는 설명이 있다', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
     const dictOf = name => {
