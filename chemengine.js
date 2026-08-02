@@ -193,9 +193,20 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
         p = nwFresh(fb) || nwUnused(fb);
         if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w };
       } else {
-        // 맞힌 개념: 원본 유지(form 절약), 충돌 시에만 비오답 form으로
-        if (!usedThis[norm(orig.s)] && !wrongStmts[norm(orig.s)]) pick = orig;
-        else { p = nwUnused(fb); if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w }; }
+        /* 맞힌 개념: 예전에는 원본을 그대로 뒀다(form 절약). 그런데 학생 화면과
+           성적표는 **"같은 문제는 다시 나오지 않습니다"** 라고 약속한다.
+           재어 보니 retakeC 문장의 13%가 정시 문장과 글자까지 같아서, 30%를
+           틀린 학생이 60문항 중 5~6문항을 **그대로 다시** 보고 있었다.
+           맞힌 개념이라도 이미 본 문장이면 기억으로 답하게 되어 확인이 안 된다.
+
+           그래서 순서를 뒤집는다: 안 본 문장을 먼저 찾고, form 이 동났을 때만
+           원본으로 돌아간다. 아낄 것은 form 이 아니라 약속이다.
+           (그다음 자리는 subForm 이 재노출 0 을 보장하고, 원본은 최후다.) */
+        if (!usedThis[norm(orig.s)] && !seenStatements[norm(orig.s)] && !wrongStmts[norm(orig.s)]) pick = orig;
+        else {
+          p = nwFresh(fb) || nwUnused(fb);
+          if (p) pick = { c: it.c, a: p.a, s: p.s, f: p.f, w: p.w };
+        }
       }
       if (!pick) { var sub = subForm(); if (sub) { pick = sub; subbed = true; } }  // 소진 → 범위 내 다른 개념으로 대체
       if (!pick) pick = orig;                                                       // 최후(이론상 도달 안 함)

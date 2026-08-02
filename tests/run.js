@@ -321,6 +321,70 @@ async function assertNoOverflow(page, label) {
   /* 이 문단은 **매주** 학부모에게 간다. 상황별 변형이 둘뿐이면 같은 상황이
      이어질 때 격주로 같은 글이 가고, 두 주 연달아 같으면 그때부터 안 읽힌다.
      (게다가 chronic 은 늘 [0] 만 쓰고 있어서 뱅크를 늘려도 안 나왔다.) */
+  /* ══════════════════════════════════════════════════════════════
+     학생 화면과 성적표가 **약속**한다: "틀린 개념만 골라 강의록으로 다시 잡은 뒤,
+     새 문항으로 확인합니다(**같은 문제는 다시 나오지 않습니다**)."
+
+     그런데 buildRetake 는 맞힌 개념에서 `seenStatements` 를 안 봤다("form 절약").
+     retakeC 문장의 13%가 정시 문장과 글자까지 같아서, 정시를 30% 틀린 학생이
+     60문항 중 5~6문항을 **그대로 다시** 봤다. 기억으로 답하면 확인이 안 되고,
+     무엇보다 한 약속이 깨진다. 아낄 것은 form 이 아니라 약속이다.
+     ══════════════════════════════════════════════════════════════ */
+  await test('재시 · 같은 문제는 다시 나오지 않는다', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const norm = x => (x || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')').trim();
+    const AD = path.join(ROOT, 'appdata');
+    const FBraw = JSON.parse(fs.readFileSync(path.join(AD, 'forms_bank.json'), 'utf8'));
+    const FB = FBraw.forms || FBraw;
+
+    let items = 0, repeat = 0, rounds = 0, worst = ['', 0];
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).sort().forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      const j = (d.jeongsi && d.jeongsi.items) || [], rc = d.retakeC || [];
+      if (!j.length || !rc.length) return;
+      rounds++;
+      const seen = {}; j.forEach(it => { seen[norm(it.s)] = 1; });
+      /* 합격선 바로 밑에서 떨어진 전형적인 재시 응시자(30% 오답)를 흉내 낸다. */
+      const wrong = [], wrongStmts = {};
+      j.forEach((it, i) => { if (i % 10 < 3) { wrong.push(it.c); wrongStmts[norm(it.s)] = 1; } });
+      const r = E.buildRetake(2, rc, wrong, FB, Object.assign({}, seen), wrongStmts);
+      let rep = 0;
+      r.items.forEach(it => { items++; if (seen[norm(it.s)]) { rep++; repeat++; } });
+      if (rep > worst[1]) worst = [f, rep];
+    });
+    console.log('  회차 ' + rounds + ' · 재시 ' + items + '문항 중 이미 본 문장 ' + repeat +
+                '개 (최악 ' + worst[0].replace(/round_|\.json/g, '') + ' ' + worst[1] + ')');
+    assert(rounds >= 40 && items >= 2000, '회차 자료를 제대로 못 읽었다');
+    /* form 이 동난 개념은 원본으로 돌아갈 수밖에 없다(그때는 다른 개념으로도 못
+       바꾼다). 그런 자리를 0 으로 못 박으면 검사가 거짓말이 되므로, 눈에 띄면
+       바로 알 수 있는 선(회차당 1문항 미만)으로 둔다. 지금은 46회차 통틀어 2개다. */
+    assert(repeat <= rounds, '이미 본 문장이 재시에 ' + repeat + '개 (회차당 1개를 넘음) · 최악 ' + worst[0]);
+    assert(worst[1] <= 3, worst[0] + ' 한 회차에만 ' + worst[1] + '개');
+
+    /* 규칙 자체도 본다 — 맞힌 개념이라고 seen 을 건너뛰면 안 된다. */
+    const src = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    assert(/!usedThis\[norm\(orig\.s\)\] && !seenStatements\[norm\(orig\.s\)\]/.test(src),
+      '맞힌 개념에서 이미 본 문장을 다시 거른다는 조건이 사라졌다');
+  });
+
+  /* 오답 뒤에 읽는 해설이 개념 이름만 던지면 도움이 안 된다. 고쳐 놓은 것이
+     되돌아가지 않게 못 박는다(재어 보고 고른 것들이다). */
+  await test('내용 · 해설이 이름만 던지지 않는다', async () => {
+    const AD = path.join(ROOT, 'appdata');
+    const bad = { '확장옥텟 분자의 입체 구조.': 0, '오비탈 양자수.': 0 };
+    let n = 0;
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).forEach(f => {
+      const t = fs.readFileSync(path.join(AD, f), 'utf8');
+      Object.keys(bad).forEach(k => { const m = t.split('"w": "' + k + '"').length - 1; bad[k] += m; });
+      n++;
+    });
+    assert(n >= 40, '회차 자료를 못 읽었다');
+    /* '확장옥텟 분자의 입체 구조.' 는 SF₄·PF₅·ClF₃… 열 분자에 같은 문구가 붙어
+       있었다 — 정답이 O 든 X 든 똑같아서 무엇이 틀렸는지 알 길이 없었다.
+       '오비탈 양자수.' 는 스핀양자수 문항에 붙은 **다른 개념 이름**이었다. */
+    Object.keys(bad).forEach(k => assert(bad[k] === 0, '되돌아온 해설: "' + k + '" ' + bad[k] + '건'));
+  });
+
   await test('내용 · 매주 가는 문구가 되풀이되지 않는다', async page => {
     await page.goto(BASE + 'report.html');
     await page.waitForTimeout(1500);
