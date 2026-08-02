@@ -254,7 +254,7 @@ const SKEY='chemistreal_session_v1';
 
 var TESTMODE=false;   /* 테스트 모드는 URL ?test=1 로만 켜짐 (수기 채점 실수로 TEST 저장 방지) */
 let S=null, MANIFEST=null, FORMS=null, STUDY=null, courseTab='ch2', SAVE_STATE=null, STUDENT_HIST=null, STUDENT_HIST_KEY=null, STUDENT_WEAK=null, COHORT=null, COHORT_LOADED=false, SERVER_LINK=null;
-function blank(){return {view:'id',name:'',school:'',grade:'',isTest:false,roundId:null,round:null,
+function blank(){return {view:'select',name:'',school:'',grade:'',isTest:false,roundId:null,round:null,
   attemptNo:1,attempts:[],keyItems:[],answers:[],cur:0,graded:null,dx:null,gate:null,seen:{},wrongStmts:{}};}
 
 // ---------- 데이터 로더 (fetch → 실패 시 EMBED 폴백) ----------
@@ -376,8 +376,10 @@ function getDiagram(mis,unit){ var t=((mis||'')+' '+(unit||''));
   if(/보일|샤를|압력.{0,2}부피 그래프/.test(t)) return DIAGRAMS.gasLawGraph;
   return ''; }
 
-const ORD={id:0,select:1,pdf:2,grade:3,report:4,gate:5,retake:6,done:7};
-const STEPLB=['학생','회차','시험지','채점','진단','강의록','재시','완료'];
+/* 회차 → 학생 → 시험지 → 채점. 수업은 회차 단위로 돈다 — 한 회차를 정해 놓고
+   학생을 차례로 채점한다. 학생부터 물으면 매 학생마다 회차를 다시 고르게 된다. */
+const ORD={select:0,id:1,pdf:2,grade:3,report:4,gate:5,retake:6,done:7};
+const STEPLB=['회차','학생','시험지','채점','진단','강의록','재시','완료'];
 function renderSteps(){
   const cur=ORD[S.view];
   $('#steps').innerHTML=STEPLB.map((lb,i)=>{
@@ -706,14 +708,12 @@ function dsHTML(cid){
 function render(){
   renderSteps(); const v=S.view; let h='';
   if(v==='id'){
-    const sv=savedSession();
-    h=(sv?`<div class="resume"><div style="flex:1">채점하던 내용이 있습니다 · <b>${sv.name}</b> · ${sv.attemptNo===1?'정시':sv.attemptNo===2?'재시':'재재시'} (${sv.answers.filter(a=>a).length}/${sv.keyItems.length})</div><button onclick="resume()">이어하기</button><button class="x" onclick="clearSession();render()">지우기</button></div>`:'')+
-    `<div class="card"><h1>학생 정보</h1><p class="lede">이름과 학교로 학생을 식별합니다. 학년은 응시 시점 기록용이라 매년 바뀌어도 같은 학생으로 이어집니다.</p>${S.round?`<div style="margin:2px 0 12px;padding:9px 12px;background:#f6f2e4;border:1px solid #e6dcbf;border-radius:8px;font-size:13px;color:#6b5b1e"><b>회차 유지</b> · ${S.round.title||'선택한 회차'} <a href="#" onclick="go('select');return false" style="color:#9a7b1e;margin-left:6px;font-weight:700;text-decoration:none">회차 변경 →</a></div>`:''}
+    h=    `<div class="card"><h1>학생 정보</h1><p class="lede">이름과 학교로 학생을 식별합니다. 학년은 응시 시점 기록용이라 매년 바뀌어도 같은 학생으로 이어집니다.</p>${S.round?`<div style="margin:2px 0 12px;padding:9px 12px;background:#f6f2e4;border:1px solid #e6dcbf;border-radius:8px;font-size:13px;color:#6b5b1e"><b>고른 회차</b> · ${S.round.title||'선택한 회차'} <a href="#" onclick="go('select');return false" style="color:#9a7b1e;margin-left:6px;font-weight:700;text-decoration:none">회차 바꾸기 →</a></div>`:''}
       <label>이름</label><input id="f_name" value="${S.name}" placeholder="예: 홍길동" autocomplete="off">
       <div class="row2"><div><label>학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중" autocomplete="off"></div>
         <div><label>학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2" inputmode="numeric"></div></div>
       ${TESTMODE?`<div class="toggle" style="color:#b45309;font-weight:600">⚠ 테스트 모드 · 이 학생 기록은 실제 성적에 반영되지 않습니다 (URL의 ?test=1)</div>`:``}
-      <div class="btnrow"><button onclick="saveId()">${S.round?'이 학생 채점 시작':'이 학생 시작'}</button></div></div>
+      <div class="btnrow"><button class="ghost" onclick="go('select')">회차로</button><button onclick="saveId()">${S.round?'이 학생 채점 시작':'이 학생 시작'}</button></div></div>
       <div style="text-align:center;margin-top:13px;display:flex;gap:8px 16px;justify-content:center;flex-wrap:wrap"><a href="pending.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">재시 미응시 현황 보기 →</a><a href="roster.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">반 명단 · 주말시험 미응시 보기 →</a><a href="hw_grader.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">숙제 채점 (조준모의고사) →</a><a href="pdfs.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">시험지·해설 PDF →</a><a href="retake_entry.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">재시 수기 입력 →</a><a href="letters.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">학부모 문자 템플릿 →</a></div>
       ${cohortPanelHTML()}`;
   }
@@ -724,14 +724,16 @@ function render(){
     const hk=ChemEngine.studentKey(S.name,S.school);
     const hist=(STUDENT_HIST_KEY===hk)?(STUDENT_HIST||{}):{};
     const anyHist=Object.keys(hist).length>0;
-    h=`<div class="card"><h1>시험 선택</h1><p class="lede">${S.name} · ${S.school}${S.grade?' '+S.grade+'학년':''}</p>
+    const sv=savedSession();
+    h=(sv?`<div class="resume"><div style="flex:1">채점하던 내용이 있습니다 · <b>${sv.name}</b> · ${sv.attemptNo===1?'정시':sv.attemptNo===2?'재시':'재재시'} (${sv.answers.filter(a=>a).length}/${sv.keyItems.length})</div><button onclick="resume()">이어하기</button><button class="x" onclick="clearSession();render()">지우기</button></div>`:'')+
+    `<div class="card"><h1>시험 선택</h1><p class="lede">${S.name?`${S.name} · ${S.school}${S.grade?' '+S.grade+'학년':''}`:'채점할 회차를 먼저 고르세요. 학생 이름은 다음 화면에서 넣습니다.'}</p>
       <div class="tabs">${Object.keys(COURSE).map(c=>`<button class="${c===courseTab?'sel':''}" onclick="courseTab='${c}';render()">${COURSE[c]}</button>`).join('')}</div>
       <div class="rgrid">${rounds.map(r=>{const st=hist[r.course+'#'+r.round];
         const mk=st==='pass'?'<span style="position:absolute;top:3px;right:5px;color:#1f7a4d;font-size:12px;font-weight:800;line-height:1">✓</span>':st==='fail'?'<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#c0392b"></span>':'';
         return `<div class="rchip" style="position:relative" onclick="pickRound('${r.data}')">${mk}<span class="n mono">${r.round}</span><span class="u">회</span></div>`;}).join('')}</div>
       ${anyHist?`<p class="note" style="margin-bottom:4px"><span style="color:#1f7a4d;font-weight:800">✓</span> 통과 · <span style="color:#c0392b">●</span> 미통과(재시 필요) · 표시 없음 안 봄</p>`:''}
       <p class="note">화학Ⅰ·Ⅱ 각 18회, 일반화학 10회 · 누적 OX. 통과 기준 ${MANIFEST.pass}점.</p>
-      <div class="btnrow"><button class="ghost" onclick="go('id')">뒤로</button></div></div>`;
+      ${S.name?`<div class="btnrow"><button class="ghost" onclick="go('id')">학생 정보로</button></div>`:''}</div>`;
   }
   else if(v==='pdf'){
     const m=(MANIFEST.rounds||[]).find(r=>r.data===S.roundId)||{};
@@ -824,15 +826,19 @@ function render(){
   }
   $('#app').innerHTML=h;
   if(S.view==='grade'||S.view==='retake'){var fe=document.getElementById('entry'); if(fe) fe.focus();}
-  if(S.view==='pdf'){ checkPdfs(); }
+  if(S.view==='pdf'){ checkPdfs(); if(S.roundId) PDF_SEEN[S.roundId]=true; }
   if(S.view==='id'){ loadCohort(); }
   if(S.view==='select'){ loadStudentHist(); }
 }
+var PDF_SEEN={};   // 이 회차 시험지 화면을 이미 봤나(둘째 학생부터 건너뛴다)
 function saveId(){S.name=$('#f_name').value.trim()||'학생';S.school=$('#f_school').value.trim()||'학교';
-  S.grade=$('#f_grade').value.trim();S.isTest=TESTMODE;if(S.round&&S.roundId&&S.round.jeongsi&&S.round.jeongsi.items){startGrade(S.round.jeongsi.items,1);go('grade');}else{go('select');}}
+  S.grade=$('#f_grade').value.trim();S.isTest=TESTMODE;
+  if(!S.round||!S.roundId){go('select');return;}                 // 회차가 없으면 되돌린다(있을 수 없는 자리)
+  if(PDF_SEEN[S.roundId]&&S.round.jeongsi&&S.round.jeongsi.items){startGrade(S.round.jeongsi.items,1);go('grade');}
+  else{go('pdf');}}
 async function pickRound(file){S.roundId=file;$('#app').innerHTML='<div class="loading">시험 불러오는 중…</div>';
   const rd=await loadRound(file); if(!rd){$('#app').innerHTML='<div class="card"><p>이 회차 데이터는 배포 후 로드됩니다. (미리보기는 화학Ⅱ 7회만 내장)</p><div class="btnrow"><button class="ghost" onclick="go(\'select\')">뒤로</button></div></div>';return;}
-  S.round=rd;go('pdf');}
+  S.round=rd;go('id');}
 async function resume(){const sv=savedSession();if(!sv)return;$('#app').innerHTML='<div class="loading">불러오는 중…</div>';
   const rd=await loadRound(sv.roundId); if(!rd){clearSession();render();return;}
   S.round=rd;S.roundId=sv.roundId;S.name=sv.name;S.school=sv.school;S.grade=sv.grade;S.isTest=sv.isTest;

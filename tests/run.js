@@ -130,14 +130,17 @@ async function assertNoOverflow(page, label) {
   /* ── 3. 채점 흐름: 학생정보 → 회차 → 60문항 → 채점 → 결과 (시트 POST는 모킹) ── */
   await test('index · 채점 전체 흐름', async page => {
     await page.goto(BASE + 'index.html?test=1'); await page.waitForTimeout(900);  // 테스트 모드는 URL로만
-    assert(await page.$('#f_name'), '학생 정보 화면이 아님');
+    /* 차례가 바뀌었다: 회차 → 학생 → 시험지 → 채점. 수업은 회차 단위로 도는데
+       예전에는 학생부터 물어서, 학생마다 회차를 다시 골라야 했다. */
+    assert(await page.$('.rchip'), '첫 화면이 회차 선택이 아님');
     assert(!(await page.$('#f_test')), '테스트 모드 체크박스는 제거되어야 함');
-    await page.fill('#f_name', '회귀테스트'); await page.fill('#f_school', '테스트중'); await page.fill('#f_grade', '2');
-    await page.click('.btnrow button'); await page.waitForTimeout(500);
-    assert(await page.$('.rchip'), '회차 선택 화면이 아님');
     await page.click('.rchip');                        // 첫 회차
     // index.html은 `let S`라 window.S가 없음 → typeof로 접근
     await page.waitForFunction(() => typeof S !== 'undefined' && S.round && S.round.jeongsi && S.round.jeongsi.items, null, { timeout: 8000 });
+    assert(await page.$('#f_name'), '회차를 고른 뒤 학생 정보 화면이 아님');
+    await page.fill('#f_name', '회귀테스트'); await page.fill('#f_school', '테스트중'); await page.fill('#f_grade', '2');
+    // 학생 화면의 단추는 [회차로][이 학생 채점 시작] — 마지막 것이 진행
+    await page.click('.btnrow button:last-child'); await page.waitForTimeout(600);
     // 시험 출제·응시 화면 → 'OMR 채점' 버튼(뒤로/OMR 채점 중 마지막)
     await page.click('.btnrow button:last-child'); await page.waitForTimeout(400);
     assert(await page.$('#entry'), '채점 입력 화면이 아님');
@@ -437,6 +440,43 @@ async function assertNoOverflow(page, label) {
       console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
     }
   }
+
+  /* ── 채점 흐름: 회차 → 학생 → 시험지 → 채점 ──────────────────────
+     수업은 회차 단위로 돈다 — 한 회차를 정해 놓고 학생을 차례로 채점한다.
+     예전에는 학생부터 물어서, 학생마다 회차를 다시 골라야 했다.
+
+     여기서 지키는 것:
+     - 첫 화면이 회차다(학생 이름 없이도 고를 수 있다)
+     - 회차를 고르면 학생, 학생을 넣으면 시험지, 그다음 채점
+     - 둘째 학생부터는 시험지 화면을 건너뛴다(같은 회차를 또 볼 이유가 없다)
+     - **이미 나간 응시 링크 모양이 그대로다**(학생에게 보낸 주소가 깨지면 안 된다) */
+  await test('채점 흐름 · 회차 먼저 → 학생 나중', async (page) => {
+    await page.goto(BASE + 'index.html', { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(() => typeof S !== 'undefined' && S && S.view, null, { timeout: 20000 });
+    assert(await page.evaluate(() => S.view) === 'select', '첫 화면이 회차가 아니다');
+    assert(await page.evaluate(() => document.querySelector('#steps .step .lb').textContent) === '회차',
+           '걸음 표시 첫 칸이 회차가 아니다');
+    // 학생을 모르는 채로도 회차를 고를 수 있어야 한다
+    assert(await page.evaluate(() => document.querySelectorAll('.rgrid .rchip').length) > 0, '회차 칩이 없다');
+
+    await page.evaluate(() => document.querySelector('.rgrid .rchip').click());
+    await page.waitForFunction(() => S.view === 'id', null, { timeout: 20000 });
+    assert(await page.evaluate(() => /고른 회차/.test(document.querySelector('#app').textContent)),
+           '학생 화면에 고른 회차가 안 보인다');
+
+    await page.fill('#f_name', '흐름테스트'); await page.fill('#f_school', '테스트중');
+    await page.evaluate(() => saveId());
+    await page.waitForFunction(() => S.view === 'pdf', null, { timeout: 20000 });
+    /* 이 주소는 학생에게 이미 나갔다. 모양이 바뀌면 받은 링크가 깨진다. */
+    const link = await page.evaluate(() => document.getElementById('examUrl').textContent.trim());
+    assert(/exam\.html\?c=[a-z0-9]+&r=\d+$/.test(link), '응시 링크 모양이 바뀌었다: ' + link);
+
+    // 둘째 학생: 같은 회차 시험지를 또 보여 주지 않는다
+    await page.evaluate(() => { S.name = ''; S.school = ''; go('id'); });
+    await page.fill('#f_name', '둘째'); await page.fill('#f_school', '테스트중');
+    await page.evaluate(() => saveId());
+    await page.waitForFunction(() => S.view === 'grade', null, { timeout: 20000 });
+  }, { adminGate: true, viewport: { width: 900, height: 900 } });
 
   await BROWSER.close();
   srv.close();
