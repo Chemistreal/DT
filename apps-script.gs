@@ -342,6 +342,10 @@ function doGet(e) {
     return json_({ ok: true, passed: computePassed_(_pd) }); }
   if (action === 'names') { return namesForStudents_(e.parameter.code); }
   if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
+  /* 익명본(cohortmis)과 달리 이름이 붙는다. 개념 하나로 학생을 부르는 자리다 —
+     숫자만으로는 보충을 못 한다. 노출 폭은 pending·passed 와 같다. */
+  if (action === 'mistags') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
+    return json_({ ok: true, mis: misNamed_(Number(e.parameter.days || 21) || 21) }); }
   if (action === 'sentlog') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
     return json_({ ok: true, sent: sentLog_(Number(e.parameter.days || 21) || 21) }); }
   if (action === 'snoozelog') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
@@ -1937,4 +1941,55 @@ function snoozeList_() {
     });
   } catch (e) {}
   return out;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   개념 하나로 학생을 부른다 — "몰농도를 아직 못 잡은 아이들"
+
+   [왜 익명본으로는 안 되나]
+   cohortMis_ 는 반 패널용이라 학생키를 s1, s2 … 로 **다시 매긴다.** 그 번호는
+   다른 창구(pending·passed)의 학생키와 아무 관계가 없어서, 셸에서 이름을
+   붙일 방법이 없다. 그래서 통합 셸이 보여 주는 '어려워하는 개념' 은 여태
+   숫자만 있었다 — 몇 명이 틀렸는지는 아는데 **누구인지를 모른다.**
+   보충을 하려면 이름이 있어야 한다.
+
+   [무엇이 '아직 못 잡은' 인가]
+   같은 (학생·과목·회차)에 정시·재시·재재시가 여러 줄 있다. **마지막 시도**만
+   본다. 정시에서 틀렸다가 재시에서 잡은 개념을 계속 부르면, 이미 잡은 아이를
+   또 불러 앉히게 된다.
+   마지막 시도가 통과여도 거기서 틀린 개념은 그대로 싣는다(통과 점수를 넘겨도
+   못 잡은 것은 못 잡은 것이다). 대신 pass 를 같이 줘서 셸이 가려 보게 한다.
+   ══════════════════════════════════════════════════════════════════ */
+function misNamed_(days) {
+  days = days || 21;
+  var data = sheet_().getDataRange().getValues(); data.shift();
+  var all = data.map(mapRow_).filter(function (r) { return !r.isTest && r.studentKey; });
+  var excluded = getExcluded_();
+  var groups = {};
+  all.forEach(function (r) {
+    if (excluded.indexOf(exKey_(r.studentKey, r.course, r.round)) >= 0) return;
+    var k = r.studentKey + '#' + r.course + '#' + r.round;
+    (groups[k] || (groups[k] = [])).push(r);
+  });
+  var now = new Date(), out = [];
+  Object.keys(groups).forEach(function (k) {
+    var rows = groups[k], last = null, lo = -1;
+    rows.forEach(function (r) {
+      var o = attOrd_(r.attempt);
+      if (o >= lo) { lo = o; last = r; }       // 마지막 시도
+    });
+    if (!last || !last.wrongMis || !last.wrongMis.length) return;
+    var d = last.date ? new Date(last.date) : now;
+    var ago = Math.floor((now - d) / 86400000);
+    if (ago > days) return;
+    out.push({
+      studentKey: last.studentKey, name: last.name, school: last.school, year: last.year,
+      course: last.course, round: last.round, attempt: last.attempt,
+      pass: !!last.pass, score: last.score, tags: last.wrongMis,
+      reportLink: last.reportLink || '',
+      date: Utilities.formatDate(d, 'Asia/Seoul', 'M/d'), days: ago
+    });
+  });
+  out.sort(function (a, b) { return a.days - b.days || String(a.name).localeCompare(String(b.name), 'ko'); });
+  return { rows: out, days: days, generatedAt: Utilities.formatDate(now, 'Asia/Seoul', 'yyyy-MM-dd HH:mm') };
 }

@@ -465,5 +465,51 @@ console.log('[14] 오늘 못 하는 학생은 미룬다');
     !ctx.sentLog_(21).some(x => x.name === '오늘학생'), JSON.stringify(ctx.sentLog_(21)));
 }
 
+console.log('[15] 개념 하나로 학생을 부른다');
+{
+  /* 익명본(cohortmis)은 학생키를 s1,s2 로 다시 매겨서 다른 창구와 이을 수 없다.
+     그래서 셸의 '어려워하는 개념' 은 여태 숫자만 있었다 — 몇 명인지는 아는데
+     누구인지를 모른다. 보충을 하려면 이름이 있어야 한다. */
+  const now = Date.now();
+  const row = (name, key, course, round, att, pass, mis, ago) => {
+    const r = HEADERS.map(() => '');
+    r[0] = name; r[1] = 'L'; r[2] = new Date(now - ago * 864e5); r[3] = pass ? 90 : 60;
+    r[4] = pass ? '통과' : '미달'; r[5] = key; r[6] = '휘문중'; r[7] = '2';
+    r[8] = course; r[9] = round; r[10] = att; r[13] = mis; r[15] = ''; r[16] = '[]'; r[17] = '[]';
+    return r;
+  };
+  const S = SHEETS['결과'];
+  const keep = S._rows.length;
+  /* 정시에서 몰농도를 틀리고 재시에서 잡았다. 다시 부르면 이미 잡은 아이를
+     또 앉히게 된다 — 마지막 시도만 본다. */
+  S._rows.push(row('이재현', '휘문중-이재현', 'ch1', 5, '정시', false, '몰농도 / 완충', 2));
+  S._rows.push(row('이재현', '휘문중-이재현', 'ch1', 5, '재시', true, '완충', 1));
+  S._rows.push(row('박서준', '휘문중-박서준', 'ch1', 5, '정시', false, '몰농도', 3));
+  /* 오래된 것까지 쌓으면 지금 무엇을 보충해야 하는지가 안 보인다. */
+  S._rows.push(row('옛학생', '휘문중-옛학생', 'ch1', 5, '정시', false, '몰농도', 90));
+
+  const m = ctx.misNamed_(21);
+  const of = nm => m.rows.filter(r => r.name === nm)[0];
+  T('이름이 붙는다', !!of('박서준') && of('박서준').school === '휘문중', JSON.stringify(m.rows));
+  T('마지막 시도만 본다', of('이재현') && of('이재현').tags.join(',') === '완충',
+    JSON.stringify(of('이재현')));
+  T('잡은 개념은 다시 안 부른다',
+    !m.rows.some(r => r.name === '이재현' && r.tags.indexOf('몰농도') >= 0));
+  T('마지막이 통과여도 틀린 개념은 싣는다', of('이재현') && of('이재현').pass === true);
+  T('오래된 줄은 빼고 준다', !of('옛학생'), JSON.stringify(m.rows.map(r => r.name)));
+  T('기간을 넓히면 나온다', ctx.misNamed_(120).rows.some(r => r.name === '옛학생'));
+  T('틀린 개념이 없는 줄은 안 싣는다', m.rows.every(r => r.tags.length > 0));
+  T('급한 것이 위에 선다', m.rows.map(r => r.days).every((d, i, a) => i === 0 || a[i - 1] <= d),
+    JSON.stringify(m.rows.map(r => [r.name, r.days])));
+
+  const g3 = J(ctx.doGet({ parameter: { action: 'mistags' } }));
+  T('창구로도 읽힌다', g3.ok === true && Array.isArray(g3.mis.rows), JSON.stringify(g3).slice(0, 160));
+  /* 익명본은 그대로 익명이어야 한다 — 이 창구를 만들었다고 저쪽이 열리면 안 된다. */
+  T('익명본은 그대로 익명이다',
+    ctx.cohortMis_().every(r => /^s\d+$/.test(String(r.studentKey)) && !('name' in r)),
+    JSON.stringify(ctx.cohortMis_()[0]));
+  S._rows.length = keep;
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);
