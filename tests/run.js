@@ -414,6 +414,70 @@ async function assertNoOverflow(page, label) {
     assert(/_rxPick\(RXBANK\.chronic\.many/.test(src), 'chronic 을 골라 쓰지 않는다');
   });
 
+  /* ══════════════════════════════════════════════════════════════
+     "반복해서 막히는 개념" 은 서로 다른 회차에서 **같은 이름**의 오개념을
+     틀렸을 때만 뜬다. 이름이 갈려 있으면 같은 곳에서 세 번 막혀도 신호가 없다.
+
+     세어 보니 793종 가운데 474종(59.8%)이 단 한 회차에만 있어서, 문항
+     602개(21.8%)는 아무리 틀려도 구조적으로 신호를 못 냈다 — 갈린 이유는
+     대부분 조사와 어순(`몰농도 온도`/`몰농도와 온도`)이었다.
+     ══════════════════════════════════════════════════════════════ */
+  await test('내용 · 같은 개념이 이름 때문에 갈리지 않는다', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const AD = path.join(ROOT, 'appdata');
+    const used = {}, rounds = {};
+    fs.readdirSync(AD).filter(f => /^round_.*\.json$/.test(f)).forEach(f => {
+      const d = JSON.parse(fs.readFileSync(path.join(AD, f), 'utf8'));
+      const key = d.course + '#' + d.round;
+      [d.jeongsi].concat(d.retakeC || []).forEach(b => {
+        if (!b || !Array.isArray(b.items)) return;
+        b.items.forEach(it => {
+          const m = String((it && it.mis) || '').trim(); if (!m) return;
+          used[m] = (used[m] || 0) + 1;
+          (rounds[m] || (rounds[m] = {}))[key] = 1;
+        });
+      });
+    });
+    const nRound = m => Object.keys(rounds[m] || {}).length;
+    const merged = {};
+    Object.keys(rounds).forEach(m => {
+      const c = E.misCanon(m);
+      Object.keys(rounds[m]).forEach(k => { (merged[c] || (merged[c] = {}))[k] = 1; });
+    });
+    const blockedBefore = Object.keys(used).filter(m => nRound(m) < 2)
+      .reduce((t, m) => t + used[m], 0);
+    const blockedAfter = Object.keys(used)
+      .filter(m => Object.keys(merged[E.misCanon(m)] || {}).length < 2)
+      .reduce((t, m) => t + used[m], 0);
+    console.log('  신호를 못 내던 문항 ' + blockedBefore + ' → ' + blockedAfter +
+                ' · 매핑 ' + Object.keys(E.MIS_CANON).length + '개');
+    assert(blockedAfter < blockedBefore, '이름 정리가 아무것도 살리지 못했다');
+    assert(blockedAfter <= 520, '아직 ' + blockedAfter + '문항이 신호를 못 낸다');
+
+    /* ⚠ 이름만 닮고 개념이 다른 것을 합치면 남의 약점이 섞인다. 사람이 빼 둔
+       것들이 실수로 다시 들어오면 여기서 걸린다. */
+    [['원자 구성', '원자핵 구성'], ['몰농도 정의', '몰랄 농도 정의'],
+     ['전자 전이', '전자 이동'], ['끓는점 오름', '어는점 내림'],
+     ['반응 차수', '반응 지수'], ['원자 수 세기', '원소 수 세기']]
+      .forEach(([a, b]) => assert(E.misCanon(a) !== E.misCanon(b),
+        '다른 개념을 합쳤다: ' + a + ' / ' + b));
+
+    /* 대표 이름으로 바뀐 뒤에도 설명을 찾을 수 있어야 한다 — 못 찾으면
+       "3개 회차 반복" 을 짚어 놓고 도움을 못 준다. */
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const one = JSON.parse(src.match(/const ONELINE=(\{[\s\S]*?\});\n/)[1]);
+    const core = JSON.parse(src.match(/const CORE=(\{[\s\S]*?\});\n/)[1]);
+    const noHelp = Object.keys(E.MIS_CANON).map(k => E.MIS_CANON[k])
+      .filter(t => !one[t] || !core[t]);
+    assert(noHelp.length === 0, '대표 이름에 설명이 없다: ' + noHelp.slice(0, 4).join(' / '));
+
+    /* 자료(mis)와 해설 사전은 손대지 않는다 — 시트에 쌓인 지난 기록이 옛 이름이라,
+       집계에서만 바꿔야 지난 학기까지 같이 살아난다. */
+    const eng = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    assert(/var mk = misCanon\(m\);/.test(eng), '집계에서 대표 이름을 안 쓴다');
+    assert(Object.keys(used).some(m => E.MIS_CANON[m]), '자료의 태그가 매핑에 안 걸린다');
+  });
+
   await test('내용 · 짚은 개념에는 설명이 있다', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
     const dictOf = name => {
