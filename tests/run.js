@@ -303,6 +303,69 @@ async function assertNoOverflow(page, label) {
      저장소에 다 있는데도. 학부모는 문자로 받은 링크 하나뿐이라 더 볼 수 없다. */
   /* 눈으로 보면 "좀 흐린가?" 로 끝나고, 흐린 채로 남는다. 재서 정한다.
      학부모가 휴대폰으로 읽는 문서라 여기서 아끼면 안 읽힌다. */
+  /* ══════════════════════════════════════════════════════════════
+     이름만 주고 도움을 안 주면 안 된다.
+
+     성적표는 오개념 이름을 짚어 준다 — "총괄성 크기 · 3개 회차 반복". 그런데
+     설명(ONELINE)이 없는 태그는 코드가 그 줄을 **조용히 빼 버린다**:
+
+         ${ONELINE[m.mis] ? '<b>핵심:</b> …' : ''}
+
+     그러면 세 회차나 막힌 것을 짚어 놓고 **아무것도 알려 주지 않는 화면**이
+     된다. 재어 보니 태그 열 개가 그랬고, 걸리는 문항이 2,760개 중 339개
+     (12.3%)였다 — 고체 결정구조 · 오비탈 마디 · 전자전이 계열 같은 화학Ⅱ 뒷단원.
+
+     회차를 새로 만들면 새 태그가 생긴다. 그때 설명을 안 쓰면 여기서 빨간불이
+     난다 — 그게 이 검사의 목적이다.
+     ══════════════════════════════════════════════════════════════ */
+  await test('내용 · 짚은 개념에는 설명이 있다', async () => {
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const dictOf = name => {
+      const m = src.match(new RegExp('const ' + name + '=(\\{[\\s\\S]*?\\});\\n'));
+      assert(m, name + ' 사전을 못 찾았다');
+      return JSON.parse(m[1]);
+    };
+    const ONELINE = dictOf('ONELINE'), CORE = dictOf('CORE');
+
+    const used = {};
+    let items = 0, rounds = 0;
+    fs.readdirSync(path.join(ROOT, 'appdata'))
+      .filter(f => /^round_.*\.json$/.test(f))
+      .forEach(f => {
+        rounds++;
+        const d = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', f), 'utf8'));
+        ['jeongsi', 'jaesi', 'jaejaesi'].forEach(sec => {
+          const b = d[sec];
+          if (!b || !Array.isArray(b.items)) return;
+          b.items.forEach(it => {
+            items++;
+            const m = String((it && it.mis) || '').trim();
+            if (m) used[m] = (used[m] || 0) + 1;
+          });
+        });
+      });
+    console.log('  회차 ' + rounds + ' · 문항 ' + items + ' · 오개념 ' + Object.keys(used).length + '종');
+    assert(rounds >= 40 && items >= 2000, '회차 자료를 제대로 못 읽었다');
+
+    const count = (dict) => Object.keys(used).filter(t => !dict[t]);
+    const noOne = count(ONELINE), noCore = count(CORE);
+    const hit = ks => ks.reduce((t, k) => t + used[k], 0);
+    assert(noOne.length === 0,
+      '한 줄 설명(ONELINE)이 없는 개념 ' + noOne.length + '종 · 문항 ' + hit(noOne) +
+      '개 — ' + noOne.slice(0, 5).join(' / '));
+    assert(noCore.length === 0,
+      '핵심 설명(CORE)이 없는 개념 ' + noCore.length + '종 · 문항 ' + hit(noCore) +
+      '개 — ' + noCore.slice(0, 5).join(' / '));
+
+    /* 빈 문자열로 채워 검사만 통과시키는 길을 막는다 — 그건 없는 것과 같다. */
+    const thin = Object.keys(used).filter(t => String(ONELINE[t] || '').replace(/\*/g, '').trim().length < 15);
+    assert(thin.length === 0, '설명이 너무 짧은 개념: ' + thin.slice(0, 5).join(' / '));
+
+    /* 모든 문항에 오개념 이름이 붙어 있어야 '어디서 막혔나' 를 말할 수 있다. */
+    const tagged = Object.values(used).reduce((a, b) => a + b, 0);
+    assert(tagged === items, '오개념 이름이 없는 문항 ' + (items - tagged) + '개');
+  });
+
   await test('report · 글씨는 눈이 아니라 자로 정한다', async () => {
     const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
     const lum = h => { h = h.replace('#',''); const a = [0,2,4].map(i => parseInt(h.slice(i,i+2),16)/255)
