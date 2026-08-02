@@ -277,6 +277,11 @@ function doPost(e) {
       if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' });
       return json_({ ok: true, log: markSent_(d) });
     }
+    /* 미루기도 같은 길이다 — 셸은 쓰지 않고 DT 의 pending.html 이 대신 부른다. */
+    if (d.action === 'snooze') {
+      if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' });
+      return json_({ ok: true, log: snooze_(d) });
+    }
     var sh = sheet_();
     var _selfKey = keyOf_(d.name || '', d.school || '');
     var _key = canonicalKey_(d.name || '', d.school || '');   // 같은 학생이 학교명을 다르게 적어도 기존 키로 자동 연결
@@ -339,6 +344,8 @@ function doGet(e) {
   if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
   if (action === 'sentlog') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
     return json_({ ok: true, sent: sentLog_(Number(e.parameter.days || 21) || 21) }); }
+  if (action === 'snoozelog') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
+    return json_({ ok: true, snoozed: snoozeList_() }); }
   if (action === 'views') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, views: viewsList_() }); }
   /* 수입은 명단·점수와 다른 종류다. 이 창구만은 **진짜 토큰**을 받는다
      (adminOk_ 는 지금 전체 공개라 아무나 통과한다). 속성이 비어 있으면 아예 닫는다. */
@@ -1844,6 +1851,89 @@ function sentLog_(days) {
       out.push({ kind: String(r[1] || ''), name: String(r[2] || ''),
                  course: String(r[3] || ''), round: String(r[4] || ''),
                  at: Utilities.formatDate(new Date(t), 'Asia/Seoul', 'M/d HH:mm'), ts: t });
+    });
+  } catch (e) {}
+  return out;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   미루기 — "이 학생은 다음 주에 다시"
+
+   [왜 지우지 않고 미루나]
+   재시 목록에 오늘 손댈 수 없는 학생이 섞여 있다. 이번 주 내내 결석이거나,
+   이미 따로 얘기해 두었거나, 부모님이 다음 주에 연락 달라고 했거나.
+   지금은 그런 줄도 매일 똑같이 올라온다. 그래서 목록 전체를 흘려보게 되고,
+   **정말 오늘 해야 하는 줄까지 같이 흘러간다.**
+
+   지우면 안 된다. 지운 것은 돌아오지 않는다. 미룬 것은 날짜가 지나면
+   저절로 돌아온다 — 잊어버려도 되게 하는 것이 목적이다.
+
+   [날짜는 글자로 적는다]
+   시트에 Date 로 넣으면 시간대에 따라 하루가 밀린다(스크립트는 KST, 시트는
+   다른 곳일 수 있다). 'YYYY-MM-DD' 글자로 적고 글자로 비교한다. ISO 차례는
+   사전 차례와 같아서 크기 비교가 그대로 맞는다.
+   ══════════════════════════════════════════════════════════════════ */
+var SNZ_TAB = '_미룸';
+function snoozeSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(SNZ_TAB);
+  if (!sh) {
+    sh = ss.insertSheet(SNZ_TAB);
+    sh.appendRow(['시각', '갈래', '이름', '과목', '회차', '언제까지', '취소']);
+  }
+  return sh;
+}
+/* 시트가 'YYYY-MM-DD' 를 날짜로 바꿔 놓아도 읽을 때 다시 글자로 되돌린다. */
+function dayStr_(v) {
+  if (!v) return '';
+  /* instanceof 로 보지 않는다. 시트가 돌려주는 값은 다른 realm 에서 온 Date 라
+     instanceof 가 거짓이 되는 자리가 있고, 그러면 미룬 날짜를 통째로 못 읽는다
+     (미룬 학생이 목록에 그대로 남는다). 할 줄 아는 것으로 가린다. */
+  if (v && typeof v.getFullYear === 'function') return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
+  var s = String(v).trim();
+  var m = s.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})/);
+  if (!m) return '';
+  return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+}
+function todayStr_() { return Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd'); }
+
+/* 열쇠는 _안내기록 과 같은 규칙이다(갈래|이름|과목|회차). 셸이 만드는 열쇠와
+   같아야 화면에서 바로 맞춰 볼 수 있다. */
+function snooze_(d) {
+  var sh = snoozeSheet_(), key = sentKeyOf_(d), last = sh.getLastRow();
+  var until = dayStr_(d.until);
+  if (!d.off && !until) return '';             // 언제까지인지 없으면 미룰 수 없다
+  var rows = last > 1 ? sh.getRange(2, 1, last - 1, 7).getValues() : [];
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var k = [String(rows[i][1] || ''), String(rows[i][2] || '').replace(/\s+/g, '').trim(),
+             String(rows[i][3] || ''), String(rows[i][4] || '')].join('|');
+    if (k !== key) continue;
+    /* 이미 있던 줄을 고친다. 미루기를 다시 누르면 날짜만 밀리고,
+       "지금 보기" 를 누르면 취소로 적힌다(줄은 남는다 — 몇 번 미뤘는지가 신호다). */
+    sh.getRange(i + 2, 6).setValue(d.off ? dayStr_(rows[i][5]) : until);
+    sh.getRange(i + 2, 7).setValue(d.off ? 'Y' : '');
+    if (!d.off) sh.getRange(i + 2, 1).setValue(new Date());
+    return key;
+  }
+  if (d.off) return key;
+  sh.appendRow([new Date(), String(d.kind || ''), String(d.name || ''),
+                String(d.course || ''), String(d.round || ''), until, '']);
+  return key;
+}
+/* 아직 살아 있는 것만 준다. 날짜가 지난 것은 알아서 빠진다 —
+   지우는 사람도, 지우는 트리거도 없다. */
+function snoozeList_() {
+  var out = [];
+  try {
+    var sh = snoozeSheet_(), last = sh.getLastRow();
+    if (last < 2) return out;
+    var today = todayStr_();
+    sh.getRange(2, 1, last - 1, 7).getValues().forEach(function (r) {
+      if (String(r[6] || '').trim()) return;                  // 취소된 것
+      var until = dayStr_(r[5]);
+      if (!until || until < today) return;                    // 날짜가 지난 것
+      out.push({ kind: String(r[1] || ''), name: String(r[2] || ''),
+                 course: String(r[3] || ''), round: String(r[4] || ''), until: until });
     });
   } catch (e) {}
   return out;
