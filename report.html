@@ -695,9 +695,32 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
     return y != null ? y : (rs[0] ? rs[0].year : null);
   }
 
-  // 간격 반복(D8): 과거 회차에 틀린 개념 중 지금 다시 점검할 것. chronic할수록(자주 틀림) 우선(D10 인출강도).
+  /* ---------- 간격 반복 ----------
+     "복습 시점" 이라고 적어 놓고 **시점 설계가 없었다.** 과거에 한 번이라도
+     틀린 개념을 회차마다 그대로 다시 늘어놓았다. 그러면 목록이 계속 길어지고,
+     길어지면 안 읽힌다.
+
+     왜 필요한가 — 재어 보니 이렇다. 한 개념을 틀린 뒤 **정시에서 다시 만날
+     때까지**:
+
+         화학Ⅰ 882짝 중 390(44%) · 화학Ⅱ 902중 420(47%) · 일반화학 503중 253(50%)
+         이 **다시는 안 나온다.** 나오는 것의 대부분은 바로 다음 회차다.
+
+     즉 간격이 **1 아니면 ∞** 다. 사이가 비어 있다.
+
+     선생님이 정한 간격: **1 → 3 → 7 회차**(2026-08).
+     마지막으로 틀린 회차 L 을 기준으로 L+1, L+4(=1+3), L+11(=1+3+7) 에 한 번씩
+     떠오르고, 그 뒤로는 졸업한다. 그 사이에 다시 틀리면 L 이 그 회차로 옮겨져
+     처음부터 다시 센다.
+
+     ⚠ 여기서 아는 것은 "**다시 안 걸렸다**" 뿐이지 "**확인됐다**" 가 아니다.
+     시트 기록에는 그 회차에 그 개념을 **물었는지**가 없고 틀린 목록만 있다.
+     그래서 이 함수는 *언제 다시 보여 줄지*만 정한다 — 숙달 판정이 아니다.
+     (물었는지까지 보려면 회차 자료를 학생 앱이 들고 있어야 한다.) */
+  var SPACED_DUE = [1, 4, 11];        // 1 → +3 → +7 (누적)
+
   function spacedReview(rows, currentRound) {
-    var ord = new Proxy({},{get:function(_o,k){k=String(k);var n=0;for(var i=0;i<k.length;i++){if(k.charAt(i)==='재')n++;}return n;}});  // 시도 순서 = 재 글자 수(무한 단계)
+    var ord = { '정시': 0, '첫번째시험': 0, '이번주 테스트': 0, '첫 응시': 0, '재시': 1, '재재시': 2 };
     var byRound = {};
     (rows || []).forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
     var byConcept = {};
@@ -709,10 +732,18 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
         o.rounds[rd] = 1; o.last = Math.max(o.last, Number(rd));
       });
     });
+    var now = Number(currentRound) || 0;
     return Object.keys(byConcept).map(function (m) {
-      var o = byConcept[m];
-      return { mis: m, times: Object.keys(o.rounds).length, last: o.last, gap: (currentRound || 0) - o.last };
-    }).filter(function (x) { return x.last < (currentRound || 0); })
+      var o = byConcept[m], gap = now - o.last;
+      /* 지난 due 를 몇 개 넘겼나 = 몇 단계까지 왔나. 셋을 다 넘겼으면 졸업이다.
+         (오래전에 한 번 틀리고 그 뒤로 안 걸린 개념은 여기서 목록을 떠난다 —
+         그것을 지금 "복습 시점" 이라고 내미는 것이 오히려 거짓말이다.) */
+      var stage = 0;
+      while (stage < SPACED_DUE.length && gap > SPACED_DUE[stage]) stage++;
+      var due = stage < SPACED_DUE.length ? o.last + SPACED_DUE[stage] : null;
+      return { mis: m, times: Object.keys(o.rounds).length, last: o.last, gap: gap,
+               stage: stage, due: due, dueNow: due != null && now >= due };
+    }).filter(function (x) { return x.last < now && x.dueNow; })
       .sort(function (a, b) { return b.times - a.times || b.last - a.last; });
   }
 
@@ -1552,8 +1583,8 @@ function render(commit){
     ${A.chronicMis.length?A.chronicMis.map(m=>`<div class="rx"><div class="top"><span class="nm">${m.mis}</span><span class="freq">${m.rounds}개 회차 반복</span></div>${ONELINE[m.mis]?`<div class="ol"><b>핵심:</b> ${md(ONELINE[m.mis])}</div>`:''}</div>`).join('')
       :'<p class="muted">반복해서 막히는 개념 없음. 안정적입니다.</p>'}
     ${review.length?`<div class="subhead" style="margin-top:16px">한 번씩 놓친 곳, 복습 시점</div>
-    <p class="note" style="margin:2px 0 10px">이전 회차에 한 번씩 놓쳤던 개념입니다. 지금 가볍게 다시 점검하면 오래 갑니다.</p>
-    ${review.map(function(x){return '<div class="rvrow"><span class="rvm">'+x.mis+'</span><span class="rvg">'+x.last+'회에서</span></div>';}).join('')}`:''}</div>`;
+    <p class="note" style="margin:2px 0 10px">이전 회차에 놓쳤던 개념 중 <b>지금이 다시 볼 때</b>인 것만 골랐습니다(1 → 3 → 7회차 간격). 지금 가볍게 점검하면 오래 갑니다.</p>
+    ${review.map(function(x){return '<div class="rvrow"><span class="rvm">'+x.mis+'</span><span class="rvg">'+x.last+'회에서 · '+(x.stage===0?'첫 점검':x.stage===1?'두 번째 점검':'마지막 점검')+'</span></div>';}).join('')}`:''}</div>`;
 
   // 지금까지의 여정 (바로잡은 개념 누적 + 끝까지 해낸 기록 통합)
   h+=`<div class="card"><h2>지금까지의 여정</h2>

@@ -615,6 +615,41 @@ async function assertNoOverflow(page, label) {
     await page.setViewportSize({ width: 1280, height: 900 });
   });
 
+  /* "복습 시점" 이라고 적어 놓고 시점 설계가 없었다 — 과거에 한 번이라도 틀린
+     개념을 회차마다 그대로 다시 늘어놓았다. 선생님이 정한 간격: 1 → 3 → 7회차. */
+  await test('간격 반복 · 1 → 3 → 7 회차에만 떠오른다', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const rows = [{ round: 10, attempt: '정시', wrongMis: ['총괄성'] }];
+    const seen = [];
+    for (let n = 10; n <= 22; n++) if (E.spacedReview(rows, n).length) seen.push(n);
+    assert(JSON.stringify(seen) === JSON.stringify([11, 14, 21]),
+           '떠오르는 회차가 11·14·21 이 아니다: ' + JSON.stringify(seen));
+
+    /* 사이 회차에 뜨면 목록이 길어지고, 길어지면 안 읽힌다. */
+    assert(E.spacedReview(rows, 12).length === 0, '12회에 떴다 — 사이는 비어야 한다');
+    assert(E.spacedReview(rows, 22).length === 0, '졸업한 개념이 또 떴다');
+
+    /* 다시 틀리면 기준이 그 회차로 옮겨져 처음부터 다시 센다. */
+    const again = [{ round: 10, attempt: '정시', wrongMis: ['총괄성'] },
+                   { round: 12, attempt: '정시', wrongMis: ['총괄성'] }];
+    const seen2 = [];
+    for (let n = 12; n <= 24; n++) if (E.spacedReview(again, n).length) seen2.push(n);
+    assert(JSON.stringify(seen2) === JSON.stringify([13, 16, 23]),
+           '다시 틀린 뒤 기준이 안 옮겨졌다: ' + JSON.stringify(seen2));
+    assert(E.spacedReview(again, 13)[0].times === 2, '틀린 횟수를 안 센다');
+
+    /* 엔진은 네 곳에 같은 코드로 들어 있다. 하나만 고치면 화면마다 다르게
+       동작하는데, 그것을 잡는 검사가 없었다. */
+    const eng = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    const i = eng.indexOf('  /* ---------- 간격 반복'), j = eng.indexOf('  // ---------- export');
+    assert(i > 0 && j > i, 'chemengine.js 에서 간격 반복 자리를 못 찾았다');
+    const ref = eng.slice(i, j);
+    ['exam.html', 'report.html', 'chemistreal_app.html'].forEach(f => {
+      const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+      assert(src.includes(ref), f + ' 의 엔진이 chemengine.js 와 갈렸다');
+    });
+  });
+
   await test('내용 · 온도 표기가 한 가지다', async () => {
     const AD = path.join(ROOT, 'appdata');
     const bad = [];
