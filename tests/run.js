@@ -302,6 +302,91 @@ async function assertNoOverflow(page, label) {
   });
 
   /* ── 8. 홈: 타일 링크 무결성 (가리키는 파일이 전부 존재) ── */
+  /* ══════════════════════════════════════════════════════════════
+     명단 화면: **못 물어본 것**과 **비어 있는 것**은 다른 일이다.
+
+     여태 둘을 같게 봤다 — 서버에 못 물어봐도 기본 명단을 띄우고 "명단 저장을
+     누르면 반영됩니다" 라고 안내했다. 그 상태에서 저장을 누르면 시트의 진짜
+     명단(세 반 54명)이 기본 명단으로 **덮어써진다.** 한 번 누르면 끝이다.
+
+     실제로 그렇게 배너가 떴다. 서버도 명단도 멀쩡했고, 앱스크립트가 실행을
+     한 줄로 세우는 동안 이 화면의 한 번뿐인 요청이 줄에 걸렸을 뿐이다.
+     ══════════════════════════════════════════════════════════════ */
+  await test('roster · 못 물어봤으면 저장을 막는다', async page => {
+    let asked = 0;
+    await page.route('**/macros/s/**', route => {
+      if (/action=roster/.test(route.request().url()) && route.request().method() === 'GET') {
+        asked++; return route.abort();          // 줄에 걸려 실패하는 상황
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    });
+    await page.goto(BASE + 'roster.html');
+    await page.waitForTimeout(4500);
+    /* 한 번 실패했다고 포기하면 화면이 기본 명단으로 되돌아간다 — 몇 번 더 묻는다. */
+    assert(asked >= 2, '한 번만 묻고 포기했다 (' + asked + '회)');
+    const st = await page.evaluate(() => ({
+      load: state.load,
+      disabled: document.getElementById('save').disabled,
+      bad: !!document.querySelector('#banner .banner.bad'),
+      text: document.getElementById('banner').textContent,
+      retry: !!document.getElementById('retry'),
+    }));
+    assert(st.load === 'fail', '상태가 fail 이 아니다: ' + st.load);
+    assert(st.disabled, '저장 단추가 안 잠겼다');
+    assert(st.bad, '실패 배너가 안 뜬다');
+    assert(/서버에 저장된 명단이 아닙니다/.test(st.text), '무엇이 보이는지 안 알려 준다');
+    assert(st.retry, '다시 불러오는 길이 없다');
+
+    /* 단추를 막아 뒀지만 스크립트로도 눌린다. 덮어쓰기는 되돌릴 수 없으므로
+       문을 두 겹으로 잠근다 — 저장 요청이 **한 건도 나가면 안 된다.** */
+    let posted = 0;
+    await page.route('**/macros/s/**', route => {
+      if (route.request().method() === 'POST') { posted++; }
+      return route.abort();
+    });
+    await page.evaluate(() => save());
+    await page.waitForTimeout(600);
+    assert(posted === 0, '막아 뒀는데 저장이 나갔다 (' + posted + '건)');
+  }, { adminGate: true });
+
+  await test('roster · 서버가 비었다고 답하면 저장할 수 있다', async page => {
+    await page.route('**/macros/s/**', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, classes: [] }) }));
+    await page.goto(BASE + 'roster.html');
+    await page.waitForTimeout(1200);
+    const st = await page.evaluate(() => ({
+      load: state.load,
+      disabled: document.getElementById('save').disabled,
+      bad: !!document.querySelector('#banner .banner.bad'),
+      n: state.classes.length,
+    }));
+    /* 진짜 첫 설정이다 — 이때는 기본 명단을 띄우고 저장을 열어 둬야 한다. */
+    assert(st.load === 'empty', '상태가 empty 가 아니다: ' + st.load);
+    assert(!st.disabled, '저장이 잠겨 있다 — 첫 설정을 못 한다');
+    assert(!st.bad, '붉은 배너가 뜬다 — 실패가 아닌데');
+    assert(st.n > 0, '기본 명단이 안 떴다');
+  }, { adminGate: true });
+
+  await test('roster · 서버 명단이 오면 그것을 쓴다', async page => {
+    await page.route('**/macros/s/**', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, classes: [
+        { label: '화학1 일6-10', course: 'ch1', students: ['강신우', '고영훈'], round: 7 } ] }) }));
+    await page.goto(BASE + 'roster.html');
+    await page.waitForTimeout(1200);
+    const st = await page.evaluate(() => ({
+      load: state.load, n: state.classes.length,
+      first: state.classes[0] && state.classes[0].students.length,
+      disabled: document.getElementById('save').disabled,
+      banner: document.getElementById('banner').textContent.trim(),
+    }));
+    assert(st.load === 'ok', '상태가 ok 가 아니다: ' + st.load);
+    assert(st.n === 1 && st.first === 2, '서버 명단을 안 썼다');
+    assert(!st.disabled, '저장이 잠겨 있다');
+    assert(st.banner === '', '멀쩡한데 배너가 뜬다: ' + st.banner);
+  }, { adminGate: true });
+
   await test('home · 타일 링크 무결성', async page => {
     await page.goto(BASE + 'home.html'); await page.waitForTimeout(400);
     const hrefs = await page.$$eval('a.tile', as => as.map(a => a.getAttribute('href')));
