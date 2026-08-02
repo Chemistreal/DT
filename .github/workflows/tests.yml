@@ -15,6 +15,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # 통합 셸(exam/hub.html)이 이 목록을 읽어 자료 탭을 그린다. 파일이 늘었는데
+      # 목록이 그대로면 셸에서는 그 회차가 없는 것처럼 보인다 — 눌러 보고 나서야 안다.
+      - name: 자료 목록이 실제 파일과 일치
+        run: python3 tools/gen_materials.py --check
       - name: Install playwright
         run: npm install --prefix tests
       - name: Install chromium
