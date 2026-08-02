@@ -200,6 +200,11 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .gcell .gv{font-family:'JetBrains Mono',monospace;font-size:27px;font-weight:800;color:var(--teal-d);line-height:1}
 .gcell .gv .gu{font-size:13px;font-weight:700;opacity:.55}
 .gcell .gl{font-size:11px;color:var(--sub);margin-top:6px}
+/* 틀린 것 옆에 고칠 것을 둔다. 손가락으로 짚는 자리라 넉넉히 잡는다. */
+.matrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.matlink{display:inline-block;padding:10px 16px;border:1px solid var(--brass);border-radius:10px;
+  color:var(--ink);text-decoration:none;font-weight:700;font-size:14px;background:var(--surface)}
+.matlink:hover{background:var(--brass-soft,rgba(201,162,39,.10))}
 .retakebtn{display:block;margin-top:14px;padding:13px;background:var(--o);color:#fff;text-align:center;border-radius:11px;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:-.01em}
 .retaken{font-size:11.5px;color:var(--sub);text-align:center;margin:8px 0 0;line-height:1.4}
 .qualcard{background:linear-gradient(180deg,#FAF6EF,var(--surface));border-left:4px solid var(--brass)}
@@ -860,6 +865,53 @@ function rxNarrCard(){
     + '<p class="note" style="font-size:13.5px;line-height:1.85;margin:0;color:#3a4653">'+parts.join(' ')+'</p></div>';
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   이 회차 자료 — 틀린 것 옆에 고칠 것을 둔다
+
+   파이널 성적표는 틀린 문항마다 해설·동형문제를 걸어 준다. 그런데 DT 성적표는
+   "총괄성 크기를 틀렸습니다" 까지만 말하고 **갈 곳을 안 준다.** 자료는 이
+   저장소에 다 있는데(문제지·해설·오답노트), 성적표에서 거기로 가는 길이
+   하나도 없었다. 학부모는 문자로 받은 링크 하나뿐이라 더 볼 수가 없다.
+
+   [주소를 지어내지 않는다]
+   회차 번호로 파일 이름을 지어내면 404 로 끝난다 — 화학Ⅱ 는 문제지·OMR 이
+   18회까지 있는데 **해설 HTML 은 7회까지뿐**이다. 이 저장소가 만들어 두는
+   목록(materials.json)에 실제로 있는 것만 건다. 목록을 못 읽으면 이 칸을
+   통째로 접는다(빈 링크를 보여 주느니 안 보여 준다).
+   ══════════════════════════════════════════════════════════════════ */
+var MATS=null;
+async function loadMats(){
+  try{
+    var r=await fetch('materials.json',{cache:'no-cache'});
+    if(!r.ok) return;
+    var j=await r.json();
+    if(j&&j.courses) MATS=j;
+  }catch(e){}
+}
+function matsFor(course, round){
+  if(!MATS) return null;
+  var c=(MATS.courses||[]).filter(function(x){ return x.key===course; })[0];
+  if(!c) return null;
+  var r=(c.rounds||[]).filter(function(x){ return Number(x.round)===Number(round); })[0];
+  return r? (r.files||null) : null;
+}
+function matsCardHTML(){
+  if(!latest) return '';
+  var f=matsFor(latest.course, latest.round);
+  if(!f) return '';
+  var out=[];
+  if(f.haeseol) out.push('<a class="matlink" href="'+(f.haeseol.html||f.haeseol.pdf)+'"'+
+    (f.haeseol.html?'':' download')+'>해설'+(f.haeseol.html?'':' (PDF)')+'</a>');
+  if(f.munje) out.push('<a class="matlink" href="'+(f.munje.html||f.munje.pdf)+'"'+
+    (f.munje.html?'':' download')+'>문제지</a>');
+  if(f.truthbook) out.push('<a class="matlink" href="'+f.truthbook.pdf+'" download>오답노트 (PDF)</a>');
+  if(!out.length) return '';
+  var nm={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'}[latest.course]||latest.course;
+  return '<div class="card"><h2>이 회차 자료 · '+nm+' '+latest.round+'회</h2>'+
+    '<p class="lede">틀린 개념은 <b>해설</b>에서 바로 확인할 수 있습니다. '+
+    '다시 풀어 볼 때는 문제지를, 정리할 때는 오답노트를 쓰세요.</p>'+
+    '<div class="matrow">'+out.join('')+'</div></div>';
+}
 function qualCard(){ var rec=latest.finalScore-latest.jeongsiScore; var band, msg;
   if(!latest.passed){ band='다지기 단계'; msg='이번 회차는 재시로 약한 개념을 하나씩 잡는 중입니다. 점수보다 무너지지 않고 채워가는 것이 먼저입니다.'; }
   else { band='성장 구간'; msg='이번 회차도 통과했습니다. 꾸준히 올라오고 있고, 이번 주 핵심 처방으로 한 단계 더 갈 수 있어요.'; }
@@ -1437,6 +1489,8 @@ function render(commit){
       return rowsH+'<p class="note" style="margin-top:10px">'+(allP?'응시한 회차를 모두 통과로 마감했습니다.':'응시한 회차의 진행 상황입니다. 아직 통과 전인 회차는 강의록을 다진 뒤 재시로 채우면 됩니다.')+'</p>';
     })()}</div>`;
 
+  // 틀린 것 바로 옆에 고칠 자료를 둔다
+  h+=matsCardHTML();
   // 마감 · 서명 + 다음 점검 + 관계
   h+=roundCardsHTML();
   if(!_EMBED) h+='<div id="main-sols"></div>';
@@ -1470,6 +1524,7 @@ async function askReport(student, tries){
 }
 async function boot(){
   await loadSeeds();
+  await loadMats();          // 정적 파일이라 앱스크립트 줄에 안 선다
   var sp=new URLSearchParams(location.search), student=sp.get('student');
   if(REPORT_URL && student){
     var j=await askReport(student, 3);

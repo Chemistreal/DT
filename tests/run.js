@@ -298,6 +298,65 @@ async function assertNoOverflow(page, label) {
        "반 평균보다 0.29999999999999716점 높습니다"
      점수를 그냥 빼서 문자열에 붙이면 부동소수점 찌꺼기가 그대로 나간다.
      pt() 가 셋째 자리에서 반올림해 늘 00.00 꼴로 적는다. */
+  /* 파이널 성적표는 틀린 문항마다 해설·동형문제를 걸어 준다. DT 성적표는
+     "총괄성 크기를 틀렸습니다" 까지만 말하고 **갈 곳을 안 줬다** — 자료는 이
+     저장소에 다 있는데도. 학부모는 문자로 받은 링크 하나뿐이라 더 볼 수 없다. */
+  await test('report · 틀린 것 옆에 고칠 자료를 둔다', async page => {
+    await page.route('**/materials.json', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ courses: [
+        { key: 'ch2', name: '화학Ⅱ', rounds: [
+          { round: 10, files: {
+              munje: { html: 'munje_ch2_round10.html' },
+              haeseol: { pdf: 'haeseol_ch2_round10.pdf' },      // HTML 이 없는 회차
+              truthbook: { pdf: 'truthbooks/chem2_round10_truthbook_bw.pdf' } } },
+          { round: 11, files: { munje: { html: 'munje_ch2_round11.html' } } } ] } ] }) }));
+    await page.goto(BASE + 'report.html');                 // 데모(마지막 회차 10회 · ch2)
+    await page.waitForTimeout(1800);
+    const m = await page.evaluate(() => ({
+      head: [].map.call(document.querySelectorAll('h2'), e => e.textContent)
+              .filter(t => /이 회차 자료/.test(t))[0] || '',
+      links: [].map.call(document.querySelectorAll('.matlink'),
+                         e => [e.textContent, e.getAttribute('href')]),
+    }));
+    assert(/화학Ⅱ 10회/.test(m.head), '어느 회차 자료인지 안 적는다: ' + m.head);
+    assert(m.links.length === 3, '자료 링크가 셋이 아니다: ' + JSON.stringify(m.links));
+    /* 해설 HTML 이 없는 회차는 PDF 라고 적어야 한다 — 눌러 보고 알게 하지 않는다. */
+    assert(/해설 \(PDF\)/.test(m.links[0][0]), '해설이 PDF 인 것을 안 적는다: ' + m.links[0][0]);
+    assert(m.links[0][1] === 'haeseol_ch2_round10.pdf', '해설 주소가 틀렸다');
+    /* 손가락으로 짚는 자리다. */
+    const box = await page.$eval('.matlink', e => e.getBoundingClientRect().height);
+    assert(box >= 36, '누를 자리가 좁다: ' + box);
+    await assertNoOverflow(page, 'report-mats');
+  });
+
+  await test('report · 없는 자료 주소를 지어내지 않는다', async page => {
+    /* 화학Ⅱ 는 문제지·OMR 이 18회까지 있는데 해설 HTML 은 7회까지뿐이다.
+       회차 번호로 이름을 지어내면 404 로 끝난다 — 목록에 있는 것만 건다. */
+    await page.route('**/materials.json', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ courses: [ { key: 'ch2', name: '화학Ⅱ', rounds: [
+        { round: 10, files: { munje: { html: 'munje_ch2_round10.html' } } } ] } ] }) }));
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1800);
+    const links = await page.evaluate(() =>
+      [].map.call(document.querySelectorAll('.matlink'), e => e.textContent));
+    assert(links.length === 1 && /문제지/.test(links[0]), '없는 자료를 걸었다: ' + JSON.stringify(links));
+  });
+
+  await test('report · 목록을 못 읽으면 칸을 접는다', async page => {
+    /* 빈 링크를 보여 주느니 안 보여 준다. */
+    await page.route('**/materials.json', route => route.abort());
+    await page.goto(BASE + 'report.html');
+    await page.waitForTimeout(1800);
+    const n = await page.evaluate(() => document.querySelectorAll('.matlink').length);
+    const heads = await page.evaluate(() =>
+      [].map.call(document.querySelectorAll('h2'), e => e.textContent).filter(t => /이 회차 자료/.test(t)).length);
+    assert(n === 0 && heads === 0, '목록도 없이 칸이 떴다');
+    /* 나머지 성적표는 그대로 살아 있어야 한다. */
+    assert(await page.$eval('#app', e => e.textContent.length) > 500, '성적표가 통째로 죽었다');
+  });
+
   await test('report · 점수는 소수 둘째 자리까지', async page => {
     await page.goto(BASE + 'report.html'); await page.waitForTimeout(1400);
 
