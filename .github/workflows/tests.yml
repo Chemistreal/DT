@@ -19,6 +19,10 @@ jobs:
       # 목록이 그대로면 셸에서는 그 회차가 없는 것처럼 보인다 — 눌러 보고 나서야 안다.
       - name: 자료 목록이 실제 파일과 일치
         run: python3 tools/gen_materials.py --check
+      # "좀 흐린가?" 로는 아무것도 안 고쳐진다. 148장을 매번 기계가 잰다 —
+      # 처음 재었을 때 147장이 걸렸다(viewport 128 · 대비 25 · 작은 글씨 17).
+      - name: 화면 전수 검수 (대비 · 글씨 · viewport)
+        run: python3 tools/audit_pages.py
       - name: Install playwright
         run: npm install --prefix tests
       - name: Install chromium
