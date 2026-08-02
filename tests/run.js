@@ -242,6 +242,42 @@ async function assertNoOverflow(page, label) {
     assert(/열 수 없습니다|확인/.test(text), '링크 오류 안내가 표시되지 않음');
     await assertNoOverflow(page, 'report');
   });
+  /* 못 물어본 것과 기록이 없는 것은 다르다. 앱스크립트가 줄을 세우는 동안
+     학부모가 링크를 누르면 이 한 번뿐인 요청이 줄에 걸려 실패하는데, 여태
+     화면에는 "링크가 오래되어…" 가 떴다 — 링크는 멀쩡한데 학부모는 링크를
+     의심하고 선생님께 문의한다. */
+  await test('report · 못 물어본 것을 링크 탓으로 돌리지 않는다', async page => {
+    let asked = 0;
+    await page.route('**/macros/s/**', route => {
+      if (/student=/.test(route.request().url())) { asked++; return route.abort(); }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+    });
+    await page.goto(BASE + 'report.html?student=abc');
+    await page.waitForTimeout(6000);
+    /* 한 번 실패했다고 포기하면 줄이 빠진 뒤에도 못 연다. */
+    assert(asked >= 2, '한 번만 묻고 포기했다 (' + asked + '회)');
+    const text = await page.$eval('#app', e => e.textContent).catch(() => '');
+    assert(/링크에는 문제가 없습니다/.test(text), '링크 탓으로 읽히는 안내: ' + text.slice(0, 80));
+    assert(/오래되어/.test(text) === false, '멀쩡한 링크를 오래됐다고 한다');
+    assert(await page.$('#retryRep'), '다시 시도할 길이 없다');
+    /* 남의 성적을 보여 주는 일은 여전히 없어야 한다. */
+    assert(text.indexOf('조준모T테스트예시자료') < 0, '데모 학생이 노출됨');
+    await assertNoOverflow(page, 'report-fail');
+  });
+
+  await test('report · 서버가 기록 없다고 답하면 그렇게 적는다', async page => {
+    await page.route('**/macros/s/**', route => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, cumulative: null, rows: [] }) }));
+    await page.goto(BASE + 'report.html?student=abc');
+    await page.waitForTimeout(1500);
+    const text = await page.$eval('#app', e => e.textContent).catch(() => '');
+    /* 이때는 링크·기록을 확인하라는 원래 안내가 맞다. */
+    assert(/열 수 없습니다/.test(text), '원래 안내가 안 뜬다: ' + text.slice(0, 80));
+    assert(/링크에는 문제가 없습니다/.test(text) === false, '못 물어본 것으로 잘못 읽는다');
+    assert(text.indexOf('조준모T테스트예시자료') < 0, '데모 학생이 노출됨');
+  });
+
   await test('report · 빈 student 파라미터도 데모 대신 오류', async page => {
     // ?student= (값 없음)로 열려도 학생 링크이므로 데모(가짜 학생)를 보여주면 안 된다
     await page.goto(BASE + 'report.html?student='); await page.waitForTimeout(1000);

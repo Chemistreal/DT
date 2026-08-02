@@ -1448,23 +1448,51 @@ function render(commit){
   if(commit===false){return h;}
   $('#app').innerHTML=h;
 }
-async function boot(){
-  await loadSeeds();
-  try{
-    var sp=new URLSearchParams(location.search), student=sp.get('student');
-    if(REPORT_URL && student){
+/* ── 못 물어본 것과 기록이 없는 것은 다르다 ───────────────────────────
+   앱스크립트는 실행을 한 줄로 세운다. 선생님이 통합 셸을 열어 창구 여럿이
+   줄을 서 있는 동안 학부모가 링크를 누르면, 이 한 번뿐인 요청이 줄에 걸려
+   실패한다. 그러면 화면에는 **"링크가 오래되어…"** 가 떴다 — 링크는 멀쩡한데
+   학부모는 링크를 의심하고 선생님께 문의한다.
+
+   그래서 (1) 몇 번 더 물어보고, (2) 그래도 안 되면 **왜 못 열었는지**를
+   사실대로 적고 다시 시도할 길을 준다. */
+var LOAD_FAIL=false;
+async function askReport(student, tries){
+  for(var i=0;i<(tries||3);i++){
+    try{
       var r=await fetch(REPORT_URL+'?student='+encodeURIComponent(student)+'&t='+Date.now(), {cache:'no-store'});
       var j=await r.json();
-      if(j && j.cumulative){ A=j.cumulative; allRows=j.rows||[]; RANK=j.rank||null; COHORT=j.cohort||null; }
-    }
-  }catch(e){ console.warn('리포트 데이터 로드 실패, 데모로 표시', e); }
+      if(j && typeof j==='object') return j;
+    }catch(e){}
+    await new Promise(function(res){ setTimeout(res, 800*(i+1)); });
+  }
+  return null;
+}
+async function boot(){
+  await loadSeeds();
+  var sp=new URLSearchParams(location.search), student=sp.get('student');
+  if(REPORT_URL && student){
+    var j=await askReport(student, 3);
+    if(!j) LOAD_FAIL=true;                       // 물어보지 못했다(기록이 없는 것과 다르다)
+    else if(j.cumulative){ A=j.cumulative; allRows=j.rows||[]; RANK=j.rank||null; COHORT=j.cohort||null; }
+  }
   var demoHard=(new URLSearchParams(location.search).get('demo')==='hard');
   // ★안전장치: 학생 링크(student 파라미터)가 있는데 데이터가 안 열리면(코드 미해석·링크 오류)
   //   절대 데모 학생(조민수 등)을 대신 보여주지 않는다 — 남의 성적으로 오인될 수 있다.
   if(!A && sp.has('student')){   // 값이 비어도(?student=) 학생 링크로 열린 것이므로 데모로 대체하지 않는다
-    document.getElementById('app').innerHTML='<div class="card"><h1>리포트를 열 수 없습니다</h1>'
-      +'<p class="lede">아직 응시 기록이 없거나, 링크가 오래되어 학생 코드가 확인되지 않았습니다. '
-      +'받으신 링크를 다시 확인해 주세요. 문제가 계속되면 담당 선생님(조준모T)께 문의해 주세요.</p></div>';
+    /* 못 물어본 것을 '링크가 오래되었다' 고 적으면, 멀쩡한 링크를 의심하게
+       만들고 선생님께 문의가 간다. 사실대로 적고 다시 시도할 길을 준다. */
+    document.getElementById('app').innerHTML = LOAD_FAIL
+      ? '<div class="card"><h1>잠시 후 다시 열어 주세요</h1>'
+        +'<p class="lede">지금 서버가 바빠 성적표를 불러오지 못했습니다. '
+        +'<b>링크에는 문제가 없습니다.</b> 잠시 뒤 아래 단추를 눌러 주세요.</p>'
+        +'<p><button id="retryRep" style="font:inherit;padding:9px 16px;border-radius:9px;'
+        +'border:1px solid #C9A227;background:#fff;cursor:pointer">다시 시도</button></p></div>'
+      : '<div class="card"><h1>리포트를 열 수 없습니다</h1>'
+        +'<p class="lede">아직 응시 기록이 없거나, 링크가 오래되어 학생 코드가 확인되지 않았습니다. '
+        +'받으신 링크를 다시 확인해 주세요. 문제가 계속되면 담당 선생님(조준모T)께 문의해 주세요.</p></div>';
+    var rb=document.getElementById('retryRep');
+    if(rb) rb.addEventListener('click', function(){ location.reload(); });
     return;
   }
   var isDemo=!A;                                            // 파라미터가 아예 없을 때만 데모(미리보기)
