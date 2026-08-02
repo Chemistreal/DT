@@ -341,5 +341,58 @@ console.log('[12] 아침 요약');
   T('토큰이 늘 같은 값이다', ctx.incomeToken_() === ctx.incomeToken_() && !!ctx.incomeToken_());
 }
 
+console.log('[13] 누구에게 무슨 안내를 보냈나');
+{
+  /* 셸이 문자를 복사하면 그 줄을 가라앉히는데, 그 표시가 화면에서만 살았다.
+     여덟 명 중 다섯에게 보낸 뒤 잠깐 다른 일을 하면 다시 세야 했다. */
+  const d = { action: 'marksent', kind: 'pend', name: '홍 길동', course: 'ch1', round: 3 };
+  let r3 = J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
+  T('보낸 것을 적는다', r3.ok === true, JSON.stringify(r3));
+  let log = ctx.sentLog_(21);
+  T('읽으면 나온다', log.some(x => x.kind === 'pend' && x.course === 'ch1' && String(x.round) === '3'),
+    JSON.stringify(log));
+
+  /* 같은 사람에게 두 번 눌러도 줄이 두 개가 되면 안 된다 — 취소할 때 어느
+     줄을 지워야 할지 알 수 없어진다. */
+  const n1 = ctx.sentLog_(21).length;
+  ctx.doPost({ postData: { contents: JSON.stringify(d) } });
+  T('두 번 눌러도 한 줄', ctx.sentLog_(21).length === n1, `${n1} -> ${ctx.sentLog_(21).length}`);
+
+  /* 열쇠는 사람이다(갈래·이름·과목·회차). 이름의 빈칸은 지우고 견준다 —
+     셸이 만드는 열쇠와 같은 규칙이어야 두 쪽이 같은 줄을 가리킨다. */
+  ctx.doPost({ postData: { contents: JSON.stringify(
+    { action: 'marksent', kind: 'pend', name: '홍길동', course: 'ch1', round: 3 }) } });
+  T('이름의 빈칸은 무시한다', ctx.sentLog_(21).length === n1);
+
+  /* 잘못 눌렀으면 무를 수 있다. 줄을 지우지 않고 취소로 적는다 — 언제 눌렀다
+     언제 물렀는지가 남아야 "보냈다는데요" 를 되짚을 수 있다. */
+  ctx.doPost({ postData: { contents: JSON.stringify(
+    { action: 'marksent', kind: 'pend', name: '홍길동', course: 'ch1', round: 3, off: true }) } });
+  log = ctx.sentLog_(21);
+  T('무르면 안 보낸 것으로 센다',
+    !log.some(x => x.kind === 'pend' && x.course === 'ch1' && String(x.round) === '3'),
+    JSON.stringify(log));
+  const sh = SHEETS['_안내기록'];
+  T('줄은 남긴다(기록이 사라지지 않는다)', sh && sh._rows.length >= 2, sh ? sh._rows.length : 'none');
+
+  /* 다른 갈래는 다른 줄이다 — 재시 안내를 보냈다고 통과 문자까지 보낸 것이
+     되면 안 된다. */
+  ctx.doPost({ postData: { contents: JSON.stringify(
+    { action: 'marksent', kind: 'pass', name: '홍길동', course: 'ch1', round: 3 }) } });
+  T('갈래가 다르면 따로 센다',
+    ctx.sentLog_(21).some(x => x.kind === 'pass'), JSON.stringify(ctx.sentLog_(21)));
+
+  const g = J(ctx.doGet({ parameter: { action: 'sentlog' } }));
+  T('창구로도 읽힌다', g.ok === true && Array.isArray(g.sent));
+  /* 지난 학기 것까지 주면 셸이 옛 줄을 흐려 놓는다. 오래된 줄을 하나 심어
+     본다(0 은 '기간 없음' 이 아니라 기본값으로 떨어지므로 그것으로는 못 본다). */
+  SHEETS['_안내기록']._rows.push(
+    [new Date(Date.now() - 90 * 864e5), 'pend', '옛학생', 'ch2', 9, '']);
+  T('오래된 줄은 빼고 준다',
+    !ctx.sentLog_(21).some(x => x.name === '옛학생'), JSON.stringify(ctx.sentLog_(21)));
+  T('기간을 넓히면 나온다',
+    ctx.sentLog_(120).some(x => x.name === '옛학생'));
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

@@ -270,6 +270,13 @@ function doPost(e) {
       return json_({ ok: true, classes: getRoster_() });
     }
     if (d.action === 'absentee_email') { if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' }); weeklyAbsenteeEmail(); return json_({ ok: true, sent: true }); }
+    /* 어떤 안내를 누구에게 보냈나. 통합 셸이 이 창구를 **직접** 부르지는 않는다 —
+       셸은 아무것도 쓰지 않기로 되어 있어서, DT 의 pending.html 이 대신 부른다
+       (문구를 빌리는 것과 같은 길이다). */
+    if (d.action === 'marksent') {
+      if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' });
+      return json_({ ok: true, log: markSent_(d) });
+    }
     var sh = sheet_();
     var _selfKey = keyOf_(d.name || '', d.school || '');
     var _key = canonicalKey_(d.name || '', d.school || '');   // 같은 학생이 학교명을 다르게 적어도 기존 키로 자동 연결
@@ -330,6 +337,8 @@ function doGet(e) {
     return json_({ ok: true, passed: computePassed_(_pd) }); }
   if (action === 'names') { return namesForStudents_(e.parameter.code); }
   if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
+  if (action === 'sentlog') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
+    return json_({ ok: true, sent: sentLog_(Number(e.parameter.days || 21) || 21) }); }
   if (action === 'views') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, views: viewsList_() }); }
   /* 수입은 명단·점수와 다른 종류다. 이 창구만은 **진짜 토큰**을 받는다
      (adminOk_ 는 지금 전체 공개라 아무나 통과한다). 속성이 비어 있으면 아예 닫는다. */
@@ -1769,4 +1778,73 @@ function setupMonthlyIncomeTrigger() {
     .onMonthDay(1).atHour(6).inTimezone('Asia/Seoul').create();
   monthlyIncomeSnapshot();                       // 이번 달치를 지금 한 줄 남긴다
   return '등록 완료: 매달 1일 06시 monthlyIncomeSnapshot (이번 달은 방금 기록)';
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   누구에게 무슨 안내를 보냈나
+   ------------------------------------------------------------------
+   [왜 시트인가]
+   셸이 문자를 복사하면 그 줄을 가라앉혀 두는데, 그 표시가 **그 화면에서만**
+   살았다. 새로고침하면 사라지고 다른 기기에서는 안 보인다. 여덟 명 중 다섯에게
+   보낸 뒤 잠깐 다른 일을 하면 누구에게 보냈는지 다시 세야 했다.
+   브라우저에 적으면 기기마다 답이 달라진다 — 이 시스템이 피하려는 바로 그
+   모양이다. 그러니 시트여야 한다.
+
+   [왜 셸이 직접 쓰지 않나]
+   통합 셸은 아무것도 쓰지 않기로 되어 있다(지워도 안전한 파일). DT 의
+   pending.html 이 대신 부른다 — 문구를 빌리는 것과 같은 길이다.
+
+   [지연이 아니라 되돌리기]
+   보낸 표시는 **로그**라 언제든 지울 수 있다. 잘못 눌렀으면 취소하면 된다.
+   5초 기다리게 하는 것보다 낫다 — 5초는 잘못 누른 것을 알아채기엔 짧고,
+   제대로 누른 사람에게는 매번 걸리적거린다.
+
+   [열쇠는 사람이다]
+   목록의 **번호**로 기억하면 다시 불러올 때 번호가 밀려 엉뚱한 줄이 흐려진다.
+   갈래·이름·과목·회차로 적는다(셸이 만드는 열쇠와 같은 규칙).
+   ══════════════════════════════════════════════════════════════════ */
+var SENT_TAB = '_안내기록';
+function sentSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(SENT_TAB);
+  if (!sh) { sh = ss.insertSheet(SENT_TAB); sh.appendRow(['시각', '갈래', '이름', '과목', '회차', '취소']); }
+  return sh;
+}
+function sentKeyOf_(d) {
+  return [String(d.kind || ''), String(d.name || '').replace(/\s+/g, '').trim(),
+          String(d.course || ''), String(d.round || '')].join('|');
+}
+/* off:true 면 취소로 적는다(줄을 지우지 않는다 — 언제 눌렀다 언제 물렀는지가
+   남아야 "보냈다는데요" 를 되짚을 수 있다). */
+function markSent_(d) {
+  var sh = sentSheet_(), key = sentKeyOf_(d), last = sh.getLastRow();
+  var rows = last > 1 ? sh.getRange(2, 1, last - 1, 6).getValues() : [];
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var k = [String(rows[i][1] || ''), String(rows[i][2] || '').replace(/\s+/g, '').trim(),
+             String(rows[i][3] || ''), String(rows[i][4] || '')].join('|');
+    if (k === key) { sh.getRange(i + 2, 6).setValue(d.off ? 'Y' : ''); return key; }
+  }
+  if (d.off) return key;                       // 없던 것을 취소할 일은 없다
+  sh.appendRow([new Date(), String(d.kind || ''), String(d.name || ''),
+                String(d.course || ''), String(d.round || ''), '']);
+  return key;
+}
+/* 최근 것만 준다. 지난 학기 것까지 보내면 셸이 옛 줄을 흐려 놓는다. */
+function sentLog_(days) {
+  var out = [];
+  try {
+    var sh = sentSheet_(), last = sh.getLastRow();
+    if (last < 2) return out;
+    var cut = Date.now() - (days || 21) * 864e5;
+    sh.getRange(2, 1, last - 1, 6).getValues().forEach(function (r) {
+      if (String(r[5] || '').trim()) return;                 // 취소된 것은 안 보낸 것으로
+      var t = r[0] ? new Date(r[0]).getTime() : 0;
+      if (!t || t < cut) return;
+      out.push({ kind: String(r[1] || ''), name: String(r[2] || ''),
+                 course: String(r[3] || ''), round: String(r[4] || ''),
+                 at: Utilities.formatDate(new Date(t), 'Asia/Seoul', 'M/d HH:mm'), ts: t });
+    });
+  } catch (e) {}
+  return out;
 }
