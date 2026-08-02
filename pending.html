@@ -469,6 +469,20 @@ function fetchJSON_(url, tries){
     return null;
   });
 }
+/* 못 물어봤을 때 하는 말. 예전에는 "Apps Script 배포(/exec)와 권한을 확인하세요"
+   였다 — 맞는 말이지만 **선생님이 할 수 있는 일이 아니다.** 대개는 서버가 잠깐
+   밀린 것이고, 다시 누르면 된다. 그러니 먼저 다시 누를 자리를 준다.
+   원인은 접어서 아래에 남긴다(정말 배포가 끊겼을 때 필요하다). */
+function failBox(why){
+  return '<div class="err"><b>미응시 현황을 불러오지 못했습니다.</b> '
+    + '기록이 없는 것이 아니라 <b>지금 서버에 물어보지 못한 것</b>입니다. '
+    + '<button id="pendRetry" class="ghost" style="margin-left:6px">다시 불러오기</button>'
+    + '<div style="margin-top:8px;font-size:12px;opacity:.75">계속 이러면 Apps Script 웹앱이 배포되어 있고 '
+    + '액세스가 "모든 사용자"인지 확인하세요.' + (why ? ' (' + esc(why) + ')' : '') + '</div></div>';
+}
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'pendRetry') load();
+});
 function load(){
   if(Q.has('demo')){ render(demo(), demoAbs(), false, demoPass()); return; }
   document.getElementById('app').innerHTML='<div class="loading">불러오는 중…</div>';
@@ -481,10 +495,10 @@ function load(){
   ]).then(function(res){
     var A=res[0], P=res[1], S=res[2];
     if((A&&A.error==='auth')||(P&&P.error==='auth')){ admReset(); document.getElementById('app').innerHTML='<div class="err">관리자 코드가 올바르지 않습니다. 페이지를 새로고침한 뒤 다시 입력해 주세요.</div>'; return; }
-    if(!P||!P.ok||!P.pending){ document.getElementById('app').innerHTML='<div class="err">데이터를 불러오지 못했습니다. Apps Script 배포(/exec)와 권한을 확인하세요.</div>'; return; }
+    if(!P||!P.ok||!P.pending){ document.getElementById('app').innerHTML=failBox(); return; }
     render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null, !(A&&A.ok), (S&&S.ok&&S.passed)?S.passed:null);
   }).catch(function(e){
-    document.getElementById('app').innerHTML='<div class="err">연결 실패: '+esc(String(e))+'<br>Apps Script 웹앱이 배포되어 있고 액세스가 "모든 사용자"인지 확인하세요.</div>';
+    document.getElementById('app').innerHTML=failBox(String(e));
   });
 }
 /* ===== 오프라인 인쇄용 ZIP 다운로드 ===== */
