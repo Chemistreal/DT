@@ -444,6 +444,19 @@ function markSent(d){
 }
 function unmarkSent(d){ return markSent({ kind:d.kind, name:d.name, course:d.course, round:d.round, off:true }); }
 
+/* 미루기도 같은 길이다. d.until 은 'YYYY-MM-DD', off:true 면 "지금 보기".
+   지우는 것이 아니라 미루는 것이므로, 못 적혀도 잃는 것은 없다 —
+   다음에 열면 그 줄이 그대로 목록에 있을 뿐이다. */
+function snoozeStu(d){
+  try{
+    return fetch(STATUS_URL, { method:'POST', mode:'no-cors',
+      headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action:'snooze', kind:d.kind, name:d.name,
+                             course:d.course, round:d.round,
+                             until:d.until||'', off:!!d.off }) });
+  }catch(e){ return Promise.resolve(); }
+}
+
 function fetchJSON_(url, tries){
   tries = tries || 3;
   return fetch(url, {cache:'no-store'}).then(function(r){

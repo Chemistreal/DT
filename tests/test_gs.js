@@ -66,7 +66,17 @@ const ctx = {
     getProperty: k => (k in PROPS ? PROPS[k] : null),
     setProperty: (k, v) => { PROPS[k] = v; },
   }) },
-  Utilities: { formatDate: () => DATEKEY.v, getUuid: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' },
+  /* 날짜 꼴을 그대로 흉내 낸다. 예전 흉내는 무슨 꼴을 물어도 같은 글자를
+     돌려줘서, '언제까지 미뤘나' 를 검사할 방법이 아예 없었다(모든 날짜가
+     같은 값이 되니 크기 비교가 늘 참이었다). */
+  Utilities: {
+    formatDate: (d, tz, fmt) => {
+      if (fmt !== 'yyyy-MM-dd') return DATEKEY.v;
+      const x = new Date(d);
+      return x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2);
+    },
+    getUuid: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+  },
   /* 무엇이 걸렸는지 세어야 '스스로 건다'를 확인할 수 있다. 어떤 순서로 불러도
      받도록 아무 메서드나 자기 자신을 돌려주고, create() 에서만 기록한다. */
   ScriptApp: { getProjectTriggers: () => TRIGGERS.map(f => ({ getHandlerFunction: () => f })),
@@ -392,6 +402,67 @@ console.log('[13] 누구에게 무슨 안내를 보냈나');
     !ctx.sentLog_(21).some(x => x.name === '옛학생'), JSON.stringify(ctx.sentLog_(21)));
   T('기간을 넓히면 나온다',
     ctx.sentLog_(120).some(x => x.name === '옛학생'));
+}
+
+console.log('[14] 오늘 못 하는 학생은 미룬다');
+{
+  /* 지우면 안 된다 — 지운 것은 돌아오지 않는다. 날짜가 지나면 저절로
+     돌아오는 것이 이 창구의 전부다. */
+  const day = n => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); };
+  const base = { action: 'snooze', kind: 'pend', name: '홍 길동', course: 'ch1', round: 3 };
+
+  let r4 = J(ctx.doPost({ postData: { contents: JSON.stringify(Object.assign({}, base, { until: day(7) })) } }));
+  T('미룬 것을 적는다', r4.ok === true, JSON.stringify(r4));
+  let list = ctx.snoozeList_();
+  T('아직 살아 있으면 나온다',
+    list.some(x => x.kind === 'pend' && x.course === 'ch1' && String(x.round) === '3'), JSON.stringify(list));
+  T('언제까지인지 같이 준다', (list.find(x => x.kind === 'pend') || {}).until === day(7), JSON.stringify(list));
+
+  /* 셸이 만드는 열쇠와 같은 규칙(갈래·이름·과목·회차, 이름의 빈칸은 무시)이라야
+     두 쪽이 같은 줄을 가리킨다. 다르면 미룬 학생이 화면에 그대로 남는다. */
+  const n0 = SHEETS['_미룸']._rows.length;
+  ctx.doPost({ postData: { contents: JSON.stringify(
+    { action: 'snooze', kind: 'pend', name: '홍길동', course: 'ch1', round: 3, until: day(14) }) } });
+  T('같은 사람을 두 줄로 적지 않는다', SHEETS['_미룸']._rows.length === n0, `${n0} -> ${SHEETS['_미룸']._rows.length}`);
+  T('다시 미루면 날짜만 밀린다',
+    (ctx.snoozeList_().find(x => x.kind === 'pend') || {}).until === day(14));
+
+  /* 날짜가 지난 것은 **저절로** 목록에 돌아와야 한다. 치우는 트리거도 없다 —
+     안 돌아오면 미루기가 아니라 삭제고, 그 학생은 영영 안 보인다. */
+  SHEETS['_미룸']._rows.push([new Date(), 'abs', '지난학생', 'ch2', 9, day(-1), '']);
+  T('어제까지였던 것은 오늘 돌아온다',
+    !ctx.snoozeList_().some(x => x.name === '지난학생'), JSON.stringify(ctx.snoozeList_()));
+  SHEETS['_미룸']._rows.push([new Date(), 'abs', '오늘학생', 'ch2', 9, day(0), '']);
+  T('오늘까지면 오늘은 아직 미룬 것',
+    ctx.snoozeList_().some(x => x.name === '오늘학생'));
+
+  /* 시트가 'YYYY-MM-DD' 를 날짜 값으로 바꿔 놓는 일이 있다. 그때도 읽혀야 한다. */
+  const dt = new Date(); dt.setDate(dt.getDate() + 5);
+  SHEETS['_미룸']._rows.push([new Date(), 'abs', '날짜값학생', 'ch2', 9, dt, '']);
+  T('시트가 날짜로 바꿔 놔도 읽는다',
+    ctx.snoozeList_().some(x => x.name === '날짜값학생'), JSON.stringify(ctx.snoozeList_()));
+
+  /* 잘못 눌렀으면 그 자리에서 무른다. 줄은 남긴다 — 몇 번 미뤘는지가 신호다. */
+  const n1 = SHEETS['_미룸']._rows.length;
+  ctx.doPost({ postData: { contents: JSON.stringify(
+    { action: 'snooze', kind: 'pend', name: '홍길동', course: 'ch1', round: 3, off: true }) } });
+  T('무르면 목록에서 빠진다',
+    !ctx.snoozeList_().some(x => x.kind === 'pend' && String(x.round) === '3'), JSON.stringify(ctx.snoozeList_()));
+  T('줄은 남긴다', SHEETS['_미룸']._rows.length === n1);
+
+  /* 언제까지인지 없으면 미룰 수 없다. 빈 날짜를 받아 주면 '영영 안 보이는 줄'이 생긴다. */
+  const n2 = SHEETS['_미룸']._rows.length;
+  ctx.doPost({ postData: { contents: JSON.stringify(
+    { action: 'snooze', kind: 'pass', name: '무기한', course: 'ch1', round: 1 }) } });
+  T('언제까지인지 없으면 안 적는다', SHEETS['_미룸']._rows.length === n2,
+    `${n2} -> ${SHEETS['_미룸']._rows.length}`);
+
+  const g2 = J(ctx.doGet({ parameter: { action: 'snoozelog' } }));
+  T('창구로도 읽힌다', g2.ok === true && Array.isArray(g2.snoozed), JSON.stringify(g2));
+  /* 보낸 기록과 미룬 기록은 다른 장부다. 섞이면 미룬 학생이 '보냄' 으로 흐려진다. */
+  T('보낸 기록과 섞이지 않는다',
+    !ctx.sentLog_(21).some(x => x.name === '오늘학생'), JSON.stringify(ctx.sentLog_(21)));
 }
 
 console.log(`\n결과: pass=${pass} fail=${fail}`);
