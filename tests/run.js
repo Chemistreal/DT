@@ -152,6 +152,35 @@ async function assertNoOverflow(page, label) {
     assert(graded, '채점 결과(S.graded.score) 없음');
   }, { adminGate: true });
 
+  /* 못 물어봤을 때 하는 말이 선생님이 할 수 있는 일이어야 한다. 예전에는
+     "Apps Script 배포(/exec)와 권한을 확인하세요" 였다 — 맞는 말이지만
+     그 자리에서 할 수 있는 일이 아니고, 다시 누를 자리도 없었다. */
+  await test('pending · 못 물어봤으면 다시 물을 자리를 준다', async page => {
+    let dead = true, asked = 0;
+    await page.route('**/macros/s/**', route => {
+      asked++;
+      if (dead) return route.abort();
+      const cb = new URL(route.request().url()).searchParams.get('callback') || '';
+      const j = JSON.stringify({ ok: true, pending: [], absentees: [], passed: [] });
+      return route.fulfill({ status: 200,
+        contentType: cb ? 'application/javascript' : 'application/json',
+        body: cb ? cb + '(' + j + ');' : j });
+    });
+    await page.goto(BASE + 'pending.html');
+    await page.waitForTimeout(5000);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(/못 물어보지|물어보지 못한|불러오지 못했습니다/.test(txt), '못 불러왔다는 말이 없다');
+    assert(await page.evaluate(() => !!document.getElementById('pendRetry')),
+           '다시 불러오는 자리가 없다');
+    const before = asked;
+    dead = false;
+    await page.click('#pendRetry');
+    await page.waitForTimeout(2500);
+    assert(asked > before, '다시 눌러도 안 물어본다');
+    assert(await page.evaluate(() => !document.getElementById('pendRetry')),
+           '성공했는데 실패 안내가 남아 있다');
+  }, { adminGate: true });
+
   /* ── 4. 미응시 현황: 문자 복사 3종 + 시점 표현 금지 + 미응시 안내 ── */
   await test('pending · 문자 복사와 문구 규칙', async page => {
     await page.goto(BASE + 'pending.html?demo'); await page.waitForTimeout(500);
