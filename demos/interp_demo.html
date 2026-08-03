@@ -6,7 +6,7 @@
 <title>해설 엔진 골격 · InterpEngine</title>
 <style>
   :root{
-    --ink:#20303d; --sub:#5b6b78; --faint:#9aa7b2; --line:#e6ddcb; --line2:#eef0f2;
+    --ink:#20303d; --sub:#5b6b78; --faint:#626D7B; --line:#e6ddcb; --line2:#eef0f2;
     --paper:#faf7f0; --card:#ffffff; --brass:#b0894e; --brass-soft:#f7efdd;
     --x:#c0392b; --x-bg:#fbeeec; --o:#1b8a4c; --o-bg:#eaf6ee;
   }
@@ -16,7 +16,7 @@
     line-height:1.6;-webkit-font-smoothing:antialiased}
   .wrap{max-width:880px;margin:0 auto;padding:26px 18px 60px}
   .top{border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:20px}
-  .kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:800}
+  .kicker{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:800}
   h1{font-size:23px;margin:6px 0 4px}
   .lede{color:var(--sub);font-size:14px;margin:0}
   .grid{display:grid;grid-template-columns:1fr;gap:18px}
@@ -34,27 +34,27 @@
   .ib{border:1px solid var(--line2);border-left:3px solid var(--brass);border-radius:0 10px 10px 0;
     padding:11px 13px;margin-bottom:10px;background:#fff}
   .ibh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .ibu{font-size:11px;font-weight:700;color:var(--brass);background:var(--brass-soft);
+  .ibu{font-size:11.5px;font-weight:700;color:var(--brass);background:var(--brass-soft);
     border-radius:20px;padding:2px 9px}
   .ibn{font-size:14px}
   .ibm{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--x);background:var(--x-bg);
     border-radius:20px;padding:2px 9px}
   .ibdx{margin:8px 0 0;font-size:13px;color:var(--ink);line-height:1.55}
   .ibmis{margin-top:8px}
-  .ibcap{font-size:11px;font-weight:800;color:var(--sub);margin-bottom:3px}
+  .ibcap{font-size:11.5px;font-weight:800;color:var(--sub);margin-bottom:3px}
   .ibrow{font-size:12.5px;color:var(--ink);padding:2px 0 2px 12px;position:relative;line-height:1.5}
   .ibrow:before{content:"·";position:absolute;left:2px;color:var(--brass);font-weight:800}
   .ibfix{margin-top:8px;font-size:12.5px;color:#1b6b3c;background:var(--o-bg);
     border-radius:8px;padding:6px 10px}
   .ibfix span{font-weight:800}
-  .ibcite{margin-top:6px;font-size:11px;color:var(--faint);font-style:italic}
+  .ibcite{margin-top:6px;font-size:11.5px;color:var(--faint);font-style:italic}
 
   /* ===== 엔진 내부(심각도 랭킹) 패널 ===== */
   .rk{font-size:12.5px}
   .rkr{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line2)}
   .rkr:last-child{border-bottom:0}
   .rks{min-width:46px;color:var(--brass);font-weight:700}
-  .rku{color:var(--faint);font-size:11px}
+  .rku{color:var(--faint);font-size:11.5px}
   .rkm{margin-left:auto;color:var(--x)}
   details{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:#fff}
   summary{cursor:pointer;padding:12px 16px;font-weight:700;font-size:13.5px}
@@ -62,7 +62,7 @@
   .doc code{background:var(--brass-soft);border-radius:5px;padding:1px 6px;font-size:12px}
   .doc b{color:var(--brass)}
   .filebar{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
-  .pill{font-size:11px;font-weight:700;border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--sub)}
+  .pill{font-size:11.5px;font-weight:700;border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -110,7 +110,11 @@
 </div>
 
 <!-- 3개 파일을 그대로 불러온다 (file://에서도 열리도록 전역 스크립트) -->
-<script src="interp_content.js"></script>
+<script src="interp_content.js">
+/* 데모 자료라도 글자를 그대로 이어 붙이지 않는다 — 자가 잡는 자리를
+   예외로 만들면, 진짜 이름이 들어올 때도 안 잡힌다. */
+function escD(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+</script>
 <script src="interp_engine.js"></script>
 <script src="interp_render.js"></script>
 <script>
@@ -152,7 +156,7 @@
     var ranked=agg.filter(function(e){return e.missed>0;}).sort(function(a,b){return b.severity-a.severity;});
     document.getElementById('rank').innerHTML = ranked.map(function(e){
       return '<div class="rkr"><span class="rks mono">'+e.severity.toFixed(2)+'</span>'
-        +'<span>'+e.name+' <span class="rku">'+e.unit+'</span></span>'
+        +'<span>'+escD(e.name)+' <span class="rku">'+escD(e.unit)+'</span></span>'
         +'<span class="rkm mono">'+e.missed+'/'+e.total+'</span></div>';
     }).join('') || '<span class="muted">틀린 개념 없음</span>';
     var wrong=result.filter(function(r){return !r.ok;}).length;
