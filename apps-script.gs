@@ -324,6 +324,86 @@ function mapRow_(r) {
     units: parseA_(r[16]), axes: parseA_(r[17]), answers: r[18] || ''
   };
 }
+/* ── 읽기 창구 하나 ────────────────────────────────────────────────
+   **평범한 객체**를 돌려준다(ContentService 출력이 아니다). 그래야 묶음
+   창구가 이것을 여러 번 불러 한 응답에 담을 수 있다.
+   읽기 창구가 아니면 null 을 돌려준다 — doGet 이 그다음 길(성적표)로 간다. */
+function readOne_(action, e, token) {
+  var deny = { ok: false, error: 'auth' };
+  if (action === 'pending') { if (!adminOk_(token)) return deny;
+    return { ok: true, pending: computePending_(14) }; }
+  if (action === 'roster') { if (!adminOk_(token)) return deny;
+    return { ok: true, classes: getRoster_() }; }
+  if (action === 'absentees') { if (!adminOk_(token)) return deny;
+    var ov = {}; try { ov = JSON.parse(e.parameter.ov || '{}') || {}; } catch (e2) {}
+    return { ok: true, absentees: computeAbsentees_(8, ov) }; }
+  /* 통과한 학생. 안 한 학생만 모으던 창구 옆에 나란히 둔다 — 잘한 아이에게도
+     문자가 가야 한다. days 로 기간을 좁힌다(기본 14일). */
+  if (action === 'passed') { if (!adminOk_(token)) return deny;
+    return { ok: true, passed: computePassed_(Number(e.parameter.days || 14) || 14) }; }
+  if (action === 'names') { return namesData_(e.parameter.code); }
+  if (action === 'cohortmis') { return { ok: true, rows: cohortMis_() }; }
+  /* 익명본(cohortmis)과 달리 이름이 붙는다. 개념 하나로 학생을 부르는 자리다 —
+     숫자만으로는 보충을 못 한다. 노출 폭은 pending·passed 와 같다. */
+  if (action === 'mistags') { if (!adminOk_(token)) return deny;
+    return { ok: true, mis: misNamed_(Number(e.parameter.days || 21) || 21) }; }
+  if (action === 'sentlog') { if (!adminOk_(token)) return deny;
+    return { ok: true, sent: sentLog_(Number(e.parameter.days || 21) || 21) }; }
+  if (action === 'snoozelog') { if (!adminOk_(token)) return deny;
+    return { ok: true, snoozed: snoozeList_() }; }
+  if (action === 'views') { if (!adminOk_(token)) return deny;
+    return { ok: true, views: viewsList_() }; }
+  /* 수입은 명단·점수와 다른 종류다. 이 창구만은 **진짜 토큰**을 받는다
+     (adminOk_ 는 지금 전체 공개라 아무나 통과한다). 속성이 비어 있으면 아예 닫는다. */
+  if (action === 'income') {
+    var need = incomeToken_();
+    if (!need) return { ok: false, error: 'no_token', msg: '스크립트 속성 INCOME_TOKEN 을 정하세요.' };
+    if (String(e.parameter.t || '').trim() !== need) return deny;
+    return { ok: true, income: incomeNow_(), history: incomeHistory_() };
+  }
+  return null;
+}
+
+/* ── 묶음 창구 ─────────────────────────────────────────────────────
+   앱스크립트는 실행을 **한 줄로 세운다.** 통합 셸이 첫 화면에서 이 창구를
+   다섯 번 불렀는데(names·pending·absentees·passed·cohortmis), 다섯이 동시에
+   나가도 저쪽에서는 차례로 하나씩 돈다 — 앞엣것이 끝나야 뒤엣것이 시작한다.
+   실제로 재어 보니 셸을 여는 것만으로 앱스크립트 호출이 여덟 번이었고 그중
+   다섯이 여기였다.
+
+       ?action=bundle&want=names,pending,absentees
+       → { ok:true, parts:{ names:{…}, pending:{…}, absentees:{…} } }
+
+   한 실행에서 다 답한다. 다섯 번 줄을 서던 것이 한 번이 된다.
+
+   ⚠ 권한은 **낱개로 부를 때와 똑같이** 본다. readOne_ 을 그대로 부르므로
+     묶었다고 열리는 것은 하나도 없다 — 못 볼 것은 그 자리에만 error:auth 가
+     담기고 나머지는 정상으로 온다.
+   ⚠ 한 자리가 터져도 나머지는 살린다. 안 그러면 창구 하나가 고장 났을 때
+     화면 전체가 빈다.
+   ⚠ 셸은 이 창구가 아직 없는 배포에서도 살아야 한다(묶음이 실패하면 하나씩
+     다시 묻는다). 그래서 여기서 아는 이름만 답하고 모르는 것은 조용히 뺀다. */
+function bundleRead_(e, token) {
+  var want = String(e.parameter.want || '').split(',')
+    .map(function (s) { return s.trim(); })
+    .filter(function (s) { return s && s !== 'bundle'; });
+  /* 한 요청에 담는 수를 막아 둔다. 창구 이름을 백 개 적어 보내면 한 실행이
+     시간 제한에 걸려 통째로 실패한다 — 그러면 낱개보다 나쁘다. */
+  if (want.length > 12) want = want.slice(0, 12);
+  var parts = {}, n = 0;
+  for (var i = 0; i < want.length; i++) {
+    var nm = want[i];
+    if (parts[nm]) continue;                  // 같은 이름을 두 번 적어도 한 번만 돈다
+    try {
+      var r = readOne_(nm, e, token);
+      if (r) { parts[nm] = r; n++; }
+    } catch (err) {
+      parts[nm] = { ok: false, error: 'fail', msg: String(err && err.message || err) };
+    }
+  }
+  return { ok: true, bundle: true, parts: parts, n: n };
+}
+
 function doGet(e) {
   var action = (e.parameter.action || '').trim();
   var token = (e.parameter.token || '').trim();
@@ -332,33 +412,11 @@ function doGet(e) {
   /* 선생님 화면이 부르는 창구에서만 트리거를 살핀다. 학부모 성적표 경로
      (?student=)는 action 이 없으므로 여기 안 걸린다. */
   if (action) ensureTriggers_();
-  if (action === 'pending') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, pending: computePending_(14) }); }
-  if (action === 'roster') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, classes: getRoster_() }); }
-  if (action === 'absentees') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); var _ov = {}; try { _ov = JSON.parse(e.parameter.ov || '{}') || {}; } catch (e2) {} return json_({ ok: true, absentees: computeAbsentees_(8, _ov) }); }
-  /* 통과한 학생. 안 한 학생만 모으던 창구 옆에 나란히 둔다 — 잘한 아이에게도
-     문자가 가야 한다. days 로 기간을 좁힌다(기본 14일). */
-  if (action === 'passed') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
-    var _pd = Number(e.parameter.days || 14) || 14;
-    return json_({ ok: true, passed: computePassed_(_pd) }); }
-  if (action === 'names') { return namesForStudents_(e.parameter.code); }
-  if (action === 'cohortmis') { return json_({ ok: true, rows: cohortMis_() }); }
-  /* 익명본(cohortmis)과 달리 이름이 붙는다. 개념 하나로 학생을 부르는 자리다 —
-     숫자만으로는 보충을 못 한다. 노출 폭은 pending·passed 와 같다. */
-  if (action === 'mistags') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
-    return json_({ ok: true, mis: misNamed_(Number(e.parameter.days || 21) || 21) }); }
-  if (action === 'sentlog') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
-    return json_({ ok: true, sent: sentLog_(Number(e.parameter.days || 21) || 21) }); }
-  if (action === 'snoozelog') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' });
-    return json_({ ok: true, snoozed: snoozeList_() }); }
-  if (action === 'views') { if (!adminOk_(token)) return json_({ ok: false, error: 'auth' }); return json_({ ok: true, views: viewsList_() }); }
-  /* 수입은 명단·점수와 다른 종류다. 이 창구만은 **진짜 토큰**을 받는다
-     (adminOk_ 는 지금 전체 공개라 아무나 통과한다). 속성이 비어 있으면 아예 닫는다. */
-  if (action === 'income') {
-    var need = incomeToken_();
-    if (!need) return json_({ ok: false, error: 'no_token', msg: '스크립트 속성 INCOME_TOKEN 을 정하세요.' });
-    if (String(e.parameter.t || '').trim() !== need) return json_({ ok: false, error: 'auth' });
-    return json_({ ok: true, income: incomeNow_(), history: incomeHistory_() });
-  }
+  /* 읽기 창구는 한자리(readOne_)에 모아 두고, 묶음 창구가 그것을 여러 번 부른다.
+     여기서 갈라 적으면 언젠가 한쪽만 고쳐진다. */
+  if (action === 'bundle') return json_(bundleRead_(e, token));
+  var _one = readOne_(action, e, token);
+  if (_one) return json_(_one);
   var raw = (e.parameter.student || '').trim();
   var key = null;
   if (raw) {
@@ -395,12 +453,15 @@ function doGet(e) {
 
 /* 명단 조회(반 코드 또는 관리자 코드). exam 드롭다운, hw_grader 명단에 사용.
    이름만 저장된 roster 를 시트 최신 제출의 학교/학년으로 채워 반환(점수 미포함). */
-function namesForStudents_(code) {
+function namesForStudents_(code) { return json_(namesData_(code)); }
+/* 위와 같은 것을 **평범한 객체**로 돌려준다. 묶음 창구(bundle)가 이것을 쓴다 —
+   ContentService 출력은 한 요청에 하나뿐이라 그대로는 묶을 수 없다. */
+function namesData_(code) {
   var c = String(code || '').trim();
   var need = studentCode_();
   var okStudent = (need !== '' && c === need);
   if (!okStudent && !adminOk_(c)) {
-    return json_({ ok: false, error: (need === '' ? 'STUDENT_CODE not set' : 'auth') });
+    return { ok: false, error: (need === '' ? 'STUDENT_CODE not set' : 'auth') };
   }
   var classes = getRoster_();
   var data = sheet_().getDataRange().getValues(); data.shift();
@@ -417,7 +478,7 @@ function namesForStudents_(code) {
         return { name: String(nm || ''), school: hit.school || '', year: hit.year || '' };
       }) };
   });
-  return json_({ ok: true, classes: out });
+  return { ok: true, classes: out };
 }
 
 /* index.html 반 패널용 익명 투영(이름/학교/키/링크 미포함, 학생키는 s1,s2..로 치환).
