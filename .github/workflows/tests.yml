@@ -41,6 +41,12 @@ jobs:
       # 있는데 이어지지 않은 자리는 사람 판단 없이 이어 줄 수 있다.
       - name: 입력칸에 이름이 붙어 있다
         run: python3 tools/input_labels.py --check
+      # 브라우저는 인쇄할 때 배경을 기본으로 안 찍는다. 그래서 어두운 띠 위의
+      # 흰 글씨는 **흰 종이에 흰 글씨**가 됐다 — OMR 제목띠·표 머리 46장,
+      # 문제지 지시문 46장('다음 물음에 답하시오' 가 통째로), 해설지 절 띠 35장.
+      # 화면으로 보면 멀쩡해서 아무도 몰랐다.
+      - name: 종이에서 사라지는 자리가 없다
+        run: python3 tools/print_ink.py --check
       - name: Install playwright
         run: npm install --prefix tests
       - name: Install chromium
@@ -49,6 +55,11 @@ jobs:
       # 오래 굳어 있었다(옛 링크 형식·무토큰 조회). 만들어 놓고 안 돌리면 없는 것과 같다.
       - name: 앱스크립트 행동 (인증 · JSONP · 저장)
         run: node tests/test_gs.js
+      # 규칙이 '있다' 는 것과 '종이에서 읽힌다' 는 것은 다르다. 실제 브라우저에
+      # 인쇄 매체를 씌워 본다. 화면 매체에서는 원래대로인지도 같이 본다 —
+      # 화면을 건드리면 안 된다.
+      - name: 종이에서 읽힌다 (실제 브라우저)
+        run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/print-ink.js
       - name: Run regression suite
         run: NODE_PATH=tests/node_modules node tests/run.js
       - name: Upload failure screenshots
