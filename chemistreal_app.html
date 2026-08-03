@@ -683,7 +683,7 @@ function inputScreen(title,sub,submitLabel,onSubmit,showStmt){
       <div class="qnum mono">문항 ${S.cur+1}</div>
       <div class="stmt">${showStmt?it.s:'OMR '+(S.cur+1)+'번 입력 (1=O · 2=X)'}</div>
       <div class="entrywrap">
-        <input id="entry" class="entry mono" inputmode="numeric" maxlength="1" autocomplete="off" placeholder="·" oninput="onEntry(this)">
+        <input id="entry" class="entry mono" inputmode="numeric" maxlength="1" autocomplete="off" placeholder="·" oninput="onEntry(this)" aria-label="·">
         <div class="curval ${S.answers[S.cur]==='O'?'o':S.answers[S.cur]==='X'?'x':''}">${S.answers[S.cur]||'·'}</div>
       </div>
       <p class="hint"><kbd>1</kbd>=O · <kbd>2</kbd>=X 키 입력 → 자동으로 다음 칸 · ←/→ 이동</p>
@@ -759,9 +759,9 @@ function render(){
     const sv=savedSession();
     h=(sv?`<div class="resume"><div style="flex:1">채점하던 내용이 있습니다 · <b>${sv.name}</b> · ${sv.attemptNo===1?'정시':sv.attemptNo===2?'재시':'재재시'} (${sv.answers.filter(a=>a).length}/${sv.keyItems.length})</div><button onclick="resume()">이어하기</button><button class="x" onclick="clearSession();render()">지우기</button></div>`:'')+
     `<div class="card"><h1>학생 정보</h1><p class="lede">이름과 학교로 학생을 식별합니다. 학년은 응시 시점 기록용이라 매년 바뀌어도 같은 학생으로 이어집니다.</p>
-      <label>이름</label><input id="f_name" value="${S.name}" placeholder="예: 홍길동" autocomplete="off">
-      <div class="row2"><div><label>학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중" autocomplete="off"></div>
-        <div><label>학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2" inputmode="numeric"></div></div>
+      <label for="f_name">이름</label><input id="f_name" value="${S.name}" placeholder="예: 홍길동" autocomplete="off">
+      <div class="row2"><div><label for="f_school">학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중" autocomplete="off"></div>
+        <div><label for="f_grade">학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2" inputmode="numeric"></div></div>
       <div class="toggle"><input type="checkbox" id="f_test" ${S.isTest?'checked':''}><label for="f_test" style="margin:0;color:inherit">테스트 모드 · 예시 학생으로 전 과정 점검 (기록에 테스트로 표시)</label></div>
       <div class="btnrow"><button onclick="saveId()">이 학생 시작</button></div></div>`;
   }

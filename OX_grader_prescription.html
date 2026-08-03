@@ -112,9 +112,9 @@
   <div class="panel" id="setup">
     <h2><span class="n">1</span> 응시 설정</h2>
     <div class="row">
-      <label class="lbl">학생</label>
+      <label for="sName" class="lbl">학생</label>
       <input type="text" id="sName" placeholder="학생 이름" value="">
-      <label class="lbl">시험</label>
+      <label for="sRound" class="lbl">시험</label>
       <select id="sRound"></select>
       <input type="file" id="roundFile" accept=".json" class="hide">
       <button class="btn ghost" id="loadBtn" style="padding:9px 14px;font-size:13px">라운드 파일 불러오기</button>
@@ -229,7 +229,7 @@
   <div class="panel" id="histPanel">
     <h2><span class="n">＋</span> 학생 응시 이력</h2>
     <div class="row" style="margin-bottom:10px">
-      <input type="text" id="histName" placeholder="학생 이름으로 조회">
+      <input type="text" id="histName" placeholder="학생 이름으로 조회" aria-label="학생 이름으로 조회">
       <button class="btn ghost" id="histBtn">이력 보기</button>
       <button class="gctl-x" id="histClear" style="appearance:none;border:1px solid var(--line);background:#fff;color:var(--bad);border-radius:8px;padding:8px 14px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;margin-left:auto">이 학생 이력 삭제</button>
     </div>

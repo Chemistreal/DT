@@ -155,7 +155,7 @@ function renderClasses(){
                  :('<span class="badge warn">과목 미인식</span>');
     h+='<div class="clscard" data-ci="'+ci+'">';
     h+='<div class="row between wrapline" style="gap:8px">';
-    h+='<input class="lab" data-ci="'+ci+'" value="'+esc(k.label)+'" placeholder="반 이름 (예: 화학2 토1:30-5:30)" style="flex:1;min-width:180px">';
+    h+='<input class="lab" data-ci="'+ci+'" value="'+esc(k.label)+'" placeholder="반 이름 (예: 화학2 토1:30-5:30)" style="flex:1;min-width:180px" aria-label="반 이름 (예: 화학2 토1:30-5:30)">';
     h+=badge;
     h+='</div>';
     h+='<div class="row wrapline" style="margin-top:9px;gap:10px">';
@@ -169,7 +169,7 @@ function renderClasses(){
         +'<button class="x delS" data-ci="'+ci+'" data-si="'+si+'" title="삭제">×</button></div>';
     });
     h+='</div>';
-    h+='<div class="addrow"><input class="addS" data-ci="'+ci+'" placeholder="학생 추가 (여러 명은 줄바꿈/쉼표)">'
+    h+='<div class="addrow"><input class="addS" data-ci="'+ci+'" placeholder="학생 추가 (여러 명은 줄바꿈/쉼표)" aria-label="학생 추가 (여러 명은 줄바꿈/쉼표)">'
       +'<button class="tiny addBtn" data-ci="'+ci+'">추가</button></div>';
     h+='<div style="margin-top:10px;text-align:right"><button class="tiny danger delC" data-ci="'+ci+'">이 반 삭제</button></div>';
     h+='</div>';

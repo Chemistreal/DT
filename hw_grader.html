@@ -79,11 +79,11 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;backg
   <div class="card">
     <div class="row">
       <div style="max-width:130px">
-        <label>회차</label>
+        <label for="rd">회차</label>
         <select id="rd" onchange="pickRound()"></select>
       </div>
       <div>
-        <label>반</label>
+        <label for="cls">반</label>
         <select id="cls" onchange="pickClass()"><option value="">명단 불러오는 중...</option></select>
       </div>
       <div style="flex:0;display:flex;align-items:flex-end">
@@ -101,9 +101,9 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;backg
       <span class="subrounds" id="stuSub"></span>
     </div>
     <div class="row" id="manualRow" style="display:none;margin-bottom:10px">
-      <div><label>이름</label><input type="text" id="mNm" placeholder="홍길동"></div>
-      <div><label>학교</label><input type="text" id="mSc" placeholder="OO중학교"></div>
-      <div style="max-width:110px"><label>학년</label><input type="text" id="mGr" placeholder="2"></div>
+      <div><label for="mNm">이름</label><input type="text" id="mNm" placeholder="홍길동"></div>
+      <div><label for="mSc">학교</label><input type="text" id="mSc" placeholder="OO중학교"></div>
+      <div style="max-width:110px"><label for="mGr">학년</label><input type="text" id="mGr" placeholder="2"></div>
     </div>
     <p class="note">카드의 마킹을 그대로 옮깁니다. 키보드 <kbd>1</kbd>~<kbd>5</kbd> 입력 시 자동으로 다음 문항으로 넘어갑니다. <kbd>Backspace</kbd> 지우고 뒤로, <kbd>&larr;</kbd><kbd>&rarr;</kbd> 이동.</p>
     <div class="agrid" id="agrid"></div>
