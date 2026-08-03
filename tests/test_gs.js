@@ -511,5 +511,42 @@ console.log('[15] 개념 하나로 학생을 부른다');
   S._rows.length = keep;
 }
 
+console.log('[묶음 창구] 여러 창구를 한 실행에서');
+{
+  /* 앱스크립트는 실행을 한 줄로 세운다. 통합 셸이 첫 화면에서 이 창구를
+     여덟 번 불렀는데, 다섯이 한꺼번에 나가도 저쪽에서는 차례로 하나씩 돌았다.
+     묶어 받으면 한 실행으로 끝난다. */
+  const b = J(ctx.doGet({ parameter: { action: 'bundle', want: 'names,pending,cohortmis' } }));
+  T('ok + parts', b.ok === true && b.bundle === true && !!b.parts, JSON.stringify(b).slice(0, 120));
+  T('부른 만큼 담긴다', b.n === 3 && Object.keys(b.parts).length === 3,
+    JSON.stringify(Object.keys(b.parts || {})));
+  /* 묶었다고 다른 답이 나오면 안 된다 — 낱개로 부른 것과 **글자까지 같아야** 한다. */
+  ['names', 'pending', 'cohortmis'].forEach(function (a) {
+    const solo = J(ctx.doGet({ parameter: { action: a } }));
+    T(a + ' 은 낱개로 부른 것과 같다', JSON.stringify(b.parts[a]) === JSON.stringify(solo),
+      JSON.stringify(b.parts[a]).slice(0, 100));
+  });
+  /* 모르는 이름은 조용히 뺀다. 옛 셸이 엉뚱한 이름을 적어 보내도 나머지는 온다. */
+  const b2 = J(ctx.doGet({ parameter: { action: 'bundle', want: 'names,없는창구,,names' } }));
+  T('모르는 이름은 뺀다', b2.n === 1 && !!b2.parts.names && !b2.parts['없는창구'],
+    JSON.stringify(Object.keys(b2.parts)));
+  T('같은 이름을 두 번 적어도 한 번만', Object.keys(b2.parts).length === 1);
+  /* 한 요청에 담는 수를 막아 둔다 — 백 개를 적어 보내면 한 실행이 시간 제한에
+     걸려 통째로 실패한다. 그러면 낱개보다 나쁘다. */
+  const many = new Array(40).fill('cohortmis').map((x, i) => (i % 2 ? 'names' : 'cohortmis')).join(',');
+  const b3 = J(ctx.doGet({ parameter: { action: 'bundle', want: many } }));
+  T('아무리 많이 적어도 열둘까지', Object.keys(b3.parts).length <= 12);
+  /* 권한은 낱개와 똑같이 본다. 묶었다고 열리는 것은 하나도 없어야 한다.
+     수입 창구는 진짜 토큰을 받으므로, 토큰 없이 묶어 부르면 그 자리만 막힌다. */
+  const b4 = J(ctx.doGet({ parameter: { action: 'bundle', want: 'income,names' } }));
+  T('묶었다고 권한이 열리지 않는다', b4.parts.income && b4.parts.income.ok === false,
+    JSON.stringify(b4.parts.income));
+  T('막힌 자리가 있어도 나머지는 온다', b4.parts.names && b4.parts.names.ok === true);
+  /* JSONP 로도 와야 한다 — 통합 셸은 이 길로만 부른다. */
+  const jp = ctx.doGet({ parameter: { action: 'bundle', want: 'names', callback: '__hubcb' } });
+  T('JSONP 로 감싼다', /^__hubcb\(/.test(String(jp.getContent())),
+    String(jp.getContent()).slice(0, 40));
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);
