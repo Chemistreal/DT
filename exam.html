@@ -628,9 +628,9 @@ function idView(){
   const pass=(R.scoring&&R.scoring.pass)||80;
   return '<div class="card"><h1>'+esc(R.title)+'</h1>'+
     '<p class="lede">60문항 OX · 합격 '+pass+'점.</p>'+
-    '<label>이름</label><input id="nm" value="'+esc(info.name)+'" placeholder="홍길동" autocomplete="off">'+
-    '<div class="row2"><div><label>학교</label><input id="sc" value="'+esc(info.school)+'" placeholder="OO중학교" autocomplete="off"></div>'+
-    '<div><label>학년</label><input id="gr" value="'+esc(info.grade)+'" placeholder="중2" autocomplete="off"></div></div>'+
+    '<label for="nm">이름</label><input id="nm" value="'+esc(info.name)+'" placeholder="홍길동" autocomplete="off">'+
+    '<div class="row2"><div><label for="sc">학교</label><input id="sc" value="'+esc(info.school)+'" placeholder="OO중학교" autocomplete="off"></div>'+
+    '<div><label for="gr">학년</label><input id="gr" value="'+esc(info.grade)+'" placeholder="중2" autocomplete="off"></div></div>'+
     '<div class="btnrow"><button onclick="startExam()">시험 시작 →</button></div>'+
     '</div>';
 }

@@ -36,6 +36,11 @@ jobs:
       # 처음 재었을 때 147장이 걸렸다(viewport 128 · 대비 25 · 작은 글씨 17).
       - name: 화면 전수 검수 (대비 · 글씨 · viewport)
         run: python3 tools/audit_pages.py
+      # 낭독기는 이름 없는 입력칸을 그냥 '편집' 이라고 읽는다 — 열 칸이
+      # 나란히 있으면 열 번 다 '편집' 이다. 눈에 보이는 <label> 이 이미
+      # 있는데 이어지지 않은 자리는 사람 판단 없이 이어 줄 수 있다.
+      - name: 입력칸에 이름이 붙어 있다
+        run: python3 tools/input_labels.py --check
       - name: Install playwright
         run: npm install --prefix tests
       - name: Install chromium

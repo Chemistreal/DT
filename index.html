@@ -531,7 +531,7 @@ function inputScreen(title,sub,submitLabel,onSubmit,showStmt){
       <div class="qnum mono">문항 ${S.cur+1}</div>
       <div class="stmt">${showStmt?it.s:'OMR '+(S.cur+1)+'번 입력 (1=O · 2=X)'}</div>
       <div class="entrywrap">
-        <input id="entry" class="entry mono" inputmode="numeric" maxlength="1" autocomplete="off" placeholder="·" oninput="onEntry(this)">
+        <input id="entry" class="entry mono" inputmode="numeric" maxlength="1" autocomplete="off" placeholder="·" oninput="onEntry(this)" aria-label="·">
         <div class="curval ${S.answers[S.cur]==='O'?'o':S.answers[S.cur]==='X'?'x':''}">${S.answers[S.cur]||'·'}</div>
       </div>
       <p class="hint"><kbd>1</kbd>=O · <kbd>2</kbd>=X 키 입력 → 자동으로 다음 칸 · ←/→ 이동</p>
@@ -709,9 +709,9 @@ function render(){
   renderSteps(); const v=S.view; let h='';
   if(v==='id'){
     h=    `<div class="card"><h1>학생 정보</h1><p class="lede">이름과 학교로 학생을 식별합니다. 학년은 응시 시점 기록용이라 매년 바뀌어도 같은 학생으로 이어집니다.</p>${S.round?`<div style="margin:2px 0 12px;padding:9px 12px;background:#f6f2e4;border:1px solid #e6dcbf;border-radius:8px;font-size:13px;color:#6b5b1e"><b>고른 회차</b> · ${S.round.title||'선택한 회차'} <a href="#" onclick="go('select');return false" style="color:#9a7b1e;margin-left:6px;font-weight:700;text-decoration:none">회차 바꾸기 →</a></div>`:''}
-      <label>이름</label><input id="f_name" value="${S.name}" placeholder="예: 홍길동" autocomplete="off">
-      <div class="row2"><div><label>학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중" autocomplete="off"></div>
-        <div><label>학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2" inputmode="numeric"></div></div>
+      <label for="f_name">이름</label><input id="f_name" value="${S.name}" placeholder="예: 홍길동" autocomplete="off">
+      <div class="row2"><div><label for="f_school">학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중" autocomplete="off"></div>
+        <div><label for="f_grade">학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2" inputmode="numeric"></div></div>
       ${TESTMODE?`<div class="toggle" style="color:#b45309;font-weight:600">⚠ 테스트 모드 · 이 학생 기록은 실제 성적에 반영되지 않습니다 (URL의 ?test=1)</div>`:``}
       <div class="btnrow"><button class="ghost" onclick="go('select')">회차로</button><button onclick="saveId()">${S.round?'이 학생 채점 시작':'이 학생 시작'}</button></div></div>
       <div style="text-align:center;margin-top:13px;display:flex;gap:8px 16px;justify-content:center;flex-wrap:wrap"><a href="pending.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">재시 미응시 현황 보기 →</a><a href="roster.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">반 명단 · 주말시험 미응시 보기 →</a><a href="hw_grader.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">숙제 채점 (조준모의고사) →</a><a href="pdfs.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">시험지·해설 PDF →</a><a href="retake_entry.html" target="_blank" rel="noopener" style="color:#0B6E6E;font-weight:700;font-size:13.5px;text-decoration:none">재시 수기 입력 →</a><a href="letters.html" target="_blank" rel="noopener" style="color:#C9A227;font-weight:700;font-size:13.5px;text-decoration:none">학부모 문자 템플릿 →</a></div>

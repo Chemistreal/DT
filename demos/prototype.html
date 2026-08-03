@@ -451,9 +451,9 @@ function render(){
   const v=S.view; let h='';
   if(v==='id'){
     h=`<div class="card"><h1>학생 정보</h1><p class="sub">이름과 학교로 학생을 식별합니다. 학년은 응시 시점 기록용입니다.</p>
-      <label>이름</label><input id="f_name" value="${S.name}" placeholder="예: 조준모">
-      <div class="row2"><div><label>학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중"></div>
-      <div><label>학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2"></div></div>
+      <label for="f_name">이름</label><input id="f_name" value="${S.name}" placeholder="예: 조준모">
+      <div class="row2"><div><label for="f_school">학교</label><input id="f_school" value="${S.school}" placeholder="예: 휘문중"></div>
+      <div><label for="f_grade">학년</label><input id="f_grade" value="${S.grade}" placeholder="예: 2"></div></div>
       <div class="toggle"><input type="checkbox" id="f_test" ${S.isTest?'checked':''}><label for="f_test" style="margin:0;color:inherit">테스트 모드 — 예시 학생으로 전 과정 점검 (시트에 테스트로 기록)</label></div>
       <div class="btnrow"><button onclick="saveId()">이 학생 시작</button></div></div>`;
   }
