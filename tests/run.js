@@ -650,6 +650,35 @@ async function assertNoOverflow(page, label) {
     });
   });
 
+  /* 매주 가는 글이라 같은 문장이 두 주 연달아 오면 그때부터 안 읽는다 —
+     여는·만성·맺음 문단은 그래서 여러 벌 중에서 지난 회차와 안 겹치게 고른다.
+     그런데 **가장 내용에 가까운 축 문단만 한 벌뿐**이라 매주 똑같이 나갔다.
+     문단을 새로 쓰는 것은 선생님 몫이라 자리부터 열어 뒀다 — 배열이면 고른다. */
+  await test('처방 코멘트 · 축 문단도 여러 벌을 받을 수 있다', async page => {
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    assert(/Array\.isArray\(av\)/.test(src), '축 문단이 배열을 못 받는다');
+    assert(/_rxPick\(av,\s*seed>>>11/.test(src), '축 문단이 다른 자리와 같은 규칙으로 안 고른다');
+
+    /* 배열을 넣어 보고 실제로 갈리는지 — 지금 값(글 하나)도 그대로 돌아야 한다. */
+    await page.goto(BASE + 'report.html?demo');
+    await page.waitForTimeout(2500);
+    const r = await page.evaluate(() => {
+      const out = { 글하나: null, 배열: [] };
+      const key = Object.keys(RXBANK.axis)[0];
+      const orig = RXBANK.axis[key];
+      out.글하나 = typeof orig === 'string';
+      RXBANK.axis[key] = ['가 문단', '나 문단', '다 문단'];
+      for (let i = 0; i < 3; i++) {
+        const av = RXBANK.axis[key];
+        out.배열.push(Array.isArray(av) ? av.length : 0);
+      }
+      RXBANK.axis[key] = orig;
+      return out;
+    });
+    assert(r.글하나 === true, '지금 값이 글 하나가 아니다 — 하위호환을 봐야 한다');
+    assert(r.배열[0] === 3, '배열을 못 넣는다');
+  });
+
   await test('내용 · 온도 표기가 한 가지다', async () => {
     const AD = path.join(ROOT, 'appdata');
     const bad = [];
