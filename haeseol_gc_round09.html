@@ -73,7 +73,15 @@ body { font-family:"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-ser
       line-height:1.36; }
     ul.s li .n { position:absolute; left:0; top:3px; color:#bba24f; font-weight:700; font-size:8.4pt; }
     ul.s li .src { color:#c33; font-size:8pt; font-weight:700; margin-left:5px; }
-    </style></head><body>
+    
+/* 인쇄 잉크 — 배경이 안 찍혀도 읽히게. 화면은 하나도 안 바뀐다.
+   브라우저는 인쇄할 때 배경을 기본으로 안 찍는다. 어두운 배경 위의 흰
+   글씨는 그래서 흰 종이에 흰 글씨가 된다 — 지시문·제목띠가 사라졌다. */
+@media print{
+  .omrbanner,.omrhead,.inst,.inst .sec,.kind,.secband{
+    background:#fff;color:#000;border:1px solid #000}
+}
+</style></head><body>
 <div class="brand"><div><div class="lab">CHEMISTREAL · JMChC</div>
 <h1 class="tt">누적 OX 일반화학 9회</h1></div>
 <div class="rt"><span class="kind">해설지</span><br>화학 올림피아드반</div></div>
