@@ -976,7 +976,19 @@ function rxNarrCard(){
   else if(ch.length===1){ parts.push(_rxPick(RXBANK.chronic.one, cseed, cprev).replace(/\{mis\}/g, _rxEsc(ch[0].mis)).replace('{r}', ch[0].rounds)); }
   else if(A.trend.length>=3){ parts.push(_rxPick(RXBANK.chronic.none, cseed, cprev)); }
   var ax=(A.axisWeak||[]).filter(function(x){return x.wrong>=2 && RXBANK.axis[x.key];})[0];
-  if(ax) parts.push(RXBANK.axis[ax.key]);
+  /* 축 문단만 **한 벌뿐이라 매주 똑같이 나간다.** 여는 문단·만성 문단·맺음
+     문단은 여러 벌 중에서 지난 회차와 안 겹치게 고르는데, 정작 가장 내용에
+     가까운 이 문단이 늘 같은 글자다. 같은 문장이 두 주 연달아 오면 그때부터
+     안 읽는다 — 다른 자리를 여러 벌로 만든 이유가 그것이다.
+     문단을 새로 쓰는 것은 선생님 몫이라, **자리부터 열어 둔다**:
+     RXBANK.axis 의 값이 배열이면 다른 자리와 같은 규칙으로 고른다.
+     지금처럼 글 하나면 그대로 쓴다(고칠 것 없이 그대로 돈다). */
+  if(ax){
+    var av=RXBANK.axis[ax.key];
+    parts.push(Array.isArray(av)
+      ? _rxPick(av, seed>>>11, pseed!=null?(pseed>>>11):null)
+      : av);
+  }
   parts.push(_rxPick(RXBANK.closers, seed>>>3, pseed!=null?(pseed>>>3):null));
   return '<div class="card"><h2>이번 주 처방 코멘트</h2>'
     + '<p class="note" style="font-size:13.5px;line-height:1.85;margin:0;color:#3a4653">'+parts.join(' ')+'</p></div>';
