@@ -51,6 +51,12 @@ input.rnd{width:88px;text-align:center}
 .clscard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 11px;margin:11px 0}
 .slist{display:flex;flex-direction:column;gap:6px;margin:10px 0 8px}
 .srow{display:flex;align-items:center;gap:7px}
+/* 학교 칸은 이름 칸보다 좁게. 늘 보이되 눈에 덜 걸리게 둔다 — 서른 줄 중
+   실제로 적어야 하는 줄은 보통 두 줄이다. */
+.ssc{flex:0 0 96px;min-width:0}
+.srow.needsch .ssc{border-color:var(--x);background:var(--x-bg)}
+.warn.small{margin:8px 0 0;padding:8px 10px;border-radius:8px;
+  background:var(--x-bg);border:1px solid var(--x);color:var(--ink);line-height:1.5}
 .srow .idx{color:var(--muted);font-size:11.5px;width:22px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
 .addrow{display:flex;gap:7px;margin-top:6px}
 .note{font-size:12px;color:var(--muted);line-height:1.5}
@@ -77,6 +83,19 @@ input.rnd{width:88px;text-align:center}
 @keyframes sp{to{transform:rotate(360deg)}}
 a{color:var(--brass)}
 </style>
+<style id="ct-theme" data-v="4" data-fam="tool" data-seal="0">/* 이 조각은 tools/theme.py 가 넣습니다. 손으로 고치지 마세요 —
+   다음 실행에서 덮어써집니다. 색을 바꾸려면 그 파일을 고치세요. */
+:root{--ink-soft:#5C5C66;--ink-faint:#706E66;--sub:#5F6D7C;--faint:#626D7B;--line2:#EEF0EA;--line-strong:#D2C8B5;--paper:#FAFAF7;--panel:#fff;--surface:#fff;--teal:#0B6E6E;--teal-d:#0A5A5A;--teal-soft:#E4F0EF;--teal-line:#BFE0DD;--brass:#A9853C;--brass-deep:#8A6A38;--brass-soft:#F5EEDF;/* 금색은 두 가지 일을 한다 — 글자색으로도 쓰고 흰 글씨를 얹는 단추      바탕으로도 쓴다. 원래 값(#9a7b27)은 양쪽 다 4.01:1 로 본문 기준(4.5)에      못 미쳤다. 한 단 낮춰 글자 4.77 · 단추 5.12 로 올린다. */--gold:#866A20;--o:#1B8A4C;--o-bg:#E7F5EC;--x:#C0392B;--x-bg:#FBEBE9;--bad:#b23b3b;--slate:#41595A}
+html{color-scheme:light;-webkit-text-size-adjust:100%}
+@media screen{
+  body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  ::selection{background:#0B6E6E26}
+  :focus-visible{outline:2px solid #0B6E6E;outline-offset:2px;border-radius:3px}
+  table{font-variant-numeric:tabular-nums}
+  hr{border:0;border-top:1px solid var(--line)}
+  header .logo{letter-spacing:.16em;font-weight:700}
+  header::after{content:'';display:block;height:3px;margin-top:16px;border-radius:2px;background:linear-gradient(90deg,#0B6E6E 0%,#0B6E6E66 34%,#0B6E6E00 76%)}
+}</style>
 </head>
 <body>
 <div class="wrap">
@@ -118,12 +137,17 @@ function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
 var DEFAULT_ROSTER=[
   {label:'화학2 토1:30-5:30',students:['고승원','곽도윤','권효주','김두은','김시헌','김연준','김채원','김태연','석지후','송지호','안승재','안지원','오가연','오승민','이건우','이도현','이세현','이원준','이정민','이지한','이지호','이지환','이채연','장재민','최시아','현정욱','최민준']},
   {label:'일반화학 일1:30-5:30',students:['강태영','권지유','김민결','김영우','이도형','전준','전하연','황승하','황예린']},
-  {label:'화학1 일6-10',students:['강신우','고영훈','구자홍','권승현','김도현','김명준','김서준','김승현','김예성','김지완','김현승','박정현','옥윤아','온주호','유민상','윤정원','이다인','이동선','이민성','이아은','이지율','이지호','이진혁','이하윤','이한주','이현욱','임병준','임준휘','임하율','장윤아','전주환','최준혁','최지호','한이주','한준태','홍아라','황윤성']},
+  {label:'화학1 일6-10',students:['강신우','고영훈','구자홍','권승현','김도현','김명준','김서준','김승현','김예성',{n:'김지완',s:'내정중'},{n:'김지완',s:'대청중'},'김현승','박정현','옥윤아','온주호','유민상','윤정원','이다인','이동선','이민성','이아은','이지율','이지호','이진혁','이하윤','이한주','이현욱','임병준','임준휘','임하율','장윤아','전주환','최준혁','최지호','한이주','한준태','홍아라','황윤성']},
   {label:'화학2 토6-10',students:['박건태','박소영','이지안','정예찬','조예준','최승규','홍수환','고유진','홍선우']}
 ];
 
 var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
 /* 이 반이 어느 앱의 반인가. 안 적힌 옛 명단은 예전처럼 DT 로 본다. */
+/* 명단 한 칸은 이름 글자열이거나 {n:이름, s:학교} 다. 학교는 **가르는 데만**
+   쓴다 — 문자는 예전 그대로 '김지완 학생' 이다. */
+function stuName(x){ return String((x&&typeof x==='object')?(x.n||x.name||''):(x==null?'':x)).trim(); }
+function stuSchool(x){ return String((x&&typeof x==='object')?(x.s||x.school||''):'').trim(); }
+function stuMake(nm, sc){ nm=String(nm||'').trim(); sc=String(sc||'').trim(); return sc?{n:nm,s:sc}:nm; }
 function kindOf(k){ return String((k&&k.kind)||'').toLowerCase()==='exam'?'exam':'dt'; }
 function courseOf(label){
   var s=String(label||'');
@@ -175,11 +199,27 @@ function renderClasses(){
     h+='<span class="small muted">학생 '+(k.students||[]).length+'명</span>';
     h+='</div>';
     h+='<div class="slist">';
-    (k.students||[]).forEach(function(nm,si){
-      h+='<div class="srow"><span class="idx">'+(si+1)+'</span>'
+    /* 같은 반에 이름이 겹치면 **학교로 갈라야** 한다. 겹치는 줄만 짚어
+       준다 — 서른 줄에 다 학교를 적으라고 하면 아무도 안 적는다. */
+    var dupe = {};
+    (k.students||[]).forEach(function(x){
+      var nm=stuName(x).replace(/\s+/g,''); if(nm) dupe[nm]=(dupe[nm]||0)+1;
+    });
+    (k.students||[]).forEach(function(x,si){
+      var nm=stuName(x), sc=stuSchool(x);
+      var dup = dupe[nm.replace(/\s+/g,'')]>1;
+      h+='<div class="srow'+(dup&&!sc?' needsch':'')+'"><span class="idx">'+(si+1)+'</span>'
         +'<input aria-label="학생 이름" class="snm" data-ci="'+ci+'" data-si="'+si+'" value="'+esc(nm)+'">'
+        +'<input aria-label="학교 (같은 이름이 있을 때만)" class="ssc" data-ci="'+ci+'" data-si="'+si+'"'
+        +' value="'+esc(sc)+'" placeholder="'+(dup?'학교 (필요)':'학교')+'">'
         +'<button class="x delS" data-ci="'+ci+'" data-si="'+si+'" title="삭제">×</button></div>';
     });
+    var need = (k.students||[]).filter(function(x){
+      return dupe[stuName(x).replace(/\s+/g,'')]>1 && !stuSchool(x); }).length;
+    if(need) h+='<div class="warn small">이름이 같은 학생이 '+need+'명 있습니다. '
+      +'<b>학교</b>를 적어 주세요 — 안 적으면 한 사람으로 세어져 반 인원이 모자라고, '
+      +'한 명이 시험을 보면 둘 다 응시한 것으로 처리됩니다. '
+      +'(문자는 그대로 <b>이름만</b> 나갑니다)</div>';
     h+='</div>';
     h+='<div class="addrow"><input class="addS" data-ci="'+ci+'" placeholder="학생 추가 (여러 명은 줄바꿈/쉼표)" aria-label="학생 추가 (여러 명은 줄바꿈/쉼표)">'
       +'<button class="tiny addBtn" data-ci="'+ci+'">추가</button></div>';
@@ -254,7 +294,8 @@ function normalize(arr){
   return (arr||[]).map(function(k){
     return {label:String(k.label||'').trim(),
             kind:kindOf(k),
-            students:(k.students||[]).map(function(s){return String(s||'').trim();}).filter(Boolean),
+            students:(k.students||[]).map(function(x){
+              var nm=stuName(x); return nm?stuMake(nm, stuSchool(x)):null; }).filter(Boolean),
             round:(k.round===0||k.round)?Number(k.round):null};
   });
 }
@@ -320,7 +361,10 @@ async function sendMail(){
 var cont=document.getElementById('classes');
 cont.addEventListener('input',function(e){
   var t=e.target, ci=+t.getAttribute('data-ci');
-  if(t.classList.contains('snm')){ var si=+t.getAttribute('data-si'); state.classes[ci].students[si]=t.value; }
+  if(t.classList.contains('snm')){ var si=+t.getAttribute('data-si');
+    state.classes[ci].students[si]=stuMake(t.value, stuSchool(state.classes[ci].students[si])); }
+  if(t.classList.contains('ssc')){ var si2=+t.getAttribute('data-si');
+    state.classes[ci].students[si2]=stuMake(stuName(state.classes[ci].students[si2]), t.value); }
   else if(t.classList.contains('lab')){ state.classes[ci].label=t.value; }
   else if(t.classList.contains('rnd')){ var v=t.value.trim(); state.classes[ci].round=v===''?null:Number(v); }
 });

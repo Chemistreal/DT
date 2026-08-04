@@ -584,5 +584,64 @@ console.log('[반 갈래] 파이널 반은 DT 계산에서 빠진다');
   ctx.setRoster_(before);                      // 원래 명단으로 되돌린다
 }
 
+console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
+{
+  /* 화학1 일6-10 반에 김지완(내정중)·김지완(대청중) 두 학생이 있다.
+     여태 명단은 이름 글자열 배열이라 둘을 구분할 수 없었고, 한 명만
+     등록돼 반 인원이 한 명 모자랐다. 한 명이 시험을 보면 이름만으로
+     맞춰 보니 **둘 다 응시한 것**이 되어 미응시 문자가 안 나갔다. */
+  const before = JSON.parse(SHEETS['_roster']._rows[0][0]).classes;
+  const saved = ctx.setRoster_([
+    { label: '화학1 일6-10', round: null, students: [
+      { n: '김지완', s: '내정중' },
+      { n: '김지완', s: '대청중' },
+      '홍길동',                                   // 학교 없는 옛 칸도 그대로
+    ] },
+  ]);
+  T('두 김지완이 다 남는다', (saved[0].students || []).length === 3,
+    JSON.stringify(saved[0].students));
+  T('학교를 적은 칸만 객체로 남는다',
+    typeof saved[0].students[0] === 'object' && saved[0].students[2] === '홍길동',
+    JSON.stringify(saved[0].students));
+
+  /* 명단 창구가 **명단에 적은 학교**를 그대로 내줘야 한다. 시트에서 이름만으로
+     찾으면 동명이인이 최근 기록 하나로 뭉개져 둘이 같은 학교로 보인다. */
+  const nm = J(ctx.doGet({ parameter: { action: 'names' } }));
+  const cls = (nm.classes || []).filter(c => c.label === '화학1 일6-10')[0] || {};
+  const kims = (cls.students || []).filter(x => x.name === '김지완');
+  T('창구가 두 명을 다 준다', kims.length === 2,
+    JSON.stringify(cls.students));
+  T('학교가 서로 다르다', kims.length === 2 && kims[0].school !== kims[1].school,
+    JSON.stringify(kims));
+  /* ⚠ 이름은 **그대로 '김지완'** 이어야 한다. 여기에 학교를 붙이면 학부모에게
+     '김지완 내정중 학생' 이라고 문자가 나간다. */
+  T('이름에 학교를 안 붙인다', kims.every(x => x.name === '김지완'),
+    JSON.stringify(kims.map(x => x.name)));
+
+  /* 미응시: 한 명만 시험을 봤을 때 나머지 한 명이 잡혀야 한다. */
+  /* 시트 이름은 '결과' 다. 한 명(내정중)만 9회를 봤다고 적어 둔다. */
+  SHEETS['결과']._rows.push(
+    ['김지완', 'L', new Date(), 55, '통과', '내정중-김지완', '내정중', '2',
+     'ch1', 9, '정시', 30, 30, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
+  const ab = ctx.computeAbsentees_(8, { '화학1 일6-10': 9 });
+  const c = (ab.classes || []).filter(x => x.label === '화학1 일6-10')[0] || {};
+  T('본 사람은 미응시에서 빠진다',
+    (c.absentWho || []).filter(w => w.name === '김지완' && w.school === '내정중').length === 0,
+    JSON.stringify(c.absentWho));
+  T('안 본 동명이인은 그대로 잡힌다',
+    (c.absentWho || []).filter(w => w.name === '김지완' && w.school === '대청중').length === 1,
+    JSON.stringify(c.absentWho));
+  /* ⚠ 옛 화면·문자·메일이 읽는 absent 는 **글자열 배열**이어야 한다.
+     객체를 넣으면 문자가 '[object Object] 학생' 이 된다. */
+  T('absent 는 이름 글자열 그대로', (c.absent || []).every(x => typeof x === 'string'),
+    JSON.stringify(c.absent));
+  T('absent 와 absentWho 의 길이가 같다',
+    (c.absent || []).length === (c.absentWho || []).length,
+    (c.absent || []).length + ' vs ' + (c.absentWho || []).length);
+
+  SHEETS['결과']._rows.pop();
+  ctx.setRoster_(before);
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);
