@@ -640,6 +640,32 @@ console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
     (c.absent || []).length + ' vs ' + (c.absentWho || []).length);
 
   SHEETS['결과']._rows.pop();
+
+  /* ── 이름 칸에 학교를 붙여 적어 둔 옛 명단 ──────────────────────────
+     명단에 두 명을 넣을 방법이 없던 때 이름 칸에 '김지완 대청중' 이라고
+     적어 구분해 두었다. 그 값이 그대로 문자에 실려 학부모에게
+     "김지완 대청중 학생" 이라고 나갔다 — 실제로 그렇게 나갔다. */
+  const saved2 = ctx.setRoster_([
+    { label: '화학1 일6-10', round: null,
+      students: ['김지완 내정중', '김지완 대청중', '홍길동'] },
+  ]);
+  T('이름 칸의 학교를 갈라 낸다',
+    ctx.stuName_(saved2[0].students[0]) === '김지완' &&
+    ctx.stuSchool_(saved2[0].students[0]) === '내정중',
+    JSON.stringify(saved2[0].students));
+  const nm2 = J(ctx.doGet({ parameter: { action: 'names' } }));
+  const cls2 = (nm2.classes || []).filter(c => c.label === '화학1 일6-10')[0] || {};
+  T('창구가 내주는 이름에는 학교가 없다',
+    (cls2.students || []).every(x => !/[초중고]$/.test(x.name)),
+    JSON.stringify((cls2.students || []).map(x => x.name)));
+  T('학교는 따로 온다',
+    (cls2.students || []).filter(x => x.name === '김지완').map(x => x.school).sort()
+      .join(',') === '내정중,대청중',
+    JSON.stringify((cls2.students || []).map(x => [x.name, x.school])));
+  /* 붙여 쓴 이름은 안 가른다 — 멀쩡한 이름이 잘리면 더 나쁘다. */
+  T('구분자가 없으면 안 가른다', ctx.splitSchool_('김지완대청중').school === '');
+  T('짧은 이름은 안 가른다', ctx.splitSchool_('김 대청중').name === '김 대청중');
+
   ctx.setRoster_(before);
 }
 

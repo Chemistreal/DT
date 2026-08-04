@@ -1184,6 +1184,45 @@ async function assertNoOverflow(page, label) {
     await page.waitForFunction(() => S.view === 'grade', null, { timeout: 20000 });
   }, { adminGate: true, viewport: { width: 900, height: 900 } });
 
+  /* ── 문자에 실리는 이름 ──────────────────────────────────────────
+     명단·시트의 이름 칸에 `김지완 대청중` 처럼 학교가 붙어 있을 수 있다
+     (명단에 두 명을 넣을 방법이 없던 때의 흔적). 그대로 실려 학부모에게
+     "김지완 대청중 학생" 이라고 나갔다 — 선생님이 받은 실물이 그랬다.
+     문구를 짓는 **마지막 자리**에서 막는다. 여기가 마지막 관문이라 어디를
+     거쳐 왔든 안 샌다. */
+  {
+    const t0 = Date.now(), name = '문자에는 이름까지만 (학교를 안 싣는다)';
+    try {
+      const src = fs.readFileSync(path.join(ROOT, 'pending.html'), 'utf8');
+      const code = src.slice(src.indexOf('var SCHOOL_TAIL'), src.indexOf('function markSent'));
+      /* 이 파일은 strict 라 with 를 못 쓴다. 함수 몸통만 떼어 새 함수로 만든다. */
+      const ctx = new Function('COURSE',
+        code + '\nreturn { justName:justName, shareMsg:shareMsg, passMsg:passMsg, absentMsg:absentMsg };'
+      )({ ch1: '화학Ⅰ', ch2: '화학Ⅱ', gc: '일반화학' });
+      const L = 'https://x/exam.html?c=ch1&r=7';
+      const outs = [
+        ctx.absentMsg({ name: '김지완 대청중', course: 'ch1', round: 7, link: L }, '1'),
+        ctx.absentMsg({ name: '김지완 대청중', course: 'ch1', round: 7, link: L }, '2'),
+        ctx.shareMsg({ name: '김지완 내정중', course: 'ch1', round: 7, att: '정시',
+                       score: 62, next: '재시', link: '' }, '1'),
+        ctx.passMsg({ name: '김지완(대청중)', course: 'ch1', round: 7, att: '정시',
+                      score: 92, tries: 1, link: '' }),
+      ];
+      const dirty = outs.filter(o => /(내정|대청)/.test(o));
+      assert(!dirty.length, '학교가 문구에 실렸다: ' + (dirty[0] || '').split('\n')[0]);
+      assert(outs.every(o => o.indexOf('김지완 학생') >= 0),
+             "'김지완 학생' 이 없다: " + outs.map(o => o.split('\n')[0]).join(' / '));
+      /* 붙여 쓴 이름은 안 가른다 — 멀쩡한 이름이 잘리면 더 나쁘다. */
+      assert(ctx.justName('김지완대청중') === '김지완대청중', '붙여 쓴 이름을 갈랐다');
+      assert(ctx.justName('김 지완') === '김 지완', '짧은 이름을 갈랐다');
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   await BROWSER.close();
   srv.close();
 

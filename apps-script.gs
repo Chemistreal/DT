@@ -638,8 +638,12 @@ function computePending_(activeDays) {
     var next = attLabelOf_(maxo + 1);                                 // 미통과인 한 다음 재시 무한 생성 (재시->재재시->재재재시...)
     var d = lastRow.date ? new Date(lastRow.date) : now;
     var days = Math.floor((now - d) / 86400000);
+    /* 학생이 이름 칸에 '김지완 대청중' 이라고 적고 냈을 수 있다. 창구에서
+       갈라 내보낸다 — 안 그러면 그 값이 그대로 문자에 실린다. */
+    var _p = splitSchool_(lastRow.name);
     pend.push({
-      studentKey: lastRow.studentKey, name: lastRow.name, school: lastRow.school, year: lastRow.year,
+      studentKey: lastRow.studentKey, name: _p.name,
+      school: lastRow.school || _p.school, year: lastRow.year,
       course: lastRow.course, round: lastRow.round, lastAttempt: lastRow.attempt, nextNeeded: next,
       score: lastRow.score, reportLink: lastRow.reportLink || '',
       lastDate: Utilities.formatDate(d, 'Asia/Seoul', 'M/d'), days: days, active: days < activeDays
@@ -688,8 +692,10 @@ function computePassed_(days) {
     var d = best.date ? new Date(best.date) : now;
     var ago = Math.floor((now - d) / 86400000);
     if (ago > days) return;                     // 오래된 것까지 쌓으면 볼 수가 없다
+    var _b = splitSchool_(best.name);         // 이름 칸에 붙은 학교를 갈라 낸다
     out.push({
-      studentKey: best.studentKey, name: best.name, school: best.school, year: best.year,
+      studentKey: best.studentKey, name: _b.name,
+      school: best.school || _b.school, year: best.year,
       course: best.course, round: best.round, attempt: best.attempt,
       tries: bo + 1,                            // 몇 번 만에 통과했나(1 = 정시)
       score: best.score, reportLink: best.reportLink || '',
@@ -808,11 +814,37 @@ function setRoster_(classes) {
 
    ⚠ 학교는 **가르는 데만** 쓴다. 학부모에게 가는 문자는 예전 그대로
      '김지완 학생' 이다 — '김지완 내정중 학생' 이 아니다. */
+/* ── 이름에 학교가 붙어 온 것 ────────────────────────────────────────
+   명단에 학생을 두 명 넣을 방법이 없던 때, 이름 칸에 `김지완 대청중` 처럼
+   학교를 같이 적어 구분해 두었다. 그 값이 그대로 문자에 실려
+
+       [다원교육 영재관 · 화학] 김지완 대청중 학생 시험 안내
+
+   라고 나갔다. 문자는 **이름까지만** 이어야 한다 — 문자는 각자 보내니까
+   학교는 화면에서 가르는 데만 쓰면 된다.
+
+   ⚠ 띄어쓰기·가운뎃점 같은 **구분자가 있을 때만** 가른다. 붙여 쓴 것까지
+     가르려 들면 멀쩡한 이름이 잘린다(성이 두 자인 이름·드문 외자 이름).
+   ⚠ 학교로 볼 꼬리는 두 자 이상이고 초/중/고 로 끝나는 말이다.
+     `김지완 대청중` · `김지완 대청중학교` · `김지완(대청중)` 다 걸린다. */
+var SCHOOL_TAIL = /^(.+?)[\s·,\/(\[]+([가-힣A-Za-z]{2,10}(?:초|중|고)(?:등학교|학교)?)[\)\]]?\s*$/;
+function splitSchool_(raw) {
+  var s = String(raw == null ? '' : raw).trim();
+  var m = SCHOOL_TAIL.exec(s);
+  if (!m) return { name: s, school: '' };
+  var nm = m[1].trim();
+  if (nm.length < 2) return { name: s, school: '' };   // 남는 이름이 너무 짧다 — 안 가른다
+  return { name: nm, school: m[2] };
+}
 function stuName_(x) {
-  return String((x && typeof x === 'object') ? (x.n || x.name || '') : (x == null ? '' : x)).trim();
+  var raw = String((x && typeof x === 'object') ? (x.n || x.name || '') : (x == null ? '' : x)).trim();
+  return splitSchool_(raw).name;          // '김지완 대청중' → '김지완'
 }
 function stuSchool_(x) {
-  return String((x && typeof x === 'object') ? (x.s || x.school || '') : '').trim();
+  var own = String((x && typeof x === 'object') ? (x.s || x.school || '') : '').trim();
+  if (own) return own;
+  var raw = String((x && typeof x === 'object') ? (x.n || x.name || '') : (x == null ? '' : x)).trim();
+  return splitSchool_(raw).school;        // 이름 칸에 붙여 둔 학교도 읽어 준다
 }
 /* 같은 반에 이름이 겹치는 칸이 몇이나 되는지. 겹칠 때만 학교를 따진다. */
 function dupeNames_(students) {
