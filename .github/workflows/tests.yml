@@ -54,6 +54,12 @@ jobs:
       # 고친 뒤 0.6초 · 0.3초 · 2.3초.
       - name: 바깥 글꼴이 첫 화면을 막지 않는다
         run: python3 tools/font_block.py --check
+      # 성적표 링크는 **암호를 묻지 않는다**(선생님 결정). 그러면 남는 보호막은
+      # 주소를 남이 모른다는 것 하나뿐이라, 그 주소가 검색에 잡히면 보호막이
+      # 통째로 사라진다 — 아이 이름·점수·등수가 검색되는 것이다.
+      # 개인 성적이 뜨는 화면만 골라 막는다(대문·자료 화면은 그대로).
+      - name: 개인 성적 화면이 검색에 열려 있지 않다
+        run: python3 tools/noindex.py --check
       - name: Install playwright
         run: npm install --prefix tests
       - name: Install chromium
