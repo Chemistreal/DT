@@ -79,7 +79,7 @@
         <button data-c="ch1">화학1</button><button data-c="ch2">화학2</button><button data-c="gc">일반화학</button>
       </div>
       <span class="lbl" style="margin-left:8px">회차</span>
-      <select id="roundSel"></select>
+      <select aria-label="회차 선택" id="roundSel"></select>
     </div>
     <div class="meta" id="meta" style="margin-top:14px"></div>
   </div>
@@ -98,7 +98,7 @@
     <div class="padhint" id="padhint">1번 칸부터 1 또는 2를 누르면 자동으로 다음 칸으로 넘어갑니다. (지우기: Backspace · 이동: 방향키/클릭)</div>
 
     <div id="pasteBox" class="paste" style="display:none">
-      <textarea id="pasteArea" inputmode="numeric" placeholder="학생 답안을 1·2로 60개 붙여넣기/입력 (1=O, 2=X)   예: 1 2 1 1 2 ...   띄어쓰기 무방"></textarea>
+      <textarea aria-label="학생 답안 붙여넣기 — 1은 O, 2는 X" id="pasteArea" inputmode="numeric" placeholder="학생 답안을 1·2로 60개 붙여넣기/입력 (1=O, 2=X)   예: 1 2 1 1 2 ...   띄어쓰기 무방"></textarea>
     </div>
 
     <div class="grid" id="grid"></div>
@@ -154,7 +154,7 @@ function renderGrid(){
       inner+=`<div class="ox"><span class="${a==='O'?'sel':''}">O</span><span class="${a==='X'?'sel':''}">X</span></div>`;
     } else {
       const v=resp[i]||'';
-      inner+=`<input class="inp" data-i="${i}" inputmode="numeric" autocomplete="off" value="${v}">`;
+      inner+=`<input aria-label="${i+1}번 답" class="inp" data-i="${i}" inputmode="numeric" autocomplete="off" value="${v}">`;
     }
     if(graded && mode!=='key'){
       const a=k.answers[i], ok=resp[i]===a;

@@ -74,7 +74,7 @@ textarea.msg:focus{outline:none;border-color:var(--teal-line);background:#fff}
     <button class="copybtn" id="copyBtn" data-orig="문자 복사" onclick="copyMsg(this)">문자 복사</button>
   </div>
   <div class="warnbox" id="pvWarn" hidden><b>내용 미입력 회차</b>입니다. 〔 〕 표시 부분을 채우거나, letters.html의 MSGS 블록에 이 회차 내용을 넣어 주세요.</div>
-  <textarea class="msg" id="pvText" spellcheck="false"></textarea>
+  <textarea aria-label="문자 본문 미리보기" class="msg" id="pvText" spellcheck="false"></textarea>
   <div class="editnote">미리보기를 직접 고쳐도 복사에 그대로 반영됩니다 (파일에는 저장되지 않음).</div>
 </div>
 

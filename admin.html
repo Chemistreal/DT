@@ -422,7 +422,7 @@ function showBake(txt,meta){
   if(!box){ box=document.createElement('div'); box.id='bakebox'; box.className='bakebox'; document.body.appendChild(box); }
   box.innerHTML='<div class="bakecard"><div class="bakehd"><span>seeds.json · '+escH(meta)+'</span><button class="ghost sm" onclick="document.getElementById(\'bakebox\').remove()">닫기</button></div>'
     +'<p class="note">아래 전체를 복사해 <b>appdata/seeds.json</b>으로 저장·업로드하면, 다음 학기 이 회차가 응시 전부터 이 정답률을 콜드스타트 기준으로 씁니다.</p>'
-    +'<textarea class="bakearea" readonly onclick="this.select()">'+escH(txt)+'</textarea>'
+    +'<textarea aria-label="씨앗 파일 내용 — 눌러서 전체 선택" class="bakearea" readonly onclick="this.select()">'+escH(txt)+'</textarea>'
     +'<button class="ghost" style="margin-top:8px" onclick="(function(){var t=document.querySelector(\'.bakearea\');t.select();try{document.execCommand(\'copy\');}catch(e){}})()">전체 복사</button></div>';
 }
 
