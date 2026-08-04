@@ -177,7 +177,7 @@ function renderClasses(){
     h+='<div class="slist">';
     (k.students||[]).forEach(function(nm,si){
       h+='<div class="srow"><span class="idx">'+(si+1)+'</span>'
-        +'<input class="snm" data-ci="'+ci+'" data-si="'+si+'" value="'+esc(nm)+'">'
+        +'<input aria-label="학생 이름" class="snm" data-ci="'+ci+'" data-si="'+si+'" value="'+esc(nm)+'">'
         +'<button class="x delS" data-ci="'+ci+'" data-si="'+si+'" title="삭제">×</button></div>';
     });
     h+='</div>';
