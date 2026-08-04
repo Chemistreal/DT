@@ -475,9 +475,13 @@ function namesData_(code) {
     /* 갈래를 같이 보낸다. 통합 셸이 이것으로 DT 알림 대상을 가른다 —
        파이널 반 학생에게 DT 재시·미응시 문자를 만들면 안 된다. */
     return { label: k.label, course: k.course, kind: kindOf_(k),
-      students: (k.students || []).map(function (nm) {
-        var cn = cleanName_(String(nm || '')), hit = latest[cn] || {};
-        return { name: String(nm || ''), school: hit.school || '', year: hit.year || '' };
+      students: (k.students || []).map(function (x) {
+        var nm = stuName_(x), sc = stuSchool_(x);
+        var cn = cleanName_(nm), hit = latest[cn] || {};
+        /* ⚠ 명단에 적어 둔 학교가 **먼저**다. 시트에서 이름만으로 찾으면
+           동명이인은 둘 중 최근 기록 하나로 뭉개진다 — 그러면 두 학생이
+           같은 학교로 보이고 통합 셸이 둘을 한 사람으로 붙인다. */
+        return { name: nm, school: sc || hit.school || '', year: hit.year || '' };
       }) };
   });
   return { ok: true, classes: out };
@@ -777,7 +781,13 @@ function setRoster_(classes) {
       /* 파이널 반은 DT 과목이 없다. 이름에서 '화학1' 을 읽어 과목을 붙이면
          DT 계산이 그 반을 자기 반으로 착각한다. */
       course: kind === 'exam' ? '' : ((k && k.course) || courseOf_(k && k.label)),
-      students: ((k && k.students) || []).map(function (s) { return String(s || '').trim(); }).filter(String),
+      /* 학교를 적어 둔 칸만 객체로 남긴다. 안 적은 칸은 예전 모양(글자열)
+         그대로라, 지금 있는 명단은 저장해도 한 글자도 안 바뀐다. */
+      students: ((k && k.students) || []).map(function (x) {
+        var nm = stuName_(x), sc = stuSchool_(x);
+        if (!nm) return null;
+        return sc ? { n: nm, s: sc } : nm;
+      }).filter(Boolean),
       /* 파이널 반에는 DT 회차가 없다. 남겨 두면 저쪽에서 그 회차로 미응시를
          세려다 만다 — 화면에서 지워도 서버에 남으면 소용이 없다. */
       round: kind === 'exam' ? null
@@ -787,12 +797,37 @@ function setRoster_(classes) {
   rosterMeta_().getRange(1, 1).setValue(JSON.stringify({ classes: clean }));
   return clean;
 }
+/* ── 명단 한 칸 ──────────────────────────────────────────────────────
+   여태 명단은 **이름 글자열의 배열**이었다. 그러다 화학1 일6-10 반에
+   `김지완`(내정중)과 `김지완`(대청중) 두 학생이 들어왔다. 이름만으로는
+   둘을 구분할 수 없어서 한 명만 등록돼 있었고, 반 인원도 한 명으로 셌다.
+
+   그래서 칸이 **{ n: 이름, s: 학교 }** 를 들 수 있게 넓힌다. 학교를 안 적은
+   칸은 예전처럼 글자열 그대로 둔다 — 옛 명단을 통째로 바꿔 적으면 지금 잘
+   도는 것까지 흔들린다.
+
+   ⚠ 학교는 **가르는 데만** 쓴다. 학부모에게 가는 문자는 예전 그대로
+     '김지완 학생' 이다 — '김지완 내정중 학생' 이 아니다. */
+function stuName_(x) {
+  return String((x && typeof x === 'object') ? (x.n || x.name || '') : (x == null ? '' : x)).trim();
+}
+function stuSchool_(x) {
+  return String((x && typeof x === 'object') ? (x.s || x.school || '') : '').trim();
+}
+/* 같은 반에 이름이 겹치는 칸이 몇이나 되는지. 겹칠 때만 학교를 따진다. */
+function dupeNames_(students) {
+  var c = {};
+  (students || []).forEach(function (x) {
+    var n = norm_(stuName_(x)); if (n) c[n] = (c[n] || 0) + 1;
+  });
+  return c;
+}
 function norm_(s) { return String(s || '').replace(/\s+/g, ''); }
 function studentName_(key) { var s = String(key || ''); var i = s.lastIndexOf('-'); return i >= 0 ? s.slice(i + 1) : s; }
 function currentRoundForClass_(all, course, students, withinDays) {
   var now = Date.now(), lim = withinDays * 86400000;
   var set = {};
-  (students || []).forEach(function (nm) { set[norm_(nm)] = 1; });
+  (students || []).forEach(function (x) { set[norm_(stuName_(x))] = 1; });
   var cnt = {}, latest = {};                              // 회차 -> 응시 인원 수 / 마지막 응시일
   all.forEach(function (r) {
     if (r.course !== course || r.isTest) return;
@@ -839,12 +874,29 @@ function computeAbsentees_(withinDays, overrides) {
     else if (k.round === 0 || k.round) round = Number(k.round);  // 2순위: 명단(roster) 고정 회차
     else round = currentRoundForClass_(all, course, k.students, withinDays);  // 3순위: 자동(최빈 회차)
     if (round == null) { out.push({ label: k.label, course: course, round: null, absent: [], present: 0, total: total, noExam: true }); return; }
-    var took = {};
+    var took = {}, tookKey = {};
     all.forEach(function (r) {
-      if (r.course === course && r.round === round) { took[norm_(r.name)] = 1; took[norm_(studentName_(r.studentKey))] = 1; }
+      if (r.course !== course || r.round !== round) return;
+      took[norm_(r.name)] = 1;
+      took[norm_(studentName_(r.studentKey))] = 1;
+      /* 학교까지 아는 기록은 학교까지 담아 둔다 — 동명이인을 가르는 열쇠다. */
+      if (r.school) tookKey[canonicalKey_(String(r.name || ''), String(r.school))] = 1;
     });
-    var absent = (k.students || []).filter(function (nm) { return !took[norm_(nm)]; });
-    out.push({ label: k.label, course: course, round: round, absent: absent, present: total - absent.length, total: total });
+    /* 같은 반에 이름이 겹치는 학생이 있으면 **이름만으로는 누가 봤는지 알 수
+       없다.** 한 명이 보면 둘 다 본 것으로 세어 미응시 문자가 안 나갔다.
+       겹치는 이름은 학교까지 맞춰 본다(명단에 학교를 적어 두어야 갈린다). */
+    var dupe = dupeNames_(k.students);
+    var absentWho = (k.students || []).filter(function (x) {
+      var nm = stuName_(x), sc = stuSchool_(x);
+      if (dupe[norm_(nm)] > 1 && sc) return !tookKey[canonicalKey_(nm, sc)];
+      return !took[norm_(nm)];
+    }).map(function (x) { return { name: stuName_(x), school: stuSchool_(x) }; });
+    /* ⚠ `absent` 는 **글자열 배열 그대로** 둔다. 화면·문자·메일이 이것을
+       이름으로 읽는다 — 객체를 넣으면 문자가 '[object Object] 학생' 이 된다.
+       학교가 필요한 새 코드는 옆에 붙인 `absentWho` 를 읽는다. */
+    var absent = absentWho.map(function (w) { return w.name; });
+    out.push({ label: k.label, course: course, round: round, absent: absent,
+               absentWho: absentWho, present: total - absent.length, total: total });
   });
   return { classes: out, generatedAt: Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm') };
 }
@@ -882,7 +934,7 @@ function seedRosterDefault() {
   return setRoster_([
     { label: '화학2 토1:30-5:30', students: ['고승원','곽도윤','권효주','김두은','김시헌','김연준','김채원','김태연','석지후','송지호','안승재','안지원','오가연','오승민','이건우','이도현','이세현','이원준','이정민','이지한','이지호','이지환','이채연','장재민','최시아','현정욱','최민준'] },
     { label: '일반화학 일1:30-5:30', students: ['강태영','권지유','김민결','김영우','이도형','전준','전하연','황승하','황예린'] },
-    { label: '화학1 일6-10', students: ['강신우','고영훈','구자홍','권승현','김도현','김명준','김서준','김승현','김예성','김지완','김현승','박정현','옥윤아','온주호','유민상','윤정원','이다인','이동선','이민성','이아은','이지율','이지호','이진혁','이하윤','이한주','이현욱','임병준','임준휘','임하율','장윤아','전주환','최준혁','최지호','한이주','한준태','홍아라','황윤성'] },
+    { label: '화학1 일6-10', students: ['강신우','고영훈','구자홍','권승현','김도현','김명준','김서준','김승현','김예성',{ n: '김지완', s: '내정중' }, { n: '김지완', s: '대청중' },'김현승','박정현','옥윤아','온주호','유민상','윤정원','이다인','이동선','이민성','이아은','이지율','이지호','이진혁','이하윤','이한주','이현욱','임병준','임준휘','임하율','장윤아','전주환','최준혁','최지호','한이주','한준태','홍아라','황윤성'] },
     { label: '화학2 토6-10', students: ['박건태','박소영','이지안','정예찬','조예준','최승규','홍수환','고유진','홍선우'] }
   ]).length + '개 반 명단 초기화 완료';
 }
@@ -1110,7 +1162,7 @@ function classColorMap_() {
   var classes = getRoster_(), map = [];
   classes.forEach(function (k, idx) {
     var set = {};
-    (k.students || []).forEach(function (nm) { set[norm_(nm)] = 1; });
+    (k.students || []).forEach(function (x) { set[norm_(stuName_(x))] = 1; });
     map.push({ course: k.course || courseOf_(k.label), set: set, color: CLASS_PALETTE[idx % CLASS_PALETTE.length] });
   });
   return map;
@@ -1516,10 +1568,13 @@ function rosterSnapshot() {
   if (!classes.length) { Logger.log('[명단] 비어 있음'); return; }
   var map = {};
   var out = classes.map(function (k) {
-    var codes = (k.students || []).map(function (nm) {
-      var key = canonKeyOfRaw_(String(nm || ''));
+    var codes = (k.students || []).map(function (x) {
+      var nm = stuName_(x), sc = stuSchool_(x);
+      /* 학교를 적어 둔 칸은 그것까지 넣어 키를 만든다 — 동명이인이 한 코드로
+         합쳐지면 두 학생의 기록이 한 사람 것으로 섞인다. */
+      var key = sc ? canonicalKey_(nm, sc) : canonKeyOfRaw_(nm);
       var code = _codeOf_(key || nm);
-      if (code) map[code] = { key: key || String(nm || ''), name: String(nm || '') };
+      if (code) map[code] = { key: key || nm, name: nm };
       return code;
     }).filter(String);
     return { label: k.label, course: k.course, n: codes.length, students: codes };
@@ -1796,7 +1851,7 @@ function incomeNow_() {
     var st = c.students || [], n = st.length;
     seats += n;
     st.forEach(function (x) {
-      var nm = String((x && x.name) || x || '').replace(/\s+/g, '').trim();
+      var nm = norm_(stuName_(x));
       if (nm) names[nm] = 1;
     });
     rows.push({ label: c.label, course: c.course, n: n, amount: n * per });
