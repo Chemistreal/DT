@@ -94,7 +94,7 @@ a{color:var(--brass)}
 
   <div class="card">
     <h2><span class="dot"></span>반 명단 관리</h2>
-    <p class="note">반 이름에 <b>화학1 · 화학2 · 일반화학</b>이 들어가면 과목이 자동 인식됩니다. "이번주 회차"는 비워두면 자동(최근 8일 내 최신 회차)으로 잡습니다. 학생 추가칸에 여러 명을 줄바꿈/쉼표로 붙여넣으면 한 번에 들어갑니다.</p>
+    <p class="note">반 이름에 <b>화학1 · 화학2 · 일반화학</b>이 들어가면 과목이 자동 인식됩니다. DT 를 안 보는 반(1년에 한 번 여는 <b>파이널 반</b> 같은 것)은 갈래를 <b>'파이널'</b> 로 두세요 — 미응시·재시 알림에서 빠집니다. 다 쓰면 <b>이 반 삭제</b>로 지우면 됩니다. "이번주 회차"는 비워두면 자동(최근 8일 내 최신 회차)으로 잡습니다. 학생 추가칸에 여러 명을 줄바꿈/쉼표로 붙여넣으면 한 번에 들어갑니다.</p>
     <div id="classes"></div>
     <button class="ghost" id="addC" style="margin-top:8px">+ 반 추가</button>
   </div>
@@ -123,6 +123,8 @@ var DEFAULT_ROSTER=[
 ];
 
 var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+/* 이 반이 어느 앱의 반인가. 안 적힌 옛 명단은 예전처럼 DT 로 본다. */
+function kindOf(k){ return String((k&&k.kind)||'').toLowerCase()==='exam'?'exam':'dt'; }
 function courseOf(label){
   var s=String(label||'');
   if(s.indexOf('일반화학')>=0) return 'gc';
@@ -150,16 +152,26 @@ var $=function(s){return document.querySelector(s);};
 function renderClasses(){
   var box=$('#classes'); var h='';
   state.classes.forEach(function(k,ci){
+    var kind=kindOf(k);
     var co=courseOf(k.label);
-    var badge=co?('<span class="badge">'+COURSE_KO[co]+'</span>')
-                 :('<span class="badge warn">과목 미인식</span>');
+    /* 파이널 반은 DT 과목이 없는 것이 정상이다. 거기에 '과목 미인식' 을 띄우면
+       고쳐야 할 것처럼 보인다 — 고칠 것이 없다. */
+    var badge = kind==='exam' ? '<span class="badge">파이널</span>'
+              : (co?('<span class="badge">'+COURSE_KO[co]+'</span>')
+                   :('<span class="badge warn">과목 미인식</span>'));
     h+='<div class="clscard" data-ci="'+ci+'">';
     h+='<div class="row between wrapline" style="gap:8px">';
     h+='<input class="lab" data-ci="'+ci+'" value="'+esc(k.label)+'" placeholder="반 이름 (예: 화학2 토1:30-5:30)" style="flex:1;min-width:180px" aria-label="반 이름 (예: 화학2 토1:30-5:30)">';
     h+=badge;
     h+='</div>';
     h+='<div class="row wrapline" style="margin-top:9px;gap:10px">';
-    h+='<label class="small muted">이번주 회차 <input class="rnd" data-ci="'+ci+'" type="number" min="1" value="'+(k.round==null?'':esc(k.round))+'" placeholder="자동"></label>';
+    h+='<label class="small muted">갈래 <select class="knd" data-ci="'+ci+'" aria-label="이 반의 갈래">'
+      +'<option value="dt"'+(kind==='dt'?' selected':'')+'>DT (주간 테스트)</option>'
+      +'<option value="exam"'+(kind==='exam'?' selected':'')+'>파이널 (DT 안 봄)</option>'
+      +'</select></label>';
+    /* 파이널 반은 DT 회차가 없다. 칸을 남겨 두면 적어야 하는 줄 안다. */
+    if(kind!=='exam')
+      h+='<label class="small muted">이번주 회차 <input class="rnd" data-ci="'+ci+'" type="number" min="1" value="'+(k.round==null?'':esc(k.round))+'" placeholder="자동"></label>';
     h+='<span class="small muted">학생 '+(k.students||[]).length+'명</span>';
     h+='</div>';
     h+='<div class="slist">';
@@ -241,6 +253,7 @@ async function loadRoster(){
 function normalize(arr){
   return (arr||[]).map(function(k){
     return {label:String(k.label||'').trim(),
+            kind:kindOf(k),
             students:(k.students||[]).map(function(s){return String(s||'').trim();}).filter(Boolean),
             round:(k.round===0||k.round)?Number(k.round):null};
   });
@@ -311,6 +324,16 @@ cont.addEventListener('input',function(e){
   else if(t.classList.contains('lab')){ state.classes[ci].label=t.value; }
   else if(t.classList.contains('rnd')){ var v=t.value.trim(); state.classes[ci].round=v===''?null:Number(v); }
 });
+cont.addEventListener('change',function(e){
+  var t=e.target;
+  if(!t.classList.contains('knd')) return;
+  var ci=+t.getAttribute('data-ci');
+  state.classes[ci].kind=t.value;
+  /* 파이널로 바꾸면 DT 회차는 뜻이 없다. 남겨 두면 저쪽에서 그 회차로 미응시를
+     세려다 만다 — 지워 두는 편이 정직하다. */
+  if(t.value==='exam') state.classes[ci].round=null;
+  renderClasses();
+});
 cont.addEventListener('focusout',function(e){
   if(e.target.classList.contains('lab')) renderClasses(); // 과목 배지 갱신
 });
@@ -330,7 +353,7 @@ function addStudents(ci,text){
   renderClasses();
 }
 document.getElementById('addC').addEventListener('click',function(){
-  state.classes.push({label:'',students:[],round:null}); renderClasses();
+  state.classes.push({label:'',kind:'dt',students:[],round:null}); renderClasses();
   var labs=cont.querySelectorAll('.lab'); if(labs.length) labs[labs.length-1].focus();
 });
 document.getElementById('save').addEventListener('click',save);

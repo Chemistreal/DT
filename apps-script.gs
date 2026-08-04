@@ -472,7 +472,9 @@ function namesData_(code) {
     if (!latest[nm] || t >= latest[nm].t) latest[nm] = { school: String(r[6] || ''), year: String(r[7] || ''), t: t };
   });
   var out = (classes || []).map(function (k) {
-    return { label: k.label, course: k.course,
+    /* 갈래를 같이 보낸다. 통합 셸이 이것으로 DT 알림 대상을 가른다 —
+       파이널 반 학생에게 DT 재시·미응시 문자를 만들면 안 된다. */
+    return { label: k.label, course: k.course, kind: kindOf_(k),
       students: (k.students || []).map(function (nm) {
         var cn = cleanName_(String(nm || '')), hit = latest[cn] || {};
         return { name: String(nm || ''), school: hit.school || '', year: hit.year || '' };
@@ -753,13 +755,33 @@ function getRoster_() {
   try { var v = rosterMeta_().getRange(1, 1).getValue(); var o = v ? JSON.parse(v) : null; return (o && o.classes) ? o.classes : []; }
   catch (e) { return []; }
 }
+/* 이 반이 **어느 앱의 반인가.**
+
+   선생님 반이 전부 DT(주간 테스트)를 하는 것은 아니다. 파이널만 하는 반도
+   있는데, 그 반을 명단에 넣으면 DT 가 회차를 못 찾아 '과목 미인식' 으로 뜨고
+   미응시 계산에도 끼어든다 — 시험을 안 보는 반이 미응시로 잡히는 것이다.
+
+   그래서 반마다 갈래를 적는다. 적지 않은 반은 예전처럼 DT 로 본다(옛 명단이
+   그대로 살아 있어야 한다). */
+function kindOf_(k) {
+  var v = String((k && k.kind) || '').trim().toLowerCase();
+  return v === 'exam' ? 'exam' : 'dt';
+}
+
 function setRoster_(classes) {
   var clean = (classes || []).map(function (k) {
+    var kind = kindOf_(k);
     return {
       label: String((k && k.label) || '').trim(),
-      course: (k && k.course) || courseOf_(k && k.label),
+      kind: kind,
+      /* 파이널 반은 DT 과목이 없다. 이름에서 '화학1' 을 읽어 과목을 붙이면
+         DT 계산이 그 반을 자기 반으로 착각한다. */
+      course: kind === 'exam' ? '' : ((k && k.course) || courseOf_(k && k.label)),
       students: ((k && k.students) || []).map(function (s) { return String(s || '').trim(); }).filter(String),
-      round: (k && (k.round === 0 || k.round)) ? Number(k.round) : null
+      /* 파이널 반에는 DT 회차가 없다. 남겨 두면 저쪽에서 그 회차로 미응시를
+         세려다 만다 — 화면에서 지워도 서버에 남으면 소용이 없다. */
+      round: kind === 'exam' ? null
+           : ((k && (k.round === 0 || k.round)) ? Number(k.round) : null)
     };
   }).filter(function (k) { return k.label; });
   rosterMeta_().getRange(1, 1).setValue(JSON.stringify({ classes: clean }));
@@ -807,6 +829,9 @@ function computeAbsentees_(withinDays, overrides) {
   var all = data.map(mapRow_).filter(function (r) { return r.studentKey; });
   var classes = getRoster_(), roundCache = {}, out = [];
   classes.forEach(function (k) {
+    /* 파이널 반은 DT 시험을 안 본다. 여기 끼우면 반 전체가 미응시로 잡히고,
+       선생님한테 '보내야 할 사람' 으로 뜬다 — 보낼 일이 없는 문자다. */
+    if (kindOf_(k) === 'exam') return;
     var course = k.course || courseOf_(k.label), total = (k.students || []).length;
     if (!course) { out.push({ label: k.label, course: '', round: null, absent: [], present: 0, total: total, note: '과목 미인식' }); return; }
     var round, ov = overrides[k.label];

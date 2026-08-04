@@ -548,5 +548,41 @@ console.log('[묶음 창구] 여러 창구를 한 실행에서');
     String(jp.getContent()).slice(0, 40));
 }
 
+console.log('[반 갈래] 파이널 반은 DT 계산에서 빠진다');
+{
+  /* 선생님 반이 전부 DT 를 보는 것은 아니다. 파이널만 하는 반을 명단에 넣으면
+     DT 가 회차를 못 찾아 '과목 미인식' 으로 뜨고, 미응시 계산에도 끼어든다 —
+     시험을 안 보는 반이 통째로 미응시로 잡히고 그만큼 문자가 만들어진다. */
+  const before = JSON.parse(SHEETS['_roster']._rows[0][0]).classes;
+  const saved = ctx.setRoster_([
+    { label: '화학1 일6-10', students: ['홍길동', '김민준'], round: null },
+    { label: '파이널 목7-10', kind: 'exam', students: ['홍길동', '박서준'], round: 3 },
+  ]);
+  T('갈래를 적어 둔다', saved[0].kind === 'dt' && saved[1].kind === 'exam',
+    JSON.stringify(saved.map(k => [k.label, k.kind])));
+  /* 파이널 반에 이름으로 과목을 붙이면 DT 가 자기 반으로 착각한다. */
+  T('파이널 반에는 DT 과목을 안 붙인다', saved[1].course === '', JSON.stringify(saved[1]));
+  T('DT 반은 예전처럼 과목을 붙인다', saved[0].course === 'ch1');
+  /* 회차도 지운다 — 남겨 두면 그 회차로 미응시를 세려다 만다. */
+  T('파이널 반은 회차를 안 갖는다', saved[1].round === null, String(saved[1].round));
+
+  const ab = ctx.computeAbsentees_(8, {});
+  const labels = (ab.classes || ab || []).map(c => c.label);
+  T('미응시에 파이널 반이 안 뜬다', labels.indexOf('파이널 목7-10') < 0, JSON.stringify(labels));
+  T('DT 반은 그대로 뜬다', labels.indexOf('화학1 일6-10') >= 0, JSON.stringify(labels));
+
+  /* 셸이 갈래를 알아야 DT 알림 대상을 가를 수 있다. */
+  const nm = J(ctx.doGet({ parameter: { action: 'names' } }));
+  const byLabel = {};
+  (nm.classes || []).forEach(c => { byLabel[c.label] = c; });
+  T('명단 창구가 갈래를 같이 준다',
+    byLabel['파이널 목7-10'] && byLabel['파이널 목7-10'].kind === 'exam',
+    JSON.stringify((nm.classes || []).map(c => [c.label, c.kind])));
+  T('안 적은 반은 DT 로 본다(옛 명단 호환)',
+    ctx.kindOf_({ label: '화학2 토6-10' }) === 'dt');
+
+  ctx.setRoster_(before);                      // 원래 명단으로 되돌린다
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);
