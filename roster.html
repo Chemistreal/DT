@@ -145,8 +145,29 @@ var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
 /* 이 반이 어느 앱의 반인가. 안 적힌 옛 명단은 예전처럼 DT 로 본다. */
 /* 명단 한 칸은 이름 글자열이거나 {n:이름, s:학교} 다. 학교는 **가르는 데만**
    쓴다 — 문자는 예전 그대로 '김지완 학생' 이다. */
-function stuName(x){ return String((x&&typeof x==='object')?(x.n||x.name||''):(x==null?'':x)).trim(); }
-function stuSchool(x){ return String((x&&typeof x==='object')?(x.s||x.school||''):'').trim(); }
+/* 명단에 두 명을 넣을 방법이 없던 때, 이름 칸에 `김지완 대청중` 처럼 학교를
+   같이 적어 구분해 두었다. 그 값이 그대로 문자에 실려 학부모에게
+   "김지완 대청중 학생" 이라고 나갔다. 여기서 갈라 놓으면 이름 칸에는
+   `김지완`, 학교 칸에는 `대청중` 이 들어가고 문자는 이름만 쓴다.
+   ⚠ 띄어쓰기 같은 **구분자가 있을 때만** 가른다 — 붙여 쓴 것까지 가르려
+     들면 멀쩡한 이름이 잘린다. */
+var SCHOOL_TAIL=/^(.+?)[\s·,\/(\[]+([가-힣A-Za-z]{2,10}(?:초|중|고)(?:등학교|학교)?)[\)\]]?\s*$/;
+function splitSchool(v){
+  var s=String(v==null?'':v).trim(), m=SCHOOL_TAIL.exec(s);
+  if(!m) return {name:s, school:''};
+  var nm=m[1].trim();
+  return nm.length<2 ? {name:s, school:''} : {name:nm, school:m[2]};
+}
+function stuName(x){
+  var raw=String((x&&typeof x==='object')?(x.n||x.name||''):(x==null?'':x)).trim();
+  return splitSchool(raw).name;
+}
+function stuSchool(x){
+  var own=String((x&&typeof x==='object')?(x.s||x.school||''):'').trim();
+  if(own) return own;
+  var raw=String((x&&typeof x==='object')?(x.n||x.name||''):(x==null?'':x)).trim();
+  return splitSchool(raw).school;
+}
 function stuMake(nm, sc){ nm=String(nm||'').trim(); sc=String(sc||'').trim(); return sc?{n:nm,s:sc}:nm; }
 function kindOf(k){ return String((k&&k.kind)||'').toLowerCase()==='exam'?'exam':'dt'; }
 function courseOf(label){
@@ -362,7 +383,10 @@ var cont=document.getElementById('classes');
 cont.addEventListener('input',function(e){
   var t=e.target, ci=+t.getAttribute('data-ci');
   if(t.classList.contains('snm')){ var si=+t.getAttribute('data-si');
-    state.classes[ci].students[si]=stuMake(t.value, stuSchool(state.classes[ci].students[si])); }
+    /* 이름 칸에 '김지완 대청중' 이라고 쳐도 그 자리에서 갈라 준다.
+       학교 칸이 이미 차 있으면 그것을 그대로 둔다. */
+    var sp=splitSchool(t.value), had=stuSchool(state.classes[ci].students[si]);
+    state.classes[ci].students[si]=stuMake(sp.name, had||sp.school); }
   if(t.classList.contains('ssc')){ var si2=+t.getAttribute('data-si');
     state.classes[ci].students[si2]=stuMake(stuName(state.classes[ci].students[si2]), t.value); }
   else if(t.classList.contains('lab')){ state.classes[ci].label=t.value; }

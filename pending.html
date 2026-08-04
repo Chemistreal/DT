@@ -147,9 +147,21 @@ function setAbsRoundVal(el){
 }
 
 var STAGE_LABEL={'1':'1단계 · 월요일','2':'2단계 · 수요일','3':'3단계 · 최종'};
+/* ⚠ **문자에는 이름까지만.** 명단이나 시트의 이름 칸에 `김지완 대청중` 처럼
+   학교가 붙어 있을 수 있다(명단에 두 명을 넣을 방법이 없던 때의 흔적). 그대로
+   실으면 학부모에게 "김지완 대청중 학생" 이라고 나간다 — 실제로 그렇게 나갔다.
+   창구에서 이미 갈라 보내지만, 문구를 짓는 **마지막 자리**에서 한 번 더 막는다.
+   여기가 마지막 관문이라 여기서 막으면 어디를 거쳐 왔든 안 샌다. */
+var SCHOOL_TAIL = /^(.+?)[\s·,\/(\[]+([가-힣A-Za-z]{2,10}(?:초|중|고)(?:등학교|학교)?)[\)\]]?\s*$/;
+function justName(v){
+  var s=String(v==null?'':v).trim(), m=SCHOOL_TAIL.exec(s);
+  if(!m) return s;
+  var nm=m[1].trim();
+  return nm.length<2 ? s : nm;
+}
 function shareMsg(d, stage){
   var course=COURSE[d.course]||d.course;
-  var head='[다원교육 영재관 · 화학] '+d.name+' 학생';
+  var head='[다원교육 영재관 · 화학] '+justName(d.name)+' 학생';
   var reask='재시는 아이가 틀린 개념만 골라 개별 출제되며, 처음 본 문항과 겹치지 않습니다.';
   var link='▶ '+d.link;
   if(stage==='3'){
@@ -171,7 +183,7 @@ function shareMsg(d, stage){
   // 1단계 (월요일 · 처음 안내)
   return head+' 재시 안내\n\n'
     +'안녕하세요, 화학 조준모입니다.\n\n'
-    +d.name+' 학생이 '+course+' '+d.round+'회 '+d.att+'에서 '+d.score+'점으로 통과선(80점)에 조금 못 미쳤습니다. 저희 반은 틀린 개념을 다시 잡아 통과까지 마무리하는 재시 과정을 두는데, 이번 주 재시를 아직 시작하기 전이라 안내드립니다.\n\n'
+    +justName(d.name)+' 학생이 '+course+' '+d.round+'회 '+d.att+'에서 '+d.score+'점으로 통과선(80점)에 조금 못 미쳤습니다. 저희 반은 틀린 개념을 다시 잡아 통과까지 마무리하는 재시 과정을 두는데, 이번 주 재시를 아직 시작하기 전이라 안내드립니다.\n\n'
     +'아래 링크에서 취약 개념만 강의록으로 보강한 뒤 재시를 보면 됩니다. '+reask+'\n\n'
     +link+'\n\n'
     +'누적 시험이라 이번 주 안에 마무리하면 다음 회차가 훨씬 수월합니다. 감사합니다.\n\n조준모 드림';
@@ -186,14 +198,14 @@ function shareMsg(d, stage){
 function passMsg(d){
   var course=COURSE[d.course]||d.course;
   var sc=Number(d.score), tries=Number(d.tries)||1;
-  var head='[다원교육 영재관 · 화학] '+d.name+' 학생 통과 안내';
+  var head='[다원교육 영재관 · 화학] '+justName(d.name)+' 학생 통과 안내';
   var how;
   if(tries<=1){
-    how=d.name+' 학생이 '+course+' '+d.round+'회 '+(d.att||'정시')+'에서 '+d.score+'점으로 통과했습니다. '
+    how=justName(d.name)+' 학생이 '+course+' '+d.round+'회 '+(d.att||'정시')+'에서 '+d.score+'점으로 통과했습니다. '
       +(sc>=100?'만점입니다. ':(sc>=95?'거의 흐트러짐이 없었습니다. ':''))
       +'재시 없이 한 번에 통과선(80점)을 넘겼습니다.';
   }else{
-    how=d.name+' 학생이 '+course+' '+d.round+'회 '+(d.att||'재시')+'에서 '+d.score+'점으로 통과했습니다. '
+    how=justName(d.name)+' 학생이 '+course+' '+d.round+'회 '+(d.att||'재시')+'에서 '+d.score+'점으로 통과했습니다. '
       +'정시에서 놓친 개념을 다시 잡아 통과까지 마무리했습니다. 틀린 것을 그냥 넘기지 않고 끝까지 메운 과정이라, '
       +'점수보다 그 과정이 남습니다.';
   }
@@ -234,7 +246,7 @@ function absentMsg(d, stage){
       +link+'\n\n'
       +'응시하면 결과와 취약 개념이 개인 리포트에 바로 반영됩니다. 누적 시험이라 한 주를 건너뛰면 다음 회차가 그만큼 버거워지니 꼭 챙겨 주세요. 감사합니다.\n\n조준모 드림';
   }
-  var head='[다원교육 영재관 · 화학] '+d.name+' 학생';
+  var head='[다원교육 영재관 · 화학] '+justName(d.name)+' 학생';
   if(stage==='2'){
     return head+' 시험 리마인드\n\n'
       +'안녕하세요, 화학 조준모입니다.\n\n'
@@ -249,7 +261,7 @@ function absentMsg(d, stage){
     +'이번 주 '+course+' '+d.round+'회 누적 OX 시험을 안내드립니다. 저희 반은 매주 누적 OX 60문항으로 그 주 학습을 점검합니다.\n\n'
     +'아래 링크에서 온라인으로 바로 응시할 수 있습니다. 오래 걸리지 않으니 다음 수업 전까지 편할 때 응시해 주세요.\n\n'
     +link+'\n\n'
-    +'응시하면 결과와 취약 개념 피드백이 '+d.name+' 학생 개인 리포트에 바로 반영됩니다. 매주 꾸준히 쌓을수록 누적 성적표가 탄탄해집니다. 감사합니다.\n\n조준모 드림';
+    +'응시하면 결과와 취약 개념 피드백이 '+justName(d.name)+' 학생 개인 리포트에 바로 반영됩니다. 매주 꾸준히 쌓을수록 누적 성적표가 탄탄해집니다. 감사합니다.\n\n조준모 드림';
 }
 
 function absentClassHTML(c){
