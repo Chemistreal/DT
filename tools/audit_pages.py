@@ -89,8 +89,17 @@ def audit(path):
     # 했다 — 실제로는 가장 잘 읽히는 화면이다.
     # 그 장이 밝은 화면인지 어두운 화면인지 먼저 정하고, **그 쪽 바탕**으로 잰다.
     vs = dict(VAR.findall(s))
-    allbg = [v for k, v in vs.items()
-             if re.search(r'paper|bg|cream|surface|white|card', k, re.I)]
+    # ⚠ 네 번째 거짓말. 이름에 'bg' 가 들어가면 다 바탕으로 쳤다. 그래서
+    # --o-bg(맞은 문항의 연둣빛 띠) · --x-bg · --teal-soft 같은 **상태 색**까지
+    # 바탕이 되었고, 거기에 아무 글자색이나 얹어 재고는 모자란다고 했다.
+    # 이 저장소에서는 그 바람에 **152장 가운데 152장**이 걸렸다 — 전부 거짓이다.
+    # 그러면 사람이 이 자를 안 보게 되고, 진짜가 와도 안 본다.
+    #
+    # ⚠ 이 고침은 exam 저장소에는 이미 되어 있었다. 같은 자가 두 저장소에서
+    #   갈라져 한쪽만 고쳐진 채로 있었다 — 자를 고칠 때는 양쪽을 같이 고친다.
+    SURFACE = {'bg', 'paper', 'cream', 'surface', 'card', 'sunk', 'page',
+               'white', 'canvas', 'panel'}
+    allbg = [v for k, v in vs.items() if k.lower() in SURFACE]
     dark_page = bool(allbg) and sum(1 for v in allbg if lum(v) <= .5) > len(allbg) / 2
     bgs = [v for v in allbg if (lum(v) <= .5) == dark_page]
     if not bgs:
@@ -98,9 +107,29 @@ def audit(path):
     fgs = [(k, v) for k, v in vs.items()
            if re.search(r'ink|text|sub|muted|faint|fg', k, re.I)]
     for k, v in fgs:
-        worst = min(ratio(v, b) for b in bgs)
-        if worst < AA_TEXT:
-            out.append(('--%s 대비 %.2f:1' % (k, worst), '본문 글씨는 %.1f:1 필요' % AA_TEXT))
+        # --brand-ink 는 종이가 아니라 --brand-bg 위에 얹힌다. 짝이 있으면 거기서 잰다.
+        stem = re.sub(r'[-_]?(ink|text|sub|muted|faint|fg)\d*$', '', k, flags=re.I)
+        pair = [w for kk, w in vs.items() if stem and re.fullmatch(
+            re.escape(stem) + r'[-_]?bg\d*', kk, re.I)]
+        # ⚠ 다섯 번째. 한 파일에 밝은 팔레트와 어두운 팔레트가 **둘 다** 있는
+        #   화면이 있다 — roster.html 은 --bg #0f1216 인 어두운 화면인데
+        #   --paper #FAFAF7 도 갖고 있다. 다수결로 한쪽을 고르면 반대쪽 글자색이
+        #   통째로 거짓 경고가 된다(--ink 1.07:1 이라고 했다 · 실제 15.17:1).
+        #   글자색은 **자기와 반대 밝기의 바탕** 위에서 잰다. 화면이 실제로
+        #   그렇게 짝지어 쓰기 때문이다.
+        #   그리고 밝기로 짝짓는 것도 **중간 회색에서 깨진다** — roster 의
+        #   --muted #9aa0a8 은 밝지도 어둡지도 않아, 어느 쪽으로 붙여도 한쪽은
+        #   틀린다(어두운 바탕에서 7.12, 흰 바탕에서 2.52).
+        #
+        #   여기서 멈추고 사실을 적는다: **글자색이 어느 바탕에 얹히는지는 CSS
+        #   글만 보고는 알 수 없다.** 그래서 규칙을 바꾼다 — 이 화면이 가진
+        #   바탕 가운데 **어느 하나에서도** 4.5 를 못 넘을 때만 결함으로 센다.
+        #   "이 화면 어디에 놓아도 안 읽힌다" 는 사람 판단이 필요 없는 사실이다.
+        #   대신 밝은 바탕과 어두운 바탕을 같이 가진 화면은 따로 세어 둔다 —
+        #   거기서는 이 자가 짐작하고 있다는 것을 사람이 알아야 한다.
+        best = max(ratio(v, b) for b in (pair or allbg or bgs))
+        if best < AA_TEXT:
+            out.append(('--%s 대비 %.2f:1' % (k, best), '어느 바탕에서도 %.1f:1 미만' % AA_TEXT))
 
     # ── 손가락 자리 ───────────────────────────────────────
     tiny = re.findall(r'padding:\s*[0-3]px\s+\d+px[^;}]*;[^}]*font-size:\s*(?:[0-9.]+)px', s)
@@ -194,7 +223,15 @@ def main():
     for k, v in byKind.most_common(14):
         print('  %-30s %d' % (k, v))
     print('\n화면 %d개 · 결함 있는 화면 %d개' % (len(files), len(rows)))
+    # ⚠ 이 자는 **종료 코드를 낸 적이 없었다.** 152장이 걸려도 0 을 냈고, CI 는
+    #   `--check` 없이 부르고 있었다. 그래서 화면 전수 검수가 여섯 달 동안
+    #   초록불이었다 — 재기는 쟀는데 아무 힘이 없었다.
+    #   재는 것과 막는 것은 다르다. 재면 막는다.
+    return 1 if ('--check' in sys.argv and rows) else 0
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        os._exit(0)
