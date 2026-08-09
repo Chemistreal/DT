@@ -91,8 +91,13 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
   <div class="chips" id="chips"></div>
   <div class="row"><button class="btn btn-go" id="go">생성</button><button class="btn btn-link" id="link">링크 생성·복사</button><button class="btn btn-demo" id="demo">예시</button><button class="btn btn-print" id="print">인쇄 / PDF</button></div>
   <input aria-label="만들어진 링크 — 눌러서 전체 선택" id="linkout" readonly onclick="this.select()">
-  <div class="linkmsg" id="linkmsg">링크가 복사되었습니다. 학부모에게 보내면 이 리포트만 보입니다(입력란 숨김).</div>
-  <div class="chint">학생 이름과 오답 개념을 넣고 생성한 뒤, 링크 생성·복사를 눌러 학부모에게 보냅니다. 학부모가 링크를 열면 입력란 없이 완성된 리포트만 표시됩니다.</div>
+  <div class="linkmsg" id="linkmsg">링크가 복사되었습니다. 학부모에게 보내면 이 리포트만 보입니다(입력란 숨김). <b>⚠ 주소를 아는 사람은 누구나 열립니다</b> &mdash; 아이 이름과 진단이 담기니 <b>단체방에는 올리지 마세요.</b></div>
+  <!-- ⚠ 이 링크에는 **암호가 없다.** 주소 자체가 열쇠라, 남는 보호막은 "주소를 남이
+     모른다" 하나뿐이다(그래서 tools/noindex.py 가 검색에서 뺀다). 수명을 두거나
+     암호를 붙이는 것은 창구(Apps Script) 쪽 일이라 여기서 못 한다 —
+     대신 **보내는 사람이 그 사실을 알게** 한다. 모르고 단체방에 올리는 것이
+     이 구조에서 유일하게 크게 새는 길이다. -->
+<div class="chint">학생 이름과 오답 개념을 넣고 생성한 뒤, 링크 생성·복사를 눌러 학부모에게 보냅니다. 학부모가 링크를 열면 입력란 없이 완성된 리포트만 표시됩니다. <b>링크에는 암호가 없어 주소를 아는 사람은 누구나 열 수 있으니, 받는 분에게 직접 보내세요.</b></div>
 </div>
 
 <main class="sheet">
