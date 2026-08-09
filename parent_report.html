@@ -56,6 +56,10 @@ body.parent-mode .controls{display:none}
 .bar-track{height:7px;background:#EFE9DD;border-radius:4px;overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--brass),var(--brass-deep));border-radius:4px}
 .bar-val{font-size:11.5px;color:var(--ink-soft);text-align:right;font-variant-numeric:tabular-nums}
 .bars-note{font-size:12px;color:var(--ink-soft);margin-top:12px;line-height:1.6}
+/* 근거 한 줄. 본문보다 작지만 **각주로 밀어내지는 않는다** — 각주는 아무도
+   안 읽고, 안 읽히는 자리에 적은 근거는 적지 않은 것과 같다. */
+.basis{font-size:13px;color:var(--ink-soft);margin-top:10px;line-height:1.7;
+  border-left:2px solid var(--line);padding-left:11px}
 .colophon{margin-top:48px;padding-top:26px;border-top:1px solid var(--line);text-align:center}
 .credential{font-family:var(--serif);font-size:15.5px;letter-spacing:.14em}.credential .sep{color:var(--brass);margin:0 9px;font-weight:700}
 .fineprint{margin-top:12px;font-size:11.5px;color:var(--ink-faint);letter-spacing:.05em;line-height:1.7}
@@ -87,8 +91,13 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
   <div class="chips" id="chips"></div>
   <div class="row"><button class="btn btn-go" id="go">생성</button><button class="btn btn-link" id="link">링크 생성·복사</button><button class="btn btn-demo" id="demo">예시</button><button class="btn btn-print" id="print">인쇄 / PDF</button></div>
   <input aria-label="만들어진 링크 — 눌러서 전체 선택" id="linkout" readonly onclick="this.select()">
-  <div class="linkmsg" id="linkmsg">링크가 복사되었습니다. 학부모에게 보내면 이 리포트만 보입니다(입력란 숨김).</div>
-  <div class="chint">학생 이름과 오답 개념을 넣고 생성한 뒤, 링크 생성·복사를 눌러 학부모에게 보냅니다. 학부모가 링크를 열면 입력란 없이 완성된 리포트만 표시됩니다.</div>
+  <div class="linkmsg" id="linkmsg">링크가 복사되었습니다. 학부모에게 보내면 이 리포트만 보입니다(입력란 숨김). <b>⚠ 주소를 아는 사람은 누구나 열립니다</b> &mdash; 아이 이름과 진단이 담기니 <b>단체방에는 올리지 마세요.</b></div>
+  <!-- ⚠ 이 링크에는 **암호가 없다.** 주소 자체가 열쇠라, 남는 보호막은 "주소를 남이
+     모른다" 하나뿐이다(그래서 tools/noindex.py 가 검색에서 뺀다). 수명을 두거나
+     암호를 붙이는 것은 창구(Apps Script) 쪽 일이라 여기서 못 한다 —
+     대신 **보내는 사람이 그 사실을 알게** 한다. 모르고 단체방에 올리는 것이
+     이 구조에서 유일하게 크게 새는 길이다. -->
+<div class="chint">학생 이름과 오답 개념을 넣고 생성한 뒤, 링크 생성·복사를 눌러 학부모에게 보냅니다. 학부모가 링크를 열면 입력란 없이 완성된 리포트만 표시됩니다. <b>링크에는 암호가 없어 주소를 아는 사람은 누구나 열 수 있으니, 받는 분에게 직접 보내세요.</b></div>
 </div>
 
 <main class="sheet">
@@ -164,7 +173,15 @@ function generate(){
   h+=`<section class="section"><div class="section-h"><span class="section-n">Ⅱ</span><span class="section-t">왜 이 순서로 보강하는가</span><span class="section-sub">처방</span></div>`;
   if(d.casc.length){const r=d.casc[0];const downs=r.members.filter(m=>m!==r.c).length;
     h+=`<p>핵심은 효율입니다. 틀린 단원을 하나씩 메우는 대신, <span class="ink">「${esc(N[r.c].n)}」</span> 같은 토대 개념 하나를 바로잡으면 그 위에 선 <span class="em">${downs}개</span> 개념이 함께 회복될 발판이 섭니다. 선수 관계를 따라 뿌리부터 순서대로 진행하기 때문에, 같은 시간으로 더 넓게 회복됩니다.</p>`;}
-  else h+=`<p>오답이 비교적 독립적이라, 빈도와 파급이 큰 개념부터 순서대로 보강합니다. 각 교정이 곧바로 결과로 이어집니다.</p>`;
+  else h+=`<p>오답이 비교적 독립적이라, 빈도와 파급이 큰 개념부터 순서대로 보강합니다. 하나를 잡을 때마다 그만큼이 바로 점수로 돌아옵니다.</p>`;
+  /* ── 이 순서가 무엇 위에 서 있는지 같이 적는다 ────────────────────
+     이 저장소의 다른 곳은 숫자를 낼 때 **무엇을 근거로 한 숫자인지**를 반드시
+     같이 적는다("응시 N명 기준의 잠정치"). 그런데 학부모 리포트만 그 약속
+     밖에 있었다 — 보강 순서를 정하는 선수 개념 지도는 아직 **1차 초안이고
+     선생님 검수 대상**이라고 오개념 카탈로그가 스스로 적고 있는데,
+     여기서는 "회복 경로가 정해져 있습니다" 로만 나갔다.
+     설득을 줄이자는 것이 아니다. 근거를 적으면 나머지 문장이 더 믿긴다. */
+  h+=`<p class="basis">이 순서는 개념 사이의 선수 관계(무엇을 먼저 알아야 하는가)를 따라 정합니다. 관계 지도는 선생님이 계속 손보는 중이라, 학생마다 실제 순서는 상담에서 조정될 수 있습니다.</p>`;
   if(d.barRoots.length){h+='<div class="bars">';const maxL=d.lev[d.barRoots[0]];
     for(const c of d.barRoots)h+=`<div class="bar-row"><span class="bar-name">${esc(N[c].n)}${d.roots.has(c)?'<span class="root">뿌리</span>':''}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.max(8,d.lev[c]/maxL*100)}%"></span></span><span class="bar-val">+${d.lev[c]}</span></div>`;
     h+='</div><p class="bars-note">각 막대는 그 개념을 바로잡았을 때 함께 회복되는 하류 개념의 수입니다. 뿌리일수록 위로 더 많은 개념을 떠받칩니다.</p>';}
