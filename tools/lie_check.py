@@ -54,7 +54,25 @@ def contrast_hits(css):
     return bool([h for h in audit_pages.audit(p) if '대비' in h[0]])
 
 
+report_msg = _load('tools/report_msg.py')
+
+
+def has_step(sentence):
+    """위치를 말한 문장에 '다음에 무엇을 하면 되는지' 가 있는가."""
+    return bool(report_msg.STEP.search(sentence))
+
+
 CASES = [
+    ('report_msg 다음 걸음', has_step, [
+        ('위치만 말하면 없다고 해야 한다',
+         '최상위권입니다. 반에서 상위 약 3%에 듭니다. 반 평균보다 12점 높습니다.', False),
+        ('할 일을 말하면 있다고 해야 한다',
+         '상위권입니다. 아래 취약 개념 하나만 이번 주에 끝내면 됩니다.', True),
+        ('어미가 달라도 알아본다',
+         '취약 개념 하나를 잡고 재시를 보면 최종 점수가 올라갑니다.', True),
+        ('시스템이 해 준다는 말은 할 일이 아니다',
+         '첫 응시 이후 시스템이 최종 점수를 보정합니다.', False),
+    ]),
     ('audit_pages 대비', contrast_hits, [
         ('어느 바탕에서도 안 읽히는 색은 잡는다',
          ':root{--paper:#ffffff;--card:#f7f7f7;--muted:#eeeeee}', True),
