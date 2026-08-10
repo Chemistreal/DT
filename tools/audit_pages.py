@@ -13,6 +13,24 @@
 
     실행:  python3 tools/audit_pages.py [경로...]     # 기본: 이 저장소
            python3 tools/audit_pages.py --tier a      # 매일 여는 화면만
+
+■ 네 저장소가 나눠 쓰는 자다 — 판 2026-08-10
+
+exam · DT · study64-report · KMChC 가 이 파일을 **한 벌**로 쓴다. TIER_A/B 만
+저장소마다 다르고 나머지는 글자 하나까지 같아야 한다. 갈라지면 한쪽만 고쳐진다.
+
+실제로 갈라져 있었다(2026-08-10 에 다시 모았다).
+
+    study64-report  270줄  고침 다 있음
+    DT              270줄  고침은 있는데 **커밋이 안 되어 있었다**
+    exam            259줄  열한 번째 거짓말 고침이 없다
+    KMChC           200줄  --check 도 종료 코드도 없다 — 아무것도 못 막았다
+
+CI 는 다른 저장소를 볼 수 없다. **이 줄은 자가 아니라 약속이다.** 손댈 때는
+네 곳에 같이 넣고, 위 날짜를 고친다. 다른지 보려면 —
+
+    diff <(sed 's/^TIER_[AB] = .*//' A/tools/audit_pages.py) \
+         <(sed 's/^TIER_[AB] = .*//' B/tools/audit_pages.py)
 """
 import os, re, sys, json, math, collections, urllib.parse
 
