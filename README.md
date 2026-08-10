@@ -62,6 +62,7 @@ NODE_PATH=tests/node_modules node tests/run.js
 | `tools/theme.py` | 화면마다 옷이 갈라지는 것 |
 | `tools/lie_check.py` | **자가 거짓말하는 것** (참·거짓 예시를 맞히는지) |
 | `tools/report_msg.py` | 석차 문구가 다음 걸음을 안 말하는 것 |
+| `tools/msg_ledger.py` | 사람에게 하던 말이 조용히 사라지는 것 |
 | `tools/store_ledger.py` | 브라우저에 무엇을 남기는지 적어 두지 않는 것 |
 | `tools/input_labels.py` | 입력칸에 이름이 없는 것 |
 | `tools/js_syntax.py` | 화면 안 자바스크립트가 깨진 채 나가는 것 |
