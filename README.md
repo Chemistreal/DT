@@ -57,6 +57,7 @@ NODE_PATH=tests/node_modules node tests/run.js
 | 자 | 막는 것 |
 |---|---|
 | `tools/gen_materials.py` | 자료가 늘었는데 목록이 그대로여서 셸에서 안 보이는 것 |
+| `tools/ci_deps.py` | **자가 CI 에서 못 도는 것** (걸어 뒀는데 안 돌아가는 것) |
 | `tools/page_doors.py` | **주소를 아는 사람만 열 수 있는 화면이 생기는 것** |
 | `tools/audit_pages.py` | 글자 대비 4.5:1 미달 · 작은 글씨 · 빠진 뼈대 |
 | `tools/theme.py` | 화면마다 옷이 갈라지는 것 |

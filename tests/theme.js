@@ -21,6 +21,7 @@
    ============================================================ */
 'use strict';
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const PLAYWRIGHT = process.env.PLAYWRIGHT_MODULE || 'playwright';
@@ -28,15 +29,29 @@ const CHROMIUM = process.env.CHROMIUM_PATH || undefined;
 const PORT = Number(process.env.PORT || 8943);
 const ROOT = path.join(__dirname, '..');
 
-/* 갈래마다 한 장. 띠가 있는 것 · 없는 것, 종이색이 달랐던 것을 고루 넣는다. */
+/* 갈래마다 한 장. 띠가 있는 것 · 없는 것, 종이색이 달랐던 것을 고루 넣는다.
+   ⚠ **없는 화면을 재고 있었다.** #69 에서 문이 없는 화면 셋을 지웠는데
+     (`parent_report.html` · `admin_console.html` · `diagnosis_app.html`),
+     이 목록은 그대로 두었다. 없는 주소는 404 가 오고, 빈 문서에는 잴 글자가
+     없으니 "잰 글자 없음 · 0마디" 라는 이상한 실패가 났다. 그런데 그때 이
+     검사가 CI 에서 **playwright 설치보다 앞**에 걸려 조용히 건너뛰고 있어서
+     아무도 못 봤다 — 건너뛴 것은 초록이 아니다. */
 const PAGES = [
   ['report.html',        '학부모 성적표 (문자로 나간다)'],
-  ['parent_report.html', '학부모 리포트'],
   ['OX_grader.html',     'OX 채점판'],
   ['index.html',         '대문'],
   ['roster.html',        '반 명단'],
   ['letters.html',       '문자 미리보기'],
 ];
+
+/* 목록이 화면보다 오래 산다. 다시 썩으면 **여기서** 걸리게 한다 —
+   화면이 지워진 것과 화면이 망가진 것은 다른 일이고, 다르게 읽혀야 한다. */
+const gone = PAGES.map(([f]) => f).filter(f => !fs.existsSync(path.join(ROOT, f)));
+if (gone.length) {
+  console.log('실패: 이 검사가 **없는 화면**을 재려고 한다 — ' + gone.join(' · '));
+  console.log('화면을 지웠으면 이 목록에서도 지운다(지운 자리는 page_doors 가 안다).');
+  process.exit(1);
+}
 
 let fail = 0;
 const chk = (n, ok, extra) => {
