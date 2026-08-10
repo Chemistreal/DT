@@ -59,6 +59,7 @@ NODE_PATH=tests/node_modules node tests/run.js
 | `tools/gen_materials.py` | 자료가 늘었는데 목록이 그대로여서 셸에서 안 보이는 것 |
 | `tools/ci_deps.py` | **자가 CI 에서 못 도는 것** (걸어 뒀는데 안 돌아가는 것) |
 | `tools/page_doors.py` | **주소를 아는 사람만 열 수 있는 화면이 생기는 것** |
+| `tools/asset_doors.py` | **어느 화면도 안 거는 자료가 새로 쌓이는 것** (지금 6개 55.1+2.6MB — ⚖ A7) |
 | `tools/audit_pages.py` | 글자 대비 4.5:1 미달 · 작은 글씨 · 빠진 뼈대 |
 | `tools/theme.py` | 화면마다 옷이 갈라지는 것 |
 | `tools/lie_check.py` | **자가 거짓말하는 것** (참·거짓 예시를 맞히는지) |

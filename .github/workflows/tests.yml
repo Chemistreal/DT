@@ -46,6 +46,13 @@ jobs:
       # 셋은 선생님이 지우기로 정했고, 셋은 index.html 에 문을 냈다.
       - name: 모든 화면에 문이 있다
         run: python3 tools/page_doors.py --check
+      # 같은 물음을 **자료**에는 아무도 안 던지고 있었다. 재어 보니 volumes/ 4권
+      # 55MB 와 supplements/ 2종 2.6MB 를 **어느 화면도 안 건다.** 주소를 직접
+      # 건네 쓰시는 것일 수도 있어 지우지 않는다 — 지금 상태를 박아 두고
+      # **새로 생기는 것**을 잡는다(⚖ A7).
+      - name: 모든 자료에 문이 있다
+        timeout-minutes: 5
+        run: python3 tools/asset_doors.py --check
       # "좀 흐린가?" 로는 아무것도 안 고쳐진다. 148장을 매번 기계가 잰다 —
       # 처음 재었을 때 147장이 걸렸다(viewport 128 · 대비 25 · 작은 글씨 17).
       # ⚠ 이 줄은 여섯 달 동안 **아무것도 막지 않았다.** `--check` 없이 불렀고,
