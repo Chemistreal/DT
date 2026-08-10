@@ -104,13 +104,42 @@ async function open(browser, answerFonts) {
       await p.goto(`http://localhost:${PORT}/${page}`,
                    { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
       await p.waitForTimeout(SETTLE);
-      const fcp = await p.evaluate(() => {
-        const e = performance.getEntriesByType('paint')
-          .find(x => x.name === 'first-contentful-paint');
-        return e ? Math.round(e.startTime) : -1;
-      }).catch(() => -1);
-      console.log(`  ${page} 첫 그림 ${fcp < 0 ? '없음' : fcp + 'ms'}`);
-      chk(`${page} 이 글꼴을 기다리지 않는다`, fcp > 0 && fcp < PAINT_MAX, true);
+      /* ⚠ **자가 거짓말한 자리.** 여기는 `first-contentful-paint` 하나만 읽고,
+         그 값이 없으면 '첫 그림 없음' 이라고 말했다. 그런데 Chrome 은 화면에
+         글이 멀쩡히 떠 있어도 그 지표를 **안 적는 때가 있다** — KMChC 의
+         index.html 이 그랬다(2026-08-10). 재어 보니
+
+             first-paint = 924ms · masthead 높이 202px · opacity 1
+
+         였다. 그리는데 안 그렸다고 한 것이다. 지표가 없는 것과 화면이 빈 것은
+         다른 일이라, **눈에 보이는 글이 있는지**를 같이 본다. 둘 다 없을 때만
+         빨간불이다 — 그래야 원래 잡던 것(빈 흰 종이)을 그대로 잡는다. */
+      const r = await p.evaluate(() => {
+        const paint = performance.getEntriesByType('paint');
+        const pick = n => { const e = paint.find(x => x.name === n);
+                            return e ? Math.round(e.startTime) : -1; };
+        let visible = 0;
+        const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let t;
+        while ((t = walk.nextNode())) {
+          const s = (t.nodeValue || '').trim();
+          if (s.length < 2) continue;
+          const el = t.parentElement;
+          if (!el || /^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)) continue;
+          const cs = getComputedStyle(el);
+          if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+          if (parseFloat(cs.opacity) < 0.1) continue;
+          const b = el.getBoundingClientRect();
+          if (b.width < 8 || b.height < 8 || b.top > innerHeight || b.bottom < 0) continue;
+          if (++visible >= 3) break;
+        }
+        return { fcp: pick('first-contentful-paint'), fp: pick('first-paint'), visible };
+      }).catch(() => ({ fcp: -1, fp: -1, visible: 0 }));
+      const byFcp = r.fcp > 0 && r.fcp < PAINT_MAX;
+      const byEye = r.visible >= 3 && r.fp > 0 && r.fp < PAINT_MAX;
+      console.log(`  ${page} 첫 그림 ${r.fcp < 0 ? '(FCP 없음)' : r.fcp + 'ms'}`
+        + ` · 첫 칠 ${r.fp < 0 ? '없음' : r.fp + 'ms'} · 보이는 글 ${r.visible}곳`);
+      chk(`${page} 이 글꼴을 기다리지 않는다`, byFcp || byEye, true);
       await ctx.close();
     }
 
