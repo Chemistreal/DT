@@ -56,26 +56,58 @@ KNOWN = {
 # 여기 있으면 안 되는 것 — 남의 기록. 시트에 있어야 한다.
 FORBIDDEN = re.compile(r'roster|명단|score|성적|answers?_|응답', re.I)
 
+# 그런데 저장소마다 사정이 다르다. DT 는 "브라우저를 비워도 아무것도 안 잃는다"
+# 를 지킬 수 있다 — 성적·명단이 시트에만 있기 때문이다. exam 은 **채점을 하는
+# 앱**이라 창구가 죽어도 그 자리에서 채점이 끝나야 하고, 그러려면 방금 채점한
+# 것을 손에 들고 있어야 한다.
+#
+# 그래서 "여기 둬도 되는 것" 을 **까닭과 함께** 적을 자리를 둔다. 비워 두면
+# 이 검사는 그 저장소에서 늘 빨간불이고, 늘 빨간불이면 아무도 안 본다.
+# 새 칸이 여기 없이 생기면 그때는 걸린다 — 그게 이 자의 일이다.
+FORBIDDEN_OK = {}
+
 SET = re.compile(r'localStorage\.setItem\(\s*([A-Za-z_$][\w$]*|[\'"][^\'"]+[\'"])')
 CONST = re.compile(r'\b(?:const|var|let)\s+(\w+)\s*=\s*([\'"][^\'"]+[\'"])')
+# ⚠ **자가 거짓말한 자리.** 래퍼(`Store.set(KEY,…)`)를 풀 때 파일 안의 모든
+#   `.set(…)` 호출을 훑어 이름을 맞춰 봤다. 그랬더니 배지 이름을 담은 지역
+#   변수까지 저장 칸이 됐다 — exam/index.html 의
+#
+#       const map=[['전 문항','check'],['상위','starb'],…]
+#       …  const key = 'starb';  …  x.set(key)
+#
+#   저장 칸 이름은 이 저장소들에서 **대문자 상수**로 둔다(KEY·ROSTER_PREFIX·
+#   PAL_KEY·DHLOG…). 래퍼를 풀 때는 그것만 본다. 네 저장소로 견줘 보니
+#   이 규칙으로 빠지는 것은 starb 하나뿐이고 나머지는 그대로 남는다.
+#   소문자 상수에 저장 칸을 담으면 여기서 안 잡힌다 — 그때는 대문자로 옮긴다.
+WRAP_NAME = re.compile(r'^[A-Z][A-Z0-9_]*$')
+
+
+def keys_in(s):
+    """글 한 덩이가 쓰는 저장 칸 이름들.
+
+    파일에서 떼어 둔 까닭은 `tools/lie_check.py` 가 참·거짓 예시를 먹여
+    보기 위해서다. 자를 넓히거나 좁히면 그쪽에서 걸린다."""
+    names = {k: v.strip('\'"') for k, v in CONST.findall(s)}
+    out = set()
+    for raw in SET.findall(s):
+        if raw[0] in '\'"':
+            out.add(raw.strip('\'"'))
+        elif raw in names:
+            out.add(names[raw])
+        else:
+            # 래퍼를 거치는 것 — 부르는 자리에서 이름을 찾는다
+            for call in re.findall(r'\w+\.(?:set|get|del)\(\s*(\w+)\s*[,)]', s):
+                if call in names and WRAP_NAME.match(call):
+                    out.add(names[call])
+    return out
 
 
 def keys():
     """화면마다 쓰는 저장 칸. 변수로 쓴 것은 그 파일 안에서 값을 찾아 푼다."""
     got = collections.defaultdict(set)
     for p in sorted(glob.glob(os.path.join(ROOT, '*.html'))):
-        s = open(p, encoding='utf-8', errors='ignore').read()
-        names = {k: v.strip('\'"') for k, v in CONST.findall(s)}
-        for raw in SET.findall(s):
-            if raw[0] in '\'"':
-                got[raw.strip('\'"')].add(os.path.basename(p))
-            elif raw in names:
-                got[names[raw]].add(os.path.basename(p))
-            else:
-                # 래퍼를 거치는 것 — 부르는 자리에서 이름을 찾는다
-                for call in re.findall(r'\w+\.(?:set|get|del)\(\s*(\w+)\s*[,)]', s):
-                    if call in names:
-                        got[names[call]].add(os.path.basename(p))
+        for k in keys_in(open(p, encoding='utf-8', errors='ignore').read()):
+            got[k].add(os.path.basename(p))
     return got
 
 
@@ -89,7 +121,8 @@ def main():
                                     ' '.join(sorted(got[k]))[:40]))
     fresh = sorted(k for k in got if k not in KNOWN)
     gone = sorted(k for k in KNOWN if k not in got)
-    bad = sorted(k for k in got if FORBIDDEN.search(k))
+    bad = sorted(k for k in got if FORBIDDEN.search(k) and k not in FORBIDDEN_OK)
+    okd = sorted(k for k in got if FORBIDDEN.search(k) and k in FORBIDDEN_OK)
 
     if fresh:
         print('\n적어 두지 않은 칸 %d개' % len(fresh))
@@ -98,9 +131,14 @@ def main():
     if gone:
         print('\n적어 뒀는데 이제 안 쓰는 칸 %d개: %s' % (len(gone), ' '.join(gone)))
         print('  지워도 되지만, 옛 브라우저에 남아 있을 수 있으니 지우는 코드가 있는지 보고 빼라.')
+    if okd:
+        print('\n남의 기록이지만 **까닭을 적고 두기로 한 것** %d개' % len(okd))
+        for k in okd:
+            print('  %-26s %s' % (k, FORBIDDEN_OK[k]))
     if bad:
         print('\n⚠ 남의 기록으로 보이는 이름 %d개: %s' % (len(bad), ' '.join(bad)))
         print('  성적·명단은 시트에 있어야 한다. 브라우저를 비워도 아무것도 안 잃는 성질을 지킨다.')
+        print('  여기 둬야 할 까닭이 있으면 FORBIDDEN_OK 에 **그 까닭과 함께** 적는다.')
 
     if check:
         # 없어진 칸은 빨간불이 아니다(줄이는 것은 좋은 일이다).

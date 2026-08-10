@@ -54,6 +54,14 @@ def contrast_hits(css):
     return bool([h for h in audit_pages.audit(p) if '대비' in h[0]])
 
 
+store_ledger = _load('tools/store_ledger.py')
+
+
+def store_keys(src):
+    """이 글이 브라우저에 남긴다고 자가 세는 칸 이름들."""
+    return sorted(store_ledger.keys_in(src))
+
+
 report_msg = _load('tools/report_msg.py')
 
 
@@ -84,6 +92,20 @@ CASES = [
          ':root{--paper:#FAFAF7;--o-bg:#E7F5EC;--brass-ink:#866A20}', False),
         ('짝이 있는 글자색은 그 짝 위에서 잰다',
          ':root{--paper:#FAFAF7;--warn-bg:#3A2A10;--warn-ink:#F3E6C8}', False),
+    ]),
+('store_ledger 저장 칸', store_keys, [
+        ('따옴표로 바로 적은 칸은 잡는다',
+         "localStorage.setItem('dt_stucode', v)", ['dt_stucode']),
+        ('상수에 담아 둔 칸도 값을 찾아 푼다',
+         "const KEY='dt_hw_round';localStorage.setItem(KEY,v)", ['dt_hw_round']),
+        ('래퍼를 거쳐도 대문자 상수면 잡는다',
+         "const PAL_KEY='dt_pal_v1';function set(k,v){localStorage.setItem(k,v)}"
+         "S.set(PAL_KEY,1)", ['dt_pal_v1']),
+        # 자가 여기서 거짓말을 했다. 배지 이름을 담은 **소문자 지역 변수**를
+        # 저장 칸으로 세어 'starb' 라는 칸이 있다고 말했다(exam/index.html).
+        ('배지 이름을 담은 소문자 지역 변수는 저장 칸이 아니다',
+         "const map=[['전 문항','check'],['상위','starb']];const key='starb';"
+         "function set(k,v){localStorage.setItem(k,v)}x.set(key)", []),
     ]),
 ]
 
