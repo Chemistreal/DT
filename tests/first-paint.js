@@ -30,6 +30,7 @@
    ============================================================ */
 'use strict';
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const PLAYWRIGHT = process.env.PLAYWRIGHT_MODULE || 'playwright';
@@ -57,8 +58,17 @@ catch (e) {
   console.log('건너뜀: playwright 를 찾지 못했다'); process.exit(0);
 }
 
-const PAGES = ['report.html', 'parent_report.html', 'index.html'];
+/* ⚠ `parent_report.html` 이 여기 있었다. 그 화면은 #69 에서 지웠다(문이 없었다).
+     없는 주소는 404 라 첫 그림이 영영 안 뜬다 — 검사가 **제 목록 때문에**
+     빨간불이 난다. 위의 표에 남은 이름은 그때 잰 값이라 그대로 둔다. */
+const PAGES = ['report.html', 'index.html'];
 const FAKE_CSS = ':root{--font-arrived:1}';
+
+const gone = PAGES.filter(f => !fs.existsSync(path.join(ROOT, f)));
+if (gone.length) {
+  console.log('실패: 이 검사가 **없는 화면**을 재려고 한다 — ' + gone.join(' · '));
+  process.exit(1);
+}
 
 async function open(browser, answerFonts) {
   const ctx = await browser.newContext({ serviceWorkers: 'block' });
