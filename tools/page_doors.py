@@ -37,18 +37,31 @@ NO_DOOR_OK = {
 }
 
 
-def referenced(exclude):
-    """저장소 안에서 불리는 화면 이름을 모은다. 자기 자신은 빼고 센다."""
-    names = set()
+def mentions():
+    """파일마다 그 안에서 불리는 화면 이름. **한 번만 읽는다.**
+
+    [한 번 느렸던 곳] 처음에는 화면마다 저장소를 통째로 다시 읽었다(자기
+    자신을 빼고 세려고). 화면이 258장인 저장소에서 258 × 260 번 파일을 읽어
+    2분이 넘게 걸렸고, 검사가 느리면 사람이 안 돌린다. 한 번 읽어 두고
+    '나 말고 누가 부르나' 는 그 표에서 뺀다."""
+    out = {}
     pats = (os.path.join(ROOT, '*.html'), os.path.join(ROOT, '*.gs'),
             os.path.join(ROOT, '*.json'), os.path.join(ROOT, '*.md'))
     for pat in pats:
         for p in glob.glob(pat):
-            if os.path.basename(p) == exclude:
-                continue
             s = open(p, encoding='utf-8', errors='ignore').read()
-            names.update(re.findall(r'[A-Za-z0-9_가-힣-]+\.html', s))
-    return names
+            out[os.path.basename(p)] = set(re.findall(r'[A-Za-z0-9_가-힣-]+\.html', s))
+    return out
+
+
+def callers(seen):
+    """화면 이름 → 그 이름을 부르는 파일들(자기 자신은 뺀다)."""
+    who = {}
+    for src, names in seen.items():
+        for n in names:
+            if n != src:
+                who.setdefault(n, set()).add(src)
+    return who
 
 
 def doors():
@@ -59,13 +72,14 @@ def doors():
     if os.path.exists(mat):
         listed = set(re.findall(r'[A-Za-z0-9_가-힣-]+\.html',
                                 open(mat, encoding='utf-8').read()))
+    who = callers(mentions())
     out = []
     for n in pages:
         if n in listed:
             out.append((n, True, '자료 목록'))
         elif n in NO_DOOR_OK:
             out.append((n, True, '적어 둠 · ' + NO_DOOR_OK[n]))
-        elif n in referenced(exclude=n):
+        elif who.get(n):
             out.append((n, True, '다른 화면이 건다'))
         else:
             out.append((n, False, ''))
