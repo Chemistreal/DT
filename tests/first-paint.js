@@ -37,6 +37,28 @@ const PLAYWRIGHT = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const CHROMIUM = process.env.CHROMIUM_PATH || undefined;
 const PORT = Number(process.env.PORT || 8942);
 const ROOT = path.join(__dirname, '..');
+/* ── 네 앱이 **같은 천장**을 쓴다 ──────────────────────────────
+   exam · DT · KMChC · study64 넷 다 `PAINT_MAX = 4000` 이다.
+   2026-08-11, 넷을 **겹치지 않게 하나씩** 세 번씩 재어 맞춘 값이다(#42).
+
+       DT        report   388 · index   348
+       exam      index    772 · hub     504 · final 608
+       KMChC     report 1,424 · answers 1,348 · index (FCP 없음 · 첫 칠 924)
+       study64   index  1,464 · report 1,188 · answers 776
+
+   성한 값은 넷 다 1.5초 아래다. 그런데 **2,500 으로 내리지 않았다.**
+   넷을 잇달아 재던 첫 판에서 KMChC report 이 3,020ms 로 나왔다 — 같은 것을
+   조용할 때 세 번 다시 재니 1,328 · 1,336 · 1,424 였다. 기계가 바쁘면 성한
+   쪽이 두 배로 늘어난다(exam index 도 772 → 1,320 이었다). 천장은 **목표가
+   아니라 걸림줄**이고, 성한 판에서 울리는 걸림줄은 다음부터 아무도 안 본다.
+
+   이 줄이 잡는 병은 13,184ms 였다 — 바깥 글꼴이 첫 화면을 인질로 잡는 것.
+   4,000 은 그 병과 **바쁜 판의 성한 값** 사이에 있고, 2,500 은 그 사이가
+   아니라 성한 값 위에 걸친다.
+
+   ⚠ 한 곳을 고치면 **네 곳을 같이 고친다.** 한 저장소만 낮추면 나머지 셋은
+     낮춘 줄 모른 채 초록불이다 — 그러면 «맞춰 두었다» 는 말이 거짓이 된다.
+   ───────────────────────────────────────────────────────────── */
 const PAINT_MAX = 4000;      // 대답 없는 망에서도 이 안에 떠야 한다
 const SETTLE = 4000;         // 첫 그림이 생길 시간을 준다
 
