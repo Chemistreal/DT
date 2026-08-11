@@ -240,11 +240,18 @@
       units.forEach(function (u) {
         var got = u.t - u.w;                       // 맞은 수 (위 주석)
         var r = Math.round(okRate(u) * 100);
+        /* ⚠ 문항 두 개 미만은 **판정하지 않는다**(선생님 규칙 · 화면의
+           UNIT_MIN_Q 와 같다). 한 문항으로 «100%» 라고 적으면 학부모는 그
+           단원이 탄탄한 줄 안다 — 실제로는 한 번 맞힌 것뿐이다.
+           숫자(1/1)는 그대로 적고, 백분율만 안 적는다. */
+        var thin = u.t < 2;
         urows.push(new TableRow({ children: [
-          cell([txt(u.u, { size: 20, after: 0 })], Math.floor(CW * 0.52)),
+          cell([txt(u.u, { size: 20, color: thin ? MUT : INK, after: 0 })], Math.floor(CW * 0.52)),
           cell([txt(got + ' / ' + u.t, { size: 20, color: MUT, after: 0 })], Math.floor(CW * 0.24)),
-          cell([txt(r + '%', { size: 20, bold: true, after: 0,
-                               color: r >= 80 ? OK : (r >= 60 ? GOLD : RED) })], CW - Math.floor(CW * 0.76))] }));
+          cell([txt(thin ? '판정 안 함' : (r + '%'),
+                    { size: thin ? 17 : 20, bold: !thin, after: 0,
+                      color: thin ? MUT : (r >= 80 ? OK : (r >= 60 ? GOLD : RED)) })],
+               CW - Math.floor(CW * 0.76))] }));
       });
       body.push(new Table({ columnWidths: [Math.floor(CW * 0.52), Math.floor(CW * 0.24), CW - Math.floor(CW * 0.76)],
         rows: urows, width: { size: CW, type: WidthType.DXA },

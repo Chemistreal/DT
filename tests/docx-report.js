@@ -143,6 +143,22 @@ function docxText(file, tmp) {
   chk('맞은 수와 틀린 수가 뒤집히지 않았다', flipped === 0,
       flipped ? `뒤집힌 줄 ${flipped}개` : true);
 
+  /* ⚠ **문항 두 개 미만은 판정하지 않는다**(선생님 결정 #41 · 파이널의
+     `DOM_MIN_Q = 2` 와 같은 규칙). 한 문항으로 «100%» 라고 적으면 학부모는
+     그 단원이 탄탄한 줄 안다 — 실제로는 한 번 맞힌 것뿐이다.
+     지금 자료에 그런 단원이 없을 수도 있다. 그때는 **없다는 것만** 확인하고
+     넘어간다 — 규칙은 아직 안 온 경우를 지키려고 있는 것이다. */
+  const thin = screen.units.filter(u => Number(u.v.split('/')[1]) < 2);
+  if (thin.length) {
+    chk(`문항 2개 미만인 단원 ${thin.length}개를 판정하지 않는다`,
+        thin.every(u => new RegExp(u.u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                                   '\\s+\\d+ / \\d+\\s+판정 안 함').test(txt)),
+        thin.map(u => u.u + ' ' + u.v).join(' · '));
+  } else {
+    console.log('  (문항 2개 미만인 단원이 지금은 없다 — 규칙만 걸어 둔다)');
+    chk('«판정 안 함» 을 아무 데나 쓰지 않는다', !/판정 안 함/.test(txt), true);
+  }
+
   /* 약한 단원이 위에 있어야 한다 — 종이는 아래로 갈수록 안 읽는다. */
   const order = screen.units.map(u => txt.indexOf(u.u)).filter(i => i >= 0);
   chk('약한 단원이 위에 온다 (화면과 같은 차례)',

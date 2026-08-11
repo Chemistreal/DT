@@ -170,6 +170,9 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .hero,.growth,.rankcard,.closing,.todo,.strength{break-inside:avoid}
   h2,.subhead{break-after:avoid}
   .rx,.heatrow,.kv,.rvrow,.gcell,.strchip,.legend,.intro{break-inside:avoid}
+.heatrow.is-thin .hu{color:var(--muted,#61707F)}
+.hnote{flex:1;font-size:11.5px;color:var(--muted,#61707F);letter-spacing:.01em}
+
   .chartwrap{break-inside:avoid}
   /* 문항별 정오 표는 한 쪽 안에 들어가는 크기(≈904px)인데 쪽 경계에 걸려
      반으로 잘리고 있었다. 감싼 카드가 한 쪽보다 커서 카드 규칙이 안 먹는다.
@@ -1101,7 +1104,18 @@ function aggFromRows(){ var u={},ax={};
     (first.units||[]).forEach(function(x){var o=u[x.u]||(u[x.u]={u:x.u,t:0,w:0});o.t+=x.t;o.w+=x.w;});
     (first.axes||[]).forEach(function(x){var o=ax[x.k]||(ax[x.k]={t:0,w:0});o.t+=x.t;o.w+=x.w;}); });
   return {units:Object.keys(u).map(function(k){return u[k];}), axes:ax}; }
+/* ⚠ **문항 두 개 미만은 판정하지 않는다**(선생님이 파이널에서 정하신 규칙,
+   `DOM_MIN_Q = 2`). 한 문항으로 «100%» 라고 말하면 학부모는 그 단원이 탄탄한
+   줄 안다 — 실제로는 한 번 맞힌 것뿐이다. 반대로 «0%» 도 마찬가지다.
+   그 규칙이 파이널에만 있고 여기에는 없었다(2026-08-11, 선생님 결정 #41).
+
+   숫자는 그대로 적는다(1/1). 안 적는 것은 **판정**이다 — 막대와 색. */
+var UNIT_MIN_Q = 2;
 function unitHeat(units){ return units.slice().sort(function(a,b){var ma=a.t?a.w/a.t:0,mb=b.t?b.w/b.t:0;return mb-ma||b.t-a.t;}).map(function(u){
+  if(u.t < UNIT_MIN_Q){
+    return '<div class="heatrow is-thin"><span class="hu">'+u.u+'</span>'
+      +'<span class="hnote">문항 '+u.t+'개 · 판정 안 함</span>'
+      +'<span class="hv mono">'+(u.t-u.w)+'/'+u.t+'</span></div>'; }
   var m=u.t?(u.t-u.w)/u.t:0, pct=Math.round(m*100), col=m>=0.85?'#197E46':m>=0.6?'#7FB069':m>=0.4?'#E0A458':'#C0392B';
   return '<div class="heatrow"><span class="hu">'+u.u+'</span><span class="hbar"><i style="width:'+pct+'%;background:'+col+'"></i></span><span class="hv mono">'+(u.t-u.w)+'/'+u.t+'</span></div>'; }).join(''); }
 function svgTrend(){
