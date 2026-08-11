@@ -160,6 +160,14 @@ jobs:
       # 그대로 오는지도 본다 — 빠르기만 재면 '글꼴을 빼는 것' 이 만점이다.
       - name: 글꼴 창구가 죽어도 학부모 성적표가 뜬다
         run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/first-paint.js
+      # 선생님이 정하신 것(2026-08-11) — "인쇄규칙하지말고 워드파일로
+      # 다운받을수있게 exam스타일로". 학부모가 남겨 두는 것은 종이가 아니라
+      # 파일이고, exam 은 이미 그렇게 하는데 DT 에만 없었다.
+      # ⚠ 이 자는 «있다/없다» 를 세지 않는다. **화면의 숫자와 종이의 숫자를
+      #   한 줄씩 맞춰 본다.** 이 자를 만들면서 정답률을 거꾸로 적어, 88점으로
+      #   통과한 학생의 단원이 종이에서 0% 로 찍혔다 — 둘 다 그럴듯해 보였다.
+      - name: 성적표 Word 가 화면과 같은 말을 한다
+        run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/docx-report.js
       - name: Run regression suite
         run: NODE_PATH=tests/node_modules node tests/run.js
       - name: Upload failure screenshots
