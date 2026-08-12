@@ -296,6 +296,31 @@ async function askRoster(tries){
   }
   return null;
 }
+
+/* ── 읽기는 **한 번 못 물었다고 포기하지 않는다** (2026-08-12) ──────────
+   선생님이 «이번 주 미응시 현황 · 불러오지 못했습니다 (배포/권한 확인)» 를
+   만나셨다. 배포도 권한도 멀쩡했다 — Apps Script 가 잠깐 밀린 것이었다.
+
+   `pending.html` 에는 진작에 이 자가 있었다(세 번까지 다시 묻는다). 여기만
+   맨 `fetch` 를 써서, **한 번 실패하면 그대로 끝**이었다. 있는데 안 걸었다.
+
+   ⚠ **읽기에만 쓴다.** 쓰기(POST)를 다시 보내면 같은 줄이 두 번 들어간다 —
+     파이널에서 그 병으로 7월 기록의 날짜가 오늘로 바뀌었다(2026-08-12).
+     읽는 것은 몇 번을 물어도 같은 답이라 다시 물어도 된다. */
+async function readJSON_(url, tries){
+  tries = tries || 3;
+  for(var i=0;i<tries;i++){
+    try{
+      var r = await fetch(url, {cache:'no-store'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return JSON.parse(await r.text());
+    }catch(e){
+      if(i === tries-1) throw e;
+      await new Promise(function(res){ setTimeout(res, 700*(i+1)); });
+    }
+  }
+}
+
 async function loadRoster(){
   setStat('<span class="spin"></span>명단 불러오는 중...');
   var j=await askRoster(3);
@@ -338,12 +363,30 @@ function banner(){
 
 async function loadAbsentees(){
   document.getElementById('absbox').innerHTML='<p class="muted small"><span class="spin"></span>불러오는 중...</p>';
+  /* ⚠ **못 물어본 것과 그리다 넘어진 것은 다르다.**
+     예전에는 둘을 한 try 로 묶어 두어서, 답은 잘 받아 놓고 그리다 넘어져도
+     «불러오지 못했습니다 (배포/권한 확인)» 이 떴다. 선생님은 멀쩡한 배포를
+     확인하러 가시게 된다. 물어보는 자리만 감싼다 — 그리다 나는 오류는
+     숨기지 않고 그대로 터뜨려서 자와 콘솔에 남게 둔다. */
+  var j;
   try{
-    var r=await fetch(API+'?action=absentees&token='+encodeURIComponent(admTok())+'&t='+Date.now(),{cache:'no-store'});
-    var j=await r.json();
-    if(j&&j.ok===false&&j.error==='auth'){ admReset(); }
-    renderAbsentees(j&&j.absentees);
-  }catch(e){ document.getElementById('absbox').innerHTML='<p class="muted small">불러오지 못했습니다. (배포/권한 확인)</p>'; }
+    j = await readJSON_(API+'?action=absentees&token='+encodeURIComponent(admTok())+'&t='+Date.now());
+  }catch(e){
+    /* 예전 말은 «불러오지 못했습니다. (배포/권한 확인)» 이었다. 맞는 말이지만
+       **선생님이 할 수 있는 일이 아니고**, 대개는 서버가 잠깐 밀린 것이다.
+       `pending.html` 이 같은 자리에서 이미 이렇게 고쳐 두었다 — 먼저 다시 누를
+       자리를 주고, 진짜 배포가 끊겼을 때 볼 말은 뒤에 작게 남긴다.
+       그리고 **기록이 없는 것과 못 물어본 것은 다르다** — 그것부터 말한다. */
+    document.getElementById('absbox').innerHTML =
+      '<p class="muted small"><b>지금 서버에 물어보지 못했습니다.</b> '
+      + '미응시 학생이 없다는 뜻이 아닙니다. '
+      + '<button class="ghost" id="absRetry" style="margin-left:4px">다시 불러오기</button>'
+      + '<br><span style="opacity:.7">세 번 물어봤습니다. 계속 이러면 Apps Script 웹앱 배포와 권한을 확인하세요.</span></p>';
+    var rb=document.getElementById('absRetry'); if(rb) rb.addEventListener('click', loadAbsentees);
+    return;
+  }
+  if(j&&j.ok===false&&j.error==='auth'){ admReset(); }
+  renderAbsentees(j&&j.absentees);
 }
 
 function setStat(html){ document.getElementById('saveStat').innerHTML=html; }
@@ -359,8 +402,7 @@ async function save(){
   setStat('<span class="spin"></span>저장 중...');
   try{
     await fetch(API,{method:'POST',body:JSON.stringify(payload)});
-    var vr=await fetch(API+'?action=roster&token='+encodeURIComponent(admTok())+'&t='+Date.now(),{cache:'no-store'});
-    var vj=await vr.json();
+    var vj=await readJSON_(API+'?action=roster&token='+encodeURIComponent(admTok())+'&t='+Date.now());
     if(vj&&vj.classes){
       var n=vj.classes.length, tot=vj.classes.reduce(function(a,c){return a+((c.students||[]).length);},0);
       state.classes=normalize(vj.classes); state.load='ok'; banner(); renderClasses();
