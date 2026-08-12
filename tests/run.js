@@ -976,6 +976,99 @@ async function assertNoOverflow(page, label) {
     assert(st.banner === '', '멀쩡한데 배너가 뜬다: ' + st.banner);
   }, { adminGate: true });
 
+  /* ══════════════════════════════════════════════════════════════
+     **못 물어본 것**과 **그리다 넘어진 것**은 다르다 (2026-08-12)
+
+     선생님이 「이번 주 미응시 현황 · 불러오지 못했습니다. (배포/권한 확인)」
+     을 만나셨다. 재어 보니 배포도 권한도 멀쩡했다 — Apps Script 가 실행을
+     한 줄로 세우는 동안 이 화면의 **한 번뿐인 요청**이 줄에 걸렸을 뿐이다.
+     바로 위 «못 물어봤으면 저장을 막는다» 에서 이미 배운 병인데, 미응시
+     현황만 맨 `fetch` 를 쓰고 있었다. 있는데 안 걸었다.
+
+     그리고 저 문구는 **두 가지 다른 일에 같이 붙어 있었다.** 답을 잘 받아
+     놓고 그리다 넘어져도 «배포/권한 확인» 이 떴다 — 그러면 선생님은 멀쩡한
+     배포를 확인하러 가시고, 진짜 원인은 아무 데도 안 남는다.
+     ══════════════════════════════════════════════════════════════ */
+  {
+    /* 앱스크립트가 내보내는 것과 **열 이름이 같은** 답 (computeAbsentees_). */
+    const ABS = { ok: true, absentees: { generatedAt: '2026-08-12 09:00', classes: [
+      { label: '화학1 목6-10', course: 'ch1', round: 3, absent: ['홍길동'],
+        absentWho: [{ name: '홍길동', school: 'ㅇㅇ중' }], present: 4, total: 5 } ] } };
+
+    await test('미응시 · 한 번 밀렸다고 포기하지 않는다', async page => {
+      let asked = 0;
+      await page.route('**/macros/s/**', route => {
+        if (!/action=absentees/.test(route.request().url())) {
+          return route.fulfill({ status: 200, contentType: 'application/json',
+            body: JSON.stringify({ ok: true, classes: [] }) });
+        }
+        asked++;
+        if (asked <= 2) return route.abort();          // 줄에 걸린 두 번
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify(ABS) });
+      });
+      await page.goto(BASE + 'roster.html');
+      await page.waitForTimeout(1000);
+      await page.evaluate(() => loadAbsentees());
+      await page.waitForTimeout(4500);                 // 700 + 1400ms 쉰다
+      const t = await page.evaluate(() =>
+        document.getElementById('absbox').textContent.replace(/\s+/g, ' ').trim());
+      assert(asked >= 3, '한 번만 묻고 포기했다 (' + asked + '회)');
+      assert(/홍길동/.test(t), '다시 물어 받아 놓고 안 그렸다: ' + t.slice(0, 80));
+      assert(/미응시 1 \/ 5명/.test(t), '숫자가 안 나온다: ' + t.slice(0, 80));
+    }, { adminGate: true });
+
+    await test('미응시 · 진짜 못 물어보면 없는 것처럼 말하지 않는다', async page => {
+      await page.route('**/macros/s/**', route => {
+        if (!/action=absentees/.test(route.request().url())) {
+          return route.fulfill({ status: 200, contentType: 'application/json',
+            body: JSON.stringify({ ok: true, classes: [] }) });
+        }
+        return route.abort();
+      });
+      await page.goto(BASE + 'roster.html');
+      await page.waitForTimeout(1000);
+      await page.evaluate(() => loadAbsentees());
+      await page.waitForTimeout(4500);
+      const st = await page.evaluate(() => ({
+        t: document.getElementById('absbox').textContent.replace(/\s+/g, ' ').trim(),
+        retry: !!document.getElementById('absRetry'),
+      }));
+      /* 여기서 «미응시 0명» 이나 빈 화면을 보이면 선생님은 «다 봤구나» 로
+         읽으신다. 못 물어본 것은 그렇게 읽히면 안 된다. */
+      assert(/물어보지 못했습니다/.test(st.t), '무슨 일인지 안 알려 준다: ' + st.t.slice(0, 80));
+      assert(/없다는 뜻이 아닙니다/.test(st.t), '없는 것으로 읽힐 수 있다: ' + st.t.slice(0, 80));
+      assert(st.retry, '다시 불러오는 길이 없다');
+    }, { adminGate: true });
+
+    await test('미응시 · 그리다 넘어진 것을 배포 탓으로 돌리지 않는다', async page => {
+      await page.route('**/macros/s/**', route => {
+        if (!/action=absentees/.test(route.request().url())) {
+          return route.fulfill({ status: 200, contentType: 'application/json',
+            body: JSON.stringify({ ok: true, classes: [] }) });
+        }
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify(ABS) });
+      });
+      await page.goto(BASE + 'roster.html');
+      await page.waitForTimeout(1000);
+      /* 그리는 자리를 일부러 넘어뜨린다 — 서버는 멀쩡히 답했다. */
+      await page.evaluate(() => { window.esc = () => { throw new Error('그리다 넘어짐'); }; });
+      /* ⚠ 여기서 `pageerror` 를 세면 안 된다. evaluate 로 부르면 튀어나온
+         오류가 **그 약속에 담겨** 넘어오므로 페이지에서는 터지지 않는다.
+         재려던 것은 «오류가 살아서 나오는가» 이니 그것을 바로 잡는다. */
+      const thrown = await page.evaluate(async () => {
+        try { await loadAbsentees(); return ''; } catch (e) { return String(e && e.message || e); }
+      });
+      const t = await page.evaluate(() =>
+        document.getElementById('absbox').textContent.replace(/\s+/g, ' ').trim());
+      assert(!/배포/.test(t) && !/권한/.test(t),
+        '서버는 답했는데 배포·권한을 확인하라고 한다: ' + t.slice(0, 80));
+      assert(/그리다 넘어짐/.test(thrown),
+        '그리다 난 오류를 삼켰다 — 아무 데도 안 남는다 (' + (thrown || '아무것도 안 나옴') + ')');
+    }, { adminGate: true });
+  }
+
   /* 명단 화면에서 배운 것을 관리자 콘솔에도 건다. 여기도 읽기가 실패하면
      adminRows 를 빈 배열로 덮고 "저장된 실전 응시 0건" 을 띄우고 있었다 —
      선생님이 그것을 '아무도 안 봤다' 로 읽으면 엉뚱한 판단이 따라온다. */
