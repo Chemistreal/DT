@@ -110,7 +110,23 @@ async function takeExam(p, port, how) {
   await p.evaluate(() => submitExam());
 }
 
+/* ── pt() 는 두 파일에 있다 ────────────────────────────────────────────
+   학생은 이 화면 다음 칸에서 바로 report.html 을 본다. 두 화면이 같은 점수를
+   다르게 적으면 어느 쪽이 맞는지 알 수가 없다. 한쪽만 고쳐도 잡히게 **글자
+   그대로** 맞대어 본다(final.html·final-submit.html 이 겪은 것과 같은 병). */
+function grabPt(file) {
+  const src = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const m = src.match(/function pt\(n\)\{[^\n]*\}/);
+  return m ? m[0] : null;
+}
+
 (async () => {
+  console.log('── 점수를 적는 자가 두 파일에서 같다 ──');
+  const A0 = grabPt('exam.html'), B0 = grabPt('report.html');
+  chk('exam.html 에 pt() 가 있다', !!A0);
+  chk('report.html 에 pt() 가 있다', !!B0);
+  chk('둘이 글자 그대로 같다', !!A0 && A0 === B0, A0 === B0 ? '' : (A0 || '') + ' ≠ ' + (B0 || ''));
+
   const { srv, port } = await serve();
   const browser = await chromium.launch(Object.assign({ args: ['--no-sandbox'] },
     CHROMIUM ? { executablePath: CHROMIUM } : {}));
@@ -145,9 +161,29 @@ async function takeExam(p, port, how) {
     const end = await p.evaluate(() =>
       ((document.getElementById('hoffNum') || {}).textContent || '').replace('점', ''));
     /* ⚠ **리포트와 같은 숫자여야 한다.** 점수는 문항당 1.6667점이라 대개
-       소수가 나온다. 여기서 반올림해 «63» 이라 적으면 다음 화면인 리포트에는
-       63.3 이 있다 — 학생은 둘 중 뭐가 맞는지 모른다. */
-    chk('채점기가 낸 점수 그대로 선다 (소수까지)', end.trim() === String(got),
+       소수가 나온다. 리포트는 pt() 로 늘 소수 둘째 자리까지 적는다(85 →
+       85.00). 여기만 «85» 라 하면 학생은 둘 중 뭐가 맞는지 모른다. */
+    chk('소수 둘째 자리까지 적는다', /^\d+\.\d{2}$/.test(end.trim()), end.trim());
+    /* ⚠ 자릿수를 늘리면 **원 밖으로 넘친다.** 「100.00점」 은 일곱 글자다 —
+       처음 그린 52px 로는 링을 뚫고 나가 「점」 이 아래로 밀렸다. 눈으로
+       «괜찮아 보인다» 로 끝내지 않고, 글자 상자가 원 안에 드는지 잰다. */
+    const fits = await p.evaluate(() => {
+      const el = document.getElementById('hoffNum');
+      const n = el.getBoundingClientRect();
+      const r = document.querySelector('.hoff .ring').getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const rad = r.width / 2 - 12;                    // 테두리 굵기만큼 뺀다
+      /* 네 귀퉁이가 다 원 안에 들어야 한다. */
+      const ok = [[n.left, n.top], [n.right, n.top], [n.left, n.bottom], [n.right, n.bottom]]
+        .every(([x, y]) => Math.hypot(x - cx, y - cy) <= rad);
+      return { ok: ok, w: Math.round(n.width), h: Math.round(n.height),
+               d: Math.round(rad * 2),
+               lines: Math.round(n.height / parseFloat(getComputedStyle(el).fontSize)) };
+    });
+    chk('숫자가 링 안에 들어간다', fits.ok === true,
+      fits.w + '×' + fits.h + ' (안지름 ' + fits.d + ')');
+    chk('«점» 이 아래로 안 밀린다 (한 줄이다)', fits.lines <= 1, fits.lines + '줄');
+    chk('채점기가 낸 점수에서 선다', Number(end) === Number(got),
       end.trim() + ' (채점 ' + got + ')');
     chk('이 답안은 합격이다 (재시 길은 아래에서 잰다)',
       await p.evaluate(() => RESULT.g.pass) === true, got + '점');
@@ -188,9 +224,19 @@ async function takeExam(p, port, how) {
     chk('새 문항이 나온다고 알려 준다', /새 문항/.test(m.t));
     const left = (m.t.match(/점까지 ([\d.]+)점 남았습니다/) || [])[1];
     chk('몇 점 남았는지 적는다', !!left, left ? left + '점' : m.t.slice(0, 40));
-    /* 80 - 48.3 은 자바스크립트에서 31.700000000000003 이다. 60가지 점수 중
-       열셋이 그렇다. 그대로 보이면 «이게 뭐지» 가 된다. */
-    chk('부동소수 찌꺼기가 안 붙는다', !!left && left.length <= 4, left || '');
+    /* 80 - 48.3 은 자바스크립트에서 31.700000000000003 이다. 이 시험의 예순
+       가지 점수 가운데 열셋이 그렇다. 그대로 보이면 «이게 뭐지» 가 된다.
+       선생님 결정(2026-08-14) — **소수 둘째 자리까지만.** */
+    chk('남은 점수도 소수 둘째 자리까지', /^\d+\.\d{2}$/.test(left || ''), left || '');
+    /* 이 화면에 뜨는 점수는 **전부** 그 규칙을 따라야 한다. 하나라도 새면
+       학생이 보는 숫자가 두 가지가 된다. */
+    const raw = (m.t.match(/\d+\.\d{3,}/g) || []);
+    chk('세 자리 넘는 소수가 하나도 없다', raw.length === 0, raw.join(' ') || '없음');
+    /* 통과 기준은 회차 데이터에 «80» 이라 적힌 **규칙**이다. 계산에서 나온
+       값이 아니라 찌꺼기가 낄 자리가 없고, «80.00점» 이라 쓰면 제목이 한 줄에
+       안 들어간다. 점수는 두 자리, 기준은 적힌 그대로. */
+    chk('통과 기준은 적힌 그대로 쓴다', /80점까지/.test(m.t) && /80점 이상이면/.test(m.t),
+      (m.t.match(/\S*80\S*점까지/) || [''])[0]);
     /* 나가는 문이 리포트 쪽으로만 나 있어야 한다 — «닫기» 로 끝나면
        복습도 재시도 안 하고 사라진다. */
     chk('나가는 문이 리포트뿐이다', m.buttons.length === 1 && /리포트/.test(m.buttons[0]),
