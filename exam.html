@@ -104,8 +104,12 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .hoff .arc{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.22,.9,.28,1),stroke .5s}
 .hoff .arc.pass{stroke:var(--o)} .hoff .arc.fail{stroke:var(--x)}
 .hoff .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
-.hoff .num{font-size:52px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-.03em;line-height:1}
-.hoff .num i{font-style:normal;font-size:18px;font-weight:700;color:var(--faint);margin-left:2px}
+/* ⚠ 글자 수가 늘면 **원 밖으로 넘친다.** 소수 둘째 자리까지 적기로 하면서
+   「100.00점」 이 일곱 글자가 됐고, 52px 로는 링을 뚫고 나가 「점」 이 아래로
+   밀렸다. 크기는 startHandoff 가 **글자 수를 보고 정한다** — 여기 값은
+   가장 짧을 때의 위쪽 한계다. 안 넘치는지는 tests/handoff.js 가 잰다. */
+.hoff .num{font-size:46px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-.03em;line-height:1;white-space:nowrap}
+.hoff .num i{font-style:normal;font-size:.4em;font-weight:700;color:var(--faint);margin-left:2px}
 .hoff .vd{font-size:13.5px;font-weight:800;letter-spacing:.02em}
 .hoff .vd.pass{color:var(--o)} .hoff .vd.fail{color:var(--x)}
 .hoff .oxr{display:flex;gap:22px;margin-top:20px;font-size:12.5px;color:var(--faint)}
@@ -657,6 +661,16 @@ function submitExam(){
    ⚠ 재시인 학생은 넘어가는 대신 **알림을 띄운다**(아래 retakeModal).
      복습하고 재시를 봐야 하는데, 5초 만에 지나가면 아무도 안 읽는다.
    ══════════════════════════════════════════════════════════════════════ */
+/* 점수는 늘 **소수 둘째 자리까지** 적는다(선생님 결정 2026-08-14).
+   그냥 빼서 붙이면 부동소수점 찌꺼기가 그대로 나간다 — 80-48.3 은
+   자바스크립트에서 31.700000000000003 이고, 이 시험의 예순 가지 점수 가운데
+   열셋이 그렇다.
+
+   ⚠ 이 함수는 report.html 의 pt() 와 **글자 그대로 같다.** 학생은 이 화면
+     다음에 바로 그 리포트를 보므로, 두 화면이 같은 점수를 다르게 적으면
+     어느 쪽이 맞는지 알 수가 없다. tests/handoff.js 가 둘을 맞대어 본다. */
+function pt(n){ if(n==null||n==='') return n; var v=Number(n); return isFinite(v)?v.toFixed(2):n; }
+
 var HOFF={t0:0, done:false, timer:null, raf:null, gone:false};
 var HOFF_MS=5000;                      // 셈이 도는 시간(선생님이 말씀하신 «5초»)
 
@@ -670,18 +684,23 @@ function startHandoff(){
   var arc=$('#hoffArc'); if(arc){ arc.style.strokeDasharray=LEN; arc.style.strokeDashoffset=LEN; }
   setTimeout(function(){ var a=$('#hoffArc'); if(a) a.style.strokeDashoffset=LEN*(1-pct/100); }, 60);
   /* ⚠ **리포트와 같은 숫자를 보여 준다.** 점수는 문항당 1.6667점이라 대개
-     소수가 나온다(예: 38문항 → 63.3). 여기서 반올림해 «63» 이라 적으면 바로
-     다음 화면인 리포트에는 63.3 이 있다 — 학생은 둘 중 뭐가 맞는지 모른다.
-     채점기가 정한 자릿수(Math.round(raw*10)/10)를 그대로 따른다. */
-  var DEC=(String(g.score).indexOf('.')>=0)?1:0;
-  var fmt=function(v){ return DEC?v.toFixed(1):String(Math.round(v)); };
+     소수가 나온다(예: 38문항 → 63.3). 학생은 이 화면 다음에 바로 리포트를
+     보는데, 거기는 pt() 로 «63.30» 이라 적는다. 여기서 «63» 이라 하면 둘 중
+     뭐가 맞는지 알 수가 없다. 같은 자(pt)로 적는다. */
+  /* 마지막에 설 글자로 크기를 **미리** 정한다. 도는 동안 자릿수가 바뀐다고
+     글자가 커졌다 작아졌다 하면 그게 더 어지럽다. */
+  (function(){
+    var el=$('#hoffNum'); if(!el) return;
+    var n=pt(g.score).length;                             // 100.00 → 6
+    el.style.fontSize=Math.min(46, Math.round(132/(n*0.6+0.7)))+'px';
+  })();
   (function tick(){
     var el=$('#hoffNum'); if(!el) return;                 // 화면이 바뀌었으면 그만둔다
     var k=Math.min(1,(Date.now()-HOFF.t0)/RUN);
     var e=1-Math.pow(1-k,3);                              // 끝에서 부드럽게 선다
     /* 마지막 한 칸은 셈이 아니라 **채점기가 낸 값** 그대로 박는다 —
        곱셈으로 다가가면 63.29999… 같은 것이 남는다. */
-    el.firstChild.nodeValue=(k>=1)?String(g.score):fmt(pct*e);
+    el.firstChild.nodeValue=(k>=1)?pt(g.score):pt(pct*e);
     if(k<1) HOFF.raf=requestAnimationFrame(tick);
   })();
   /* 아래 막대는 «언제 넘어가나» 를 말한다. 저장이 늦으면 여기서 멈춘다. */
@@ -769,9 +788,7 @@ function retakeSteps(){
 function showRetakeModal(){
   if($('#rtdim')) return;
   var g=RESULT.g, pass=(R.scoring&&R.scoring.pass)||80;
-  /* 80 - 36.7 은 자바스크립트에서 43.30000000000001 이다. 학생에게 그대로
-     보이면 «이게 뭐지» 가 된다. 점수와 같은 자릿수로 자른다. */
-  var need=Math.round(Math.max(0,pass-(Number(g.score)||0))*10)/10;
+  var need=Math.max(0,pass-(Number(g.score)||0));
   var li=retakeSteps().map(function(x){ return '<li><div><b class="rtt">'+x[0]+'</b><span>'+x[1]+'</span></div></li>'; }).join('');
   var d=document.createElement('div');
   d.id='rtdim'; d.className='rtdim';
@@ -779,7 +796,11 @@ function showRetakeModal(){
   d.setAttribute('aria-labelledby','rtTitle');
   d.innerHTML='<div class="rtbox">'+
     '<div class="rthd"><span class="rtbadge">재시 대상</span></div>'+
-    '<h2 id="rtTitle">'+g.score+'점 — '+pass+'점까지 '+need+'점 남았습니다</h2>'+
+    /* ⚠ **점수는 두 자리, 기준은 적힌 그대로.** 찌꺼기가 낄 수 있는 것은 빼고
+       나눈 값(내 점수·남은 점수)뿐이다. 통과 기준은 회차 데이터에 80 이라고
+       적혀 있는 규칙이라 «80.00점» 이라 쓸 것이 아니고, 그러면 제목이 한 줄에
+       안 들어간다. */
+    '<h2 id="rtTitle">'+pt(g.score)+'점 — '+pass+'점까지 '+pt(need)+'점 남았습니다</h2>'+
     '<p class="rtlede">재시는 벌이 아니라 <b>이번 회차를 끝까지 채우는 절차</b>입니다. '+
       '이 시험은 첫 응시 점수가 아니라 <b>마지막에 무엇을 알게 됐는지</b>로 셉니다.</p>'+
     '<ol class="rtsteps">'+li+'</ol>'+
@@ -891,6 +912,11 @@ function reviewView(){
     '<div class="rvgrid">'+grid+'</div>'+
     '<div class="btnrow"><button class="ghost" onclick="backToExam()">계속 풀기</button><button class="ok" onclick="submitExam()">제출하고 채점</button></div></div>';
 }
+/* ⚠ **지금은 아무 데서도 이 화면으로 안 온다.** 제출하면 handoff 로 가고,
+   거기서 리포트로 넘어가거나(합격) 재시 알림이 뜬다(재시). 그래도 지우지
+   않고 두는 것은 넘겨주는 길이 막혔을 때 돌아올 자리가 필요해서다.
+   점수는 위와 **같은 자(pt)** 로 적는다 — 여기만 다르게 적으면, 나중에
+   이 화면이 다시 쓰이는 날 두 화면이 다른 점수를 말한다. */
 function resultView(){
   const g=RESULT.g, dx=RESULT.dx, pass=g.pass;
   const weak=(dx.byMisconception||[]).slice(0,5);
@@ -899,7 +925,7 @@ function resultView(){
     ? '<h2>많이 틀린 개념</h2><div class="weak">'+weak.map(m=>'<div class="wk"><span class="wkm">'+esc(m.mis)+'</span><span class="wkc mono">'+m.count+'</span></div>').join('')+'</div>'
     : '<p class="note" style="text-align:center">모든 문항을 맞혔습니다. 훌륭합니다.</p>';
   return '<div class="card">'+
-    '<div class="rsban '+(pass?'pass':'fail')+'"><div class="rss mono">'+g.score+'<span>점</span></div><div class="rsb">'+(pass?'합격':'재시 필요')+'</div></div>'+
+    '<div class="rsban '+(pass?'pass':'fail')+'"><div class="rss mono">'+pt(g.score)+'<span>점</span></div><div class="rsb">'+(pass?'합격':'재시 필요')+'</div></div>'+
     '<div class="rsrow"><div><b class="mono" style="color:var(--o)">'+g.correctCount+'</b><span>맞음</span></div><div><b class="mono" style="color:var(--x)">'+g.wrongCount+'</b><span>틀림</span></div><div><b class="mono">'+g.blankCount+'</b><span>미응답</span></div></div>'+
     '<div id="saveLine" style="text-align:center;margin:6px 0 2px;font-size:12.5px">'+saveLineHTML()+'</div>'+
     weakHTML+
