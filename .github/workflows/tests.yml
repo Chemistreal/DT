@@ -168,6 +168,13 @@ jobs:
       #   통과한 학생의 단원이 종이에서 0% 로 찍혔다 — 둘 다 그럴듯해 보였다.
       - name: 성적표 Word 가 화면과 같은 말을 한다
         run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/docx-report.js
+      # 제출 → 리포트로 데려가는 자리(선생님 요청 2026-08-14). 여기서 재는 것은
+      # «5초 뒤 넘어가나» 가 아니라 **저장이 확인되기 전에는 안 넘어가나** 다.
+      # 앱스크립트는 실행을 한 줄로 세워서 왕복이 5초를 넘을 때가 있고, 그때
+      # 넘어가 버리면 학생은 리포트에서 «이번 회차가 없네?» 를 보고 시험을
+      # 다시 본다. 재시인 학생에게 안내가 뜨는지도 같이 본다.
+      - name: 제출하면 리포트로 데려간다 (저장이 확인된 뒤에)
+        run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/handoff.js
       - name: Run regression suite
         run: NODE_PATH=tests/node_modules node tests/run.js
       - name: Upload failure screenshots
