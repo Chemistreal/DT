@@ -93,6 +93,53 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .weak{display:flex;flex-direction:column;gap:7px;margin:4px 0 2px}
 .wk{display:flex;align-items:center;justify-content:space-between;background:var(--x-bg);border-radius:9px;padding:9px 13px}
 .wk .wkm{font-size:13px;font-weight:600;color:var(--ink)} .wk .wkc{font-size:13px;font-weight:800;color:var(--x)}
+/* ── 넘겨주는 화면 (제출 → 리포트) ─────────────────────────────────
+   제출하고 나서 학생이 «다음에 뭘 눌러야 하나» 를 고민하지 않게, 점수를
+   보여 주는 동안 리포트로 데려간다. 그 잠깐이 그냥 기다림이 아니라
+   **결과가 저장되는 시간**이기도 하다. */
+.hoff{min-height:62vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:26px 20px}
+.hoff .ring{position:relative;width:186px;height:186px}
+.hoff svg{width:100%;height:100%;transform:rotate(-90deg)}
+.hoff .trk{fill:none;stroke:var(--line2);stroke-width:12}
+.hoff .arc{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.22,.9,.28,1),stroke .5s}
+.hoff .arc.pass{stroke:var(--o)} .hoff .arc.fail{stroke:var(--x)}
+.hoff .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.hoff .num{font-size:52px;font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:-.03em;line-height:1}
+.hoff .num i{font-style:normal;font-size:18px;font-weight:700;color:var(--faint);margin-left:2px}
+.hoff .vd{font-size:13.5px;font-weight:800;letter-spacing:.02em}
+.hoff .vd.pass{color:var(--o)} .hoff .vd.fail{color:var(--x)}
+.hoff .oxr{display:flex;gap:22px;margin-top:20px;font-size:12.5px;color:var(--faint)}
+.hoff .oxr b{font-size:17px;display:block;font-family:'JetBrains Mono',monospace}
+.hoff .step{margin-top:22px;font-size:13px;color:var(--sub);min-height:20px}
+.hoff .bar{width:200px;height:4px;border-radius:3px;background:var(--line2);margin-top:11px;overflow:hidden}
+.hoff .bar i{display:block;height:100%;background:var(--teal);width:0;border-radius:3px}
+.hoff .skip{margin-top:16px;background:none;border:0;color:var(--teal);font-size:13px;font-weight:700;padding:6px 10px;text-decoration:underline;text-underline-offset:3px}
+/* 움직임을 줄여 달라는 사람이 있다. 그 뜻은 **덜 흔들리게** 이지
+   «화면을 못 보게» 가 아니다 — 셈은 그대로 하고 스르륵만 끈다. */
+@media (prefers-reduced-motion:reduce){ .hoff .arc{transition:none} .hoff .bar i{transition:none} }
+
+/* ── 재시 알림 ─────────────────────────────────────────────────────
+   여기서 «닫기» 로 끝나면 안 된다. 재시는 **복습한 뒤에** 보는 것이라,
+   나가는 문이 리포트 쪽으로만 나 있어야 한다. */
+.rtdim{position:fixed;inset:0;z-index:9990;background:rgba(16,32,46,.55);display:flex;align-items:center;justify-content:center;padding:16px;animation:rtin .22s ease-out}
+@keyframes rtin{from{opacity:0}to{opacity:1}}
+.rtbox{background:var(--surface);border-radius:18px;max-width:430px;width:100%;max-height:92vh;overflow:auto;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(16,32,46,.28);text-align:left}
+.rthd{display:flex;align-items:center;gap:10px;margin-bottom:3px}
+.rtbadge{background:var(--x-bg);color:var(--x);font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.02em}
+.rtbox h2{margin:10px 0 6px;font-size:17px;color:var(--ink);letter-spacing:-.01em}
+.rtbox h2:before{display:none}
+.rtlede{color:var(--sub);font-size:13px;margin:0 0 14px}
+.rtsteps{list-style:none;padding:0;margin:0 0 6px;counter-reset:rt}
+.rtsteps li{counter-increment:rt;display:flex;gap:11px;padding:9px 0;border-top:1px solid var(--line2)}
+.rtsteps li:first-child{border-top:0}
+.rtsteps li:before{content:counter(rt);flex:none;width:22px;height:22px;border-radius:50%;background:var(--teal-soft);color:var(--teal);font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px;font-family:'JetBrains Mono',monospace}
+/* ⚠ `b` 를 통째로 block 으로 잡으면 **설명문 안의 굵은 글씨까지** 줄이
+   갈린다 — 「이번 회차에서 / 어떤 개념을 틀렸는지 / 가 정리돼 있습니다」
+   처럼 읽힌다. 제목에만 건다. */
+.rtsteps .rtt{display:block;font-size:13.5px;margin-bottom:1px;font-weight:700}
+.rtsteps span{font-size:12.5px;color:var(--sub);line-height:1.5}
+.rtnote{background:var(--brass-soft);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--ink);margin:12px 0 0;line-height:1.55}
+.rtbox .go{width:100%;margin-top:15px}
 .plink{margin-top:16px;padding:14px 15px;background:var(--teal-soft);border-radius:12px}
 .pll{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:8px}.pll .muted{font-weight:400}
 .plurl{font-size:11.5px;color:var(--teal-d);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
@@ -581,8 +628,170 @@ function submitExam(){
   if(blanks>0){ if(!confirm(blanks+'개 문항이 미응답입니다. 오답 처리하고 제출할까요?')) return; }
   const g=ChemEngine.gradeAttempt(A,R.jeongsi.items,R.scoring);
   const dx=ChemEngine.diagnose(g,{});
-  RESULT={g:g,dx:dx}; view='result'; render(); saveResult(g,dx);
+  RESULT={g:g,dx:dx}; view='handoff'; render(); saveResult(g,dx); startHandoff();
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   제출 → **리포트로 데려간다** (선생님 요청 2026-08-14)
+   ----------------------------------------------------------------------
+   *"제출했을 때 이 페이지를 거치지 않고 바로 5초 정도 넘어가는 동적모션
+   느낌의 퍼센트 페이지 잠깐 보여주다가 상세페이지 리포트로 넘어가게"*
+
+   여태는 제출하면 결과 카드가 서고, 학생이 「상세 리포트 보기 →」 를 **스스로
+   눌러야** 했다. 안 누르면 그걸로 끝이다 — 오답 개념도 강의록도 재시도 다
+   그 너머에 있는데.
+
+   ⚠ 다만 그 5초는 **그냥 기다림이 아니다.** 이 화면은 시트로 결과를 보내고
+     (POST) 정말 들어갔는지 다시 읽어서 확인한다(GET). 앱스크립트는 실행을 한
+     줄로 세우므로 이 왕복은 5초를 넘길 때가 있다.
+
+     그래서 **셈은 5초에 끝나도, 넘어가는 것은 저장이 확인된 뒤다.**
+       · 확인됐다 → 넘어간다
+       · 아직 확인 중 → 화면에 그렇게 적고 기다린다(넘어가지 않는다)
+       · 확인 못 했다 → **넘어가지 않는다.** 다시 보내는 단추를 준다
+
+     여기서 5초를 지키자고 그냥 넘어가면, 학생은 리포트에서 «이번 회차가
+     없네?» 를 보고 시험을 다시 본다. 재는 것과 막는 것은 다르다 —
+     이 화면은 **막는 자리**다.
+
+   ⚠ 재시인 학생은 넘어가는 대신 **알림을 띄운다**(아래 retakeModal).
+     복습하고 재시를 봐야 하는데, 5초 만에 지나가면 아무도 안 읽는다.
+   ══════════════════════════════════════════════════════════════════════ */
+var HOFF={t0:0, done:false, timer:null, raf:null, gone:false};
+var HOFF_MS=5000;                      // 셈이 도는 시간(선생님이 말씀하신 «5초»)
+
+function startHandoff(){
+  HOFF={t0:Date.now(), done:false, timer:null, raf:null, gone:false};
+  var g=RESULT.g, pct=Math.max(0,Math.min(100,Number(g.score)||0));
+  var reduce=false;
+  try{ reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(_e){}
+  /* 숫자가 0 에서 점수까지 오른다. 링도 같이 찬다. */
+  var LEN=2*Math.PI*80, RUN=reduce?1:1500;
+  var arc=$('#hoffArc'); if(arc){ arc.style.strokeDasharray=LEN; arc.style.strokeDashoffset=LEN; }
+  setTimeout(function(){ var a=$('#hoffArc'); if(a) a.style.strokeDashoffset=LEN*(1-pct/100); }, 60);
+  /* ⚠ **리포트와 같은 숫자를 보여 준다.** 점수는 문항당 1.6667점이라 대개
+     소수가 나온다(예: 38문항 → 63.3). 여기서 반올림해 «63» 이라 적으면 바로
+     다음 화면인 리포트에는 63.3 이 있다 — 학생은 둘 중 뭐가 맞는지 모른다.
+     채점기가 정한 자릿수(Math.round(raw*10)/10)를 그대로 따른다. */
+  var DEC=(String(g.score).indexOf('.')>=0)?1:0;
+  var fmt=function(v){ return DEC?v.toFixed(1):String(Math.round(v)); };
+  (function tick(){
+    var el=$('#hoffNum'); if(!el) return;                 // 화면이 바뀌었으면 그만둔다
+    var k=Math.min(1,(Date.now()-HOFF.t0)/RUN);
+    var e=1-Math.pow(1-k,3);                              // 끝에서 부드럽게 선다
+    /* 마지막 한 칸은 셈이 아니라 **채점기가 낸 값** 그대로 박는다 —
+       곱셈으로 다가가면 63.29999… 같은 것이 남는다. */
+    el.firstChild.nodeValue=(k>=1)?String(g.score):fmt(pct*e);
+    if(k<1) HOFF.raf=requestAnimationFrame(tick);
+  })();
+  /* 아래 막대는 «언제 넘어가나» 를 말한다. 저장이 늦으면 여기서 멈춘다. */
+  (function bar(){
+    var b=$('#hoffBar'); if(!b) return;
+    var k=Math.min(1,(Date.now()-HOFF.t0)/HOFF_MS);
+    b.style.width=(k*100).toFixed(1)+'%';
+    if(k<1) requestAnimationFrame(bar);
+  })();
+  HOFF.timer=setTimeout(function(){ HOFF.done=true; handoffStep(); }, HOFF_MS);
+  handoffStep();
+}
+/* 셈과 저장 두 가지가 다 끝나야 넘어간다. 둘 중 뭘 기다리는지 화면이 말한다. */
+function handoffStep(){
+  if(view!=='handoff' || HOFF.gone) return;
+  var el=$('#hoffStep'); if(!el) return;
+  if(SAVE_STATE==='fail'){
+    el.innerHTML='<b style="color:var(--x)">결과 저장이 확인되지 않았습니다.</b><br>'
+      +'<span class="muted">지금 넘어가면 이번 회차가 리포트에 없을 수 있습니다.</span><br>'
+      +'<button class="ghost" style="margin-top:9px;padding:8px 14px;font-size:13px" '
+      +'onclick="saveResult(RESULT.g,RESULT.dx)">다시 보내기</button>';
+    return;
+  }
+  if(!HOFF.done){ el.textContent='채점 결과를 정리하는 중…'; return; }
+  if(SAVE_STATE==='saving'){
+    el.innerHTML='결과를 저장하는 중입니다 — <b>저장이 확인되면 넘어갑니다.</b>';
+    return;
+  }
+  el.textContent='상세 리포트로 이동합니다…';
+  handoffGo();
+}
+function handoffGo(){
+  if(HOFF.gone) return;
+  HOFF.gone=true;
+  if(HOFF.raf) cancelAnimationFrame(HOFF.raf);
+  if(HOFF.timer) clearTimeout(HOFF.timer);
+  /* 재시인 학생은 **여기서 멈춘다.** 안내를 읽고 스스로 리포트로 들어간다. */
+  if(!RESULT.g.pass){ showRetakeModal(); return; }
+  location.href=reportLink();
+}
+/* «그냥 지금 보겠다» 는 학생을 붙잡아 두지 않는다. 다만 저장이 확인 안 된
+   상태에서는 이 단추도 안 나온다 — 위 handoffStep 이 그 자리를 대신 쓴다. */
+function handoffSkip(){ HOFF.done=true; handoffStep(); }
+
+function handoffView(){
+  var g=RESULT.g, pass=g.pass, pct=Math.max(0,Math.min(100,Number(g.score)||0));
+  return '<div class="card"><div class="hoff">'+
+    '<div class="ring"><svg viewBox="0 0 186 186" aria-hidden="true">'+
+      '<circle class="trk" cx="93" cy="93" r="80"></circle>'+
+      '<circle id="hoffArc" class="arc '+(pass?'pass':'fail')+'" cx="93" cy="93" r="80"></circle>'+
+    '</svg>'+
+    '<div class="mid"><div class="num mono" id="hoffNum" role="status" aria-live="polite">0<i>점</i></div>'+
+    '<div class="vd '+(pass?'pass':'fail')+'">'+(pass?'합격':'재시 필요')+'</div></div></div>'+
+    '<div class="oxr"><div><b style="color:var(--o)">'+g.correctCount+'</b>맞음</div>'+
+      '<div><b style="color:var(--x)">'+g.wrongCount+'</b>틀림</div>'+
+      '<div><b>'+g.blankCount+'</b>미응답</div></div>'+
+    '<div class="step" id="hoffStep">채점 결과를 정리하는 중…</div>'+
+    '<div class="bar"><i id="hoffBar"></i></div>'+
+    '<button class="skip" onclick="handoffSkip()">바로 리포트 보기 →</button>'+
+  '</div></div>';
+}
+
+/* ── 재시 알림 ────────────────────────────────────────────────────────
+   *"재시인 학생들은 재시 알람을 팝업으로 띄워주고 재시를 응시하는 절차까지
+   상세히 안내를 해줘. 상세페이지에서 복습하고나서 재시 봐야하니까"*
+
+   ⚠ 여기 적는 절차는 **지어내지 않는다.** 실제로 도는 길 그대로다 —
+     report.html 의 retakeCTA() 가 「지금 재시 보기 →」 를
+     `index.html?retake=<학생>&c=<과목>&r=<회차>` 로 걸고, 거기서
+     ChemEngine.buildRetake 가 **틀린 개념으로 새 문항**을 만든다
+     (본 문장은 다시 안 나온다). 통과 기준은 이 회차의 R.scoring.pass 다. */
+function retakeSteps(){
+  var pass=(R.scoring&&R.scoring.pass)||80;
+  return [
+    ['상세 리포트를 연다',
+     '아래 단추를 누르면 바로 열립니다. 이번 회차에서 <b>어떤 개념을 틀렸는지</b>가 정리돼 있습니다.'],
+    ['틀린 개념부터 다시 읽는다',
+     '리포트의 «오답 개념 클리닉» 에 개념마다 강의록이 붙어 있습니다. <b>강의록을 덮고 스스로 떠올려 보는 것</b>까지 해야 재시에서 남습니다.'],
+    ['리포트 안의 «지금 재시 보기 →» 를 누른다',
+     '재시는 <b>따로 신청하지 않습니다.</b> 복습을 마친 뒤 그 단추를 누르면 바로 시작됩니다.'],
+    ['재시를 본다',
+     '틀린 개념 위주로 <b>새 문항</b>이 만들어집니다 — 방금 본 문장은 다시 나오지 않습니다. '+pass+'점 이상이면 통과입니다.']
+  ];
+}
+function showRetakeModal(){
+  if($('#rtdim')) return;
+  var g=RESULT.g, pass=(R.scoring&&R.scoring.pass)||80;
+  /* 80 - 36.7 은 자바스크립트에서 43.30000000000001 이다. 학생에게 그대로
+     보이면 «이게 뭐지» 가 된다. 점수와 같은 자릿수로 자른다. */
+  var need=Math.round(Math.max(0,pass-(Number(g.score)||0))*10)/10;
+  var li=retakeSteps().map(function(x){ return '<li><div><b class="rtt">'+x[0]+'</b><span>'+x[1]+'</span></div></li>'; }).join('');
+  var d=document.createElement('div');
+  d.id='rtdim'; d.className='rtdim';
+  d.setAttribute('role','dialog'); d.setAttribute('aria-modal','true');
+  d.setAttribute('aria-labelledby','rtTitle');
+  d.innerHTML='<div class="rtbox">'+
+    '<div class="rthd"><span class="rtbadge">재시 대상</span></div>'+
+    '<h2 id="rtTitle">'+g.score+'점 — '+pass+'점까지 '+need+'점 남았습니다</h2>'+
+    '<p class="rtlede">재시는 벌이 아니라 <b>이번 회차를 끝까지 채우는 절차</b>입니다. '+
+      '이 시험은 첫 응시 점수가 아니라 <b>마지막에 무엇을 알게 됐는지</b>로 셉니다.</p>'+
+    '<ol class="rtsteps">'+li+'</ol>'+
+    '<p class="rtnote"><b>복습을 먼저 하세요.</b> 리포트를 안 보고 바로 재시를 보면 같은 개념에서 또 걸립니다. '+
+      '재시 문항은 <b>틀린 개념에서 새로 만들어집니다.</b></p>'+
+    '<button class="go" onclick="goReportFromRetake()">리포트에서 복습 시작 →</button>'+
+  '</div>';
+  document.body.appendChild(d);
+  var b=d.querySelector('.go'); if(b) b.focus();
+  /* 바깥을 눌러 닫으면 «알림» 이 아니라 그냥 사라지는 것이 된다. 안 닫는다. */
+}
+function goReportFromRetake(){ location.href=reportLink(); }
 async function saveResult(g,dx){
   if(!SAVE_URL){ SAVE_STATE=null; updateSaveLine(); return; }
   SAVE_STATE='saving'; SERVER_LINK=null; updateSaveLine();
@@ -612,7 +821,10 @@ async function saveResult(g,dx){
   }catch(e){ SAVE_STATE='fail'; }
   updateSaveLine();
 }
-function updateSaveLine(){ const el=$('#saveLine'); if(el) el.innerHTML=saveLineHTML(); }
+function updateSaveLine(){ const el=$('#saveLine'); if(el) el.innerHTML=saveLineHTML();
+  /* 저장 상태가 바뀌는 곳은 여기 하나다. 넘겨주는 화면도 그것을 보고 움직인다
+     — 따로 물어보게 두면 두 자가 다른 것을 알고 있게 된다. */
+  if(view==='handoff') handoffStep(); }
 function saveLineHTML(){
   if(SAVE_STATE==='saving') return '<span class="muted">결과 저장·확인 중...</span>';
   if(SAVE_STATE==='ok') return '<span style="color:#1B8A4C;font-weight:600">결과가 저장되었습니다 · 리포트 확인 가능</span>';
@@ -628,6 +840,7 @@ function render(){
   else if(view==='id'){ h=idView(); }
   else if(view==='exam'){ h=examView(); }
   else if(view==='review'){ h=reviewView(); }
+  else if(view==='handoff'){ h=handoffView(); }
   else if(view==='result'){ h=resultView(); }
   $('#app').innerHTML=h;
 }
