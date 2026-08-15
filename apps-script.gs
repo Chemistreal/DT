@@ -189,27 +189,50 @@ function untagMistaggedJeongsi() {
   Logger.log('untagMistaggedJeongsi: ' + fixed.length + '건 TEST 해제 + 문자발송 갱신\n' + fixed.join('\n'));
 }
 
-/* 이미 갈라져 저장된 같은 학생(이름 같고 학교명이 포함관계) 1회성 통합.
-   canonicalKey_ 가 도입되기 전에 서로 다른 키로 흩어진 기록을 하나로 모은다.
-   보수적으로: 이름 그룹 안에서 '가장 짧은 학교(코어)'가 나머지 학교 전부의 부분문자열일 때만 통합
-   (동명이인이 서로 무관한 학교면 코어 포함관계가 성립하지 않아 건드리지 않는다).
-   통합 후에도 findKeyByPubId_ 가 통합 전 학교명 기준 코드까지 해석하므로 기존 발송 링크는 그대로 열린다. */
-function mergeSplitStudents() {
-  var sh = sheet_(); var last = sh.getLastRow(); if (last < 2) { Logger.log('데이터 없음'); return; }
+/* ── 「같은 사람으로 처리해 줘」 (선생님 2026-08-15) ────────────────────
+   먼저 사실부터. «대청중» 과 «대청중학교» 는 **이미 같은 열쇠다.** normSchool_
+   이 중학교/고등학교/초등학교 꼬리를 잘라 내므로 keyOf_ 단계에서 합쳐진다.
+   (앞서 이 짝을 갈라진 예로 적었던 것은 틀렸다. 자에게 물어보니 아니었다.)
+
+   실제로 갈라지는 것은 그 꼬리가 아니라 **꼬리가 아닌 차이**다:
+     «대청중» ↔ «서울대청중»(지역명 접두) · «대청»(종류 없음) · «대청중2»
+   이 갈래는 schoolAkin_ 이 알아보고 canonicalKey_ 가 **저장할 때** 연결한다.
+   그러니 남는 것은 **연결이 생기기 전에 이미 갈라져 저장된 옛 기록**뿐이고,
+   그건 이 함수가 합쳐 왔다 — 다만 스크립트 편집기에서만 부를 수 있었다.
+   선생님 화면에는 그 문이 없었다. 아래 mergeScan_ 이 그 문을 낸다.
+
+   합치는 규칙은 보수적이다: 이름 그룹 안에서 '가장 짧은 학교(코어)'가 나머지
+   학교 전부와 schoolAkin_ 일 때만 묶는다. 동명이인이 서로 무관한 학교면
+   포함관계가 성립하지 않아 건드리지 않는다.
+   통합 후에도 findKeyByPubId_ 가 통합 전 학교명 기준 코드까지 해석하므로
+   이미 보낸 리포트 주소는 그대로 열린다. */
+
+/* 무엇을 합칠지 **세기만 한다.** 아무것도 안 쓴다.
+   { groups:[{name, canon, from:[{key,rows}]}], schoolFix:[{from,to,rows}] } */
+function mergeScan_() {
+  var sh = sheet_(); var last = sh.getLastRow();
+  if (last < 2) return { groups: [], schoolFix: [] };
   var data = sh.getRange(1, 1, last, 19).getValues();
-  var idx = {}, firstAt = {};
+  var idx = {}, firstAt = {}, rowsOf = {}, fix = {};
   for (var i = 1; i < data.length; i++) {
+    /* 표기 고치기는 학생키와 무관하다 — keyOf_ 가 이미 normSchool_ 을 거치므로
+       G 를 정규형으로 바꿔도 열쇠는 한 글자도 안 변한다(test_gs 11.6 이 잰다). */
+    var raw = String(data[i][6] || ''), ns = normSchool_(raw);
+    if (raw && raw !== ns) {
+      var fk = raw + ' ' + ns;
+      (fix[fk] = fix[fk] || { from: raw, to: ns, rows: 0 }).rows++;
+    }
     var k = String(data[i][5] || '').trim(); if (!k) continue;
     var e = idx[k] || (idx[k] = { name: cleanName_(String(data[i][0] || '')), schools: [] });
     if (!e.name) e.name = cleanName_(String(data[i][0] || ''));
-    var sc = normSchool_(String(data[i][6] || '')); if (sc && e.schools.indexOf(sc) < 0) e.schools.push(sc);
+    if (ns && e.schools.indexOf(ns) < 0) e.schools.push(ns);
+    rowsOf[k] = (rowsOf[k] || 0) + 1;
     var t = (data[i][2] && data[i][2].getTime) ? data[i][2].getTime() : 0;
     if (firstAt[k] == null || t < firstAt[k]) firstAt[k] = t;
   }
   var byName = {};
   for (var k in idx) { var nm = idx[k].name; if (nm) (byName[nm] = byName[nm] || []).push(k); }
-  var remap = {};                                            // 옛키 -> 정규키
-  var plan = [];
+  var groups = [];
   for (var nm in byName) {
     var keys = byName[nm]; if (keys.length < 2) continue;
     var schools = []; keys.forEach(function (kk) { idx[kk].schools.forEach(function (s) { if (schools.indexOf(s) < 0) schools.push(s); }); });
@@ -219,19 +242,50 @@ function mergeSplitStudents() {
     if (cluster.length < 2) continue;
     var canon = cluster.filter(function (kk) { return kk === core + '-' + nm; })[0]
       || cluster.slice().sort(function (a, b) { return (firstAt[a] || 0) - (firstAt[b] || 0); })[0];
-    cluster.forEach(function (kk) { if (kk !== canon) { remap[kk] = canon; plan.push(kk + '  =>  ' + canon); } });
+    var from = cluster.filter(function (kk) { return kk !== canon; })
+      .map(function (kk) { return { key: kk, rows: rowsOf[kk] || 0 }; });
+    if (from.length) groups.push({ name: nm, canon: canon, canonRows: rowsOf[canon] || 0, from: from });
   }
-  if (!plan.length) { Logger.log('통합할 분리 학생 없음'); return; }
-  var link = {};
+  var schoolFix = []; for (var f in fix) schoolFix.push(fix[f]);
+  schoolFix.sort(function (a, b) { return b.rows - a.rows; });
+  return { groups: groups, schoolFix: schoolFix };
+}
+
+/* 잰 것을 그대로 쓴다. 세는 자와 쓰는 자를 갈라 둔 이유는 하나다 —
+   화면이 «무엇을 합칠지» 먼저 보여 준 뒤에 손이 가야 하기 때문이다.
+   학생키(F)와 리포트링크(B)를 다시 쓰는 일이라 조용히 하면 안 된다. */
+function applyMergeScan_() {
+  var scan = mergeScan_();
+  var sh = sheet_(); var last = sh.getLastRow();
+  if (last < 2) return { ok: true, merged: 0, keys: 0, schoolFixed: 0, log: [] };
+  var remap = {}, log = [];
+  scan.groups.forEach(function (g) {
+    g.from.forEach(function (f) { remap[f.key] = g.canon; log.push(f.key + '  =>  ' + g.canon); });
+  });
+  var data = sh.getRange(1, 1, last, 19).getValues();
+  var link = {}, keys = 0, fixed = 0;
   for (var i = 1; i < data.length; i++) {
+    var raw = String(data[i][6] || ''), ns = normSchool_(raw);
+    if (raw && raw !== ns) { sh.getRange(i + 1, 7).setValue(ns); fixed++; }   // G 학교 표기 통일
     var k = String(data[i][5] || '').trim(); var c = remap[k]; if (!c) continue;
     sh.getRange(i + 1, 6).setValue(c);                       // F 학생키 = 정규키
     if (link[c] == null) link[c] = linkOf_(c);
     sh.getRange(i + 1, 2).setValue(link[c]);                 // B 리포트링크 = 정규 코드
+    keys++;
   }
-  SpreadsheetApp.flush();
-  try { buildSendSheet(); } catch (e) {}
-  Logger.log('mergeSplitStudents: ' + plan.length + '개 키 통합 + 문자발송 갱신\n' + plan.join('\n'));
+  if (keys || fixed) {
+    SpreadsheetApp.flush();
+    try { buildSendSheet(); } catch (e) {}
+  }
+  return { ok: true, merged: scan.groups.length, keys: keys, schoolFixed: fixed, log: log };
+}
+
+/* 편집기에서 부르던 이름은 그대로 둔다 — 선생님 손에 익은 문이다. */
+function mergeSplitStudents() {
+  var r = applyMergeScan_();
+  if (!r.keys && !r.schoolFixed) { Logger.log('합칠 것도 고칠 표기도 없음'); return; }
+  Logger.log('mergeSplitStudents: 학생 ' + r.merged + '명 통합(행 ' + r.keys + ') · 학교 표기 '
+    + r.schoolFixed + '칸 정리 + 문자발송 갱신\n' + r.log.join('\n'));
 }
 
 /* 결과 탭 B열(리포트링크)을 전부 현재(불투명 코드) 형식으로 다시 쓴다.
@@ -276,6 +330,12 @@ function doPost(e) {
     if (d.action === 'marksent') {
       if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' });
       return json_({ ok: true, log: markSent_(d) });
+    }
+    /* 갈라진 같은 학생을 하나로. 무엇을 합칠지는 화면이 mergeplan 으로 먼저
+       보여 준 뒤라야 여기까지 온다 — 학생키와 이미 보낸 리포트 주소가 걸린 일이다. */
+    if (d.action === 'merge') {
+      if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' });
+      return json_(applyMergeScan_());
     }
     /* 미루기도 같은 길이다 — 셸은 쓰지 않고 DT 의 pending.html 이 대신 부른다. */
     if (d.action === 'snooze') {
@@ -351,6 +411,10 @@ function readOne_(action, e, token) {
     return { ok: true, sent: sentLog_(Number(e.parameter.days || 21) || 21) }; }
   if (action === 'snoozelog') { if (!adminOk_(token)) return deny;
     return { ok: true, snoozed: snoozeList_() }; }
+  /* 갈라져 저장된 같은 학생을 **세기만** 한다. 여기서는 아무것도 안 쓴다 —
+     쓰는 문은 doPost 의 'merge' 다(읽는 것은 조용해도 되고 쓰는 것은 안 된다). */
+  if (action === 'mergeplan') { if (!adminOk_(token)) return deny;
+    return { ok: true, plan: mergeScan_() }; }
   if (action === 'views') { if (!adminOk_(token)) return deny;
     return { ok: true, views: viewsList_() }; }
   /* 수입은 명단·점수와 다른 종류다. 이 창구만은 **진짜 토큰**을 받는다

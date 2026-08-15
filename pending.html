@@ -85,6 +85,21 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .whyelse b{color:#7a3f0c}
 .whykey{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:rgba(0,0,0,.05);
   border-radius:5px;padding:1px 5px}
+/* 갈라져 저장된 같은 학생을 합치는 자리. 「무엇을 합칠지」를 먼저 다 적고
+   그 아래에 손을 둔다 — 학생키와 이미 보낸 리포트 주소가 걸린 일이다. */
+.mgcard{background:#FBF3E9;border:1px solid #E8D5BC;border-radius:11px;padding:12px;margin-bottom:8px}
+.mgcard h4{margin:0 0 6px;font-size:13.5px;color:#7a3f0c}
+.mgcard p{margin:0 0 8px;font-size:12px;line-height:1.6;color:#7a5a3c}
+.mggrp{background:#fff;border:1px solid #EADBC6;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12.5px}
+.mgnm{font-weight:800;color:var(--char)}
+.mgarrow{color:#8a4b12;font-weight:700;margin:0 4px}
+.mgk{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:rgba(0,0,0,.05);
+  border-radius:5px;padding:1px 5px;word-break:break-all}
+.mgrows{color:var(--muted);font-size:11.5px;margin-left:4px}
+.mggo{width:100%;min-height:40px;border:1px solid #C8781E;background:#C8781E;color:#fff;
+  border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer}
+.mggo[disabled]{opacity:.6;cursor:default}
+.mgquiet{font-size:12px;color:var(--muted);padding:2px 2px 8px}
 .copybtn.abc{border-left-color:var(--gold)}
 .copybtn.pass{border-left-width:3px;border-left-color:var(--green);width:100%;text-align:center}
 .row.pass{border-left-color:var(--green)}
@@ -350,6 +365,58 @@ function whyHTML(p){
   if(!bits.length) return '';
   return '<div class="rwhy">'+bits.join('')+'</div>';
 }
+/* ── 「같은 사람으로 처리해 줘」 ─────────────────────────────────────
+   먼저 사실부터. «대청중» 과 «대청중학교» 는 이미 같은 열쇠다 — 창구의
+   normSchool_ 이 «중학교» 꼬리를 잘라 낸다. 갈라지는 것은 그 꼬리가 아니라
+   «서울대청중»(지역명 접두)·«대청»(종류 없음) 같은 차이이고, 그것도 지금은
+   저장할 때 canonicalKey_ 가 붙여 준다. 남는 것은 그 연결이 생기기 전에
+   이미 갈라져 저장된 옛 기록뿐이다.
+
+   그걸 합치는 함수는 있었지만 **스크립트 편집기에서만** 부를 수 있었다.
+   걸지 않은 자는 없는 자와 같다 — 선생님 화면에 문을 낸다.
+
+   ⚠ 합치기는 학생키와 리포트 주소를 다시 쓴다. 그래서 무엇을 합칠지 **먼저
+     전부 적고** 그 아래에 버튼을 둔다. 옛 주소는 창구가 계속 열어 준다. */
+function mergeHTML(M){
+  var h='<div class="sec-h">같은 사람 합치기</div>';
+  if(M===undefined) return h+'<div class="mgquiet">갈라진 학생이 있는지 <b>지금 물어보지 못했습니다.</b> '
+    +'없다는 뜻이 아닙니다 — <b>새로고침</b> 해 주세요.</div>';
+  var g=(M&&M.groups)||[], f=(M&&M.schoolFix)||[];
+  if(!g.length && !f.length)
+    return h+'<div class="mgquiet">갈라져 저장된 학생은 없습니다. 학교 표기도 모두 한 가지입니다.</div>';
+  var out='<div class="mgcard"><h4>이 학생들을 한 사람으로 봅니다</h4>';
+  out+='<p>이름이 같고 학교 표기만 다른 기록입니다. 합치면 리포트가 한 사람으로 모이고, '
+    +'이미 보낸 리포트 주소도 그대로 열립니다. '
+    +'<b>동명이인이면 누르지 마세요</b> — 서로 무관한 학교면 여기 올라오지 않지만, 마지막 판단은 선생님 몫입니다.</p>';
+  g.forEach(function(x){
+    out+='<div class="mggrp"><span class="mgnm">'+esc(x.name)+'</span> '
+      + x.from.map(function(o){ return '<span class="mgk">'+esc(o.key)+'</span><span class="mgrows">'+o.rows+'건</span>'; }).join(' + ')
+      + '<span class="mgarrow">→</span><span class="mgk">'+esc(x.canon)+'</span>'
+      + '<span class="mgrows">'+x.canonRows+'건</span></div>';
+  });
+  if(f.length){
+    out+='<div class="mggrp"><b>학교 표기 정리</b> — '
+      + f.map(function(o){ return '<span class="mgk">'+esc(o.from)+'</span><span class="mgarrow">→</span>'
+          +'<span class="mgk">'+esc(o.to)+'</span><span class="mgrows">'+o.rows+'칸</span>'; }).join(' · ')
+      + '<div class="mgrows" style="margin:4px 0 0">표기만 바뀝니다. 학생키는 한 글자도 안 바뀝니다.</div></div>';
+  }
+  out+='<button class="mggo" id="mgGo" onclick="doMerge(this)">'
+    + (g.length? '학생 '+g.length+'명 합치기' : '학교 표기 정리')
+    + (f.length&&g.length? ' · 표기도 정리' : '') + '</button></div>';
+  return h+out;
+}
+/* 쓰기는 조용히 하지 않는다. no-cors 라 응답을 못 읽으므로, 던진 뒤 목록을
+   **다시 읽어서** 결과를 화면으로 보여 준다(적어 두는 것과 막는 것은 다르다). */
+function doMerge(btn){
+  if(btn.disabled) return;
+  btn.disabled=true; btn.textContent='합치는 중…';
+  fetch(STATUS_URL, { method:'POST', mode:'no-cors',
+    headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action:'merge', token:admTok() }) })
+  .catch(function(){})
+  .then(function(){ return new Promise(function(r){ setTimeout(r,1500); }); })
+  .then(function(){ load(); });
+}
 function hkey(p){ return [p.course,p.round,p.name,p.nextNeeded].join('|'); }
 function hiddenMap(){ try{ return JSON.parse(localStorage.getItem(HIDE_LS)||'{}')||{}; }catch(e){ return {}; } }
 function saveHidden(m){ try{ localStorage.setItem(HIDE_LS, JSON.stringify(m)); }catch(e){} }
@@ -422,10 +489,14 @@ function passRowHTML(p){
 }
 
 var _LASTP=null,_LASTABS=null,_LASTFAIL=false,_LASTPASS=null;
-function render(P, ABS, absFail, PASS){
+/* undefined = 아직 못 물어봤다. null/객체 = 물어봤다. 둘은 다른 말이다. */
+var _LASTMERGE=undefined;
+function render(P, ABS, absFail, PASS, MERGE){
   _LASTP=P; _LASTABS=ABS; _LASTFAIL=absFail;
   if(PASS!==undefined) _LASTPASS=PASS;
   PASS=_LASTPASS;
+  if(MERGE!==undefined) _LASTMERGE=MERGE;
+  MERGE=_LASTMERGE;
   var a0=P.active||[], s0=P.stale||[];
   var hid=pruneHidden(a0.concat(s0));
   var a=[], s=[], hidden=[];
@@ -462,6 +533,10 @@ function render(P, ABS, absFail, PASS){
       +'<button class="btn" style="width:100%;margin-top:2px" onclick="unhideAll()">모두 복원</button>'
       +'</details></div>';
   }
+
+  /* 「왜 재시지?」가 나오는 자리가 바로 위다. 답이 «학교 표기가 갈렸다» 일 때
+     고칠 문을 그 자리 옆에 둔다 — 편집기까지 가지 않게. */
+  h+=mergeHTML(MERGE);
 
   /* 통과한 학생. 독촉 목록 아래에 둔다 — 급한 것부터 보고, 그다음에 챙긴다. */
   h+='<div class="sec-h">통과 <span class="tag" style="background:var(--green)">'+pass.length+'</span>'
@@ -501,6 +576,14 @@ function demoAbs(){
     {label:'화학2 일6-10', course:'ch2', round:7, total:6, present:6, absent:[]},
     {label:'일반화학 토10-2', course:'gc', round:3, total:5, present:3, absent:['한지우','박서준']}
   ]};
+}
+
+/* 갈라진 예는 «중학교» 꼬리가 아니라 지역명 접두다 — 꼬리는 창구가 이미 자른다. */
+function demoMerge(){
+  return { groups:[
+    { name:'이시현', canon:'대청중-이시현', canonRows:3,
+      from:[{key:'서울대청중-이시현', rows:1}] }
+  ], schoolFix:[ { from:'대청중학교', to:'대청중', rows:2 } ] };
 }
 
 function demoPass(){
@@ -573,19 +656,22 @@ document.addEventListener('click', function(e){
   if(e.target && e.target.id === 'pendRetry') load();
 });
 function load(){
-  if(Q.has('demo')){ render(demo(), demoAbs(), false, demoPass()); return; }
+  if(Q.has('demo')){ render(demo(), demoAbs(), false, demoPass(), demoMerge()); return; }
   document.getElementById('app').innerHTML='<div class="loading">불러오는 중…</div>';
   var tok=encodeURIComponent(admTok());
   Promise.all([
     fetchJSON_(STATUS_URL+'?action=absentees&token='+tok+'&ov='+encodeURIComponent(JSON.stringify(absOv()))+'&t='+Date.now()),
     fetchJSON_(STATUS_URL+'?action=pending&token='+tok+'&t='+Date.now()),
     /* 통과 목록은 못 받아도 나머지를 막지 않는다 — 급한 것은 독촉 쪽이다. */
-    fetchJSON_(STATUS_URL+'?action=passed&token='+tok+'&days=14&t='+Date.now())
+    fetchJSON_(STATUS_URL+'?action=passed&token='+tok+'&days=14&t='+Date.now()),
+    /* 합칠 것이 있는지도 같이 묻는다. 못 받으면 «없다» 가 아니라 «못 물어봤다». */
+    fetchJSON_(STATUS_URL+'?action=mergeplan&token='+tok+'&t='+Date.now())
   ]).then(function(res){
-    var A=res[0], P=res[1], S=res[2];
+    var A=res[0], P=res[1], S=res[2], M=res[3];
     if((A&&A.error==='auth')||(P&&P.error==='auth')){ admReset(); document.getElementById('app').innerHTML='<div class="err">관리자 코드가 올바르지 않습니다. 페이지를 새로고침한 뒤 다시 입력해 주세요.</div>'; return; }
     if(!P||!P.ok||!P.pending){ document.getElementById('app').innerHTML=failBox(); return; }
-    render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null, !(A&&A.ok), (S&&S.ok&&S.passed)?S.passed:null);
+    render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null, !(A&&A.ok), (S&&S.ok&&S.passed)?S.passed:null,
+           (M&&M.ok&&M.plan)?M.plan:undefined);
   }).catch(function(e){
     document.getElementById('app').innerHTML=failBox(String(e));
   });

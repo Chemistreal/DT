@@ -242,6 +242,58 @@ async function assertNoOverflow(page, label) {
     assert(await page.$$eval('.row', r => r.length) === before, '복원 후 행 수 불일치');
   });
 
+  /* ── 5-2. 「같은 사람으로 처리해 줘」 ────────────────────────────────
+     합치는 함수는 오래전부터 있었지만 **스크립트 편집기에서만** 부를 수 있었다.
+     걸지 않은 자는 없는 자와 같다 — 화면에 문이 났는지, 그 문이 무엇을 합칠지
+     **먼저 보여 주는지**, 그리고 눌렀을 때 정말 창구를 부르는지 본다. */
+  await test('pending · 갈라진 같은 학생을 화면에서 합친다', async page => {
+    await page.goto(BASE + 'pending.html?demo'); await page.waitForTimeout(500);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(/같은 사람 합치기/.test(txt), '합치는 자리가 없다');
+    /* 무엇을 합칠지 눌러 보기 전에 다 적혀 있어야 한다 — 학생키와 이미 보낸
+       리포트 주소가 걸린 일이라, 누른 뒤에 알게 되면 늦다. */
+    assert(/서울대청중-이시현/.test(txt) && /대청중-이시현/.test(txt), '무엇을 합칠지 안 적었다');
+    assert(/대청중학교/.test(txt), '표기 정리 대상을 안 적었다');
+    assert(/동명이인/.test(txt), '동명이인 주의를 안 적었다');
+    const btn = await page.$('#mgGo');
+    assert(btn, '합치는 버튼이 없다');
+    const box = await btn.boundingBox();
+    assert(box.height >= 32, '버튼이 손가락보다 작다: ' + box.height);
+
+    /* 눌렀을 때 정말 창구를 부르는가. 부른 자와 도는 자는 다르다. */
+    let posted = null;
+    await page.route('**/macros/s/**', route => {
+      const r = route.request();
+      if (r.method() === 'POST') { try { posted = JSON.parse(r.postData() || '{}'); } catch (e) { posted = {}; } }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+    });
+    await page.click('#mgGo'); await page.waitForTimeout(600);
+    assert(posted && posted.action === 'merge', '눌러도 합치라고 안 한다: ' + JSON.stringify(posted));
+    await assertNoOverflow(page, 'pending-merge');
+  });
+
+  /* 합칠 것이 없을 때 «없다» 고 말하고, 못 물어봤을 때는 «없다» 고 하지 않는다.
+     이 둘을 같은 말로 적으면 화면이 거짓말을 한다. */
+  await test('pending · 못 물어본 것과 없는 것을 다르게 말한다', async page => {
+    await page.route('**/macros/s/**', route => {
+      const u = route.request().url();
+      const cb = new URL(u).searchParams.get('callback') || '';
+      if (u.includes('action=mergeplan')) return route.abort();      // 이것만 못 물어본다
+      let body = { ok: true, pending: { active: [], stale: [], activeDays: 14, generatedAt: 'T' } };
+      if (u.includes('action=absentees')) body = { ok: true, absentees: { classes: [], generatedAt: 'T' } };
+      if (u.includes('action=passed')) body = { ok: true, passed: { passed: [], generatedAt: 'T' } };
+      const j = JSON.stringify(body);
+      return route.fulfill({ status: 200,
+        contentType: cb ? 'application/javascript' : 'application/json',
+        body: cb ? cb + '(' + j + ');' : j });
+    });
+    await page.goto(BASE + 'pending.html'); await page.waitForTimeout(5000);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(/같은 사람 합치기/.test(txt), '합치는 자리가 없다');
+    assert(/물어보지 못했습니다/.test(txt), '못 물어봤다고 안 한다');
+    assert(!/갈라져 저장된 학생은 없습니다/.test(txt), '못 물어봤는데 «없다» 고 한다');
+  }, { adminGate: true });
+
   /* ── 6. 문자 템플릿: 탭 구성 + 복사 = 미리보기 일치 + 미입력 경고 ── */
   await test('letters · 탭/복사/자리표시', async page => {
     await page.goto(BASE + 'letters.html'); await page.waitForTimeout(400);
