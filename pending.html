@@ -74,6 +74,10 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .abx-btns .copybtn{width:auto;margin-top:0;border-left-width:3px}
 .copybtn.a1{border-left-color:#3b82f6}
 .copybtn.a2{border-left-color:#8b5cf6}
+/* 최종 안내는 재시 쪽 3단계(.s3)와 **같은 붉은 띠**다. 두 흐름에서 같은
+   자리에 있는 단추가 다른 색이면, 선생님이 색으로 «몇 번째인가» 를 못
+   읽는다. */
+.copybtn.a3{border-left-color:#ef4444}
 .copybtn.abc{border-left-color:var(--gold)}
 .copybtn.pass{border-left-width:3px;border-left-color:var(--green);width:100%;text-align:center}
 .row.pass{border-left-color:var(--green)}
@@ -247,6 +251,27 @@ function absentMsg(d, stage){
       +'응시하면 결과와 취약 개념이 개인 리포트에 바로 반영됩니다. 누적 시험이라 한 주를 건너뛰면 다음 회차가 그만큼 버거워지니 꼭 챙겨 주세요. 감사합니다.\n\n조준모 드림';
   }
   var head='[다원교육 영재관 · 화학] '+justName(d.name)+' 학생';
+  /* ── 3단계 · 최종 안내 (선생님 요청 2026-08-15) ────────────────────
+     여태 미응시는 두 단계뿐이었다 — 1차 안내와 리마인드. 재시 쪽에는 이미
+     세 단계가 있었는데(월 안내 · 수 리마인드 · 최종 안내) 미응시만 둘이라,
+     두 번 보내고 나면 더 보낼 말이 없었다.
+
+     ⚠ 세 번째 말은 **더 세게 하는 것이 아니다.** 같은 말을 세 번 하면
+       읽는 쪽은 그냥 닫는다. 여기서 달라지는 것은 세기가 아니라 **까닭**이다:
+       1차는 «이번 주 시험입니다», 2차는 «아직 안 봤습니다», 3차는 **«이 회차를
+       비우면 다음 회차가 그만큼 버거워집니다»** — 누적 시험이라 그 말이
+       위협이 아니라 사실이다.
+     ⚠ 재시 3단계와 **같은 뼈대**로 적는다(마지막으로 안내 → 왜 지금인가 →
+       링크 → 미리 해 두면 수월하다). 두 흐름이 다른 목소리로 말하면 같은
+       학부모가 두 사람에게 받는 것처럼 읽힌다. */
+  if(stage==='3'){
+    return head+' 시험 최종 안내\n\n'
+      +'안녕하세요, 화학 조준모입니다.\n\n'
+      +'마지막으로 안내드립니다. '+course+' '+d.round+'회 시험이 아직 응시 전입니다. 저희 반 시험은 누적이라 한 회차를 비우면 그 범위가 다음 회차에 그대로 얹혀 옵니다. 다음 수업 전까지는 꼭 마치고 오면 좋겠습니다.\n\n'
+      +'아래 링크에서 지금 바로 응시할 수 있습니다. 60문항 OX으로 길지 않습니다.\n\n'
+      +link+'\n\n'
+      +'응시하면 취약 개념이 '+justName(d.name)+' 학생 리포트에 바로 반영되어, 다음 수업을 그만큼 편하게 따라갑니다. 감사합니다.\n\n조준모 드림';
+  }
   if(stage==='2'){
     return head+' 시험 리마인드\n\n'
       +'안녕하세요, 화학 조준모입니다.\n\n'
@@ -281,6 +306,7 @@ function absentClassHTML(c){
       +'<div class="copygrp abx-btns" data-kind="exam" data-name="'+escAttr(nm)+'" data-course="'+escAttr(c.course)+'" data-round="'+escAttr(c.round)+'" data-link="'+escAttr(el)+'">'
       +'<button class="copybtn a1" data-stage="1" data-orig="1차 안내" onclick="copyShare(this)">1차 안내</button>'
       +'<button class="copybtn a2" data-stage="2" data-orig="리마인드" onclick="copyShare(this)">리마인드</button>'
+      +'<button class="copybtn a3" data-stage="3" data-orig="최종 안내" onclick="copyShare(this)">최종 안내</button>'
       +'</div></div>';
   }).join('');
   return '<div class="abx-cls">'+head+bc+stus+'</div>';
