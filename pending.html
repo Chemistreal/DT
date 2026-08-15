@@ -78,6 +78,13 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
    자리에 있는 단추가 다른 색이면, 선생님이 색으로 «몇 번째인가» 를 못
    읽는다. */
 .copybtn.a3{border-left-color:#ef4444}
+/* 왜 이 사람이 여기 있는지. 눈에 띄되 이름보다 크지 않게 — 본체는 이름이다. */
+.rwhy{margin-top:4px;font-size:12px;line-height:1.55;display:flex;flex-direction:column;gap:3px}
+.whyseen{color:#61707F}
+.whyelse{color:#8a4b12;background:#FBF3E9;border-radius:7px;padding:5px 9px}
+.whyelse b{color:#7a3f0c}
+.whykey{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:rgba(0,0,0,.05);
+  border-radius:5px;padding:1px 5px}
 .copybtn.abc{border-left-color:var(--gold)}
 .copybtn.pass{border-left-width:3px;border-left-color:var(--green);width:100%;text-align:center}
 .row.pass{border-left-color:var(--green)}
@@ -314,6 +321,35 @@ function absentClassHTML(c){
 
 /* ===== 안내 완료 학생 숨김 (이 브라우저·이 페이지에서만 적용, 서버 데이터 불변) ===== */
 var HIDE_LS='dt_pending_hide_v1';
+/* ── 「자기는 통과했다는데 왜 재시죠?」 (선생님 물음 2026-08-15) ────────
+   이 목록은 (학생키 + 과목 + 회차) 로 묶어서 통과가 하나도 없으면 재시로
+   센다. 그래서 **통과 기록이 다른 열쇠에 붙어 있으면** 여기에 그대로 남는다.
+   열쇠는 «학교-이름» 이라 학교 표기가 갈리면 두 사람이 된다.
+
+   여태 화면은 이름과 점수만 보여 줬다. 선생님은 «왜 재시지?» 를 알 길이
+   없어서 시트를 손으로 뒤져야 했다. 이제 창구가 같이 보내 주는 것을 적는다:
+
+     · 이 묶음에 무엇이 있었나(seen) — «정시 73.30» 뿐이면 재시 기록이 아예
+       없다는 뜻이다. 그것만 알아도 다음에 볼 곳이 정해진다
+     · 같은 이름이 **다른 열쇠**로 이 회차를 통과했나(alsoPassed) — 있으면
+       학교 표기가 갈려 두 사람으로 저장된 것일 수 있다
+
+   ⚠ 자동으로 빼지 않는다. 정말 동명이인일 수 있다 — 그건 **사람이 봐야
+     한다.** 자는 짚어 주는 데까지다. 틀리게 빼면 재시가 조용히 사라진다. */
+function whyHTML(p){
+  var bits=[];
+  if(p.seen && p.seen.length)
+    bits.push('<span class="whyseen">기록 '+esc(p.seen.join(' · '))+'</span>');
+  if(p.alsoPassed && p.alsoPassed.length){
+    var a=p.alsoPassed.map(function(x){
+      return esc(x.attempt)+' '+esc(x.score)+'점 <span class="whykey">'+esc(x.studentKey)+'</span>';
+    }).join(' · ');
+    bits.push('<span class="whyelse"><b>같은 이름이 다른 열쇠로 통과해 있습니다</b> — '+a+
+      '. 학교 표기가 달라 두 사람으로 저장된 것일 수 있습니다(동명이인이면 그대로 두세요).</span>');
+  }
+  if(!bits.length) return '';
+  return '<div class="rwhy">'+bits.join('')+'</div>';
+}
 function hkey(p){ return [p.course,p.round,p.name,p.nextNeeded].join('|'); }
 function hiddenMap(){ try{ return JSON.parse(localStorage.getItem(HIDE_LS)||'{}')||{}; }catch(e){ return {}; } }
 function saveHidden(m){ try{ localStorage.setItem(HIDE_LS, JSON.stringify(m)); }catch(e){} }
@@ -352,6 +388,7 @@ function rowHTML(p){
     +'<div class="rsub">'+sub+'</div>'
     +'<div class="rwhat"><b>'+(COURSE[p.course]||esc(p.course))+' '+esc(p.round)+'회</b> · '
       +esc(p.lastAttempt)+' '+esc(p.score)+'점 미통과 → <span class="rneed">'+esc(p.nextNeeded)+' 미응시</span></div>'
+    +whyHTML(p)
     +(p.reportLink?'<div class="copygrp" data-link="'+escAttr(p.reportLink)+'" data-name="'+escAttr(p.name)+'" data-course="'+escAttr(p.course)+'" data-round="'+escAttr(p.round)+'" data-att="'+escAttr(p.lastAttempt)+'" data-score="'+escAttr(p.score)+'" data-next="'+escAttr(p.nextNeeded)+'">'
     +'<div class="cglab">카톡 안내 복사</div>'
     +'<button class="copybtn s1" data-stage="1" data-orig="1단계 · 월 안내" onclick="copyShare(this)">1단계 · 월 안내</button>'

@@ -331,6 +331,66 @@ console.log('[11] 트리거를 스스로 건다');
   T('학부모 경로에서는 안 건드린다', TRIGGERS.length === 0, JSON.stringify(TRIGGERS));
 }
 
+console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
+{
+  /* 2026-08-15, 선생님이 물으셨다 — 이시현 학생에게 화학Ⅱ 9회 재시 안내가
+     나갔는데 학생은 통과했다고 한다.
+
+     computePending_ 은 (학생키 + 과목 + 회차) 로 묶어 통과가 하나도 없으면
+     재시로 센다. 학생키는 «학교-이름» 이라 **학교 표기가 갈리면 두 사람이
+     된다** — 정시는 «대청중-이시현», 재시는 «대청중학교-이시현» 으로 들어가면
+     정시 묶음에는 통과가 없어 영영 재시 목록에 남는다.
+
+     여기서 그 상황을 그대로 만들어 놓고, 창구가 **왜인지 말해 주는지** 본다.
+     ⚠ 자동으로 빼지 않는다. 정말 동명이인일 수 있어서 사람이 봐야 한다 —
+       틀리게 빼면 재시가 조용히 사라진다. 자는 짚어 주는 데까지다. */
+  const D3 = new Date('2026-08-10T01:00:00Z'), D4 = new Date('2026-08-12T01:00:00Z');
+  const sh = SHEETS['결과'];
+  const before = sh._rows.length;
+  sh._rows.push(
+    ['이시현','L',D3,73.3,'미달','대청중-이시현','대청중','2','ch2',9,'정시',44,16,'총괄성 크기','{}','','[]','[]','O'.repeat(60)],
+    ['이시현','L',D4,85,'통과','대청중학교-이시현','대청중학교','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)]);
+
+  const P = ctx.computePending_(60);
+  const all = (P.active || []).concat(P.stale || []);
+  const row = all.filter(x => x.name === '이시현' && x.course === 'ch2' && Number(x.round) === 9)[0];
+
+  T('아직 재시 목록에 남는다(자동으로 안 뺀다)', !!row,
+    all.map(x => x.name + ' ' + x.course + x.round).join(' / ') || '없음');
+  if (row) {
+    /* ① 이 묶음에 무엇이 있었나 — «정시 73.30» 뿐이면 재시 기록이 아예 없다. */
+    T('무엇을 보고 재시라 했는지 적는다',
+      Array.isArray(row.seen) && row.seen.length === 1 && /정시/.test(row.seen[0]) && /73\.30/.test(row.seen[0]),
+      JSON.stringify(row.seen));
+    /* ② 같은 이름이 다른 열쇠로 통과해 있으면 짚어 준다 — 이것이 이 물음의 답이다. */
+    T('같은 이름이 다른 열쇠로 통과한 것을 짚는다',
+      Array.isArray(row.alsoPassed) && row.alsoPassed.length === 1 &&
+      row.alsoPassed[0].studentKey === '대청중학교-이시현' &&
+      Number(row.alsoPassed[0].score) === 85,
+      JSON.stringify(row.alsoPassed));
+    T('통과한 시도가 무엇이었는지도 적는다',
+      row.alsoPassed && row.alsoPassed[0] && row.alsoPassed[0].attempt === '재시',
+      JSON.stringify(row.alsoPassed && row.alsoPassed[0]));
+  }
+
+  /* 같은 열쇠로 제대로 통과한 사람은 **애초에 목록에 없다** — 이 자가 옛 규칙을
+     깨지 않았는지 같이 본다(아래 한 줄이 빠지면 통과자에게 독촉이 나간다). */
+  sh._rows.push(
+    ['정상수','L',D3,70,'미달','휘문중-정상수','휘문중','2','ch2',9,'정시',42,18,'','{}','','[]','[]','O'.repeat(60)],
+    ['정상수','L',D4,88,'통과','휘문중-정상수','휘문중','2','ch2',9,'재시',53,7,'','{}','','[]','[]','O'.repeat(60)]);
+  const P2 = ctx.computePending_(60);
+  const all2 = (P2.active || []).concat(P2.stale || []);
+  T('같은 열쇠로 통과한 사람은 목록에 없다',
+    !all2.some(x => x.name === '정상수'), JSON.stringify(all2.map(x => x.name)));
+  /* 짚을 것이 없으면 빈 표시를 안 남긴다 — 없는데 있는 척하면 그게 더 나쁘다. */
+  const other = all2.filter(x => x.name === '김민준')[0];
+  if (other) T('짚을 것이 없으면 빈 채로 둔다',
+    Array.isArray(other.alsoPassed) && other.alsoPassed.length === 0,
+    JSON.stringify(other.alsoPassed));
+
+  sh._rows.length = before;                       // 심은 줄을 걷어낸다
+}
+
 console.log('[12] 아침 요약');
 {
   MAILS.length = 0;

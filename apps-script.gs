@@ -626,6 +626,27 @@ function computePending_(activeDays) {
     var k = r.studentKey + '#' + r.course + '#' + r.round;
     (groups[k] || (groups[k] = [])).push(r);
   });
+  /* ── 「자기는 통과했다는데 왜 재시죠?」 (2026-08-15) ────────────────
+     선생님이 물으셨다 — 이시현 학생에게 화학Ⅱ 9회 재시 안내가 나갔는데
+     학생은 통과했다고 한다.
+
+     이 자는 (학생키 + 과목 + 회차) 로 묶어서 그 묶음에 통과가 하나도 없으면
+     재시로 센다. 그래서 **통과 기록이 다른 열쇠에 붙어 있으면** 여기서는
+     안 보인다. 열쇠는 «학교-이름» 이고, 학교 표기가 달라지면 갈린다.
+     자동 연결(canonicalKey_)이 있지만 같은 과목·회차·시도가 이미 있으면
+     동명이인 덮어쓰기를 막으려고 **일부러 연결을 포기한다**(doPost 참고).
+
+     그 자리에서 선생님은 «왜?» 를 알 길이 없었다 — 목록은 이름만 보여 줬다.
+     이제 **같은 이름이 다른 열쇠로 그 회차를 통과했는지** 같이 찾아 붙인다.
+     빼지는 않는다: 정말 동명이인일 수 있어서 **사람이 봐야 한다.**
+     대신 «이 사람일 수도 있다» 를 화면에 적어 준다. */
+  var passedByName = {};
+  all.forEach(function (r) {
+    if (!r.pass) return;
+    var nk = norm_(studentName_(r.studentKey)) + '#' + r.course + '#' + r.round;
+    (passedByName[nk] || (passedByName[nk] = [])).push(r);
+  });
+
   var now = new Date(), pend = [];
   Object.keys(groups).forEach(function (k) {
     var rows = groups[k];
@@ -646,7 +667,19 @@ function computePending_(activeDays) {
       school: lastRow.school || _p.school, year: lastRow.year,
       course: lastRow.course, round: lastRow.round, lastAttempt: lastRow.attempt, nextNeeded: next,
       score: lastRow.score, reportLink: lastRow.reportLink || '',
-      lastDate: Utilities.formatDate(d, 'Asia/Seoul', 'M/d'), days: days, active: days < activeDays
+      lastDate: Utilities.formatDate(d, 'Asia/Seoul', 'M/d'), days: days, active: days < activeDays,
+      /* 이 묶음에 무엇이 있었나. «정시 73.3» 만 있으면 재시 기록이 아예 없다는
+         뜻이고, 그것만 알아도 선생님이 다음에 무엇을 볼지 정할 수 있다. */
+      seen: rows.map(function (r) { return r.attempt + ' ' + pt_(r.score); }),
+      /* 같은 이름이 **다른 열쇠**로 이 회차를 통과했는가. 있으면 그 열쇠를
+         적어 준다 — 학교 표기가 갈려 두 사람으로 저장된 것일 수 있다. */
+      alsoPassed: (function () {
+        var nk = norm_(studentName_(lastRow.studentKey)) + '#' + lastRow.course + '#' + lastRow.round;
+        return (passedByName[nk] || [])
+          .filter(function (r) { return r.studentKey !== lastRow.studentKey; })
+          .map(function (r) { return { studentKey: r.studentKey, school: r.school,
+                                       attempt: r.attempt, score: r.score }; });
+      })()
     });
   });
   pend.sort(function (a, b) { if (a.active !== b.active) return a.active ? -1 : 1; return b.days - a.days; });
