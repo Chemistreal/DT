@@ -1391,6 +1391,21 @@ async function buildSolutions(course,round){
     var gmap={},order=[];
     wrongItems.forEach(function(it){ var m=it.mis||'기타'; if(!gmap[m]){gmap[m]=[];order.push(m);} gmap[m].push(it); });
     order.sort(function(a,b){return gmap[b].length-gmap[a].length;});
+    /* ── Word 파일도 같은 것을 담는다 (선생님 요청 2026-08-15) ────────
+       학부모가 손에 쥐는 것은 화면이 아니라 파일이다. 화면에만 있으면 링크를
+       다시 열어야 보이고, 대개 다시 안 연다.
+
+       ⚠ **여기서 만든 것을 그대로 넘긴다.** Word 쪽에서 답안을 다시 맞춰
+         보면 두 곳이 따로 세는 것이 되고, 언젠가 종이와 화면이 다른 말을
+         한다. 순서(개념 많이 틀린 순)도 화면 그대로 실어 보낸다. */
+    try{
+      var wbItems=[];
+      order.forEach(function(m){ gmap[m].forEach(function(it){
+        wbItems.push({ n:it.__i+1, mis:m, s:it.s||'', a:ox(it.a),
+                       mine:(it.__mine==='O'||it.__mine==='X')?ox(it.__mine):'', w:it.w||'' });
+      }); });
+      window.__wrongbook={ items:wbItems, course:course, round:round };
+    }catch(e){}
     out+='<div class="soldiv"></div><h2 class="solh2">오개념 정리 <span class="rc-sub">\u00b7 틀린 '+wrongItems.length+'문항을 개념별로</span></h2>';
     out+='<p class="rc-help">틀린 문항을 오개념(개념 오류)별로 묶었습니다. 많이 틀린 개념이 위에 옵니다.</p>';
     order.forEach(function(m){
@@ -1400,6 +1415,9 @@ async function buildSolutions(course,round){
       out+='</div>';
     });
   }else if(hasAns){
+    /* 틀린 것이 없으면 Word 에도 «오답노트» 라는 빈 제목을 안 남긴다 —
+       빠뜨린 줄 안다. */
+    try{ window.__wrongbook={ items:[], course:course, round:round }; }catch(e){}
     out+='<div class="soldiv"></div><div class="sol-none">이 회차에 틀린 문항이 없습니다. 완벽합니다.</div>';
   }
   return out+'</div>';

@@ -84,6 +84,28 @@ function docxText(file, tmp) {
   await p.goto(`http://localhost:${PORT}/report.html`, { waitUntil: 'load', timeout: 40000 });
   await p.waitForFunction(() => !!window.__dtRpt, null, { timeout: 30000 });
 
+  /* ── 오답노트를 재려면 **답안 문자열**이 있어야 한다 ────────────────
+     화면에 심어 둔 시범 자료(SYN_HARD)에는 답안이 없다 — 그래서 오답노트가
+     아예 안 만들어진다. 그 상태로 «없다» 고 재면 앱이 아니라 시범 자료를
+     재는 것이 된다.
+
+     시트를 통째로 흉내 내는 대신, **진짜 코드 길은 그대로 두고** 답안만
+     넣어 다시 그리게 한다: 문항은 저장소의 round 파일에서 오고, 묶고 세는
+     것도 buildSolutions 가 한다. 앞 다섯 문항만 틀린 답안이다. */
+  const seeded = await p.evaluate(async () => {
+    const items = await loadRoundItems(latest.course, latest.round);
+    if (!items || !items.length) return { no: '회차 문항을 못 읽었다' };
+    const ans = items.map((it, i) =>
+      i < 5 ? (String(it.a).toUpperCase() === 'O' ? 'X' : 'O') : String(it.a).toUpperCase()).join('');
+    (allRows || []).forEach(r => {
+      if (r.course === latest.course && Number(r.round) === Number(latest.round)) r.answers = ans;
+    });
+    (latestRows || []).forEach(r => { r.answers = ans; });
+    await fillMainSolutions();
+    return { n: items.length, wrong: 5 };
+  });
+  chk('답안을 심어 오답노트를 만들 수 있다', !seeded.no, seeded.no || (seeded.n + '문항'));
+
   /* ── 화면이 말하는 숫자를 먼저 걷는다 ── */
   const screen = await p.evaluate(() => {
     const R = window.__dtRpt;
@@ -121,6 +143,38 @@ function docxText(file, tmp) {
 
   console.log('\n── 종이가 화면과 같은 말을 하는가 ──');
   chk('이름', txt.includes(screen.name), true);
+
+  /* ── 오답노트 (선생님 요청 2026-08-15) ──────────────────────────────
+     화면에는 「문항별 정오」 와 「오개념 정리」 가 진작에 있었는데, **받는
+     파일에는 없었다.** 학부모가 손에 쥐는 것은 화면이 아니라 이 파일이다.
+
+     ⚠ 여기서 답안을 다시 맞춰 보지 않는다 — 화면이 만든 목록(__wrongbook)을
+       그대로 견준다. 두 곳이 따로 세면 언젠가 종이와 화면이 다른 말을 한다. */
+  const wb = await p.evaluate(() => window.__wrongbook || null);
+  console.log('  화면이 센 오답 ' + (wb ? wb.items.length : '—') + '문항');
+  chk('화면이 오답 목록을 넘긴다', !!wb, wb ? '' : '__wrongbook 이 없다');
+  if (wb && wb.items.length) {
+    chk('종이에 «오답노트» 칸이 있다', txt.includes('오답노트'), true);
+    const miss = wb.items.filter(it => !txt.includes(String(it.n) + '번'));
+    chk('틀린 문항 번호가 하나도 안 빠진다', miss.length === 0,
+        miss.map(m => m.n + '번').join(' ') || wb.items.length + '문항 다 있음');
+    /* 문장이 잘려 들어가면 «몇 번을 틀렸다» 만 남고 무엇을 틀렸는지는 사라진다. */
+    const cut = wb.items.filter(it => it.s && !txt.includes(it.s.slice(0, 16)));
+    chk('문장도 같이 실린다', cut.length === 0,
+        cut.length ? cut[0].s.slice(0, 24) + '…' : '전부');
+    /* 왜 틀렸는지가 오답노트의 본체다. 번호와 문장만 있으면 그냥 채점표다. */
+    const why = wb.items.filter(it => it.w);
+    if (why.length) chk('왜 틀렸는지도 실린다',
+        why.every(it => txt.includes(it.w.slice(0, 14))),
+        why.length + '개 중 ' + why.filter(it => txt.includes(it.w.slice(0, 14))).length);
+    /* 개념 묶음도 화면과 같은 이름이어야 한다. */
+    const mis = [...new Set(wb.items.map(it => it.mis).filter(Boolean))];
+    chk('개념 이름도 같다', mis.every(m => txt.includes(m)),
+        mis.filter(m => !txt.includes(m)).join(' ') || mis.length + '개 다 있음');
+  } else if (wb) {
+    /* 틀린 것이 없는데 «오답노트» 라는 빈 제목만 남으면 빠뜨린 줄 안다. */
+    chk('틀린 것이 없으면 빈 칸을 안 남긴다', !txt.includes('오답노트'), true);
+  }
   chk('회차', txt.includes(screen.round + '회'), true);
   chk('통과 여부', txt.includes(screen.passed ? '통과' : '재시'), true);
   chk('응시한 회차 수', txt.includes(screen.taken + '회  ·  통과 ' + screen.passedRounds + '회')

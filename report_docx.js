@@ -320,6 +320,49 @@
         P([], { after: 200 }));
     }
 
+    /* ══════════════════════════════════════════════════════════════
+       오답노트 (선생님 요청 2026-08-15)
+       --------------------------------------------------------------
+       *"exam에 오답노트 하듯이, DT 성적표에도 오답노트같이 보내주면 더
+       좋을거같아"*
+
+       재어 보니 **화면에는 이미 있었다** — 「문항별 정오」 와 「오개념 정리」
+       (틀린 문항마다 문장 · 정답 · 내 답 · 왜 틀렸나). 없던 것은 그것이
+       **받는 파일에 안 들어간 것**이다. 이 파일 373줄 어디에도 그 말이 한
+       번도 안 나왔다. 선생님이 «보내주면» 이라 하신 자리가 여기다.
+
+       학부모가 손에 쥐는 것은 화면이 아니라 이 파일이다. 화면에만 있으면
+       링크를 다시 열어야 보이고, 대개 다시 안 연다.
+
+       ⚠ **화면과 같은 자료에서 뽑는다.** 여기서 답안을 다시 맞춰 보지
+         않는다 — 두 곳이 따로 세면 언젠가 어긋나고, 어긋나면 종이와 화면이
+         다른 말을 한다(tests/docx-report.js 가 그것을 잰다).
+       ⚠ 못 읽으면 **이 칸을 통째로 접는다.** 틀린 문항이 없는데 «오답노트»
+         라는 빈 제목만 남으면, 읽는 쪽은 빠뜨린 줄 안다.
+       ══════════════════════════════════════════════════════════════ */
+    var WB = (typeof window !== 'undefined' && window.__wrongbook) || null;
+    if (WB && WB.items && WB.items.length) {
+      body.push(txt('오답노트', { bold: true, color: EM, size: 26, serif: true,
+                                  before: 260, after: 40 }),
+        txt('이번 회차에서 틀린 ' + WB.items.length + '문항입니다. 개념이 같은 것끼리 묶었고, ' +
+            '문장 아래에 왜 틀렸는지를 적었습니다.',
+            { color: MUT, size: 18, after: 120 }));
+      var seen = null;
+      WB.items.forEach(function (it, i) {
+        if (it.mis !== seen) {
+          seen = it.mis;
+          body.push(txt('· ' + (it.mis || '기타'), { bold: true, color: EM, size: 19,
+                                                     before: 140, after: 40 }));
+        }
+        body.push(P([run(String(it.n) + '번  ', { bold: true, color: GOLD, size: 18 }),
+                     run(it.s || '', { size: 18 })], { after: 20 }));
+        body.push(P([run('정답 ' + it.a + '  ·  내 답 ', { color: MUT, size: 16 }),
+                     run(it.mine || '–', { bold: true, color: 'B23B3B', size: 16 })],
+                    { after: it.w ? 20 : 90 }));
+        if (it.w) body.push(txt('→ ' + it.w, { color: MUT, size: 16, i: true, after: 90 }));
+      });
+    }
+
     /* ── 연락할 곳 ──
        다 읽고 나서 "이상한데 어디로 묻지" 가 남으면 학부모는 아무 데도 안
        묻는다 — 그러면 틀린 채로 굳는다. 파이널 성적표와 같은 창구를 적는다.
