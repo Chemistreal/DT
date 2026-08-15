@@ -338,8 +338,13 @@ console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
 
      computePending_ 은 (학생키 + 과목 + 회차) 로 묶어 통과가 하나도 없으면
      재시로 센다. 학생키는 «학교-이름» 이라 **학교 표기가 갈리면 두 사람이
-     된다** — 정시는 «대청중-이시현», 재시는 «대청중학교-이시현» 으로 들어가면
+     된다** — 정시는 «대청중-이시현», 재시는 «서울대청중-이시현» 으로 들어가면
      정시 묶음에는 통과가 없어 영영 재시 목록에 남는다.
+
+     ⚠ 처음엔 갈라지는 예로 «대청중» ↔ «대청중학교» 를 적었다. **틀렸다.**
+       normSchool_ 이 «중학교» 꼬리를 잘라 내므로 그 둘은 애초에 같은 열쇠다
+       (아래 [11.6] 이 그것도 잰다). 실제로 갈라지는 것은 지역명 접두처럼
+       꼬리가 아닌 차이다.
 
      여기서 그 상황을 그대로 만들어 놓고, 창구가 **왜인지 말해 주는지** 본다.
      ⚠ 자동으로 빼지 않는다. 정말 동명이인일 수 있어서 사람이 봐야 한다 —
@@ -349,7 +354,7 @@ console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
   const before = sh._rows.length;
   sh._rows.push(
     ['이시현','L',D3,73.3,'미달','대청중-이시현','대청중','2','ch2',9,'정시',44,16,'총괄성 크기','{}','','[]','[]','O'.repeat(60)],
-    ['이시현','L',D4,85,'통과','대청중학교-이시현','대청중학교','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)]);
+    ['이시현','L',D4,85,'통과','서울대청중-이시현','서울대청중','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)]);
 
   const P = ctx.computePending_(60);
   const all = (P.active || []).concat(P.stale || []);
@@ -365,7 +370,7 @@ console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
     /* ② 같은 이름이 다른 열쇠로 통과해 있으면 짚어 준다 — 이것이 이 물음의 답이다. */
     T('같은 이름이 다른 열쇠로 통과한 것을 짚는다',
       Array.isArray(row.alsoPassed) && row.alsoPassed.length === 1 &&
-      row.alsoPassed[0].studentKey === '대청중학교-이시현' &&
+      row.alsoPassed[0].studentKey === '서울대청중-이시현' &&
       Number(row.alsoPassed[0].score) === 85,
       JSON.stringify(row.alsoPassed));
     T('통과한 시도가 무엇이었는지도 적는다',
@@ -389,6 +394,99 @@ console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
     JSON.stringify(other.alsoPassed));
 
   sh._rows.length = before;                       // 심은 줄을 걷어낸다
+}
+
+console.log('[11.6] 「같은 사람으로 처리해 줘」');
+{
+  /* 선생님: "같은 사람으로 처리해줘. OO중이나 OO중학교나 같은걸로 표기 자동 수정"
+     (2026-08-15)
+
+     먼저 사실부터 잰다 — «대청중» 과 «대청중학교» 는 **이미** 같은 열쇠다.
+     이것을 안 재고 «갈라진다» 고 적었던 것이 위 [11.5] 의 첫 주석이었다. */
+  T('«대청중» 과 «대청중학교» 는 원래 같은 열쇠다',
+    ctx.keyOf_('이시현', '대청중') === ctx.keyOf_('이시현', '대청중학교'),
+    ctx.keyOf_('이시현', '대청중') + ' vs ' + ctx.keyOf_('이시현', '대청중학교'));
+  T('고·초도 같다',
+    ctx.keyOf_('A', '휘문고') === ctx.keyOf_('A', '휘문고등학교') &&
+    ctx.keyOf_('A', '개포초') === ctx.keyOf_('A', '개포초등학교'));
+
+  /* 표기를 정규형으로 고쳐도 학생키는 한 글자도 안 바뀐다 — 이 화면이
+     «학생키는 안 바뀝니다» 라고 적기 때문에, 그 말이 참인지 여기서 잰다.
+     (화면에 적은 말은 참이어야 한다) */
+  ['대청중학교', '대청 중학교', '휘문고등학교', '개포초등학교', '대청중', '서울대청중', '대청'].forEach(s => {
+    T('표기를 고쳐도 열쇠가 안 변한다 · ' + s,
+      ctx.keyOf_('이시현', s) === ctx.keyOf_('이시현', ctx.normSchool_(s)),
+      s + ' -> ' + ctx.normSchool_(s));
+  });
+
+  const D3 = new Date('2026-08-10T01:00:00Z'), D4 = new Date('2026-08-12T01:00:00Z');
+  const sh = SHEETS['결과'];
+  const before = sh._rows.length;
+  /* 실제로 갈라지는 갈래(지역명 접두) + 표기만 어긋난 칸을 같이 심는다. */
+  sh._rows.push(
+    ['이시현','L',D3,73.3,'미달','대청중-이시현','대청중','2','ch2',9,'정시',44,16,'','{}','','[]','[]','O'.repeat(60)],
+    ['이시현','L',D4,85,'통과','서울대청중-이시현','서울대청중','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)],
+    ['김하늘','L',D3,90,'통과','언주중-김하늘','언주중학교','1','ch1',2,'정시',54,6,'','{}','','[]','[]','O'.repeat(60)],
+    /* 서로 무관한 학교의 동명이인 — 여기 올라오면 안 된다. */
+    ['박서준','L',D3,70,'미달','휘문중-박서준','휘문중','2','ch1',3,'정시',42,18,'','{}','','[]','[]','O'.repeat(60)],
+    ['박서준','L',D4,70,'미달','개포중-박서준','개포중','2','ch1',3,'정시',42,18,'','{}','','[]','[]','O'.repeat(60)]);
+
+  const plan = ctx.mergeScan_();
+  const g = plan.groups.filter(x => x.name === '이시현')[0];
+  T('갈라진 같은 학생을 찾아낸다', !!g && g.canon === '대청중-이시현' &&
+    g.from.length === 1 && g.from[0].key === '서울대청중-이시현',
+    JSON.stringify(plan.groups));
+  T('동명이인은 안 건드린다', !plan.groups.some(x => x.name === '박서준'),
+    JSON.stringify(plan.groups.map(x => x.name)));
+  const f = plan.schoolFix.filter(x => x.from === '언주중학교')[0];
+  T('어긋난 학교 표기를 짚는다', !!f && f.to === '언주중' && f.rows === 1,
+    JSON.stringify(plan.schoolFix));
+  /* 세기만 하는 자는 아무것도 안 쓴다 — 읽는 것은 조용해도 되고 쓰는 것은 안 된다. */
+  T('세는 동안에는 시트를 안 건드린다',
+    sh._rows.some(r => r[5] === '서울대청중-이시현') &&
+    sh._rows.some(r => r[6] === '언주중학교'));
+
+  /* 창구도 세기만 한다(GET mergeplan). */
+  const got = JSON.parse(ctx.doGet({ parameter: { action: 'mergeplan', token: 'adm-secret-123' } }).getContent());
+  T('창구가 합칠 목록을 내준다', got.ok === true && got.plan &&
+    got.plan.groups.some(x => x.name === '이시현'), JSON.stringify(got).slice(0, 160));
+  /* ⚠ 여기서 «토큰이 틀리면 막힌다» 를 기대했다가 빨간 줄을 봤다. adminOk_ 는
+     지금 **전체 공개**라 아무나 통과한다(pending·roster·exclude 도 전부 같다).
+     그러니 막힌다고 적지 않는다 — 없는 자물쇠를 있다고 하는 셈이다.
+     대신 **재시 목록과 노출 폭이 같다**는 것을 박아 둔다. 나중에 자물쇠를
+     채운다면 두 창구가 같이 잠겨야 하고, 한쪽만 열리면 여기서 걸린다. */
+  const bad = 'nope';
+  const mp = JSON.parse(ctx.doGet({ parameter: { action: 'mergeplan', token: bad } }).getContent());
+  const pd = JSON.parse(ctx.doGet({ parameter: { action: 'pending', token: bad } }).getContent());
+  T('노출 폭이 재시 목록과 같다', (mp.ok === true) === (pd.ok === true),
+    'mergeplan ' + mp.ok + ' / pending ' + pd.ok);
+
+  const res = ctx.applyMergeScan_();
+  T('누르면 하나로 모인다',
+    !sh._rows.some(r => r[5] === '서울대청중-이시현') &&
+    sh._rows.filter(r => r[5] === '대청중-이시현').length === 2,
+    JSON.stringify(sh._rows.filter(r => r[0] === '이시현').map(r => r[5])));
+  T('표기도 정규형으로 고친다',
+    !sh._rows.some(r => r[6] === '언주중학교') &&
+    sh._rows.some(r => r[6] === '언주중'));
+  T('표기를 고쳐도 그 행의 학생키는 그대로다',
+    sh._rows.filter(r => r[0] === '김하늘')[0][5] === '언주중-김하늘',
+    JSON.stringify(sh._rows.filter(r => r[0] === '김하늘')[0]));
+  T('무엇을 했는지 세어서 돌려준다',
+    res.merged === 1 && res.keys === 1 && res.schoolFixed === 1, JSON.stringify(res));
+
+  /* 합친 뒤에는 재시 목록에서 빠진다 — 이것이 선생님이 물으신 것의 끝이다. */
+  const after = ctx.computePending_(60);
+  T('합치고 나면 재시 안내가 안 나간다',
+    !(after.active || []).concat(after.stale || []).some(x => x.name === '이시현'),
+    JSON.stringify((after.active || []).concat(after.stale || []).map(x => x.name)));
+
+  /* 두 번 눌러도 같다(멱등). 이미 하나면 더 할 것이 없다. */
+  const again = ctx.applyMergeScan_();
+  T('두 번 눌러도 더 바뀌지 않는다', again.keys === 0 && again.schoolFixed === 0,
+    JSON.stringify(again));
+
+  sh._rows.length = before;
 }
 
 console.log('[12] 아침 요약');
