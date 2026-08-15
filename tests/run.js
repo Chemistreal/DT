@@ -294,6 +294,112 @@ async function assertNoOverflow(page, label) {
     assert(!/갈라져 저장된 학생은 없습니다/.test(txt), '못 물어봤는데 «없다» 고 한다');
   }, { adminGate: true });
 
+  /* ── 5-3. 심화가 안 배운 범위를 내지 않는다 ──────────────────────────
+     선생님: "심화문제 나올때 아직 안배운 범위가 나오거나 한 부분이 있는지
+     확인하고 안배운문제를 내지 않도록 해줘" (2026-08-15)
+
+     재어 보니 있었다. 이 화면은 **과목 접두만** 보고 뽑아서, 화학Ⅰ 1회를 막
+     통과한 학생에게 후보 54개념 중 44개(81%)가 18회까지 가야 배우는 것이었다.
+     여기서는 화면에 실제로 뜬 문항 하나하나를 회차 표와 대 본다. */
+  await test('challenge · 배운 회차 밖 문항이 안 나온다', async page => {
+    await page.goto(BASE + 'challenge.html?course=ch2&round=3'); await page.waitForTimeout(400);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(/3회까지 배운 범위/.test(txt), '어디까지 내는지 화면이 말하지 않는다');
+    await page.click('.btn'); await page.waitForTimeout(300);
+    /* 여러 번 뽑아도 한 번도 새면 안 된다 — 무작위라 한 판만 보면 놓친다. */
+    const bad = await page.evaluate(() => {
+      const out = [];
+      for (let t = 0; t < 40; t++) {
+        start();
+        S.qs.forEach(q => {
+          if (!/^CH2-/.test(q.c)) return;            // 선수 과목(CH1)은 다 배운 것
+          const first = CHALLENGE_ROUND[q.c];
+          if (first == null || first > 3) out.push(q.c + '(' + first + '회)');
+        });
+      }
+      return Array.from(new Set(out));
+    });
+    assert(bad.length === 0, '3회 학생에게 안 배운 개념이 나왔다: ' + bad.slice(0, 8).join(' '));
+
+    /* 자가 눈먼 것이 아닌지 본다 — 문 없이 뽑으면 정말 새는지. */
+    const leaks = await page.evaluate(() => {
+      const out = [];
+      Object.keys(CHALLENGE_BANK).forEach(p => CHALLENGE_BANK[p].forEach(c => {
+        if (/^CH2-/.test(c.c) && CHALLENGE_ROUND[c.c] > 3) out.push(c.c);
+      }));
+      return out;
+    });
+    assert(leaks.length > 0, '3회 밖 개념이 아예 없으면 이 검사는 아무것도 안 막는다');
+  });
+
+  /* 배운 것이 12개가 안 되면 **모자란 채로** 낸다. 채우려고 안 배운 것을
+     끌어오면 그것이 바로 고치려던 병이다. 그리고 몇 개인지 말한다.
+
+     ⚠ 오늘 실데이터로는 이 가지를 못 밟는다 — 가장 얇은 회차(화학Ⅰ 1회)가
+       정확히 12개다. 그렇다고 «검사할 수 없다» 고 두면, 문제은행이 바뀌어
+       11개가 되는 날 아무도 모른다. 그래서 회차 표를 좁혀 **그 가지를 실제로
+       밟게 한 뒤** 화면을 읽는다(가짜 화면이 아니라 진짜 코드가 돈다). */
+  await test('challenge · 모자라면 모자란 대로 내고 그렇다고 말한다', async page => {
+    await page.goto(BASE + 'challenge.html?course=ch1&round=1'); await page.waitForTimeout(400);
+    const real = await page.evaluate(() => poolFor('ch1', 1)
+      .filter((q, i, a) => a.findIndex(x => x.c === q.c) === i).length);
+    assert(real === 12, '가장 얇은 회차가 12가 아니게 되었다 — 이 검사를 다시 보라 (' + real + ')');
+
+    const n = await page.evaluate(() => {
+      const keep = Object.keys(CHALLENGE_ROUND).filter(k => /^CH1-/.test(k)).slice(0, 5);
+      Object.keys(CHALLENGE_ROUND).forEach(k => { if (!keep.includes(k)) CHALLENGE_ROUND[k] = 99; });
+      render();
+      return poolFor('ch1', 1).filter((q, i, a) => a.findIndex(x => x.c === q.c) === i).length;
+    });
+    assert(n === 5, '좁혔는데도 개념 수가 안 줄었다: ' + n);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(txt.includes('심화 문항 ' + n + '개'), '문항 수를 사실대로 안 적었다: ' + n);
+    assert(/개라 .*문항입니다/.test(txt), '왜 적은지 말하지 않는다');
+    await page.click('.btn'); await page.waitForTimeout(300);
+    const got = await page.evaluate(() => S.qs.length);
+    assert(got === n, '적어 놓은 수와 실제 문항 수가 다르다: ' + got + ' vs ' + n);
+    const head = await page.evaluate(() => document.querySelector('h2').textContent);
+    assert(head.includes(n + '문항'), '제목은 아직 12문항이라고 한다: ' + head);
+
+    /* 하나도 없으면 «없다» 고 말하고 시작 버튼을 안 준다. */
+    const none = await page.evaluate(() => {
+      S.view = 'intro';
+      Object.keys(CHALLENGE_ROUND).forEach(k => { CHALLENGE_ROUND[k] = 99; });
+      render();
+      return { txt: document.body.innerText, btn: !!document.querySelector('.btn') };
+    });
+    assert(/낼 만한 개념이 없습니다/.test(none.txt), '없는데 없다고 안 한다');
+    assert(!none.btn, '낼 것이 없는데 시작 버튼이 있다');
+  });
+
+  /* 이미 학생들에게 나간 옛 링크에는 회차가 없다. 그때 «다 배웠다» 고 치면
+     고친 것이 도로 풀린다 — 지어내지 말고 묻는다. */
+  await test('challenge · 회차를 모르면 지어내지 않고 묻는다', async page => {
+    await page.goto(BASE + 'challenge.html?course=ch2'); await page.waitForTimeout(400);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(/어디까지 배웠나요/.test(txt), '회차를 안 묻는다');
+    assert(!/도전 시작/.test(txt), '회차도 모르는데 바로 풀린다');
+    const n = await page.$$eval('.rpick', b => b.length);
+    assert(n === 18, '화학Ⅱ 회차 수가 18이 아니다: ' + n);
+    const h = await page.$eval('.rpick', b => b.getBoundingClientRect().height);
+    assert(h >= 32, '회차 버튼이 손가락보다 작다: ' + h);
+    await page.click('.rpick:nth-child(3)'); await page.waitForTimeout(500);
+    assert(/round=3/.test(page.url()), '눌러도 회차가 안 붙는다: ' + page.url());
+    assert(/3회까지 배운 범위/.test(await page.evaluate(() => document.body.innerText)),
+           '고른 회차가 화면에 안 반영된다');
+    await assertNoOverflow(page, 'challenge-pick');
+  });
+
+  /* 성적표·응시 화면이 회차를 안 넘기면 위 문이 아무 소용이 없다. */
+  await test('challenge · 부르는 쪽이 회차를 같이 넘긴다', async page => {
+    for (const f of ['report.html', 'index.html']) {
+      const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+      const m = src.match(/challenge\.html\?course=\$\{[^}]+\}([^"']*)/);
+      assert(m, f + ' 에 심화 링크가 없다');
+      assert(/round=/.test(m[1]), f + ' 이 회차를 안 넘긴다: ' + m[0]);
+    }
+  });
+
   /* ── 6. 문자 템플릿: 탭 구성 + 복사 = 미리보기 일치 + 미입력 경고 ── */
   await test('letters · 탭/복사/자리표시', async page => {
     await page.goto(BASE + 'letters.html'); await page.waitForTimeout(400);
