@@ -332,18 +332,38 @@ async function assertNoOverflow(page, label) {
     assert(leaks.length > 0, '3회 밖 개념이 아예 없으면 이 검사는 아무것도 안 막는다');
   });
 
+  /* 선수 과목은 막지 않는다. 일반화학 학생은 화학Ⅰ·Ⅱ 를 이미 마쳤으므로
+     그 개념은 회차와 무관하게 낸다 — 여기까지 막으면 심화가 텅 빈다.
+     ⚠ 회차 표를 만드는 자가 과목을 안 보고 세면 이 경계가 무너진다.
+       일반화학 회차 파일에 실린 CH1 개념이 «화학Ⅰ 1회» 가 되어, 화학Ⅰ 1회
+       학생에게 4회 개념이 나갔다(2026-08-15, 스스로 검토하다 잡음). */
+  await test('challenge · 선수 과목은 회차로 막지 않는다', async page => {
+    await page.goto(BASE + 'challenge.html?course=gc&round=1'); await page.waitForTimeout(400);
+    const got = await page.evaluate(() => {
+      const p = poolFor('gc', 1);
+      return { pre: p.filter(q => !/^GC-/.test(q.c)).length,
+               own: p.filter(q => /^GC-/.test(q.c)).length,
+               late: p.filter(q => /^GC-/.test(q.c) && CHALLENGE_ROUND[q.c] > 1).length };
+    });
+    assert(got.pre > 0, '선수 과목 개념이 하나도 안 나온다');
+    assert(got.own > 0, '일반화학 1회 개념이 하나도 안 나온다');
+    assert(got.late === 0, '일반화학인데 안 배운 회차가 샜다: ' + got.late);
+  });
+
   /* 배운 것이 12개가 안 되면 **모자란 채로** 낸다. 채우려고 안 배운 것을
      끌어오면 그것이 바로 고치려던 병이다. 그리고 몇 개인지 말한다.
 
-     ⚠ 오늘 실데이터로는 이 가지를 못 밟는다 — 가장 얇은 회차(화학Ⅰ 1회)가
-       정확히 12개다. 그렇다고 «검사할 수 없다» 고 두면, 문제은행이 바뀌어
-       11개가 되는 날 아무도 모른다. 그래서 회차 표를 좁혀 **그 가지를 실제로
-       밟게 한 뒤** 화면을 읽는다(가짜 화면이 아니라 진짜 코드가 돈다). */
+     화학Ⅰ 1회가 실제로 10개다(12개가 아니다). 처음엔 12로 보였는데, 그건
+     회차 표를 만드는 자가 **과목을 안 보고** 세었기 때문이었다 — 일반화학
+     회차 파일에 실린 CH1 개념을 «화학Ⅰ 1회» 로 오인했다. 스스로 검토하다
+     잡았다. 그래서 여기서는 실데이터로 한 번, 표를 좁혀 한 번 본다. */
   await test('challenge · 모자라면 모자란 대로 내고 그렇다고 말한다', async page => {
     await page.goto(BASE + 'challenge.html?course=ch1&round=1'); await page.waitForTimeout(400);
     const real = await page.evaluate(() => poolFor('ch1', 1)
       .filter((q, i, a) => a.findIndex(x => x.c === q.c) === i).length);
-    assert(real === 12, '가장 얇은 회차가 12가 아니게 되었다 — 이 검사를 다시 보라 (' + real + ')');
+    assert(real > 0 && real < 12, '화학Ⅰ 1회가 12개 미만이 아니다 — 표를 다시 보라 (' + real + ')');
+    const t0 = await page.evaluate(() => document.body.innerText);
+    assert(t0.includes('심화 문항 ' + real + '개'), '실데이터에서 수를 사실대로 안 적었다: ' + real);
 
     const n = await page.evaluate(() => {
       const keep = Object.keys(CHALLENGE_ROUND).filter(k => /^CH1-/.test(k)).slice(0, 5);

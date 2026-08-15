@@ -65,9 +65,20 @@ def concept_ids(obj, out):
             concept_ids(v, out)
 
 
+"""개념 접두 -> 그 개념을 «가르치는» 과목.
+
+⚠ 이 표가 없으면 자가 조용히 틀린다. 일반화학 회차 파일에는 CH1·CH2 개념이
+  섞여 나온다(선수 내용을 다시 쓴다). 과목을 안 보고 «모든 회차 파일 중 가장
+  이른 회차» 를 잡으면, CH1-085 처럼 화학Ⅰ 에서는 4회에야 나오는 개념이
+  일반화학 1회에 실려 있다는 이유로 «1회» 가 된다. 그러면 화학Ⅰ 1회 학생이
+  4회 개념을 받는다 — 고치려던 병이 자 안으로 들어온 꼴이다.
+  실제로 그렇게 만들었다가 스스로 검토하다 잡았다(2026-08-15, 17개 어긋남)."""
+PREFIX_COURSE = {'CH1': 'ch1', 'CH2': 'ch2', 'GC': 'gc'}
+
+
 def first_round():
-    """개념 id -> (과목, 처음 나온 회차)"""
-    first = {}
+    """개념 id -> 처음 나온 회차. **그 개념을 가르치는 과목의 회차만** 센다."""
+    by_course = {}
     for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
         with open(f, encoding='utf-8') as fh:
             d = json.load(fh)
@@ -77,7 +88,14 @@ def first_round():
         got = set()
         concept_ids(d, got)
         for c in got:
-            if c not in first or rnd < first[c][1]:
+            cur = by_course.setdefault(course, {})
+            if c not in cur or rnd < cur[c]:
+                cur[c] = rnd
+    first = {}
+    for course, table in by_course.items():
+        for c, rnd in table.items():
+            own = PREFIX_COURSE.get(c.rsplit('-', 1)[0])
+            if own == course:              # 남의 과목 회차는 안 센다
                 first[c] = (course, rnd)
     return first
 
@@ -140,6 +158,43 @@ def report():
         print()
 
 
+def cross_check():
+    """표를 회차 파일과 **다른 길로** 한 번 더 대 본다.
+
+    생성기와 같은 함수를 쓰면 같이 틀린다. 그래서 여기서는 jeongsi.items 와
+    retakeC[].items 만 곧이곧대로 훑어 «그 과목에서 처음 나온 회차» 를 다시 세고,
+    실린 표와 한 칸씩 맞춘다. 이 자가 없었으면 과목을 섞어 센 것을 못 잡았다."""
+    src = open(PAGE, encoding='utf-8').read()
+    m = re.search(r'var CHALLENGE_ROUND=(\{.*?\});', src, re.S)
+    if not m:
+        return ['challenge.html 에 회차 표가 없습니다.']
+    table = json.loads(m.group(1))
+    seen = {}
+    for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
+        with open(f, encoding='utf-8') as fh:
+            d = json.load(fh)
+        course, rnd = d.get('course'), int(d.get('round') or 0)
+        rows = list(d.get('jeongsi', {}).get('items') or [])
+        for v in d.get('retakeC') or []:
+            rows += list(v.get('items') or [])
+        for i in rows:
+            c = i.get('c')
+            if not c:
+                continue
+            k = (course, c)
+            if k not in seen or rnd < seen[k]:
+                seen[k] = rnd
+    bad = []
+    for cid, r in sorted(table.items()):
+        own = PREFIX_COURSE.get(cid.rsplit('-', 1)[0])
+        got = seen.get((own, cid))
+        if got is None:
+            bad.append('%s: %s 회차 파일에 없다' % (cid, own))
+        elif got != r:
+            bad.append('%s: 표 %d회 vs 실제 %d회' % (cid, r, got))
+    return bad
+
+
 def main():
     args = sys.argv[1:]
     if '--report' in args:
@@ -157,7 +212,13 @@ def main():
             print('✗ challenge.html 의 회차 표가 회차 파일과 어긋납니다.')
             print('  python3 tools/challenge_scope.py 로 다시 만드세요.')
             return 1
-        print('심화 회차 표가 회차 파일과 일치합니다. (개념 %d개)'
+        bad = cross_check()
+        if bad:
+            print('✗ 표가 회차 파일과 안 맞습니다 (%d개):' % len(bad))
+            for b in bad[:12]:
+                print('   ', b)
+            return 1
+        print('심화 회차 표가 회차 파일과 일치합니다. (개념 %d개 · 딴 길로 재확인)'
               % len(json.loads(re.search(r'var CHALLENGE_ROUND=(\{.*?\});', src, re.S).group(1))))
         return 0
     open(PAGE, 'w', encoding='utf-8').write(out)
