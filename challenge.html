@@ -108,14 +108,17 @@ function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()
 
    시험이 누적이므로 r회까지 배운 것 = 처음 등장한 회차가 r 이하인 개념이다.
    선수 과목(화학Ⅱ 학생에게 화학Ⅰ)은 이미 마쳤으므로 회차와 무관하게 낸다. */
-function curRound(){
-  var sp=new URLSearchParams(location.search);
-  var r=parseInt(sp.get('round'),10);
-  return (r>0)?r:null;
-}
 function curCourse(){
   var c=(new URLSearchParams(location.search).get('course')||'').toLowerCase();
-  return PRECOURSE[c]?c:'';
+  return PRECOURSE[c]?c:'';               // 모르는 과목은 «없다» 로 본다
+}
+/* 없는 회차를 «있다» 고 적지 않는다. 주소에 round=999 가 오면 여태
+   「999회까지 배운 범위」 라고 화면에 적었다 — 그런 회차는 없다. */
+function curRound(){
+  var r=parseInt(new URLSearchParams(location.search).get('round'),10);
+  if(!(r>0)) return null;
+  var last=COURSE_LAST[curCourse()]||0;
+  return (last && r>last) ? last : r;
 }
 /* 이 회차까지 낼 수 있는 개념. round 가 없으면 아무것도 안 고른다 —
    모르면서 «다 배웠다» 고 치는 것이 지금까지의 잘못이었다. */
@@ -139,6 +142,23 @@ function pickQuestions(){
   var seen={}, out=[];
   for(var i=0;i<pool.length && out.length<12;i++){ if(!seen[pool[i].c]){ seen[pool[i].c]=1; out.push(pool[i]); } }
   return out;
+}
+/* 과목조차 모르면 회차를 물어봐야 소용이 없다. 여태는 그럴 때 화학Ⅰ 회차를
+   보여 줬는데, 눌러도 과목이 그대로라 **같은 화면이 다시 떴다**(무한 반복).
+   모르면 모른다고 하고 먼저 과목을 묻는다. */
+var COURSE_NAME={ch1:'화학Ⅰ', ch2:'화학Ⅱ', gc:'일반화학'};
+function coursePickHTML(){
+  var b=Object.keys(PRECOURSE).map(function(c){
+    return '<button class="rpick" onclick="goCourse(\''+c+'\')">'+COURSE_NAME[c]+'</button>'; }).join('');
+  return '<div class="card intro"><span class="badgeA">A밴드 · 심화</span>'
+    +'<h1>어느 과목인가요?</h1>'
+    +'<p class="lede">배운 데까지만 냅니다. 먼저 과목을 골라 주세요.</p>'
+    +'<div class="rpicks">'+b+'</div></div>';
+}
+function goCourse(c){
+  var sp=new URLSearchParams(location.search);
+  sp.set('course', c); sp.delete('round');   // 과목이 바뀌면 회차는 뜻이 없다
+  location.search=sp.toString();
 }
 /* 옛 링크에는 회차가 없다(이미 학생들에게 나갔다). 그때는 지어내지 않고
    묻는다 — 한 번 누르면 되고, 안 배운 문제는 안 나온다. */
@@ -166,7 +186,8 @@ function render(){
   var h='';
   if(S.view==='intro'){
     var course=curCourse(), round=curRound();
-    if(!course || !round) { $('#app').innerHTML=roundPickHTML(course||'ch1'); return; }
+    if(!course) { $('#app').innerHTML=coursePickHTML(); return; }
+    if(!round)  { $('#app').innerHTML=roundPickHTML(course); return; }
     var n=poolFor(course, round).filter(function(q,i,a){
       return a.findIndex(function(x){return x.c===q.c;})===i; }).length;
     var many=Math.min(n,12);

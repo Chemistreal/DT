@@ -410,6 +410,45 @@ async function assertNoOverflow(page, label) {
     await assertNoOverflow(page, 'challenge-pick');
   });
 
+  /* 주소는 사람이 고친다. 이상한 값이 와도 **화면이 거짓말하면 안 된다.**
+     세 가지가 실제로 그랬다(2026-08-16 에 훑다 잡음):
+       · course 가 엉터리면 화학Ⅰ 회차를 보여 줬고, 눌러도 과목이 그대로라
+         같은 화면이 다시 떴다 — 무한 반복
+       · round=999 면 「999회까지 배운 범위」 라고 적었다 — 그런 회차는 없다
+       · round 가 0·음수·글자면 그냥 회차를 물었다(이건 맞다) */
+  await test('challenge · 이상한 주소에도 거짓말하지 않는다', async page => {
+    const look = async u => {
+      await page.goto(BASE + u); await page.waitForTimeout(300);
+      return page.evaluate(() => {
+        const t = document.body.innerText;
+        return { course: /어느 과목인가요/.test(t), round: /어디까지 배웠나요/.test(t),
+                 start: !!document.querySelector('.btn'),
+                 scope: (t.match(/(\d+)회까지 배운 범위/) || [])[1] || null };
+      });
+    };
+    let r = await look('challenge.html?course=xyz&round=3');
+    assert(r.course && !r.start, '모르는 과목인데 문제를 낸다');
+    r = await look('challenge.html');
+    assert(r.course, '과목도 회차도 없는데 안 묻는다');
+    /* 과목을 고르면 회차를 묻는 자리로 넘어가야 한다(같은 화면이 다시 뜨면 안 된다). */
+    await page.click('.rpick'); await page.waitForTimeout(400);
+    const t2 = await page.evaluate(() => document.body.innerText);
+    assert(/어디까지 배웠나요/.test(t2), '과목을 골라도 같은 화면이 다시 뜬다');
+    assert(/course=/.test(page.url()), '고른 과목이 주소에 안 붙는다: ' + page.url());
+
+    r = await look('challenge.html?course=ch2&round=999');
+    assert(r.scope === '18', '없는 회차를 있다고 적는다: ' + r.scope);
+    r = await look('challenge.html?course=gc&round=999');
+    assert(r.scope === '10', '과목마다 마지막 회차가 다른데 안 본다: ' + r.scope);
+    for (const bad of ['0', '-5', 'abc', '']) {
+      r = await look('challenge.html?course=ch2&round=' + bad);
+      assert(r.round && !r.start, 'round=' + bad + ' 인데 그냥 문제를 낸다');
+    }
+    /* 대문자로 와도 같은 과목이다. */
+    r = await look('challenge.html?course=CH2&round=3');
+    assert(r.scope === '3' && r.start, '대문자 과목을 못 알아본다');
+  });
+
   /* 성적표·응시 화면이 회차를 안 넘기면 위 문이 아무 소용이 없다. */
   await test('challenge · 부르는 쪽이 회차를 같이 넘긴다', async page => {
     for (const f of ['report.html', 'index.html']) {
