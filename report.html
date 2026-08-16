@@ -1644,7 +1644,9 @@ function render(commit){
     h+=`<div class="card" style="border-left:4px solid var(--teal)"><h2>다음 단계 · 한 겹 더</h2>
       <p style="font-size:13.5px;margin:0 0 12px">모든 회차를 안정적으로 통과하고 있습니다. 이제 욕심내 볼 단계예요. 아래는 <b>아이가 더 도전하고 싶을 때</b> 한 걸음 더 들어갈 심화 내용과 문항입니다. 필수는 아닙니다.</p>
       ${deepItems.length?deepItems.map(function(x){return '<div class="rx"><div class="top"><span class="nm">'+x.c+'</span><span class="freq">심화</span></div><div class="ol"><b>한 겹 더:</b> '+md(x.deep)+'</div></div>';}).join(''):''}
-      <a class="cbtn" href="challenge.html?course=${latest.course}"><span>심화 문항으로 새로운 난이도에 도전</span><span class="cgo">도전하기 →</span></a>
+      <!-- 회차를 같이 넘긴다. 안 넘기면 심화가 **안 배운 단원까지** 낸다
+           (화학Ⅰ 1회 학생에게 후보의 81%가 진도 밖이었다 · 2026-08-15). -->
+      <a class="cbtn" href="challenge.html?course=${latest.course}&amp;round=${latest.round}"><span>심화 문항으로 새로운 난이도에 도전</span><span class="cgo">도전하기 →</span></a>
       <p class="cbtnnote">부모님은 "한번 해볼래?" 정도로 가볍게 권해 주시면 충분합니다.</p></div>`;
   }
 

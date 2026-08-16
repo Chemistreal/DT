@@ -294,6 +294,171 @@ async function assertNoOverflow(page, label) {
     assert(!/갈라져 저장된 학생은 없습니다/.test(txt), '못 물어봤는데 «없다» 고 한다');
   }, { adminGate: true });
 
+  /* ── 5-3. 심화가 안 배운 범위를 내지 않는다 ──────────────────────────
+     선생님: "심화문제 나올때 아직 안배운 범위가 나오거나 한 부분이 있는지
+     확인하고 안배운문제를 내지 않도록 해줘" (2026-08-15)
+
+     재어 보니 있었다. 이 화면은 **과목 접두만** 보고 뽑아서, 화학Ⅰ 1회를 막
+     통과한 학생에게 후보 54개념 중 44개(81%)가 18회까지 가야 배우는 것이었다.
+     여기서는 화면에 실제로 뜬 문항 하나하나를 회차 표와 대 본다. */
+  await test('challenge · 배운 회차 밖 문항이 안 나온다', async page => {
+    await page.goto(BASE + 'challenge.html?course=ch2&round=3'); await page.waitForTimeout(400);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(/3회까지 배운 범위/.test(txt), '어디까지 내는지 화면이 말하지 않는다');
+    await page.click('.btn'); await page.waitForTimeout(300);
+    /* 여러 번 뽑아도 한 번도 새면 안 된다 — 무작위라 한 판만 보면 놓친다. */
+    const bad = await page.evaluate(() => {
+      const out = [];
+      for (let t = 0; t < 40; t++) {
+        start();
+        S.qs.forEach(q => {
+          if (!/^CH2-/.test(q.c)) return;            // 선수 과목(CH1)은 다 배운 것
+          const first = CHALLENGE_ROUND[q.c];
+          if (first == null || first > 3) out.push(q.c + '(' + first + '회)');
+        });
+      }
+      return Array.from(new Set(out));
+    });
+    assert(bad.length === 0, '3회 학생에게 안 배운 개념이 나왔다: ' + bad.slice(0, 8).join(' '));
+
+    /* 자가 눈먼 것이 아닌지 본다 — 문 없이 뽑으면 정말 새는지. */
+    const leaks = await page.evaluate(() => {
+      const out = [];
+      Object.keys(CHALLENGE_BANK).forEach(p => CHALLENGE_BANK[p].forEach(c => {
+        if (/^CH2-/.test(c.c) && CHALLENGE_ROUND[c.c] > 3) out.push(c.c);
+      }));
+      return out;
+    });
+    assert(leaks.length > 0, '3회 밖 개념이 아예 없으면 이 검사는 아무것도 안 막는다');
+  });
+
+  /* 선수 과목은 막지 않는다. 일반화학 학생은 화학Ⅰ·Ⅱ 를 이미 마쳤으므로
+     그 개념은 회차와 무관하게 낸다 — 여기까지 막으면 심화가 텅 빈다.
+     ⚠ 회차 표를 만드는 자가 과목을 안 보고 세면 이 경계가 무너진다.
+       일반화학 회차 파일에 실린 CH1 개념이 «화학Ⅰ 1회» 가 되어, 화학Ⅰ 1회
+       학생에게 4회 개념이 나갔다(2026-08-15, 스스로 검토하다 잡음). */
+  await test('challenge · 선수 과목은 회차로 막지 않는다', async page => {
+    await page.goto(BASE + 'challenge.html?course=gc&round=1'); await page.waitForTimeout(400);
+    const got = await page.evaluate(() => {
+      const p = poolFor('gc', 1);
+      return { pre: p.filter(q => !/^GC-/.test(q.c)).length,
+               own: p.filter(q => /^GC-/.test(q.c)).length,
+               late: p.filter(q => /^GC-/.test(q.c) && CHALLENGE_ROUND[q.c] > 1).length };
+    });
+    assert(got.pre > 0, '선수 과목 개념이 하나도 안 나온다');
+    assert(got.own > 0, '일반화학 1회 개념이 하나도 안 나온다');
+    assert(got.late === 0, '일반화학인데 안 배운 회차가 샜다: ' + got.late);
+  });
+
+  /* 배운 것이 12개가 안 되면 **모자란 채로** 낸다. 채우려고 안 배운 것을
+     끌어오면 그것이 바로 고치려던 병이다. 그리고 몇 개인지 말한다.
+
+     화학Ⅰ 1회가 실제로 10개다(12개가 아니다). 처음엔 12로 보였는데, 그건
+     회차 표를 만드는 자가 **과목을 안 보고** 세었기 때문이었다 — 일반화학
+     회차 파일에 실린 CH1 개념을 «화학Ⅰ 1회» 로 오인했다. 스스로 검토하다
+     잡았다. 그래서 여기서는 실데이터로 한 번, 표를 좁혀 한 번 본다. */
+  await test('challenge · 모자라면 모자란 대로 내고 그렇다고 말한다', async page => {
+    await page.goto(BASE + 'challenge.html?course=ch1&round=1'); await page.waitForTimeout(400);
+    const real = await page.evaluate(() => poolFor('ch1', 1)
+      .filter((q, i, a) => a.findIndex(x => x.c === q.c) === i).length);
+    assert(real > 0 && real < 12, '화학Ⅰ 1회가 12개 미만이 아니다 — 표를 다시 보라 (' + real + ')');
+    const t0 = await page.evaluate(() => document.body.innerText);
+    assert(t0.includes('심화 문항 ' + real + '개'), '실데이터에서 수를 사실대로 안 적었다: ' + real);
+
+    const n = await page.evaluate(() => {
+      const keep = Object.keys(CHALLENGE_ROUND).filter(k => /^CH1-/.test(k)).slice(0, 5);
+      Object.keys(CHALLENGE_ROUND).forEach(k => { if (!keep.includes(k)) CHALLENGE_ROUND[k] = 99; });
+      render();
+      return poolFor('ch1', 1).filter((q, i, a) => a.findIndex(x => x.c === q.c) === i).length;
+    });
+    assert(n === 5, '좁혔는데도 개념 수가 안 줄었다: ' + n);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(txt.includes('심화 문항 ' + n + '개'), '문항 수를 사실대로 안 적었다: ' + n);
+    assert(/개라 .*문항입니다/.test(txt), '왜 적은지 말하지 않는다');
+    await page.click('.btn'); await page.waitForTimeout(300);
+    const got = await page.evaluate(() => S.qs.length);
+    assert(got === n, '적어 놓은 수와 실제 문항 수가 다르다: ' + got + ' vs ' + n);
+    const head = await page.evaluate(() => document.querySelector('h2').textContent);
+    assert(head.includes(n + '문항'), '제목은 아직 12문항이라고 한다: ' + head);
+
+    /* 하나도 없으면 «없다» 고 말하고 시작 버튼을 안 준다. */
+    const none = await page.evaluate(() => {
+      S.view = 'intro';
+      Object.keys(CHALLENGE_ROUND).forEach(k => { CHALLENGE_ROUND[k] = 99; });
+      render();
+      return { txt: document.body.innerText, btn: !!document.querySelector('.btn') };
+    });
+    assert(/낼 만한 개념이 없습니다/.test(none.txt), '없는데 없다고 안 한다');
+    assert(!none.btn, '낼 것이 없는데 시작 버튼이 있다');
+  });
+
+  /* 이미 학생들에게 나간 옛 링크에는 회차가 없다. 그때 «다 배웠다» 고 치면
+     고친 것이 도로 풀린다 — 지어내지 말고 묻는다. */
+  await test('challenge · 회차를 모르면 지어내지 않고 묻는다', async page => {
+    await page.goto(BASE + 'challenge.html?course=ch2'); await page.waitForTimeout(400);
+    const txt = await page.evaluate(() => document.body.innerText);
+    assert(/어디까지 배웠나요/.test(txt), '회차를 안 묻는다');
+    assert(!/도전 시작/.test(txt), '회차도 모르는데 바로 풀린다');
+    const n = await page.$$eval('.rpick', b => b.length);
+    assert(n === 18, '화학Ⅱ 회차 수가 18이 아니다: ' + n);
+    const h = await page.$eval('.rpick', b => b.getBoundingClientRect().height);
+    assert(h >= 32, '회차 버튼이 손가락보다 작다: ' + h);
+    await page.click('.rpick:nth-child(3)'); await page.waitForTimeout(500);
+    assert(/round=3/.test(page.url()), '눌러도 회차가 안 붙는다: ' + page.url());
+    assert(/3회까지 배운 범위/.test(await page.evaluate(() => document.body.innerText)),
+           '고른 회차가 화면에 안 반영된다');
+    await assertNoOverflow(page, 'challenge-pick');
+  });
+
+  /* 주소는 사람이 고친다. 이상한 값이 와도 **화면이 거짓말하면 안 된다.**
+     세 가지가 실제로 그랬다(2026-08-16 에 훑다 잡음):
+       · course 가 엉터리면 화학Ⅰ 회차를 보여 줬고, 눌러도 과목이 그대로라
+         같은 화면이 다시 떴다 — 무한 반복
+       · round=999 면 「999회까지 배운 범위」 라고 적었다 — 그런 회차는 없다
+       · round 가 0·음수·글자면 그냥 회차를 물었다(이건 맞다) */
+  await test('challenge · 이상한 주소에도 거짓말하지 않는다', async page => {
+    const look = async u => {
+      await page.goto(BASE + u); await page.waitForTimeout(300);
+      return page.evaluate(() => {
+        const t = document.body.innerText;
+        return { course: /어느 과목인가요/.test(t), round: /어디까지 배웠나요/.test(t),
+                 start: !!document.querySelector('.btn'),
+                 scope: (t.match(/(\d+)회까지 배운 범위/) || [])[1] || null };
+      });
+    };
+    let r = await look('challenge.html?course=xyz&round=3');
+    assert(r.course && !r.start, '모르는 과목인데 문제를 낸다');
+    r = await look('challenge.html');
+    assert(r.course, '과목도 회차도 없는데 안 묻는다');
+    /* 과목을 고르면 회차를 묻는 자리로 넘어가야 한다(같은 화면이 다시 뜨면 안 된다). */
+    await page.click('.rpick'); await page.waitForTimeout(400);
+    const t2 = await page.evaluate(() => document.body.innerText);
+    assert(/어디까지 배웠나요/.test(t2), '과목을 골라도 같은 화면이 다시 뜬다');
+    assert(/course=/.test(page.url()), '고른 과목이 주소에 안 붙는다: ' + page.url());
+
+    r = await look('challenge.html?course=ch2&round=999');
+    assert(r.scope === '18', '없는 회차를 있다고 적는다: ' + r.scope);
+    r = await look('challenge.html?course=gc&round=999');
+    assert(r.scope === '10', '과목마다 마지막 회차가 다른데 안 본다: ' + r.scope);
+    for (const bad of ['0', '-5', 'abc', '']) {
+      r = await look('challenge.html?course=ch2&round=' + bad);
+      assert(r.round && !r.start, 'round=' + bad + ' 인데 그냥 문제를 낸다');
+    }
+    /* 대문자로 와도 같은 과목이다. */
+    r = await look('challenge.html?course=CH2&round=3');
+    assert(r.scope === '3' && r.start, '대문자 과목을 못 알아본다');
+  });
+
+  /* 성적표·응시 화면이 회차를 안 넘기면 위 문이 아무 소용이 없다. */
+  await test('challenge · 부르는 쪽이 회차를 같이 넘긴다', async page => {
+    for (const f of ['report.html', 'index.html']) {
+      const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+      const m = src.match(/challenge\.html\?course=\$\{[^}]+\}([^"']*)/);
+      assert(m, f + ' 에 심화 링크가 없다');
+      assert(/round=/.test(m[1]), f + ' 이 회차를 안 넘긴다: ' + m[0]);
+    }
+  });
+
   /* ── 6. 문자 템플릿: 탭 구성 + 복사 = 미리보기 일치 + 미입력 경고 ── */
   await test('letters · 탭/복사/자리표시', async page => {
     await page.goto(BASE + 'letters.html'); await page.waitForTimeout(400);

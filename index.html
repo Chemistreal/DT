@@ -833,7 +833,8 @@ function render(){
       <p class="lede" style="margin:0">${S.name} · ${last.attempt} <b class="mono">${last.score}</b>점</p>
       <p style="margin:14px 0 4px">잘했습니다. 다음 수업에서 봅시다.</p>
       <div class="ladder" style="justify-content:center">${S.attempts.map(a=>`<span class="lstep ${a.pass?'p':'f'}">${a.attempt} ${a.score}${a.pass?' ✓':''}</span>`).join('')}</div></div>
-      <a class="challengebtn" href="challenge.html?course=${S.round.course}"><span class="cbadge">A밴드</span>한 단계 위 심화 도전 →<small>통과한 지금, 더 어려운 문제로 실력의 끝을 확인해 보세요</small></a>
+      <!-- 회차를 같이 넘긴다. 안 넘기면 심화가 안 배운 단원까지 낸다. -->
+      <a class="challengebtn" href="challenge.html?course=${S.round.course}&amp;round=${S.round.round}"><span class="cbadge">A밴드</span>한 단계 위 심화 도전 →<small>통과한 지금, 배운 데까지에서 더 어려운 문제로 실력의 끝을 확인해 보세요</small></a>
       <div style="max-width:340px;margin:16px auto 2px;padding-top:13px;border-top:1px solid #eee;text-align:center">
         <div class="pll" style="justify-content:center">학부모에게 통과 소식 전달 <span class="muted">· 리포트 링크 포함</span></div>
         <div class="btnrow" style="margin-top:7px;justify-content:center"><button class="ghost sm" onclick="copyPassMsg(this)">통과 소식 + 링크 복사</button></div>
