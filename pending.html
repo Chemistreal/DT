@@ -312,15 +312,34 @@ function absentMsg(d, stage){
 }
 
 function absentClassHTML(c){
+  /* ⚠ 어떤 상태든 반 카드는 **반드시 선다.** 예전에는 미응시가 0이거나
+     회차를 못 정한(noExam) 반을 거르는 바람에, 그 반이 화면에서 통째로
+     사라졌다 — 회차 고르개까지 같이 사라져서 되살릴 문도 없었다. 실제로
+     한 반(23명 전원 미응시)이 회차 지정이 어긋난 채 이 화면에서만 안 보였다.
+     roster.html 은 네 상태(과목 미인식·회차 미정·미응시·전원 응시)를 다
+     보여 준다 — 여기도 같은 규칙을 쓴다. */
+  if(c.note){
+    return '<div class="abx-cls"><div class="abx-head"><span class="abx-nm">'+esc(c.label)+'</span>'
+      +'<span class="abx-badge">'+esc(c.note)+'</span></div>'
+      +'<div class="muted-note" style="margin:8px 0 0">반 이름에 화학1·화학2·일반화학이 들어가야 과목을 인식합니다 — roster.html에서 반 이름을 고쳐 주세요.</div></div>';
+  }
   var el=examLink(c.course, c.round);
   var ovv=absOv()[c.label], ovOn=(ovv!=null);
+  var noRound=(c.noExam||c.round==null);
   var opts='<option value="">자동</option>';
   for(var _i=1;_i<=20;_i++){ opts+='<option value="'+_i+'"'+((ovOn&&Number(ovv)===_i)?' selected':'')+'>'+_i+'회</option>'; }
   var head='<div class="abx-head"><span class="abx-nm">'+esc(c.label)+'</span>'
-    +'<span class="abx-badge">'+(COURSE[c.course]||esc(c.course))+' '+esc(c.round)+'회</span>'
+    +'<span class="abx-badge">'+(COURSE[c.course]||esc(c.course))+' '+(noRound?'회차 미정':esc(c.round)+'회')+'</span>'
     +'<select class="roundsel'+(ovOn?' on':'')+'" data-label="'+escAttr(c.label)+'" onchange="setAbsRoundVal(this)" title="이 반의 시험 회차 선택 (자동/직접)">'+opts+'</select>'
-    +'<span class="abx-cnt">미응시 '+c.absent.length+'/'+c.total+'명</span>'
-    +'<button class="zipbtn" data-course="'+escAttr(c.course)+'" data-round="'+Number(c.round)+'" data-label="'+escAttr(c.label)+'" data-absent="'+escAttr(JSON.stringify(c.absent))+'" onclick="zipExamClass(this)">시험지 ZIP</button></div>';
+    +'<span class="abx-cnt">'+(noRound?'회차를 골라 주세요':(c.absent.length?('미응시 '+c.absent.length+'/'+c.total+'명'):('전원 응시 '+c.total+'명')))+'</span>'
+    +(c.absent.length?'<button class="zipbtn" data-course="'+escAttr(c.course)+'" data-round="'+Number(c.round)+'" data-label="'+escAttr(c.label)+'" data-absent="'+escAttr(JSON.stringify(c.absent))+'" onclick="zipExamClass(this)">시험지 ZIP</button>':'')+'</div>';
+  if(noRound){
+    return '<div class="abx-cls">'+head
+      +'<div class="muted-note" style="margin:8px 0 0">최근 8일 안에 이 반 학생들의 채점 기록이 없어 회차를 자동으로 못 정했습니다. 위에서 회차를 직접 고르면 그 회차 기준 미응시자가 나옵니다.</div></div>';
+  }
+  if(!c.absent.length){
+    return '<div class="abx-cls">'+head+'</div>';
+  }
   var bc='<div class="copygrp abx-bc" data-kind="exam" data-name="" data-course="'+escAttr(c.course)+'" data-round="'+escAttr(c.round)+'" data-link="'+escAttr(el)+'">'
     +'<button class="copybtn abc" data-stage="bc" data-orig="반 전체 공지 복사" onclick="copyShare(this)">반 전체 공지 복사</button></div>';
   var stus=(c.absent||[]).map(function(nm){
@@ -503,8 +522,10 @@ function render(P, ABS, absFail, PASS, MERGE){
   a0.forEach(function(p){ (hid[hkey(p)]?hidden:a).push(p); });
   s0.forEach(function(p){ (hid[hkey(p)]?hidden:s).push(p); });
   _ACTIVE=a.slice();
-  var absClasses=(ABS&&ABS.classes||[]).filter(function(c){return c.absent&&c.absent.length;});
-  var absN=absClasses.reduce(function(t,c){return t+c.absent.length;},0);
+  /* 미응시 수는 실제 미응시자만 세되, 카드는 **모든 반**을 세운다 —
+     거른 반은 사라진 반이고, 사라진 반은 고칠 수도 없다. */
+  var absAll=(ABS&&ABS.classes||[]);
+  var absN=absAll.reduce(function(t,c){return t+((c.absent&&c.absent.length)||0);},0);
   var gen=document.getElementById('gen'); if(gen) gen.textContent='갱신 '+(P.generatedAt||(ABS&&ABS.generatedAt)||'');
   var h='';
   var pass=(PASS&&PASS.passed)||[];
@@ -519,8 +540,11 @@ function render(P, ABS, absFail, PASS, MERGE){
   // 시험 미응시 (roster 미응시자 기준) · 온라인 응시 안내
   h+='<div class="sec-h">시험 미응시 <span class="tag" style="background:var(--red)">'+absN+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 온라인 응시 필요</span></div>';
   if(!ABS){ h+= absFail ? '<div class="muted-note">미응시자 명단을 불러오지 못했습니다. 잠시 후 <b>새로고침</b> 해주세요. (서버가 잠깐 응답하지 못한 경우로, 대개 다시 시도하면 됩니다.)</div>' : '<div class="muted-note">등록된 반 명단이 없습니다. roster.html에서 반 명단을 저장하세요.</div>'; }
-  else if(!absN){ h+='<div class="empty">이번 회차 시험을 응시하지 않은 학생이 없습니다.</div>'; }
-  else{ h+='<div class="muted-note">저장된 반 명단 기준, 이번 회차 시험 응시 기록이 없는 학생입니다. 버튼으로 온라인 응시 안내를 복사해 보내세요. (OX 워밍업이 아니라 정식 60문항 시험입니다.)</div>'; h+=absClasses.map(absentClassHTML).join(''); }
+  else{
+    if(!absN) h+='<div class="empty">이번 회차 시험을 응시하지 않은 학생이 없습니다.</div>';
+    else h+='<div class="muted-note">저장된 반 명단 기준, 이번 회차 시험 응시 기록이 없는 학생입니다. 버튼으로 온라인 응시 안내를 복사해 보내세요. (OX 워밍업이 아니라 정식 60문항 시험입니다.)</div>';
+    h+=absAll.map(absentClassHTML).join('');
+  }
 
   h+='<div class="sec-h">재시 필요 <span class="tag">'+a.length+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 오래된 순</span>'+(a.length?'<button class="zipbtn" style="margin-left:auto" onclick="zipRetakePending(this)">재시지 ZIP ('+a.length+'명)</button>':'')+'</div>';
   if(!a.length){ h+='<div class="empty">'+(hidden.length?'표시할 재시 미응시 학생이 없습니다. (숨김 '+hidden.length+'명)':'2주 이내 재시 미응시 학생이 없습니다.')+'</div>'; }
