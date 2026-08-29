@@ -1494,6 +1494,47 @@ async function assertNoOverflow(page, label) {
     await page.waitForFunction(() => S.view === 'grade', null, { timeout: 20000 });
   }, { adminGate: true, viewport: { width: 900, height: 900 } });
 
+  /* ── 구간 종합 보고서 (?seg=1-4) ────────────────────────────────
+     구간을 자를 때 가장 흔한 거짓말 둘을 기계가 막는다.
+     ① 미응시를 지우지 않는다 — 세 회차만 본 학생의 문서가 «넉 달 다 봤다»
+        로 읽히면 안 된다.
+     ② 구간 밖 회차를 끌어오지 않는다 — 5회 기록이 1~4회 종합에 섞이면
+        학부모는 어느 숫자가 무엇인지 알 수 없다. */
+  {
+    const t0 = Date.now(), name = '구간 종합 · 미응시를 지우지 않고 구간 밖을 안 섞는다';
+    try {
+      const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+      const a = src.indexOf('function segStates(');
+      const b = src.indexOf('async function segLedger(');
+      assert(a > 0 && b > a, 'segStates 를 못 찾았다');
+      const ctx = new Function('ORD',
+        src.slice(a, b) + '\nreturn { segStates: segStates };'
+      )(new Proxy({}, { get: (_o, k) => (String(k).match(/재/g) || []).length }));
+
+      const R = (round, attempt, pass) => ({ course: 'ch1', round, attempt, pass, score: pass ? 90 : 60 });
+      const rows = [
+        R(1, '첫 응시', false), R(1, '재시', true),   // 재시로 통과
+        R(2, '첫 응시', true),                        // 첫 응시 통과
+        // 3회 없음 → 미응시
+        R(4, '첫 응시', false),                       // 미달 · 재시 안 봄
+        R(5, '첫 응시', true),                        // 구간 밖 — 섞이면 안 된다
+      ];
+      const st = ctx.segStates(rows, 'ch1', 1, 4);
+      assert(st.length === 4, '구간 밖 회차가 섞였다: ' + st.length + '칸');
+      assert(st.map(x => x.round).join(',') === '1,2,3,4', '회차가 어긋났다: ' + st.map(x => x.round));
+      const got = st.map(x => x.state).join(',');
+      assert(got === 'repass,pass,miss,need', '상태가 어긋났다: ' + got);
+      /* 안 본 회차가 목록에서 빠지면(=3칸만 나오면) 위 length 검사가 잡는다.
+         여기서는 그 칸이 'miss' 로 **남아 있는지**를 한 번 더 못 박는다. */
+      assert(st[2].state === 'miss', '미응시 회차가 사라졌다');
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   /* ── 첫 응시 라벨 ────────────────────────────────────────────────
      시트에 실제로 저장되는 첫 응시 라벨은 '첫 응시' 다(exam.html:822,
      index.html:305). 그런데 report.html 안에 인라인된 엔진이 한때 '정시'

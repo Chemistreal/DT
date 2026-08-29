@@ -74,15 +74,15 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .gwrap{margin-top:9px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .grid{border-collapse:separate;border-spacing:0;font-size:12px;width:auto;min-width:100%}
 .grid th,.grid td{padding:3px 4px;white-space:nowrap}
-.grid thead th{font-size:10.5px;color:var(--muted);font-weight:700;padding-bottom:5px;text-align:center}
+.grid thead th{font-size:11.5px;color:var(--muted);font-weight:700;padding-bottom:5px;text-align:center}
 .grid th.gname{position:sticky;left:0;z-index:2;background:#fff;text-align:left;font-weight:700;
   color:var(--char);padding-right:9px;box-shadow:1px 0 0 var(--line)}
 .grid thead th.gname{color:var(--muted);font-weight:700}
-.grid td.gname{position:sticky;left:0;z-index:2;background:#fff;box-shadow:1px 0 0 var(--line);
+.grid th.gname,.grid td.gname{position:sticky;left:0;z-index:2;background:#fff;box-shadow:1px 0 0 var(--line);
   text-align:left;font-weight:700;color:var(--char);padding-right:9px}
 .gseg{border-left:2px solid var(--line)}
 .cell{display:block;width:19px;height:19px;line-height:19px;border-radius:5px;text-align:center;
-  font-size:10px;font-weight:700;margin:0 auto}
+  font-size:11.5px;font-weight:700;margin:0 auto}
 .c-pass{background:#E4F0E6;color:#2C6B3F}            /* 첫 응시 통과 */
 .c-repass{background:#E4F0E6;color:#2C6B3F;box-shadow:inset 0 0 0 1.4px #8FC0A0}  /* 재시로 통과 */
 .c-retry{background:#FDF1DC;color:#8A6A2E}           /* 재시 진행 중(아직 미달) */
@@ -91,7 +91,7 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .c-pre{background:transparent;color:#D8D3C8}         /* 다니기 전(첫 응시보다 앞) */
 .gsum{font-size:11.5px;color:var(--muted);padding-left:9px;white-space:nowrap}
 .gsum b{color:var(--red)}
-.glegend{font-size:11px;color:var(--muted);margin-top:7px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.glegend{font-size:11.5px;color:var(--muted);margin-top:7px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 .glegend span{display:inline-flex;align-items:center;gap:4px}
 .glegend i{width:11px;height:11px;border-radius:3px;display:inline-block}
 .gact{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 0 2px;
@@ -469,9 +469,9 @@ var CELLLBL={pass:'첫 응시 통과',repass:'재시로 통과',retry:'재시 �
 function gridHTML(c){
   var g=gridFor(c); if(!g) return '';
   var upto=Number(c.round)||0;
-  var head='<tr><th class="gname">학생</th>';
-  for(var n=1;n<=upto;n++) head+='<th'+((n>1&&(n-1)%4===0)?' class="gseg"':'')+'>'+n+'</th>';
-  head+='<th class="gsum">밀림</th></tr>';
+  var head='<tr><th scope="col" class="gname">학생</th>';
+  for(var n=1;n<=upto;n++) head+='<th scope="col"'+((n>1&&(n-1)%4===0)?' class="gseg"':'')+'>'+n+'</th>';
+  head+='<th scope="col" class="gsum">밀림</th></tr>';
   var body=g.map(function(st){
     var tds=st.states.map(function(v,i){
       var k=CELL[v]||CELL.miss;
@@ -479,7 +479,7 @@ function gridHTML(c){
         +(i+1)+'회 · '+(CELLLBL[v]||'')+'">'+k.t+'</span></td>';
     }).join('');
     var b=st.backlog.length;
-    return '<tr><td class="gname">'+esc(st.name)+'</td>'+tds
+    return '<tr><th scope="row" class="gname">'+esc(st.name)+'</th>'+tds
       +'<td class="gsum">'+(b?'<b>'+b+'</b>':'—')+'</td></tr>';
   }).join('');
   var lg='<div class="glegend">'
