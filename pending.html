@@ -94,6 +94,8 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .glegend{font-size:11.5px;color:var(--muted);margin-top:7px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
 .glegend span{display:inline-flex;align-items:center;gap:4px}
 .glegend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.gsechead{font-size:12px;font-weight:800;color:var(--char);margin-top:11px;padding-top:9px;
+  border-top:1.5px solid var(--line)}
 .gact{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 0 2px;
   border-top:1px dashed var(--line);margin-top:7px}
 .gact .who{font-size:12.5px;font-weight:700;color:var(--char);min-width:64px}
@@ -279,11 +281,16 @@ function copyShare(btn){
     att:host.getAttribute('data-att'), score:host.getAttribute('data-score'), next:host.getAttribute('data-next'),
     tries:host.getAttribute('data-tries'), link:host.getAttribute('data-link') };
   var kind=host.getAttribute('data-kind')||'retake';
+  if(kind==='seg'){
+    d.from=Number(host.getAttribute('data-from'))||1;
+    d.to=Number(host.getAttribute('data-to'))||4;
+  }
   if(kind==='backlog'){
     d.rounds=(host.getAttribute('data-rounds')||'').split(',').map(Number).filter(Boolean).sort(function(a,b){return a-b;});
     d.link=examLink(d.course, d.rounds[0]);      // 가장 오래된 회차부터 — 누적이라 순서가 있다
   }
-  var msg=(kind==='backlog')?backlogMsg(d)
+  var msg=(kind==='seg')?segMsg(d)
+    :(kind==='backlog')?backlogMsg(d)
     :(kind==='exam')?absentMsg(d, stage):(kind==='pass')?passMsg(d):shareMsg(d, stage); if(!msg) return;
   var orig=btn.getAttribute('data-orig')||btn.textContent;
   var done=function(){ btn.textContent='복사됨 ✓'; btn.classList.add('copied');
@@ -314,6 +321,27 @@ function roundsPhrase(rs){
   var run=rs.every(function(v,i){ return i===0||v===rs[i-1]+1; });
   if(rs.length>=4&&run) return rs[0]+'회부터 '+rs[rs.length-1]+'회까지 '+rs.length+'개 회차';
   return rs.join('·')+'회';
+}
+/* 구간 종합 보고서 안내. 이것만 성격이 다르다 — 나머지는 전부 «안 한 것을
+   해 달라» 는 독촉이고, 이것은 «넉 달치를 한 장으로 정리해 드립니다» 다.
+   그래서 링크가 문서 자체이고, 할 일을 시키지 않는다.
+   뼈대는 같다: 머리말 → 인사 → 무엇인가 → 무엇이 담겼나 → ▶ 링크 → 맺음. */
+function segMsg(d){
+  var course=COURSE[d.course]||d.course;
+  var span=d.from+'~'+d.to+'회';
+  var link=String(d.link||'');
+  var sep=link.indexOf('?')>=0?'&':'?';
+  return '[다원교육 영재관 · 화학] '+justName(d.name)+' 학생 '+span+' 종합 보고서\n\n'
+    +'안녕하세요, 화학 조준모입니다.\n\n'
+    +course+' '+span+'가 마무리되어, 네 회차를 한 장으로 정리한 종합 보고서를 보내드립니다. '
+    +'매주 보내드리던 회차별 리포트와 달리, 이 문서는 회차가 쌓여야 비로소 보이는 것을 담았습니다.\n\n'
+    +'· 네 회차 응시 이력과 점수 추이\n'
+    +'· 단원별로 이 구간에서 얼마나 다져졌는지\n'
+    +'· 앞 회차에서 틀린 개념을 뒤 회차가 다시 물었을 때 맞혔는지 — 바로잡은 개념과 아직 남은 개념\n\n'
+    +'▶ '+link+sep+'seg='+d.from+'-'+d.to+'\n\n'
+    +'마지막 항목이 이 보고서의 핵심입니다. 한 번 틀린 개념이 실제로 고쳐졌는지는 '
+    +'한 회차 성적표로는 알 수 없고, 네 회차를 이어 봐야 확인됩니다. '
+    +'남은 개념이 있다면 다음 구간을 시작하기 전에 그 부분부터 짚어 주시면 좋겠습니다. 감사합니다.\n\n조준모 드림';
 }
 function backlogMsg(d){
   var course=COURSE[d.course]||d.course;
@@ -452,11 +480,13 @@ function gridFor(c){
   var stus=gRowsFor(cls.students, GRID.rows);
   return stus.map(function(st){
     var states=gStates(st.rows, c.course, upto);
+    /* 학부모에게 보내는 리포트 주소. 시트 행이 그대로 들고 있다(mapRow_). */
+    var link=''; for(var i=st.rows.length-1;i>=0;i--){ if(st.rows[i].reportLink){ link=st.rows[i].reportLink; break; } }
     var backlog=[];
     states.forEach(function(v,i){ if(v==='miss') backlog.push(i+1); });
     var needRetry=[];
     states.forEach(function(v,i){ if(v==='need'||v==='retry') needRetry.push(i+1); });
-    return {name:st.name, school:st.school, states:states, backlog:backlog, needRetry:needRetry};
+    return {name:st.name, school:st.school, states:states, backlog:backlog, needRetry:needRetry, link:link};
   }).sort(function(a,b){
     return (b.backlog.length-a.backlog.length) || (b.needRetry.length-a.needRetry.length)
         || a.name.localeCompare(b.name);
@@ -489,6 +519,26 @@ function gridHTML(c){
     +'<span><i class="c-need"></i>미달·재시 안 봄</span>'
     +'<span><i class="c-miss"></i>안 봄</span>'
     +'<span><i class="c-pre" style="border:1px dashed var(--line)"></i>다니기 전</span></div>';
+  /* ── 끝난 구간의 종합 보고서 ──────────────────────────────────────
+     구간은 회차 번호로 고정한다(1~4 · 5~8 · 9~12 · 선생님 결정). 지금 회차가
+     5회면 1~4회가 끝난 구간이다. 그 구간을 **한 회차라도 응시한** 학생에게만
+     단추를 세운다 — 한 번도 안 본 학생에게 「종합」을 보내면 빈 문서다. */
+  var segEnd=Math.floor(upto/4)*4, segFrom=segEnd-3;
+  var segs=(segEnd>=4)?g.filter(function(st){
+      if(!st.link) return false;
+      return st.states.slice(segFrom-1,segEnd).some(function(v){ return v!=='miss'&&v!=='pre'; });
+    }).map(function(st){
+      var took=st.states.slice(segFrom-1,segEnd).filter(function(v){return v!=='miss'&&v!=='pre';}).length;
+      return '<div class="gact"><span class="who">'+esc(st.name)+'</span>'
+        +'<span class="why">'+segFrom+'~'+segEnd+'회 중 '+took+'회 응시</span>'
+        +'<div class="copygrp" data-kind="seg" data-name="'+escAttr(st.name)+'"'
+        +' data-course="'+escAttr(c.course)+'" data-from="'+segFrom+'" data-to="'+segEnd+'"'
+        +' data-link="'+escAttr(st.link)+'">'
+        +'<button class="copybtn" data-orig="'+segFrom+'~'+segEnd+'회 종합 보내기" onclick="copyShare(this)">'
+        +segFrom+'~'+segEnd+'회 종합 보내기</button></div></div>';
+    }).join(''):'';
+  var segHead=segs?'<div class="gsechead">'+segFrom+'~'+segEnd+'회 종합 보고서 보내기</div>':'';
+
   /* 밀린 회차가 둘 이상인 학생만 몰아 안내 단추를 세운다. 하나뿐이면 위의
      1차·리마인드·최종이 이미 그 일을 한다 — 같은 말을 두 서식으로 갖지 않는다. */
   var acts=g.filter(function(st){ return st.backlog.length>=2; }).map(function(st){
@@ -499,7 +549,7 @@ function gridHTML(c){
       +'<button class="copybtn" data-orig="밀린 회차 안내 복사" onclick="copyShare(this)">밀린 회차 안내 복사</button>'
       +'</div></div>';
   }).join('');
-  return '<div class="gwrap"><table class="grid"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+lg+acts;
+  return '<div class="gwrap"><table class="grid"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+lg+acts+segHead+segs;
 }
 
 function absentClassHTML(c){
