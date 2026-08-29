@@ -319,7 +319,14 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
       var trend = Object.keys(rounds).map(function (rk) {
         var R = rounds[rk];
         R.attempts.sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
-        var jeong = R.attempts.find(function (a) { return a.attempt === '정시'; });
+        /* ⚠ '정시' 한 글자만 찾으면 안 된다. 시트에 실제로 들어 있는 첫 응시
+           라벨은 '첫 응시' 다(2026-08 기준 349건, '정시'는 0건) — exam.html·
+           index.html 이 그 이름으로 저장한다. report.html 안에 박힌 사본은
+           2026-08-29 에 고쳤는데 이 공용 파일은 같이 안 고쳐서, index.html 이
+           재시 직후 보여 주는 리포트에서 첫 응시 점수가 통째로 비었다.
+           아래 order() 는 라벨에 든 '재' 글자를 센다 — 이름이 무엇이든
+           '재' 가 없으면 첫 응시다. 새 라벨이 또 생겨도 안 깨진다. */
+        var jeong = R.attempts.find(function (a) { return order(a.attempt) === 0; });
         var last = R.attempts[R.attempts.length - 1];
         var passedAny = R.attempts.some(function (a) { return a.pass; });
         var passAtt = null; for (var pi = 0; pi < R.attempts.length; pi++) { if (R.attempts[pi].pass) { passAtt = R.attempts[pi]; break; } }

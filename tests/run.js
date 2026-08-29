@@ -1584,6 +1584,38 @@ async function assertNoOverflow(page, label) {
     }
   }
 
+  /* ── 같은 엔진이 두 벌 있다 ─────────────────────────────────────
+     위 검사는 **report.html 안에 박힌 사본**만 잰다. 그런데 엔진은 두 벌이다 —
+     `chemengine.js` 는 index.html 이 불러 쓰고, 학생이 재시를 끝내면 그 자리에서
+     보여 주는 리포트가 이것으로 계산된다. 2026-08-29 에 report.html 만 고쳐서
+     이쪽은 '정시' 한 글자로 남아 있었고, 재시 직후 화면의 첫 응시 점수가
+     통째로 null 이었다. **두 벌이면 두 벌 다 잰다.** */
+  {
+    const t0 = Date.now(), name = '공용 엔진(chemengine.js)도 첫 응시 라벨을 알아본다';
+    try {
+      delete require.cache[require.resolve(path.join(ROOT, 'chemengine.js'))];
+      const CE = require(path.join(ROOT, 'chemengine.js'));
+      assert(CE && CE.cumulative, 'chemengine.js 에 cumulative 가 없다');
+      const rows = lab => ([
+        { studentKey: '가상중-검사', course: 'ch1', round: 1, attempt: lab, score: 70, pass: false, wrongMis: [], units: [], date: '2026-08-01' },
+        { studentKey: '가상중-검사', course: 'ch1', round: 1, attempt: '재시', score: 85, pass: true, wrongMis: [], units: [], date: '2026-08-02' },
+      ]);
+      const first = lab => {
+        const A = CE.cumulative(rows(lab))['가상중-검사'];
+        assert(A && A.trend && A.trend.length === 1, lab + ': 회차가 안 잡혔다');
+        return A.trend[0].jeongsiScore;
+      };
+      assert(first('첫 응시') === 70, "'첫 응시' 점수를 못 읽는다 → " + first('첫 응시'));
+      assert(first('정시') === 70, "'정시' 점수를 못 읽는다 → " + first('정시'));
+      assert(first('첫번째시험') === 70, "'첫번째시험' 점수를 못 읽는다 → " + first('첫번째시험'));
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   /* ── 문자에 실리는 이름 ──────────────────────────────────────────
      명단·시트의 이름 칸에 `김지완 대청중` 처럼 학교가 붙어 있을 수 있다
      (명단에 두 명을 넣을 방법이 없던 때의 흔적). 그대로 실려 학부모에게
