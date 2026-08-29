@@ -654,7 +654,15 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
       var trend = Object.keys(rounds).map(function (rk) {
         var R = rounds[rk];
         R.attempts.sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
-        var jeong = R.attempts.find(function (a) { return a.attempt === '정시'; });
+        /* ⚠ '정시' 한 글자만 찾으면 안 된다. 시트에 실제로 들어 있는 첫 응시
+           라벨은 '첫 응시' 다(2026-08 기준 349건, '정시'는 0건) — exam.html·
+           index.html 이 그 이름으로 저장한다. 그래서 여기서 첫 응시 점수가
+           통째로 null 이 되고, 학부모가 회차 카드를 눌러 여는 「N회 시점 상세
+           리포트」에서 첫 응시 점수가 전부 비었다. 데모 데이터(SYN)는 옛 라벨
+           '정시' 라서 검사도 초록불이었다.
+           바로 아래 order() 가 이미 네 라벨을 다 알고 있다 — 그것을 쓴다.
+           (서버 cumulative_ 는 attOrd_ 로 같은 일을 이미 옳게 한다.) */
+        var jeong = R.attempts.find(function (a) { return order(a.attempt) === 0; });
         var last = R.attempts[R.attempts.length - 1];
         var passedAny = R.attempts.some(function (a) { return a.pass; });
         return {

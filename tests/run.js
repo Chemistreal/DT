@@ -1494,6 +1494,55 @@ async function assertNoOverflow(page, label) {
     await page.waitForFunction(() => S.view === 'grade', null, { timeout: 20000 });
   }, { adminGate: true, viewport: { width: 900, height: 900 } });
 
+  /* ── 첫 응시 라벨 ────────────────────────────────────────────────
+     시트에 실제로 저장되는 첫 응시 라벨은 '첫 응시' 다(exam.html:822,
+     index.html:305). 그런데 report.html 안에 인라인된 엔진이 한때 '정시'
+     한 글자로만 찾아서, 학부모가 회차 카드를 눌러 여는 「N회 시점 상세
+     리포트」의 첫 응시 점수가 통째로 null 이었다.
+
+     ⚠ 이 검사가 있어야 하는 진짜 까닭: 그 화면의 데모 데이터(SYN)는 옛
+       라벨 '정시' 라서, 데모로 도는 검사는 전부 초록불이고 **실제 학부모만
+       깨진 문서를 받았다.** 그래서 여기서는 시트에 실제로 들어 있는 라벨로
+       잰다. 세 라벨이 같은 값을 내야 한다. */
+  {
+    const t0 = Date.now(), name = "첫 응시 라벨 세 가지를 다 알아본다 ('첫 응시'·'정시'·'첫번째시험')";
+    try {
+      const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+      const a = src.indexOf('(function (root) {');
+      const b = src.indexOf('root.ChemEngine = api;', a);
+      assert(a > 0 && b > a, 'report.html 안에서 엔진을 못 찾았다');
+      const code = src.slice(a, b) + 'root.ChemEngine = api; })(shim);';
+      const shim = {};
+      new Function('shim', code)(shim);
+      const CE = shim.ChemEngine;
+      assert(CE && CE.cumulative, 'ChemEngine.cumulative 가 없다');
+
+      const rows = lab => ([
+        { studentKey: '가상중-검사', course: 'ch1', round: 1, attempt: lab, score: 70, pass: false, wrongMis: [], units: [], date: '2026-08-01' },
+        { studentKey: '가상중-검사', course: 'ch1', round: 1, attempt: '재시', score: 85, pass: true, wrongMis: [], units: [], date: '2026-08-02' },
+        { studentKey: '가상중-검사', course: 'ch1', round: 2, attempt: lab, score: 90, pass: true, wrongMis: [], units: [], date: '2026-08-08' },
+      ]);
+      const first = lab => {
+        const c = CE.cumulative(rows(lab));
+        const A = c['가상중-검사'];
+        assert(A && A.trend && A.trend.length === 2, lab + ': 회차가 2개로 안 잡혔다');
+        return A.trend.slice().sort((x, y) => x.round - y.round).map(t => t.jeongsiScore);
+      };
+      const real = first('첫 응시'), legacy = first('정시'), old2 = first('첫번째시험');
+      assert(real[0] === 70 && real[1] === 90,
+             "'첫 응시' 로 저장된 점수를 못 읽는다 → " + JSON.stringify(real));
+      assert(JSON.stringify(real) === JSON.stringify(legacy),
+             "'첫 응시' 와 '정시' 가 다른 값을 낸다 → " + JSON.stringify(real) + ' vs ' + JSON.stringify(legacy));
+      assert(JSON.stringify(real) === JSON.stringify(old2),
+             "'첫번째시험' 이 다른 값을 낸다 → " + JSON.stringify(old2));
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   /* ── 문자에 실리는 이름 ──────────────────────────────────────────
      명단·시트의 이름 칸에 `김지완 대청중` 처럼 학교가 붙어 있을 수 있다
      (명단에 두 명을 넣을 방법이 없던 때의 흔적). 그대로 실려 학부모에게
