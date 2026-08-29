@@ -68,6 +68,37 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .abx-cnt{margin-left:auto;font-size:12px;font-weight:700;color:var(--red)}
 .abx-bc{margin:9px 0 4px}
 .abx-bc .copybtn{width:100%;text-align:center;border-left-width:3px;border-left-color:var(--gold)}
+/* ── 반 × 회차 격자 ────────────────────────────────────────────────
+   한 회차만 보던 자리를 회차 축으로 넓힌 것. 칸 하나가 한 학생의 한 회차다.
+   가로로 길어질 수 있어 격자만 따로 구른다(화면 전체가 밀리면 안 된다). */
+.gwrap{margin-top:9px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.grid{border-collapse:separate;border-spacing:0;font-size:12px;width:auto;min-width:100%}
+.grid th,.grid td{padding:3px 4px;white-space:nowrap}
+.grid thead th{font-size:10.5px;color:var(--muted);font-weight:700;padding-bottom:5px;text-align:center}
+.grid th.gname{position:sticky;left:0;z-index:2;background:#fff;text-align:left;font-weight:700;
+  color:var(--char);padding-right:9px;box-shadow:1px 0 0 var(--line)}
+.grid thead th.gname{color:var(--muted);font-weight:700}
+.grid td.gname{position:sticky;left:0;z-index:2;background:#fff;box-shadow:1px 0 0 var(--line);
+  text-align:left;font-weight:700;color:var(--char);padding-right:9px}
+.gseg{border-left:2px solid var(--line)}
+.cell{display:block;width:19px;height:19px;line-height:19px;border-radius:5px;text-align:center;
+  font-size:10px;font-weight:700;margin:0 auto}
+.c-pass{background:#E4F0E6;color:#2C6B3F}            /* 첫 응시 통과 */
+.c-repass{background:#E4F0E6;color:#2C6B3F;box-shadow:inset 0 0 0 1.4px #8FC0A0}  /* 재시로 통과 */
+.c-retry{background:#FDF1DC;color:#8A6A2E}           /* 재시 진행 중(아직 미달) */
+.c-need{background:#FBE3DE;color:#A8402C}            /* 정시 미달 · 재시 기록 없음 */
+.c-miss{background:#F3F0EA;color:#A9A296}            /* 안 봄 */
+.c-pre{background:transparent;color:#D8D3C8}         /* 다니기 전(첫 응시보다 앞) */
+.gsum{font-size:11.5px;color:var(--muted);padding-left:9px;white-space:nowrap}
+.gsum b{color:var(--red)}
+.glegend{font-size:11px;color:var(--muted);margin-top:7px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.glegend span{display:inline-flex;align-items:center;gap:4px}
+.glegend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.gact{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:7px 0 2px;
+  border-top:1px dashed var(--line);margin-top:7px}
+.gact .who{font-size:12.5px;font-weight:700;color:var(--char);min-width:64px}
+.gact .why{font-size:11.5px;color:var(--muted)}
+.gact .copybtn{margin-top:0;border-left-width:3px}
 .abx-stu{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0 2px;border-top:1px dashed var(--line);margin-top:6px}
 .abx-sname{font-weight:700;font-size:14px;color:#374151;min-width:66px}
 .abx-btns{flex-direction:row;gap:6px;margin-left:auto;margin-top:0}
@@ -248,7 +279,12 @@ function copyShare(btn){
     att:host.getAttribute('data-att'), score:host.getAttribute('data-score'), next:host.getAttribute('data-next'),
     tries:host.getAttribute('data-tries'), link:host.getAttribute('data-link') };
   var kind=host.getAttribute('data-kind')||'retake';
-  var msg=(kind==='exam')?absentMsg(d, stage):(kind==='pass')?passMsg(d):shareMsg(d, stage); if(!msg) return;
+  if(kind==='backlog'){
+    d.rounds=(host.getAttribute('data-rounds')||'').split(',').map(Number).filter(Boolean).sort(function(a,b){return a-b;});
+    d.link=examLink(d.course, d.rounds[0]);      // 가장 오래된 회차부터 — 누적이라 순서가 있다
+  }
+  var msg=(kind==='backlog')?backlogMsg(d)
+    :(kind==='exam')?absentMsg(d, stage):(kind==='pass')?passMsg(d):shareMsg(d, stage); if(!msg) return;
   var orig=btn.getAttribute('data-orig')||btn.textContent;
   var done=function(){ btn.textContent='복사됨 ✓'; btn.classList.add('copied');
     setTimeout(function(){ btn.textContent=orig; btn.classList.remove('copied'); }, 1800); };
@@ -262,6 +298,38 @@ function siteBase(){ var b=location.href.split('?')[0].split('#')[0]; return b.s
 function examLink(course, round){ return siteBase()+'exam.html?c='+encodeURIComponent(course)+'&r='+encodeURIComponent(round); }
 
 /* 시험 미응시(정식 시험 자체를 안 본 학생) 안내 메시지. 링크는 응시 페이지(exam.html?c=&r=). */
+/* 밀린 회차 몰아 안내 (선생님 요청 · 회차 축 격자와 함께 들어왔다).
+   ⚠ 회차마다 한 통씩 보내지 않는다 — 네 통을 받은 학부모는 넷째 통을 안 연다.
+     한 통에 모으고, 링크는 **가장 오래된 회차 하나**만 건다. 누적 시험이라
+     순서대로 하나씩 하는 편이 실제로 낫고, 링크가 셋씩 붙으면 문자가 갈린다.
+   ⚠ 밀린 회차가 하나뿐이면 이 문구를 안 쓴다 — 위 absentMsg 1차 안내가 이미
+     그 일을 한다(같은 말을 두 서식으로 갖지 않는다). 부르는 쪽에서 거른다.
+   뼈대는 이 파일의 다른 문구와 같다: 머리말 → 인사 → 사실 → 왜 지금인가 →
+   ▶ 링크 → 맺음. 두 흐름이 다른 목소리로 말하면 같은 학부모가 두 사람에게
+   받는 것처럼 읽힌다(아래 3단계 주석과 같은 까닭). */
+/* 회차 목록을 사람이 읽는 말로. 넷 이상이 죽 이어지면 「5회부터 12회까지
+   여덟 회차」 로 접는다 — 「5·6·7·8·9·10·11·12회」 는 세어 보게 만든다. */
+function roundsPhrase(rs){
+  if(!rs.length) return '';
+  var run=rs.every(function(v,i){ return i===0||v===rs[i-1]+1; });
+  if(rs.length>=4&&run) return rs[0]+'회부터 '+rs[rs.length-1]+'회까지 '+rs.length+'개 회차';
+  return rs.join('·')+'회';
+}
+function backlogMsg(d){
+  var course=COURSE[d.course]||d.course;
+  var rs=(d.rounds||[]).slice().sort(function(a,b){return a-b;});
+  var first=rs[0];
+  var list=roundsPhrase(rs);
+  return '[다원교육 영재관 · 화학] '+justName(d.name)+' 학생 미응시 회차 안내\n\n'
+    +'안녕하세요, 화학 조준모입니다.\n\n'
+    +justName(d.name)+' 학생이 '+course+' '+list+' 시험을 아직 응시하지 않아 안내드립니다. '
+    +'저희 반 시험은 누적이라 빠진 회차의 범위가 다음 회차에 그대로 얹혀 옵니다. '
+    +'회차가 쌓일수록 따라잡기가 어려워져, 지금 정리해 두는 편이 훨씬 수월합니다.\n\n'
+    +'한꺼번에 몰아서 보실 필요는 없습니다. '+first+'회부터 하나씩 순서대로 응시하면 됩니다. '
+    +'아래 링크에서 '+first+'회를 먼저 보시고, 나머지 회차는 같은 화면에서 이어서 볼 수 있습니다.\n\n'
+    +'▶ '+d.link+'\n\n'
+    +'응시하면 취약 개념이 '+justName(d.name)+' 학생 리포트에 바로 반영됩니다. 감사합니다.\n\n조준모 드림';
+}
 function absentMsg(d, stage){
   var course=COURSE[d.course]||d.course;
   var link='\u25b6 '+d.link;
@@ -311,6 +379,129 @@ function absentMsg(d, stage){
     +'응시하면 결과와 취약 개념 피드백이 '+justName(d.name)+' 학생 개인 리포트에 바로 반영됩니다. 매주 꾸준히 쌓을수록 누적 성적표가 탄탄해집니다. 감사합니다.\n\n조준모 드림';
 }
 
+/* ══ 반 × 회차 격자 ═══════════════════════════════════════════════════
+   여태 이 화면은 «이번 주 한 회차» 만 봤다. 그래서 「지난 세 회차가 밀린
+   학생」과 「이번 주만 안 본 학생」이 같은 줄로 보였다. 회차 축을 편다.
+
+   ⚠ 중도에 들어온 학생 (선생님 결정): 그 학생의 **첫 응시 기록보다 앞선
+     회차**는 미응시로 세지 않는다 — 명단에 등록일이 없어서 5회부터 다닌
+     학생이 1~4회 결석으로 찍히고, 그대로 학부모에게 「네 회차가 밀렸다」는
+     사실 아닌 문자가 나간다. 빈칸으로 두고 문자에서도 뺀다.
+
+   ⚠ 서버를 안 고친다. 이미 있는 두 창구(action=roster · all=1)로 다 된다 —
+     새 창구를 만들면 선생님이 앱스크립트를 직접 재배포하셔야 한다. */
+var GRID=null;   // {classes:[...], rows:[...]} — 없으면 격자를 안 그린다(나머지는 그대로 돈다)
+
+function gName(x){ return String((x&&typeof x==='object')?(x.n||x.name||''):(x==null?'':x)).trim(); }
+function gSchool(x){
+  var own=String((x&&typeof x==='object')?(x.s||x.school||''):'').trim();
+  if(own) return own;
+  var raw=gName(x), m=SCHOOL_TAIL.exec(raw);
+  return m?m[2]:'';
+}
+/* 서버 norm_/cleanName_ 과 같은 규칙 — 공백만 지운다. 두 쪽이 다르게 다듬으면
+   같은 학생이 격자에서만 안 잡힌다. */
+function gNorm(v){ return String(v==null?'':v).replace(/\s+/g,''); }
+
+/* 이 반 학생 한 명의 회차별 상태. rows 는 그 학생의 기록 전부. */
+function gStates(rows, course, upto){
+  var by={};
+  rows.forEach(function(r){
+    if(r.course!==course) return;
+    var n=Number(r.round)||0; if(!n) return;
+    (by[n]||(by[n]=[])).push(r);
+  });
+  var firstSeen=null;
+  Object.keys(by).forEach(function(k){ var n=Number(k); if(firstSeen===null||n<firstSeen) firstSeen=n; });
+  var out=[];
+  for(var n=1;n<=upto;n++){
+    var att=by[n];
+    if(!att){ out.push(firstSeen!==null&&n<firstSeen?'pre':'miss'); continue; }
+    var passed=att.some(function(a){return a.pass;});
+    var hasRetry=att.some(function(a){return String(a.attempt||'').indexOf('재')>=0;});
+    if(passed) out.push(hasRetry?'repass':'pass');
+    else out.push(hasRetry?'retry':'need');
+  }
+  return out;
+}
+/* 그 반의 기록을 학생별로 나눈다. 명단 이름 ↔ 시트 이름 맞추기는 서버
+   computeAbsentees_ 와 같은 규칙이다 — 이름(공백 제거)으로 맞추고, 반 안에
+   같은 이름이 둘이면 학교까지 본다. */
+function gRowsFor(students, rows){
+  var dupe={};
+  students.forEach(function(x){ var n=gNorm(gName(x)); if(n) dupe[n]=(dupe[n]||0)+1; });
+  var byName={}, byKey={};
+  rows.forEach(function(r){
+    var n=gNorm(justName(r.name)); if(n) (byName[n]||(byName[n]=[])).push(r);
+    var k=gNorm(r.studentKey||''); if(k) (byKey[k]||(byKey[k]=[])).push(r);
+  });
+  return students.map(function(x){
+    var nm=justName(gName(x)), sc=gSchool(x), n=gNorm(nm);
+    if(dupe[n]>1&&sc){
+      var key=gNorm(sc.replace(/중학교$/,'중').replace(/고등학교$/,'고').replace(/초등학교$/,'초')+'-'+nm);
+      return {name:nm, school:sc, rows:byKey[key]||[]};
+    }
+    return {name:nm, school:sc, rows:byName[n]||[]};
+  });
+}
+function gridFor(c){
+  if(!GRID||!GRID.classes||!GRID.rows) return null;
+  var cls=GRID.classes.filter(function(k){ return String(k.label||'')===String(c.label||''); })[0];
+  if(!cls||!(cls.students||[]).length) return null;
+  var upto=Number(c.round)||0; if(!upto) return null;
+  var stus=gRowsFor(cls.students, GRID.rows);
+  return stus.map(function(st){
+    var states=gStates(st.rows, c.course, upto);
+    var backlog=[];
+    states.forEach(function(v,i){ if(v==='miss') backlog.push(i+1); });
+    var needRetry=[];
+    states.forEach(function(v,i){ if(v==='need'||v==='retry') needRetry.push(i+1); });
+    return {name:st.name, school:st.school, states:states, backlog:backlog, needRetry:needRetry};
+  }).sort(function(a,b){
+    return (b.backlog.length-a.backlog.length) || (b.needRetry.length-a.needRetry.length)
+        || a.name.localeCompare(b.name);
+  });
+}
+var CELL={pass:{c:'c-pass',t:'✓'},repass:{c:'c-repass',t:'✓'},retry:{c:'c-retry',t:'재'},
+          need:{c:'c-need',t:'!'},miss:{c:'c-miss',t:'·'},pre:{c:'c-pre',t:''}};
+var CELLLBL={pass:'첫 응시 통과',repass:'재시로 통과',retry:'재시 봤으나 미달',
+             need:'미달 · 재시 안 봄',miss:'안 봄',pre:'다니기 전'};
+function gridHTML(c){
+  var g=gridFor(c); if(!g) return '';
+  var upto=Number(c.round)||0;
+  var head='<tr><th class="gname">학생</th>';
+  for(var n=1;n<=upto;n++) head+='<th'+((n>1&&(n-1)%4===0)?' class="gseg"':'')+'>'+n+'</th>';
+  head+='<th class="gsum">밀림</th></tr>';
+  var body=g.map(function(st){
+    var tds=st.states.map(function(v,i){
+      var k=CELL[v]||CELL.miss;
+      return '<td'+((i>0&&i%4===0)?' class="gseg"':'')+'><span class="cell '+k.c+'" title="'
+        +(i+1)+'회 · '+(CELLLBL[v]||'')+'">'+k.t+'</span></td>';
+    }).join('');
+    var b=st.backlog.length;
+    return '<tr><td class="gname">'+esc(st.name)+'</td>'+tds
+      +'<td class="gsum">'+(b?'<b>'+b+'</b>':'—')+'</td></tr>';
+  }).join('');
+  var lg='<div class="glegend">'
+    +'<span><i class="c-pass"></i>첫 응시 통과</span>'
+    +'<span><i class="c-repass" style="box-shadow:inset 0 0 0 1.4px #8FC0A0"></i>재시로 통과</span>'
+    +'<span><i class="c-retry"></i>재시 진행 중</span>'
+    +'<span><i class="c-need"></i>미달·재시 안 봄</span>'
+    +'<span><i class="c-miss"></i>안 봄</span>'
+    +'<span><i class="c-pre" style="border:1px dashed var(--line)"></i>다니기 전</span></div>';
+  /* 밀린 회차가 둘 이상인 학생만 몰아 안내 단추를 세운다. 하나뿐이면 위의
+     1차·리마인드·최종이 이미 그 일을 한다 — 같은 말을 두 서식으로 갖지 않는다. */
+  var acts=g.filter(function(st){ return st.backlog.length>=2; }).map(function(st){
+    return '<div class="gact"><span class="who">'+esc(st.name)+'</span>'
+      +'<span class="why">'+roundsPhrase(st.backlog)+' 안 봄</span>'
+      +'<div class="copygrp" data-kind="backlog" data-name="'+escAttr(st.name)+'"'
+      +' data-course="'+escAttr(c.course)+'" data-rounds="'+escAttr(st.backlog.join(','))+'">'
+      +'<button class="copybtn" data-orig="밀린 회차 안내 복사" onclick="copyShare(this)">밀린 회차 안내 복사</button>'
+      +'</div></div>';
+  }).join('');
+  return '<div class="gwrap"><table class="grid"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+lg+acts;
+}
+
 function absentClassHTML(c){
   /* ⚠ 어떤 상태든 반 카드는 **반드시 선다.** 예전에는 미응시가 0이거나
      회차를 못 정한(noExam) 반을 거르는 바람에, 그 반이 화면에서 통째로
@@ -337,8 +528,11 @@ function absentClassHTML(c){
     return '<div class="abx-cls">'+head
       +'<div class="muted-note" style="margin:8px 0 0">최근 8일 안에 이 반 학생들의 채점 기록이 없어 회차를 자동으로 못 정했습니다. 위에서 회차를 직접 고르면 그 회차 기준 미응시자가 나옵니다.</div></div>';
   }
+  /* 회차 축 격자. 명단·기록을 못 받았으면 조용히 빠진다 — 격자가 없다고
+     이번 주 독촉 목록까지 못 쓰게 되면 안 된다. */
+  var grid=gridHTML(c);
   if(!c.absent.length){
-    return '<div class="abx-cls">'+head+'</div>';
+    return '<div class="abx-cls">'+head+grid+'</div>';
   }
   var bc='<div class="copygrp abx-bc" data-kind="exam" data-name="" data-course="'+escAttr(c.course)+'" data-round="'+escAttr(c.round)+'" data-link="'+escAttr(el)+'">'
     +'<button class="copybtn abc" data-stage="bc" data-orig="반 전체 공지 복사" onclick="copyShare(this)">반 전체 공지 복사</button></div>';
@@ -350,7 +544,7 @@ function absentClassHTML(c){
       +'<button class="copybtn a3" data-stage="3" data-orig="최종 안내" onclick="copyShare(this)">최종 안내</button>'
       +'</div></div>';
   }).join('');
-  return '<div class="abx-cls">'+head+bc+stus+'</div>';
+  return '<div class="abx-cls">'+head+grid+bc+stus+'</div>';
 }
 
 /* ===== 안내 완료 학생 숨김 (이 브라우저·이 페이지에서만 적용, 서버 데이터 불변) ===== */
@@ -689,9 +883,15 @@ function load(){
     /* 통과 목록은 못 받아도 나머지를 막지 않는다 — 급한 것은 독촉 쪽이다. */
     fetchJSON_(STATUS_URL+'?action=passed&token='+tok+'&days=14&t='+Date.now()),
     /* 합칠 것이 있는지도 같이 묻는다. 못 받으면 «없다» 가 아니라 «못 물어봤다». */
-    fetchJSON_(STATUS_URL+'?action=mergeplan&token='+tok+'&t='+Date.now())
+    fetchJSON_(STATUS_URL+'?action=mergeplan&token='+tok+'&t='+Date.now()),
+    /* 회차 축 격자에 쓸 두 가지 — 반 명단과 전 기록. 못 받아도 나머지를
+       막지 않는다(격자만 조용히 빠진다). 새 창구를 만들지 않은 까닭은
+       위 GRID 주석에 적어 두었다. */
+    fetchJSON_(STATUS_URL+'?action=roster&token='+tok+'&t='+Date.now()),
+    fetchJSON_(STATUS_URL+'?all=1&token='+tok+'&t='+Date.now())
   ]).then(function(res){
-    var A=res[0], P=res[1], S=res[2], M=res[3];
+    var A=res[0], P=res[1], S=res[2], M=res[3], R=res[4], AL=res[5];
+    GRID=(R&&R.ok&&R.classes&&AL&&AL.ok&&AL.rows)?{classes:R.classes, rows:AL.rows}:null;
     if((A&&A.error==='auth')||(P&&P.error==='auth')){ admReset(); document.getElementById('app').innerHTML='<div class="err">관리자 코드가 올바르지 않습니다. 페이지를 새로고침한 뒤 다시 입력해 주세요.</div>'; return; }
     if(!P||!P.ok||!P.pending){ document.getElementById('app').innerHTML=failBox(); return; }
     render(P.pending, (A&&A.ok&&A.absentees)?A.absentees:null, !(A&&A.ok), (S&&S.ok&&S.passed)?S.passed:null,
