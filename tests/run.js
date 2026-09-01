@@ -1535,6 +1535,105 @@ async function assertNoOverflow(page, label) {
     }
   }
 
+  /* ── 구간 클리닉이 같은 말을 세 번 하지 않는다 ───────────────────────
+     같은 개념을 세 회차에서 틀린 학생은 같은 오개념 문장을 세 줄 연달아
+     읽고 있었다. 「몇 번 걸렸나」가 안 보이고, 그 개념이 무엇인지 제대로
+     설명해 주는 자리도 없었다(CORE 사전 867개가 놀고 있었다).
+
+     여기서 못 박는 것:
+     · 개념 이름은 묶음마다 **한 번만** 나온다
+     · 그 개념의 설명(CORE)도 **한 번만** 나온다
+     · 그런데 문항 줄은 **틀린 수만큼** 다 나온다 — 묶었다고 감추면 안 된다
+     · 몇 번 걸렸는지, 어느 회차였는지가 적힌다 */
+  {
+    const t0 = Date.now(), name = '구간 클리닉 · 같은 개념은 한 번 설명하고 문항은 다 보여 준다';
+    try {
+      const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+      const grab = (fn) => {
+        const at = src.indexOf('function ' + fn + '(');
+        assert(at > 0, fn + ' 를 못 찾았다');
+        let i = src.indexOf('{', at), d = 0, j = i;
+        for (; j < src.length; j++) {
+          const c = src[j];
+          if (c === '{') d++; else if (c === '}' && --d === 0) { j++; break; }
+        }
+        return src.slice(at, j);
+      };
+      const CORE = { '한계 반응물': '계수로 나눈 몫이 **가장 작은** 쪽이 먼저 떨어진다.' };
+      const ctx = new Function('rEsc', 'segNo', 'CORE', 'ONELINE', 'md',
+        grab('segClinicSec') + '\nreturn { segClinicSec: segClinicSec };'
+      )(x => String(x), n => String(n), CORE, {}, x => String(x));
+
+      const q = (round, n, mis, fixed) => ({
+        round, n, u: '양적관계', c: 'CH1-041', mis, key: 'O', got: 'X',
+        ok: false, fixed: !!fixed, s: '문항 ' + round + '-' + n, f: '', w: '',
+      });
+      const J = { Q: [q(1, 3, '한계 반응물'), q(2, 7, '한계 반응물'), q(3, 5, '한계 반응물')] };
+      const html = ctx.segClinicSec(J);
+
+      const count = (needle) => html.split(needle).length - 1;
+      assert(count('한계 반응물') === 1,
+        '개념 이름이 ' + count('한계 반응물') + '번 나온다 — 한 번이어야 한다');
+      assert(count('계수로 나눈 몫이') === 1,
+        '개념 설명이 ' + count('계수로 나눈 몫이') + '번 나온다 — 한 번이어야 한다');
+      assert(count('segqw') === 3, '문항 줄이 3개가 아니다: ' + count('segqw'));
+      assert(html.indexOf('3문항') > 0, '몇 번 걸렸는지가 없다');
+      assert(html.indexOf('1·2·3회') > 0, '어느 회차였는지가 없다');
+      /* 설명이 아예 없는 개념도 조용히 서야 한다 — CORE 에 없으면 빈 칸을 안 만든다. */
+      const J2 = { Q: [q(1, 1, '없는개념')] };
+      const h2 = ctx.segClinicSec(J2);
+      assert(h2.indexOf('segcore') < 0, '설명이 없는데 빈 설명 칸을 만들었다');
+      assert(h2.indexOf('없는개념') > 0, '개념 이름이 빠졌다');
+
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
+  /* ── 뿌리 진단은 문항이 아니라 개념을 센다 ───────────────────────────
+     같은 개념을 네 번 틀린 것은 «약점 네 개» 가 아니라 하나다. 문항으로 세면
+     「오답 20개가 뿌리 둘로」 같은 문장이 부풀려진다.
+     그리고 개념코드(c)가 없으면 이 절은 아예 서면 안 된다 — 회차 파일에
+     개념코드가 없는 옛 회차가 있고, 그때 「CH1-034」 같은 코드가 학부모
+     화면에 나가면 안 된다. */
+  {
+    const t0 = Date.now(), name = '뿌리 진단 · 개념 수로 세고, 개념코드가 없으면 서지 않는다';
+    try {
+      const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+      const at = src.indexOf('function segRootSec(');
+      assert(at > 0, 'segRootSec 을 못 찾았다');
+      let i = src.indexOf('{', at), d = 0, j = i;
+      for (; j < src.length; j++) { const c = src[j]; if (c === '{') d++; else if (c === '}' && --d === 0) { j++; break; } }
+      let seen = null;
+      const ctx = new Function('rEsc', 'dxDeepHTML',
+        src.slice(at, j) + '\nreturn { segRootSec: segRootSec };'
+      )(x => String(x), (nm, dx) => { seen = dx.wrongConcepts; return '<div id="dx"></div>'; });
+
+      const q = (c, mis) => ({ ok: false, c, u: '양적관계', mis });
+      // 같은 개념 넷 + 다른 개념 둘 = 개념 3개
+      const J = { Q: [q('A', 'a'), q('A', 'a'), q('A', 'a'), q('A', 'a'), q('B', 'b'), q('C', 'c')] };
+      const html = ctx.segRootSec(J, '학생');
+      assert(seen && seen.length === 3, '개념이 아니라 문항으로 셌다: ' + (seen ? seen.length : 'null'));
+      assert(html.indexOf('개념 <b>3개</b>') > 0, '화면에 적힌 수가 개념 수가 아니다');
+      // mis 가 비어도 개념코드를 화면에 내보내지 않는다
+      seen = null;
+      ctx.segRootSec({ Q: [q('CH1-034', ''), q('B', 'b'), q('C', 'c')] }, '학생');
+      assert(seen[0].mis === '양적관계', 'mis 가 비었을 때 단원 이름으로 안 채웠다: ' + seen[0].mis);
+      // 개념코드가 아예 없으면 절을 안 세운다
+      const none = ctx.segRootSec({ Q: [{ ok: false, u: 'x', mis: 'y' }] }, '학생');
+      assert(none === '', '개념코드가 없는데 절을 세웠다');
+
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   /* ── 첫 응시 라벨 ────────────────────────────────────────────────
      시트에 실제로 저장되는 첫 응시 라벨은 '첫 응시' 다(exam.html:822,
      index.html:305). 그런데 report.html 안에 인라인된 엔진이 한때 '정시'

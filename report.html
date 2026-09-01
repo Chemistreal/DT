@@ -400,6 +400,15 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .segclinh{background:#F7F4EC;padding:8px 12px;font-size:13px;font-weight:800;color:#2B2620;
   border-bottom:1px solid #EDE7DA}
 .segclinh span{float:right;font-size:11.5px;font-weight:600;color:#8B8377}
+.segcon{border-top:1px solid #F2EDE2}
+.segcon:first-of-type{border-top:none}
+.segconh{padding:9px 12px 2px;font-size:13px;font-weight:800;color:#8A4A32}
+.segcon.fx .segconh{color:#2C6B3F}
+.segconh span{float:right;font-size:11.5px;font-weight:600;color:#9A9284;padding-top:2px}
+.segcore{margin:0 12px 4px;font-size:12.5px;line-height:1.72;color:#4A443B;
+  background:#FAF8F3;border:1px solid #EFE9DC;border-radius:9px;padding:8px 10px}
+.segcore b{color:#2B2620}
+.segcon .segq{border-top:none;padding:4px 12px 9px}
 .segq{padding:10px 12px;border-top:1px solid #F2EDE2}
 .segq:first-of-type{border-top:none}
 .segq.fx{background:#F6FAF6}
@@ -1395,7 +1404,10 @@ function dxDeepHTML(name,dx){
   const wc=(dx&&dx.wrongConcepts)||[];
   const DD=deepDiagnose(wc);
   if(!DD.W.length) return '';
-  const nm={}; wc.forEach(function(w){nm[w.c]=w.mis||((EMBED.forms&&EMBED.forms[w.c]||{}).m)||w.c;});
+  /* EMBED 는 어떤 화면에서는 아예 없다. w.mis 가 있으면 || 가 먼저 끊어 주지만,
+     없는 문항 하나만 들어와도 ReferenceError 로 절 전체가 사라진다. */
+  const _EF=(typeof EMBED!=='undefined'&&EMBED.forms)||{};
+  const nm={}; wc.forEach(function(w){nm[w.c]=w.mis||(_EF[w.c]||{}).m||w.c;});
   const cn=function(c){return nm[c]||c;};
   const topRoot=DD.casc.length?DD.casc[0].c:null, topFam=DD.cross.length?DD.cross[0]:null;
   const arcFam=topFam?topFam.fam:(topRoot&&ENGINE[topRoot]?ENGINE[topRoot].f:null);
@@ -1927,7 +1939,10 @@ async function segJoin(states, course){
     if(!ansF) continue;
     items.forEach(function(x,k){
       var g=ansF.charAt(k); if(g!=='O'&&g!=='X') return;
-      Q.push({round:st.round, n:x.n||(k+1), u:x.u, mis:x.mis, s:x.s, f:x.f, w:x.w,
+      /* c(개념코드)를 함께 담는다. 회차 파일은 문항마다 개념코드를 갖고 있는데
+         여기서 버려 왔다 — 그래서 구간 보고서는 ENGINE(개념 1,154개의 뿌리 그래프)를
+         한 번도 못 썼다. 평소 리포트는 쓰고 있었다(dxDeepHTML). */
+      Q.push({round:st.round, n:x.n||(k+1), u:x.u, c:x.c, mis:x.mis, s:x.s, f:x.f, w:x.w,
               lvl:x.lvl, key:x.a, got:g, ok:(g===x.a),
               fixed:!!(ansL && ansL.charAt(k)===x.a)});
     });
@@ -1986,6 +2001,38 @@ function segLvlSec(J){
 /* 오답 개념 클리닉 — 파이널의 가장 무거운 절. 틀린 문항을 단원으로 묶어
    «어떤 문장을 / 왜 틀렸는지 / 재시에서 고쳤는지» 를 한자리에 편다.
    문장(f·s)과 해설(w)은 회차 파일에 이미 들어 있다 — 새로 만들 것이 없다. */
+/* ── 되풀이되는 사고 습관 · 근본 원인 진단 ─────────────────────────────
+   구간 보고서에는 이 절이 없었다. 오답을 단원으로 묶어 늘어놓기만 하면
+   «스무 개를 틀렸다» 로 읽히는데, 실제로는 그 스무 개가 뿌리 두세 개에서
+   나온다. 어디를 손보면 여러 개가 함께 풀리는지를 말해 주어야 한다.
+
+   자료는 이미 다 있었다. ENGINE 은 개념 1,154개의 선수 관계와 오류 갈래(f)를
+   담고 있고, 회차 파일의 items[].c 가 그 개념코드다. 평소 리포트는 이걸로
+   dxDeepHTML 을 그려 왔는데(1669줄), 구간 보고서는 segJoin 이 c 를 버려서
+   쓸 수가 없었다. 이제 담아 오므로 같은 절을 여기서도 세운다.
+
+   ⚠ 같은 개념을 여러 회차에서 틀렸으면 한 번만 센다 — 「같은 뿌리」를 말하는
+     절이라 문항 수가 아니라 개념 수로 세는 것이 맞다. */
+function segRootSec(J, name){
+  var wrong=(J.Q||[]).filter(function(q){ return !q.ok && q.c; });
+  if(wrong.length<3) return '';
+  var seen={}, wc=[];
+  wrong.forEach(function(q){
+    if(seen[q.c]) return; seen[q.c]=1;
+    /* mis 를 반드시 채워 넘긴다. 비면 dxDeepHTML 이 이름 자리에 개념코드를
+       그대로 적어 「CH1-034」 같은 것이 학부모 화면에 나간다. */
+    wc.push({c:q.c, unit:q.u, mis:q.mis||q.u||q.c, s:q.s, f:q.f, w:q.w});
+  });
+  var body='';
+  try{ body=dxDeepHTML(rEsc(name), {wrongConcepts:wc}); }catch(e){ body=''; }
+  if(!body) return '';
+  return '<div class="segsec"><h2>되풀이되는 사고 습관</h2>'
+    +'<p class="segnote" style="margin:0 0 12px">이 구간에서 첫 응시에 틀린 개념 <b>'+wc.length+'개</b>가 '
+    +'서로 어떻게 얽혀 있는지 봤습니다. 흩어진 실수인지, 뿌리 몇 개에서 갈라져 나온 것인지가 '
+    +'<b>무엇부터 손볼지</b>를 정합니다.</p>'
+    +body+'</div>';
+}
+
 function segClinicSec(J){
   var wrong=J.Q.filter(function(q){ return !q.ok; });
   if(!wrong.length) return '<div class="segsec"><h2>오답 개념 클리닉</h2>'
@@ -1998,20 +2045,43 @@ function segClinicSec(J){
     +'<p class="segnote" style="margin:0 0 12px">첫 응시에 틀린 <b>'+wrong.length+'문항</b>을 단원으로 묶었습니다'
     +(fixedN?(' — 이 가운데 <b>'+fixedN+'문항</b>은 같은 회차 재시에서 바로잡았습니다.'):'.')
     +' 각 문장은 시험에 나온 그대로이고, 해설도 채점 때 쓴 것과 같습니다.</p>';
+  /* 단원 안에서 **오개념으로 한 번 더 묶는다.**
+
+     예전에는 문항을 그냥 늘어놓아서, 같은 개념을 세 번 틀린 학생이 같은 오개념
+     문장을 세 줄 연달아 읽었다. 「몇 번 걸렸나」가 안 보이고, 그 개념이 무엇인지
+     제대로 설명해 주는 자리도 없었다.
+
+     CORE 는 개념 867개의 설명(평균 82자)을 담고 있고, 회차 파일의 mis 값 792종이
+     그 안에 **하나도 빠짐없이** 들어 있다(실측). 그런데 구간 보고서는 이 사전을
+     한 글자도 안 쓰고 있었다 — 짧은 ONELINE 만 썼다. 개념마다 한 번, 제대로 편다. */
   var shown=0, CAP=16;
   units.forEach(function(u){
     if(shown>=CAP) return;
     var qs=byU[u], take=qs.slice(0, Math.max(1, Math.min(qs.length, CAP-shown)));
     shown+=take.length;
     h+='<div class="segclin"><div class="segclinh">'+rEsc(u)+' <span>'+qs.length+'문항</span></div>';
-    take.forEach(function(q){
-      h+='<div class="segq'+(q.fixed?' fx':'')+'">'
-        +'<div class="segqm">'+rEsc(q.mis||'')+'</div>'
-        +'<div class="segqw">'+q.round+'회 '+segNo(q.n)+'번 · 정답 '+q.key+' · 답한 것 '+q.got+(q.fixed?' · 재시에서 고침':'')+'</div>'
-        +(q.f||q.s?'<div class="segqs">'+rEsc(q.f||q.s)+'</div>':'')
-        +(q.w?'<div class="segqe"><b>해설</b> '+rEsc(q.w)+'</div>'
-             :(ONELINE[q.mis]?'<div class="segqe"><b>핵심</b> '+md(ONELINE[q.mis])+'</div>':''))
-        +'</div>';
+    var byM={}, order=[];
+    take.forEach(function(q){ var k=q.mis||'(개념 미상)';
+      if(!byM[k]){ byM[k]=[]; order.push(k); } byM[k].push(q); });
+    order.forEach(function(k){
+      var g=byM[k], core=CORE[k]||'', one=ONELINE[k]||'';
+      var rounds=g.map(function(q){return q.round;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+      var fixedAll=g.every(function(q){return q.fixed;});
+      h+='<div class="segcon'+(fixedAll?' fx':'')+'">'
+        +'<div class="segconh">'+rEsc(k)
+        +'<span>'+(g.length>1?(g.length+'문항 · '+rounds.join('·')+'회'):(rounds[0]+'회'))
+        +(fixedAll?' · 재시에서 고침':'')+'</span></div>'
+        /* 개념 설명은 개념마다 한 번. 길게 실을 수 있으면 CORE, 없으면 ONELINE. */
+        +(core?'<div class="segcore">'+md(core)+'</div>'
+              :(one?'<div class="segcore">'+md(one)+'</div>':''));
+      g.forEach(function(q){
+        h+='<div class="segq'+(q.fixed?' fx':'')+'">'
+          +'<div class="segqw">'+q.round+'회 '+segNo(q.n)+'번 · 정답 '+q.key+' · 답한 것 '+q.got+(q.fixed?' · 재시에서 고침':'')+'</div>'
+          +(q.f||q.s?'<div class="segqs">'+rEsc(q.f||q.s)+'</div>':'')
+          +(q.w?'<div class="segqe"><b>해설</b> '+rEsc(q.w)+'</div>':'')
+          +'</div>';
+      });
+      h+='</div>';
     });
     if(qs.length>take.length) h+='<div class="segmore">이 단원에 '+(qs.length-take.length)+'문항 더 있습니다</div>';
     h+='</div>';
@@ -2265,6 +2335,9 @@ async function renderSegment(){
   }
 
   /* ⑧ 오답 개념 클리닉 · ⑨ 재시 회복력 · ⑩ 다음 구간 처방 · ⑪ 정오표 */
+  /* 클리닉 앞에 세운다 — 「무엇을 틀렸나」를 늘어놓기 전에 「어디가 뿌리인가」를
+     먼저 말해야, 아래 목록이 할 일 목록이 아니라 지도로 읽힌다. */
+  if(J.hasItems) h+=segRootSec(J, name);
   if(J.hasItems) h+=segClinicSec(J);
   h+=segRecoverSec(states);
   h+=segRxSec(aggUnits, (recomputed&&recomputed.chronicMis)||[], J);
