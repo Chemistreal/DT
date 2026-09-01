@@ -222,6 +222,11 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .gcell .gl{font-size:11.5px;color:var(--sub);margin-top:6px}
 /* 틀린 것 옆에 고칠 것을 둔다. 손가락으로 짚는 자리라 넉넉히 잡는다. */
 .matrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.segmat{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #F2EDE2}
+.segmat:first-of-type{border-top:none}
+.segmat>b{flex:0 0 44px;font-size:12.5px;font-weight:800;color:#2B2620}
+.segmat>span{display:flex;gap:6px;flex-wrap:wrap}
+.matlink.sm{padding:5px 11px;font-size:12px;border-radius:8px}
 .matlink{display:inline-block;padding:10px 16px;border:1px solid var(--brass);border-radius:10px;
   color:var(--ink);text-decoration:none;font-weight:700;font-size:14px;background:var(--surface)}
 .matlink:hover{background:var(--brass-soft,rgba(201,162,39,.10))}
@@ -2113,6 +2118,36 @@ function segRecoverSec(states){
     +'</ul></div>';
 }
 
+/* ── 이 구간 자료 ────────────────────────────────────────────────────
+   평소 리포트에는 「이 회차 자료」 칸이 있다(matsCardHTML). 그런데 그 함수는
+   latest.round **한 회차**만 본다. 구간 보고서는 이 칸을 아예 안 불렀다 —
+   네 회차를 묶어 보내면서 정작 그 네 회차의 해설·문제지·오답노트로 가는
+   길이 한 줄도 없었다. 학부모가 「다시 보라」는 말만 듣고 어디를 여는지는
+   모르는 문서였다.
+
+   응시한 회차만 싣는다. 안 본 회차의 해설을 걸어 두면 «봤는데 안 고쳤다» 로
+   읽힌다 — 안 본 것은 위 「응시 이력」이 이미 말하고 있다. */
+function segMatsSec(states, course){
+  var took=(states||[]).filter(function(s){ return s.state!=='miss'; });
+  if(!took.length || !MATS) return '';
+  var rows=[];
+  took.forEach(function(st){
+    var f=matsFor(course, st.round); if(!f) return;
+    var out=[];
+    if(f.haeseol) out.push('<a class="matlink sm" href="'+rEsc(f.haeseol.html||f.haeseol.pdf)+'"'
+      +(f.haeseol.html?'':' download')+'>해설</a>');
+    if(f.munje) out.push('<a class="matlink sm" href="'+rEsc(f.munje.html||f.munje.pdf)+'"'
+      +(f.munje.html?'':' download')+'>문제지</a>');
+    if(f.truthbook) out.push('<a class="matlink sm" href="'+rEsc(f.truthbook.pdf)+'" download>오답노트</a>');
+    if(out.length) rows.push('<div class="segmat"><b>'+st.round+'회</b><span>'+out.join('')+'</span></div>');
+  });
+  if(!rows.length) return '';
+  return '<div class="segsec"><h2>이 구간 자료</h2>'
+    +'<p class="segnote" style="margin:0 0 10px">응시한 '+rows.length+'개 회차의 해설·문제지·오답노트입니다. '
+    +'위 클리닉에서 짚은 개념은 그 회차 <b>해설</b>에 자세한 풀이가 있습니다.</p>'
+    +rows.join('')+'</div>';
+}
+
 /* 다음 구간 처방 — 약한 단원 + 되풀이 개념을 «무엇을 어떻게» 로 바꿔 적는다. */
 function segRxSec(units, chronic, J){
   var weak=(units||[]).filter(function(u){ return u.t>=4 && (u.t-u.w)/u.t < 0.8; })
@@ -2341,6 +2376,7 @@ async function renderSegment(){
   if(J.hasItems) h+=segClinicSec(J);
   h+=segRecoverSec(states);
   h+=segRxSec(aggUnits, (recomputed&&recomputed.chronicMis)||[], J);
+  h+=segMatsSec(states, course);
   if(J.hasItems) h+=segTableSec(J);
 
   /* ⑫ 맺음말 */

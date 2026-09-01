@@ -1593,6 +1593,51 @@ async function assertNoOverflow(page, label) {
     }
   }
 
+  /* ── 구간 자료는 응시한 회차만 건다 ─────────────────────────────────
+     안 본 회차의 해설을 걸어 두면 «봤는데 안 고쳤다» 로 읽힌다.
+     그리고 평소 리포트의 자료 칸(matsCardHTML)은 latest.round 한 회차만 본다 —
+     구간 보고서가 그걸 그대로 쓰면 네 회차 문서에 한 회차 링크만 실린다. */
+  {
+    const t0 = Date.now(), name = '구간 자료 · 응시한 회차만, 그리고 한 회차가 아니라 전부';
+    try {
+      const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+      const at = src.indexOf('function segMatsSec(');
+      assert(at > 0, 'segMatsSec 을 못 찾았다');
+      let i = src.indexOf('{', at), d = 0, j = i;
+      for (; j < src.length; j++) { const c = src[j]; if (c === '{') d++; else if (c === '}' && --d === 0) { j++; break; } }
+      const MATS = { courses: [{ key: 'ch1', rounds: [1, 2, 3, 4].map(r => ({ round: r, files: {
+        haeseol: { html: 'h' + r + '.html' }, munje: { html: 'm' + r + '.html' },
+        truthbook: { pdf: 't' + r + '.pdf' } } })) }] };
+      const matsFor = (course, round) => {
+        const c = MATS.courses.filter(x => x.key === course)[0]; if (!c) return null;
+        const r = c.rounds.filter(x => Number(x.round) === Number(round))[0];
+        return r ? r.files : null;
+      };
+      const ctx = new Function('rEsc', 'MATS', 'matsFor',
+        src.slice(at, j) + '\nreturn { segMatsSec: segMatsSec };'
+      )(x => String(x), MATS, matsFor);
+
+      const states = [
+        { round: 1, state: 'pass' }, { round: 2, state: 'repass' },
+        { round: 3, state: 'miss' }, { round: 4, state: 'need' },
+      ];
+      const html = ctx.segMatsSec(states, 'ch1');
+      assert(html.indexOf('h1.html') > 0 && html.indexOf('h2.html') > 0 && html.indexOf('h4.html') > 0,
+        '응시한 회차의 해설이 빠졌다');
+      assert(html.indexOf('h3.html') < 0, '미응시 회차(3회)의 자료를 걸었다');
+      const nRows = html.split('class="segmat"').length - 1;
+      assert(nRows === 3, '회차 줄이 3개가 아니다: ' + nRows);
+      assert(html.indexOf('3개 회차') > 0, '몇 회차분인지 안 적었다');
+      assert(ctx.segMatsSec([{ round: 9, state: 'pass' }], 'ch1') === '',
+        '자료가 없는 회차인데 빈 칸을 세웠다');
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   /* ── 뿌리 진단은 문항이 아니라 개념을 센다 ───────────────────────────
      같은 개념을 네 번 틀린 것은 «약점 네 개» 가 아니라 하나다. 문항으로 세면
      「오답 20개가 뿌리 둘로」 같은 문장이 부풀려진다.
