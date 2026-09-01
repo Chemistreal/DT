@@ -1546,7 +1546,7 @@ async function assertNoOverflow(page, label) {
      · 그런데 문항 줄은 **틀린 수만큼** 다 나온다 — 묶었다고 감추면 안 된다
      · 몇 번 걸렸는지, 어느 회차였는지가 적힌다 */
   {
-    const t0 = Date.now(), name = '구간 클리닉 · 같은 개념은 한 번 설명하고 문항은 다 보여 준다';
+    const t0 = Date.now(), name = '구간 클리닉 · 개념은 한 번, 문항은 다, 시험에 나온 문장 그대로';
     try {
       const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
       const grab = (fn) => {
@@ -1584,6 +1584,24 @@ async function assertNoOverflow(page, label) {
       const h2 = ctx.segClinicSec(J2);
       assert(h2.indexOf('segcore') < 0, '설명이 없는데 빈 설명 칸을 만들었다');
       assert(h2.indexOf('없는개념') > 0, '개념 이름이 빠졌다');
+
+      /* O/X 시험이라 정답이 X 인 문항은 s 가 «틀린 문장», f 가 «바르게 고친 문장» 이다.
+         회차 자료 2,760문항 가운데 1,025문항이 그렇다. f 만 보여 주면 학생은
+         **시험에 없던 문장**을 문제인 줄 알고 읽는다 — 자기가 뭘 틀렸는지 알아볼 수 없다. */
+      const qx = Object.assign(q(1, 9, '분자 종류'), {
+        s: 'HCl은 일원자분자이다.', f: 'HCl은 이원자분자이다.', key: 'X', got: 'O',
+      });
+      const h3 = ctx.segClinicSec({ Q: [qx] });
+      assert(h3.indexOf('HCl은 일원자분자이다.') > 0, '시험에 나온 문장이 빠졌다');
+      assert(h3.indexOf('HCl은 이원자분자이다.') > 0, '고친 문장이 빠졌다');
+      assert(h3.indexOf('바르게 고치면') > 0, '고친 문장에 이름표가 없다');
+      assert(h3.indexOf('HCl은 일원자분자이다.') < h3.indexOf('HCl은 이원자분자이다.'),
+        '고친 문장이 시험 문장보다 먼저 나온다');
+      /* 참인 문장(정답 O)은 s 와 f 가 같다 — 같은 문장을 두 번 싣지 않는다. */
+      const qo = Object.assign(q(1, 2, '분자 종류'), { s: '같은 문장', f: '같은 문장', key: 'O' });
+      const h4 = ctx.segClinicSec({ Q: [qo] });
+      assert(h4.split('같은 문장').length - 1 === 1, '같은 문장을 두 번 실었다');
+      assert(h4.indexOf('바르게 고치면') < 0, '고칠 것이 없는데 고침 칸을 만들었다');
 
       results.push({ name, ok: true, ms: Date.now() - t0 });
       console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
