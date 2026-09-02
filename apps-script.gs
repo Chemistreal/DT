@@ -512,6 +512,7 @@ function doGet(e) {
   return json_({ ok: true, student: key, rows: rows, excluded: getExcluded_(),
     cumulative: valid ? cumulative_(rows) : null,
     rank: valid ? rank_(all, key, getExcluded_()) : null,
+    ranks: valid ? ranksAll_(all, key, getExcluded_()) : [],
     cohort: valid ? cohortItems_(all, key, getExcluded_()) : null });
 }
 
@@ -564,6 +565,75 @@ function cohortMis_() {
       date: r.date, isTest: false, wrongMis: r.wrongMis, units: r.units });
   });
   return out;
+}
+
+/* 회차마다의 석차 — 구간 종합 보고서가 쓴다.
+
+   rank_ 는 **가장 최근 회차 하나**만 돌려준다. 그래서 5~8회를 묶은 종합
+   보고서는 석차를 한 줄도 못 실었다(마지막 회차가 12회면 그 석차는 이 구간의
+   것이 아니라 실으면 거짓말이 된다).
+
+   이 자는 학생이 응시한 **모든 회차**의 석차를 돌려준다. 계산은 rank_ 와
+   똑같고, 대상 회차만 바뀐다. 이미 읽어 둔 all 을 다시 훑는 것이라 시트를
+   더 읽지 않는다.
+
+   ⚠ 사람이 다섯 명이 안 되는 회차는 담지 않는다. 화면 쪽 showRank() 와 같은
+     기준이다 — 두세 명일 때 「상위 50%」는 곧 누구인지를 가리킨다. */
+function ranksAll_(all, key, excluded) {
+  excluded = excluded || [];
+  var mine = all.filter(function (r) { return r.studentKey === key && !r.isTest; });
+  if (!mine.length) return [];
+  var seen = {}, want = [];
+  mine.forEach(function (r) {
+    var k = r.course + '|' + r.round;
+    if (seen[k]) return;
+    seen[k] = 1;
+    want.push({ course: r.course, round: r.round });
+  });
+  var out = [];
+  want.forEach(function (w) {
+    var one = rankOne_(all, key, excluded, w.course, w.round);
+    if (one) out.push(one);
+  });
+  out.sort(function (a, b) {
+    return a.course < b.course ? -1 : a.course > b.course ? 1 : a.round - b.round;
+  });
+  return out;
+}
+
+/* 한 회차의 석차. rank_ 가 하던 계산을 회차를 받도록 떼어 낸 것이다 —
+   같은 계산이 두 곳에 따로 있으면 한쪽만 고쳐져 두 화면이 다른 석차를 말한다. */
+function rankOne_(all, key, excluded, course, round) {
+  function firstScore(rows) {
+    var best = null, bo = 99;
+    rows.forEach(function (r) { var o = attOrd_(r.attempt); if (o < bo) { bo = o; best = r; } });
+    return best ? best.score : null;
+  }
+  var byStu = {};
+  all.forEach(function (r) {
+    if (r.isTest || r.course !== course || r.round !== round) return;
+    if (excluded.indexOf(exKey_(r.studentKey, r.course, r.round)) >= 0) return;
+    (byStu[r.studentKey] || (byStu[r.studentKey] = [])).push(r);
+  });
+  var scores = [];
+  Object.keys(byStu).forEach(function (k) {
+    var sc = firstScore(byStu[k]);
+    if (sc != null) scores.push({ k: k, s: sc });
+  });
+  if (scores.length < 5) return null;
+  var myS = null;
+  scores.forEach(function (x) { if (x.k === key) myS = x.s; });
+  if (myS == null) return null;
+  var avg = Math.round(scores.reduce(function (a, x) { return a + x.s; }, 0) / scores.length);
+  var rank = 1 + scores.filter(function (x) { return x.s > myS; }).length;
+  var per100 = Math.max(1, Math.min(100, Math.round(rank / scores.length * 100)));
+  var sList = scores.map(function (x) { return x.s; });
+  var variance = sList.reduce(function (a, s) { return a + (s - avg) * (s - avg); }, 0) / sList.length;
+  var sd = Math.round(Math.sqrt(variance));
+  var dist = [0,0,0,0,0,0,0,0,0,0];
+  sList.forEach(function (s) { dist[Math.min(9, Math.max(0, Math.floor(s / 10)))]++; });
+  return { course: course, round: round, avg: avg, score: myS,
+           per100: per100, n: scores.length, sd: sd, dist: dist };
 }
 
 // 최근 회차 반 전체 첫 응시 점수 → 평균·석차(100명 환산)

@@ -222,6 +222,16 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .gcell .gl{font-size:11.5px;color:var(--sub);margin-top:6px}
 /* 틀린 것 옆에 고칠 것을 둔다. 손가락으로 짚는 자리라 넉넉히 잡는다. */
 .matrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.segrks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.segrk{border:1px solid #EDE7DA;border-radius:11px;background:#fff;padding:10px 12px}
+.segrk>b{display:block;font-size:12.5px;color:#8B8377;font-weight:700}
+.segrk .v{display:block;font-size:20px;font-weight:800;color:#2B2620;margin-top:2px}
+.segrk .v i{font-style:normal;font-size:13px;font-weight:700;margin-left:1px}
+.segrk .s{display:block;font-size:12px;color:#6B6459;margin-top:3px}
+.segrk .s em{font-style:normal;font-weight:700}
+.segrk .s em.up{color:#2C6B3F}
+.segrk .s em.dn{color:#8A4A32}
+.segrk .n{display:block;font-size:11.5px;color:#9A9284;margin-top:2px}
 .segmat{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #F2EDE2}
 .segmat:first-of-type{border-top:none}
 .segmat>b{flex:0 0 44px;font-size:12.5px;font-weight:800;color:#2B2620}
@@ -1862,6 +1872,11 @@ async function askReport(student, tries){
      · 앞 두 회차 대 뒤 두 회차 단원 비교 — 회차가 나선형이라 뒤에 처음 나오는
        단원은 앞쪽 표본이 0이다. 화살표가 켜지는 단원이 거의 없고, 켜져도
        «이미 여러 번 본 단원» 뿐이라 학부모가 궁금해하는 자리가 아니다. */
+/* 회차마다의 석차. 서버가 ranks 로 함께 보내 준다(apps-script.gs · ranksAll_).
+   RANK(단수)는 가장 최근 회차 하나뿐이라, 5~8회를 묶은 보고서에서는 쓸 수가 없었다 —
+   마지막 회차가 12회면 그 석차는 이 구간의 것이 아니고, 실으면 거짓말이 된다.
+   옛 서버는 이 칸을 안 보낸다. 그때는 빈 배열이라 석차 절이 조용히 서지 않는다. */
+var RANKS=[];
 var SEG=null;
 
 function segParse(){
@@ -2130,6 +2145,51 @@ function segRecoverSec(states){
     +'</ul></div>';
 }
 
+/* ── 이 구간 석차 ────────────────────────────────────────────────────
+   평소 리포트에는 석차 카드가 있는데(rankCard) 구간 보고서는 그 자리가 통째로
+   비어 있었다. 서버가 «가장 최근 회차» 하나만 보내 주어서다.
+
+   이제 회차마다의 석차를 받는다. 구간 안의 회차만 골라 나란히 놓으면,
+   한 회차 카드가 못 하는 말을 한다 — **네 회차 동안 자리가 올라갔나.**
+
+   ⚠ 사람이 다섯 명이 안 되는 회차는 서버가 아예 안 보낸다. 두세 명일 때
+     「상위 50%」는 곧 누구인지를 가리키기 때문이다(같은 반 학부모끼리 안다).
+     그런 회차는 빈칸으로 두고, 몇 회차가 빠졌는지는 글로 적는다. */
+function segRankSec(states, course, from, to){
+  var took=(states||[]).filter(function(s){ return s.state!=='miss'; })
+                       .map(function(s){ return s.round; });
+  var rows=(RANKS||[]).filter(function(r){
+    return r && r.course===course && r.round>=from && r.round<=to && took.indexOf(r.round)>=0; });
+  if(!rows.length) return '';
+  rows.sort(function(a,b){ return a.round-b.round; });
+  var first=rows[0], last=rows[rows.length-1];
+  var move='';
+  if(rows.length>=2){
+    var d=first.per100-last.per100;   // per100 은 작을수록 위다
+    move = d>=5  ? '이 구간 동안 상위 '+first.per100+'% → '+last.per100+'% 로 <b>'+d+'%p 올라왔습니다.</b>'
+         : d<=-5 ? '이 구간 동안 상위 '+first.per100+'% → '+last.per100+'% 로 '+(-d)+'%p 내려왔습니다. 아래 클리닉의 개념부터 짚으면 회복됩니다.'
+                 : '이 구간 동안 상위 '+first.per100+'% 안팎을 유지했습니다.';
+  }
+  var missing=took.filter(function(r){
+    return !rows.some(function(x){ return x.round===r; }); });
+  var cells=rows.map(function(r){
+    var d=r.score-r.avg;
+    return '<div class="segrk"><b>'+r.round+'회</b>'
+      +'<span class="v">상위 '+r.per100+'<i>%</i></span>'
+      +'<span class="s">'+pt(r.score)+'점 · 반 평균 '+pt(r.avg)+'점'
+      +(d>=0?(' <em class="up">+'+pt(d)+'</em>'):(' <em class="dn">'+pt(d)+'</em>'))+'</span>'
+      +'<span class="n">'+r.n+'명 중</span></div>';
+  }).join('');
+  return '<div class="segsec"><h2>이 구간 석차</h2>'
+    +'<p class="segnote" style="margin:0 0 10px">회차마다 <b>첫 응시 점수</b>로 잰 자리입니다. 재시 점수는 넣지 않습니다 — '
+    +'재시는 고쳐 온 힘을 재는 것이고, 석차는 그날 알고 있던 것을 재는 것이라 섞으면 둘 다 뜻이 흐려집니다.</p>'
+    +'<div class="segrks">'+cells+'</div>'
+    +(move?('<p class="segnote" style="margin:10px 0 0">'+move+'</p>'):'')
+    +(missing.length?('<p class="segwarn" style="margin:8px 0 0">'+missing.join('·')+'회는 응시 인원이 적어 석차를 내지 않았습니다. '
+       +'사람이 몇 되지 않을 때의 «상위 몇 %»는 누가 누구인지를 가리키게 됩니다.</p>'):'')
+    +'</div>';
+}
+
 /* ── 이 구간 자료 ────────────────────────────────────────────────────
    평소 리포트에는 「이 회차 자료」 칸이 있다(matsCardHTML). 그런데 그 함수는
    latest.round **한 회차**만 본다. 구간 보고서는 이 칸을 아예 안 불렀다 —
@@ -2350,6 +2410,7 @@ async function renderSegment(){
   }
 
   /* ④ 난이도별 성취 */
+  h+=segRankSec(states, course, from, to);
   h+=segLvlSec(J);
 
   /* ⑤ 단원별 성취 */
@@ -2425,7 +2486,7 @@ async function boot(){
   if(REPORT_URL && student){
     var j=await askReport(student, 3);
     if(!j) LOAD_FAIL=true;                       // 물어보지 못했다(기록이 없는 것과 다르다)
-    else if(j.cumulative){ A=j.cumulative; allRows=j.rows||[]; RANK=j.rank||null; COHORT=j.cohort||null; }
+    else if(j.cumulative){ A=j.cumulative; allRows=j.rows||[]; RANK=j.rank||null; RANKS=j.ranks||[]; COHORT=j.cohort||null; }
   }
   var demoHard=(new URLSearchParams(location.search).get('demo')==='hard');
   // ★안전장치: 학생 링크(student 파라미터)가 있는데 데이터가 안 열리면(코드 미해석·링크 오류)

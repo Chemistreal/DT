@@ -1611,6 +1611,58 @@ async function assertNoOverflow(page, label) {
     }
   }
 
+  /* ── 구간 석차는 구간 안의, 응시한, 사람이 충분한 회차만 ────────────────
+     서버가 회차마다의 석차를 보내 준다(ranks). 구간 보고서는 그중에서
+     ① 이 구간(from~to) 안이고 ② 이 학생이 응시했고 ③ 서버가 실제로 보낸
+     회차만 실어야 한다. 사람이 다섯 명이 안 되는 회차는 서버가 아예 안 보내는데,
+     그걸 빈칸으로 그리면 「0명 중 상위 —%」 같은 것이 학부모 화면에 나간다.
+     또 옛 서버는 ranks 칸을 안 보낸다 — 그때는 절이 조용히 서지 않아야 한다. */
+  {
+    const t0 = Date.now(), name = '구간 석차 · 구간 안·응시한·인원이 찬 회차만 싣는다';
+    try {
+      const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+      const at = src.indexOf('function segRankSec(');
+      assert(at > 0, 'segRankSec 을 못 찾았다');
+      let i = src.indexOf('{', at), d = 0, j = i;
+      for (; j < src.length; j++) { const c = src[j]; if (c === '{') d++; else if (c === '}' && --d === 0) { j++; break; } }
+      const body = src.slice(at, j);
+      const make = (RANKS) => new Function('RANKS', 'pt',
+        body + '\nreturn { segRankSec: segRankSec };')(RANKS, v => String(v));
+
+      const R = (round, per100, score, avg, n) => ({ course: 'ch1', round, per100, score, avg, n, sd: 10, dist: [] });
+      const states = [
+        { round: 5, state: 'pass' }, { round: 6, state: 'repass' },
+        { round: 7, state: 'miss' }, { round: 8, state: 'need' },
+      ];
+      // 5·6·8 은 인원이 찼고, 7 은 미응시, 9 는 구간 밖
+      const ctx = make([R(5, 40, 70, 68, 20), R(6, 30, 78, 70, 21), R(8, 18, 85, 71, 22), R(9, 12, 90, 72, 22)]);
+      const html = ctx.segRankSec(states, 'ch1', 5, 8);
+      const nCells = html.split('class="segrk"').length - 1;
+      assert(nCells === 3, '회차 칸이 3개가 아니다: ' + nCells);
+      assert(html.indexOf('>9회<') < 0 && html.indexOf('<b>9회</b>') < 0, '구간 밖 9회가 섞였다');
+      assert(html.indexOf('<b>7회</b>') < 0, '미응시 7회를 실었다');
+      assert(/40% → 18%/.test(html) || html.indexOf('40') > 0, '구간 안 이동을 안 적었다');
+      assert(/22%p 올라왔습니다/.test(html), '올라온 폭을 안 적었다: ' + (html.match(/[0-9]+%p[^<]*/) || [''])[0]);
+
+      // 인원이 모자라 서버가 안 보낸 회차 — 빈칸을 그리지 않고 글로 적는다
+      const ctx2 = make([R(5, 40, 70, 68, 20), R(8, 18, 85, 71, 22)]);
+      const h2 = ctx2.segRankSec([{ round: 5, state: 'pass' }, { round: 6, state: 'pass' },
+                                  { round: 7, state: 'pass' }, { round: 8, state: 'pass' }], 'ch1', 5, 8);
+      assert((h2.split('class="segrk"').length - 1) === 2, '없는 회차를 칸으로 그렸다');
+      assert(/6·7회는 응시 인원이 적어/.test(h2), '빠진 회차를 글로 안 적었다');
+
+      // 옛 서버(ranks 없음) — 절이 아예 서지 않는다
+      assert(make([]).segRankSec(states, 'ch1', 5, 8) === '', 'ranks 가 없는데 절을 세웠다');
+      assert(make(null).segRankSec(states, 'ch1', 5, 8) === '', 'ranks 가 null 인데 절을 세웠다');
+
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   /* ── 구간 자료는 응시한 회차만 건다 ─────────────────────────────────
      안 본 회차의 해설을 걸어 두면 «봤는데 안 고쳤다» 로 읽힌다.
      그리고 평소 리포트의 자료 칸(matsCardHTML)은 latest.round 한 회차만 본다 —
