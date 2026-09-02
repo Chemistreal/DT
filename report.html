@@ -420,6 +420,9 @@ a:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 .segconh{padding:9px 12px 2px;font-size:13px;font-weight:800;color:#8A4A32}
 .segcon.fx .segconh{color:#2C6B3F}
 .segconh span{float:right;font-size:11.5px;font-weight:600;color:#9A9284;padding-top:2px}
+.leclink{display:inline-block;margin:0 12px 6px;font-size:12px;font-weight:700;
+  color:#2F5B8C;text-decoration:none;border:1px solid currentColor;
+  border-radius:999px;padding:3px 10px}
 .segcore{margin:0 12px 4px;font-size:12.5px;line-height:1.72;color:#4A443B;
   background:#FAF8F3;border:1px solid #EFE9DC;border-radius:9px;padding:8px 10px}
 .segcore b{color:#2B2620}
@@ -1737,7 +1740,7 @@ function render(commit){
     var _expl = todoCore? md(todoCore) : (_a0&&_a0.w? _esc(_a0.w) : '');
     var _reads=_anchors.slice(0,2);
     h+=`<div class="card todo">
-      <div class="todohead"><span class="todotag">이번 주 확인할 개념</span><span class="todomis">${todoMis}</span></div>
+      <div class="todohead"><span class="todotag">이번 주 확인할 개념</span><span class="todomis">${todoMis}</span>${lecLinkHTML(todoMis, latest&&latest.course, '')}</div>
       <div class="todointro">아이가 스스로 설명해 볼 때 개념이 진짜로 남습니다. 아래 질문을 그대로 건네고, 아이의 설명을 들어봐 주세요.</div>
       <div class="todohome"><span class="tlab">이렇게 물어봐 주세요</span>${qline}</div>
       ${_expl?`<div class="todocore"><span class="tlab">잘 대답하지 못하면, 이렇게 설명해 주세요</span>${_expl} 그런 다음 "그럼 왜 그렇게 될까?"를 한 번 더 같이 짚어 보세요.</div>`:''}
@@ -1784,7 +1787,7 @@ function render(commit){
   h+=`<div class="card"><h2>다시 볼 개념</h2>
     <div class="subhead">반복해서 막히는 곳</div>
     <p class="note" style="margin:2px 0 12px">여러 번 같은 지점에서 멈췄던 개념입니다. 반복해서 드러났다는 건 <b>정확히 어디를 도우면 되는지 보인다</b>는 뜻이고, 지금 집중해서 잡고 있는 지점입니다.</p>
-    ${A.chronicMis.length?A.chronicMis.map(m=>`<div class="rx"><div class="top"><span class="nm">${m.mis}</span><span class="freq">${m.rounds}개 회차 반복</span></div>${ONELINE[m.mis]?`<div class="ol"><b>핵심:</b> ${md(ONELINE[m.mis])}</div>`:''}</div>`).join('')
+    ${A.chronicMis.length?A.chronicMis.map(m=>`<div class="rx"><div class="top"><span class="nm">${m.mis}</span><span class="freq">${m.rounds}개 회차 반복</span></div>${lecLinkHTML(m.mis, latest&&latest.course, '')}${ONELINE[m.mis]?`<div class="ol"><b>핵심:</b> ${md(ONELINE[m.mis])}</div>`:''}</div>`).join('')
       :'<p class="muted">반복해서 막히는 개념 없음. 안정적입니다.</p>'}
     ${review.length?`<div class="subhead" style="margin-top:16px">한 번씩 놓친 곳, 복습 시점</div>
     <p class="note" style="margin:2px 0 10px">이전 회차에 놓쳤던 개념 중 <b>지금이 다시 볼 때</b>인 것만 골랐습니다(1 → 3 → 7회차 간격). 지금 가볍게 점검하면 오래 갑니다.</p>
@@ -2056,7 +2059,7 @@ function segRootSec(J, name){
     +body+'</div>';
 }
 
-function segClinicSec(J){
+function segClinicSec(J, course){
   var wrong=J.Q.filter(function(q){ return !q.ok; });
   if(!wrong.length) return '<div class="segsec"><h2>오답 개념 클리닉</h2>'
     +'<p class="lede">이 구간에서 첫 응시에 틀린 문항이 없습니다. 클리닉에 올릴 것이 없습니다.</p></div>';
@@ -2094,6 +2097,8 @@ function segClinicSec(J){
         +'<div class="segconh">'+rEsc(k)
         +'<span>'+(g.length>1?(g.length+'문항 · '+rounds.join('·')+'회'):(rounds[0]+'회'))
         +(fixedAll?' · 재시에서 고침':'')+'</span></div>'
+        /* 개념마다 한 번. 문항마다 걸면 같은 문이 세 개 나란히 선다. */
+        +lecLinkHTML(k, course, u)
         /* 개념 설명은 개념마다 한 번. 길게 실을 수 있으면 CORE, 없으면 ONELINE. */
         +(core?'<div class="segcore">'+md(core)+'</div>'
               :(one?'<div class="segcore">'+md(one)+'</div>':''));
@@ -2155,6 +2160,32 @@ function segRecoverSec(states){
    ⚠ 사람이 다섯 명이 안 되는 회차는 서버가 아예 안 보낸다. 두세 명일 때
      「상위 50%」는 곧 누구인지를 가리키기 때문이다(같은 반 학부모끼리 안다).
      그런 회차는 빈칸으로 두고, 몇 회차가 빠졌는지는 글로 적는다. */
+/* LECUNIT — tools/lec_link.py --emit 가 concept-lecture-dt.json 에서 만든다.
+   과목·단원이 함께 정해 주는 강의. LECMAP 보다 먼저 본다.
+   ⚠ 손으로 고치지 않는다. 고치려면 표를 고치고 다시 내보낸다. */
+const LECUNIT={};
+/* LECMAP — tools/lec_link.py --emit 가 concept-lecture-dt.json 에서 만든다.
+   오개념 이름 → 개념강의 한 편(exam 저장소). 오답 개념 클리닉의 「강의 보기」가 쓴다.
+   ⚠ 손으로 고치지 않는다. */
+const LECMAP={};
+/* ── 오개념에서 개념강의로 ────────────────────────────────────────────
+   성적표는 틀린 문항마다 오개념 이름을 적어 준다. 그런데 그 개념을 **어디서
+   배우는지**는 어디에도 없었다 — 학부모는 「분자간 힘」이라는 말만 받고, 그걸
+   어디서 다시 봐야 하는지는 못 받았다.
+
+   강의는 이미 있다(exam 저장소 125편). 없던 것은 이름을 잇는 표 하나뿐이었다.
+
+   ⚠ 강의는 **다른 저장소**에 있다. 주소가 표 안에 통째로 들어 있으므로 여기서는
+     그대로 건다. 새 창으로 연다 — 성적표를 읽다 말고 자리를 잃지 않게. */
+function lecFor(mis, course, unit){
+  if(!mis) return '';
+  var k=(course||'')+'/'+(unit||'')+'|'+mis;
+  return LECUNIT[k] || LECMAP[mis] || '';
+}
+function lecLinkHTML(mis, course, unit){
+  var h=lecFor(mis, course, unit);
+  return h ? ('<a class="leclink" href="'+rEsc(h)+'" target="_blank" rel="noopener">▶ 개념 강의 보기 ↗</a>') : '';
+}
 function segRankSec(states, course, from, to){
   var took=(states||[]).filter(function(s){ return s.state!=='miss'; })
                        .map(function(s){ return s.round; });
@@ -2446,7 +2477,7 @@ async function renderSegment(){
   /* 클리닉 앞에 세운다 — 「무엇을 틀렸나」를 늘어놓기 전에 「어디가 뿌리인가」를
      먼저 말해야, 아래 목록이 할 일 목록이 아니라 지도로 읽힌다. */
   if(J.hasItems) h+=segRootSec(J, name);
-  if(J.hasItems) h+=segClinicSec(J);
+  if(J.hasItems) h+=segClinicSec(J, course);
   h+=segRecoverSec(states);
   h+=segRxSec(aggUnits, (recomputed&&recomputed.chronicMis)||[], J);
   h+=segMatsSec(states, course);

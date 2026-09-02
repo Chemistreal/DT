@@ -1560,9 +1560,13 @@ async function assertNoOverflow(page, label) {
         return src.slice(at, j);
       };
       const CORE = { '한계 반응물': '계수로 나눈 몫이 **가장 작은** 쪽이 먼저 떨어진다.' };
-      const ctx = new Function('rEsc', 'segNo', 'CORE', 'ONELINE', 'md',
+      /* 개념마다 강의 문을 하나 단다 — 문항마다 걸면 같은 문이 세 개 나란히 선다.
+         여기서는 문이 붙는 **자리**만 보고, 어느 강의로 가는지는 lec_link.py 가 지킨다. */
+      let lecCalls = 0;
+      const ctx = new Function('rEsc', 'segNo', 'CORE', 'ONELINE', 'md', 'lecLinkHTML',
         grab('segClinicSec') + '\nreturn { segClinicSec: segClinicSec };'
-      )(x => String(x), n => String(n), CORE, {}, x => String(x));
+      )(x => String(x), n => String(n), CORE, {}, x => String(x),
+        () => { lecCalls++; return '<a class="leclink">▶ 개념 강의 보기 ↗</a>'; });
 
       const q = (round, n, mis, fixed) => ({
         round, n, u: '양적관계', c: 'CH1-041', mis, key: 'O', got: 'X',
@@ -1579,6 +1583,8 @@ async function assertNoOverflow(page, label) {
       assert(count('segqw') === 3, '문항 줄이 3개가 아니다: ' + count('segqw'));
       assert(html.indexOf('3문항') > 0, '몇 번 걸렸는지가 없다');
       assert(html.indexOf('1·2·3회') > 0, '어느 회차였는지가 없다');
+      assert(lecCalls === 1, '강의 문을 개념당 한 번이 아니라 ' + lecCalls + '번 달았다');
+      assert((html.split('class="leclink"').length - 1) === 1, '강의 문이 하나가 아니다');
       /* 설명이 아예 없는 개념도 조용히 서야 한다 — CORE 에 없으면 빈 칸을 안 만든다. */
       const J2 = { Q: [q(1, 1, '없는개념')] };
       const h2 = ctx.segClinicSec(J2);
