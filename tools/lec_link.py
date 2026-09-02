@@ -38,6 +38,7 @@
     python3 tools/lec_link.py           # 지금 얼마나 이어져 있나
     python3 tools/lec_link.py --check   # 끊기거나 줄면 빨간불 (CI)
     python3 tools/lec_link.py --seal    # 지금 덮는 수를 새 바닥으로
+    python3 tools/lec_link.py --chunks  # 아직 안 이은 것을 집필 조각으로 끊는다
     python3 tools/lec_link.py --absorb  # 집필 조각을 표로 옮긴다
     python3 tools/lec_link.py --emit    # 표를 report.html 의 LECMAP 으로
     python3 tools/lec_link.py --sync    # exam 저장소에서 강의 목록을 다시 베낀다
@@ -196,6 +197,74 @@ def emit():
     return 0
 
 
+def chunks(per=45):
+    """아직 안 이어진 오개념을 **집필용 조각**으로 끊어 `tools/_lecwip/` 에 놓는다.
+
+    조각 하나에 무엇이 들어가나
+        mis      오개념 이름(회차 자료 items[].mis 의 값 그대로)
+        n        그 오개념이 걸린 문항 수 — 많이 걸린 것부터 앞에 온다
+        units    어느 과목/단원에 나오는가(같은 이름이 두 단원에 걸치면 byUnit 으로 갈린다)
+        ex       그 오개념이 붙은 문항의 문장·해설 두 개까지 — **이것이 판단 근거다**
+        guess    이름만 보고 짐작한 강의. **믿으라고 주는 것이 아니라 의심하라고 준다.**
+        pick     집필자가 채운다. 맞는 강의가 없으면 빈 글자열로 두고 why 에 적는다
+        why      왜 그 강의인가 / 왜 없는가
+
+    ⚠ `guess` 를 그대로 두는 것이 가장 흔한 실패다. 이름이 닮았다고 내용이
+      같지는 않다 — 「결합 차수」가 그랬다. exam 의 lec-020 은 결합 차수를
+      「공유한 전자쌍 수」로만 정의하고 결합성/반결합성이라는 말이 파일 전체에
+      없는데, DT 문항은 분자 오비탈 판 결합 차수를 묻고 있었다. 020 을 켜 줘도
+      학생의 오류는 안 고쳐진다(맞는 곳은 lec-027 이었다).
+
+        python3 tools/lec_link.py --chunks [개수]
+    """
+    doc = load(MAP)
+    mp, bu = doc.get('map', {}), doc.get('byUnit', {})
+    done = set(mp) | {k.split(SEP, 1)[1] for k in bu if SEP in k} | set(doc.get('unmapped', {}))
+    n, unit = rounds()
+    # 문항에 붙은 문장·해설을 오개념별로 두 개까지 모은다
+    ex = collections.defaultdict(list)
+    for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
+        for it in ((load(f).get('jeongsi') or {}).get('items') or []):
+            m = str(it.get('mis') or '').strip()
+            if not m or len(ex[m]) >= 2:
+                continue
+            ex[m].append({'s': it.get('s') or '', 'w': it.get('w') or ''})
+    todo = [m for m in sorted(n, key=lambda x: (-n[x], x)) if m not in done]
+    if not todo:
+        print('이을 것이 남아 있지 않다.')
+        return 0
+    lec = doc['lectures']
+    titles = {d['title']: d['file'] for d in lec.values()}
+    def guess(m):
+        """이름이 가장 많이 겹치는 강의. 어디까지나 **의심할 출발점**이다."""
+        best, hi = '', 0
+        key = re.sub(r'[\s·,]+', '', m)
+        for t, f in titles.items():
+            tt = re.sub(r'[\s·,]+', '', t)
+            share = len({tt[i:i + 2] for i in range(len(tt) - 1)}
+                        & {key[i:i + 2] for i in range(len(key) - 1)})
+            if share > hi:
+                best, hi = f, share
+        return best if hi >= 2 else ''
+    os.makedirs(WIP, exist_ok=True)
+    made = []
+    for i in range(0, len(todo), per):
+        part = todo[i:i + per]
+        key = 'D%02d' % (i // per + 1)
+        body = {}
+        for m in part:
+            body[m] = {'n': n[m], 'units': sorted(unit[m]), 'ex': ex.get(m, []),
+                       'guess': guess(m), 'pick': '', 'why': ''}
+        io.open(os.path.join(WIP, key + '.json'), 'w', encoding='utf-8').write(
+            json.dumps(body, ensure_ascii=False, indent=1) + '\n')
+        made.append(key)
+    io.open(os.path.join(WIP, 'lectures.txt'), 'w', encoding='utf-8').write(
+        ''.join('%s\t%s\n' % (d['file'], d['title']) for d in lec.values()))
+    print('조각 %d개 · 아직 안 이어진 오개념 %d종 (%s)'
+          % (len(made), len(todo), WIP))
+    return 0
+
+
 def main():
     check = '--check' in sys.argv
     if '--sync' in sys.argv:
@@ -204,6 +273,10 @@ def main():
         return absorb()
     if '--emit' in sys.argv:
         return emit()
+    if '--chunks' in sys.argv:
+        i = sys.argv.index('--chunks')
+        per = int(sys.argv[i + 1]) if len(sys.argv) > i + 1 and sys.argv[i + 1].isdigit() else 45
+        return chunks(per)
     doc = load(MAP)
     lec, mp, un = doc['lectures'], doc.get('map', {}), doc.get('unmapped', {})
     bu = doc.get('byUnit', {})

@@ -1,0 +1,125 @@
+lec-001-atomic-structure-isotopes.html	원자의 구조와 동위원소
+lec-002-light-duality.html	빛의 이중성과 전자기파
+lec-003-hydrogen-spectrum.html	수소 선스펙트럼과 리드베리
+lec-004-bohr-model.html	보어 모형과 에너지 양자화
+lec-005-quantum-numbers.html	양자수와 오비탈
+lec-006-electron-configuration.html	전자 배치 규칙
+lec-007-shielding-zeff.html	가림과 유효핵전하
+lec-008-de-broglie.html	드브로이 물질파와 불확정성
+lec-009-nucleosynthesis.html	원소의 기원과 핵합성
+lec-010-radioactive-decay.html	방사성 붕괴와 반감기
+lec-011-periodic-table-structure.html	주기율표의 구조
+lec-012-atomic-ionic-radii.html	원자·이온 반지름
+lec-013-ionization-energy.html	이온화에너지
+lec-014-electron-affinity.html	전자친화도
+lec-015-electronegativity.html	전기음성도
+lec-016-periodic-trends-synthesis.html	주기·족 경향 종합
+lec-017-metals-nonmetals.html	금속·비금속·준금속
+lec-018-octet-lewis.html	옥텟 규칙과 루이스 구조
+lec-019-bond-types.html	화학 결합 3종
+lec-020-bond-order-length-energy.html	결합 차수·길이·에너지
+lec-021-formal-charge-resonance.html	형식전하와 공명
+lec-022-vsepr-basics.html	VSEPR 기본
+lec-023-molecular-shapes.html	분자의 모양
+lec-024-bond-angles.html	결합각과 고립전자쌍 효과
+lec-025-molecular-polarity.html	분자의 극성
+lec-026-hybrid-orbitals.html	혼성 오비탈
+lec-027-sigma-pi-bonds.html	시그마·파이 결합
+lec-028-imf-overview.html	분자 간 힘 개요
+lec-029-dispersion-forces.html	분산력
+lec-030-dipole-dipole.html	쌍극자-쌍극자 힘
+lec-031-hydrogen-bonding.html	수소 결합
+lec-032-imf-boiling-point.html	분자 간 힘과 끓는점
+lec-033-solubility.html	용해도: 비슷한 것끼리 녹는다
+lec-034-mole-avogadro.html	몰과 아보가드로 수
+lec-035-molar-mass.html	몰질량
+lec-036-formula-mass.html	화학식량
+lec-037-chemical-equations.html	화학 반응식과 계수 맞추기
+lec-038-stoichiometry.html	양적 관계
+lec-039-gas-laws-avogadro.html	기체 반응 법칙·아보가드로 법칙
+lec-040-molarity.html	몰농도
+lec-041-limiting-reactant.html	한계 반응물
+lec-042-percent-yield.html	수득률
+lec-043-stoichiometry-synthesis.html	화학량론 종합
+lec-044-gas-pressure.html	기체 압력과 기본 성질
+lec-045-boyle-charles.html	보일·샤를 법칙
+lec-046-ideal-gas-law.html	이상기체 방정식
+lec-047-partial-pressure.html	부분압력
+lec-048-kinetic-theory.html	기체 분자 운동론·확산
+lec-049-real-gases.html	실제 기체
+lec-050-evaporation-vapor-pressure.html	증발과 증기압
+lec-051-boiling-phase-diagram.html	끓는점과 상평형
+lec-052-dissolution-solubility.html	용해 과정과 용해도
+lec-053-gas-solubility.html	기체의 용해도
+lec-054-concentration-units.html	농도 표현: 몰랄·몰분율
+lec-055-colligative-overview.html	총괄성 개요
+lec-056-bp-elevation-fp-depression.html	끓는점 오름·어는점 내림
+lec-057-osmotic-pressure.html	삼투압
+lec-058-solid-classification.html	고체의 분류
+lec-059-crystal-lattice.html	결정 격자와 단위 세포
+lec-060-metallic-crystal.html	금속 결정 구조
+lec-061-ionic-crystal.html	이온 결정 구조
+lec-062-covalent-molecular-crystal.html	공유 결정·분자 결정
+lec-063-solid-properties-synthesis.html	고체 성질 종합
+lec-064-exo-endothermic.html	발열·흡열 반응
+lec-065-enthalpy.html	엔탈피와 반응 엔탈피
+lec-066-bond-energy.html	결합 에너지
+lec-067-hess-law.html	헤스 법칙
+lec-068-formation-enthalpy.html	표준 생성 엔탈피
+lec-069-specific-heat.html	비열과 열량 측정
+lec-070-phase-change-enthalpy.html	상태 변화의 엔탈피
+lec-071-entropy.html	엔트로피와 경우의 수
+lec-072-gibbs-free-energy.html	깁스 자유 에너지와 자발성
+lec-073-reversible-equilibrium.html	가역 반응과 동적 평형
+lec-074-equilibrium-constant.html	평형 상수 K
+lec-075-equilibrium-calculation.html	평형 상수 계산과 의미
+lec-076-reaction-quotient.html	반응 지수 Q와 평형 예측
+lec-077-lechatelier-concentration.html	르샤틀리에 원리: 농도
+lec-078-lechatelier-pressure.html	르샤틀리에: 압력
+lec-079-lechatelier-temperature.html	르샤틀리에: 온도·촉매
+lec-080-equilibrium-synthesis.html	평형 이동 종합
+lec-081-acid-base-definition.html	산과 염기의 정의
+lec-082-conjugate-acid-base.html	짝산-짝염기
+lec-083-water-autoionization.html	물의 자동 이온화와 Kw
+lec-084-ph-poh.html	pH와 pOH
+lec-085-acid-base-strength.html	산과 염기의 세기
+lec-086-acid-ionization-constant.html	약산의 이온화 상수 Ka
+lec-087-base-ionization-kb.html	약염기 Kb와 Ka·Kb 관계
+lec-088-polyprotic-acids.html	다양성자산
+lec-089-salt-acidity.html	염의 액성
+lec-090-buffer-solution.html	완충 용액
+lec-091-indicators-ph.html	지시약과 pH 측정
+lec-092-acid-base-synthesis.html	산과 염기 종합
+lec-093-neutralization.html	중화 반응
+lec-094-neutralization-stoichiometry.html	중화의 양적 관계
+lec-095-neutralization-titration.html	중화 적정
+lec-096-titration-curve.html	적정 곡선·중화점
+lec-097-neutralization-synthesis.html	중화 반응 종합
+lec-098-oxidation-number.html	산화수
+lec-099-redox-definition.html	산화·환원의 정의
+lec-100-oxidation-number-redox.html	산화수와 산화·환원
+lec-101-oxidizing-reducing-agent.html	산화제·환원제
+lec-102-redox-balancing.html	산화 환원 반응식의 균형
+lec-103-metal-reactivity.html	금속의 반응성
+lec-104-galvanic-cell.html	화학 전지
+lec-105-electrolysis.html	전기 분해
+lec-106-redox-synthesis.html	산화 환원 종합
+lec-107-reaction-rate.html	반응 속도의 정의
+lec-108-collision-theory.html	충돌 이론
+lec-109-activation-energy.html	활성화 에너지
+lec-110-concentration-rate.html	농도와 반응 속도
+lec-111-temperature-rate.html	온도와 반응 속도
+lec-112-catalyst.html	촉매
+lec-113-reaction-rate-synthesis.html	반응 속도 종합
+lec-114-carbon-compounds.html	탄소 화합물의 특징
+lec-115-hydrocarbons.html	탄화수소
+lec-116-functional-groups.html	작용기 개론
+lec-117-alcohols-ethers.html	알코올·에터
+lec-118-carbonyl-carboxyl-ester.html	카보닐·카복실산·에스터
+lec-119-isomers.html	이성질체
+lec-120-aromatic-benzene.html	방향족
+lec-121-carbon-compounds-synthesis.html	탄소 화합물 종합
+lec-122-complex-ion-coordinate-bond.html	착이온과 배위 결합
+lec-123-ligand-coordination-number.html	리간드와 배위수
+lec-124-complex-structure-properties.html	착물의 구조와 성질
+lec-125-coordination-synthesis.html	배위 화학 종합
