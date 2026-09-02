@@ -553,6 +553,36 @@ function gridHTML(c){
   return '<div class="gwrap"><table class="grid"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+lg+acts+segHead+segs;
 }
 
+/* ── 반 하나로 곧장 데려간다 ──────────────────────────────────────────
+   통합 셸(exam/hub.html)의 「반」 화면에는 반별 상태가 서고, 회차별 격자는
+   여기 있다. 셸에서 반을 고른 채 넘어왔는데 맨 위부터 다시 찾아야 하면
+   두 화면이 이어져 있다고 하기 어렵다.
+
+   반 이름을 그대로 자리표로 쓰지 않는다 — 「화학2 토1:30-5:30」 처럼 콜론과
+   공백이 들어 있어 CSS 선택자로 못 쓴다. 글자를 코드로 접어 쓴다.
+
+   ⚠ 셸은 이 화면을 iframe 으로 얹어 두고 gotoCls 를 그냥 부른다(같은 오리진).
+     주소를 갈면 화면이 다시 서면서 앱스크립트를 한 번 더 두드린다 — 이미
+     떠 있는 화면을 그대로 쓰게 둔다. `?cls=` 는 새 창으로 열 때만 쓴다. */
+function clsAnchor(label){
+  var s=String(label==null?'':label), out='c-';
+  for(var i=0;i<s.length;i++) out+=s.charCodeAt(i).toString(36);
+  return out;
+}
+var CLS_WANT='';
+function gotoCls(label){
+  CLS_WANT=String(label==null?'':label);
+  var el=CLS_WANT?document.getElementById(clsAnchor(CLS_WANT)):null;
+  /* 아직 안 그려졌으면 기억만 해 둔다 — 다 그리고 나서 render 가 다시 부른다. */
+  if(!el) return false;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  /* 스치듯 표시만 한다 — 색을 바꿔 두면 「이 반만 다르다」로 읽힌다. */
+  el.style.outline='2px solid var(--brass,#B08D57)';
+  el.style.outlineOffset='3px';
+  setTimeout(function(){ el.style.outline=''; el.style.outlineOffset=''; }, 2600);
+  return true;
+}
+function gotoClsFromQuery(){ gotoCls(CLS_WANT || Q.get('cls') || ''); }
 function absentClassHTML(c){
   /* ⚠ 어떤 상태든 반 카드는 **반드시 선다.** 예전에는 미응시가 0이거나
      회차를 못 정한(noExam) 반을 거르는 바람에, 그 반이 화면에서 통째로
@@ -561,7 +591,7 @@ function absentClassHTML(c){
      roster.html 은 네 상태(과목 미인식·회차 미정·미응시·전원 응시)를 다
      보여 준다 — 여기도 같은 규칙을 쓴다. */
   if(c.note){
-    return '<div class="abx-cls"><div class="abx-head"><span class="abx-nm">'+esc(c.label)+'</span>'
+    return '<div class="abx-cls"><div class="abx-head" id="'+clsAnchor(c.label)+'"><span class="abx-nm">'+esc(c.label)+'</span>'
       +'<span class="abx-badge">'+esc(c.note)+'</span></div>'
       +'<div class="muted-note" style="margin:8px 0 0">반 이름에 화학1·화학2·일반화학이 들어가야 과목을 인식합니다 — roster.html에서 반 이름을 고쳐 주세요.</div></div>';
   }
@@ -570,7 +600,7 @@ function absentClassHTML(c){
   var noRound=(c.noExam||c.round==null);
   var opts='<option value="">자동</option>';
   for(var _i=1;_i<=20;_i++){ opts+='<option value="'+_i+'"'+((ovOn&&Number(ovv)===_i)?' selected':'')+'>'+_i+'회</option>'; }
-  var head='<div class="abx-head"><span class="abx-nm">'+esc(c.label)+'</span>'
+  var head='<div class="abx-head" id="'+clsAnchor(c.label)+'"><span class="abx-nm">'+esc(c.label)+'</span>'
     +'<span class="abx-badge">'+(COURSE[c.course]||esc(c.course))+' '+(noRound?'회차 미정':esc(c.round)+'회')+'</span>'
     +'<select class="roundsel'+(ovOn?' on':'')+'" data-label="'+escAttr(c.label)+'" onchange="setAbsRoundVal(this)" title="이 반의 시험 회차 선택 (자동/직접)">'+opts+'</select>'
     +'<span class="abx-cnt">'+(noRound?'회차를 골라 주세요':(c.absent.length?('미응시 '+c.absent.length+'/'+c.total+'명'):('전원 응시 '+c.total+'명')))+'</span>'
@@ -824,15 +854,18 @@ function render(P, ABS, absFail, PASS, MERGE){
       +s.map(rowHTML).join('')+'</details></div>';
   }
   document.getElementById('app').innerHTML=h;
+  /* 셸에서 반을 고른 채 넘어왔으면 그 반으로 데려간다. 다시 그릴 때마다
+     부른다 — 회차를 바꾸면 화면이 통째로 다시 서기 때문이다. */
+  gotoClsFromQuery();
 }
 
 function demo(){
   var R='https://chemistreal.github.io/DT/report.html?student=';
   return { activeDays:14, generatedAt:'2026-06-20 14:30', active:[
     {name:'성춘향',school:'한별중',year:'2',course:'ch2',round:5,lastAttempt:'정시',score:73,nextNeeded:'재시',days:9,lastDate:'6/11',reportLink:R+'%ED%95%9C%EB%B3%84%EC%A4%91-%EC%84%B1%EC%B6%98%ED%96%A5'},
-    {name:'박서준',school:'두레중',year:'3',course:'ch2',round:7,lastAttempt:'재시',score:78,nextNeeded:'재재시',days:5,lastDate:'6/15',reportLink:R+'demo2'},
-    {name:'최예린',school:'역삼중',year:'2',course:'ch1',round:12,lastAttempt:'정시',score:68,nextNeeded:'재시',days:3,lastDate:'6/17',reportLink:R+'demo3'},
-    {name:'김도윤',school:'언주중',year:'1',course:'gc',round:3,lastAttempt:'정시',score:71,nextNeeded:'재시',days:2,lastDate:'6/18',reportLink:R+'demo4'}
+    {name:'임꺽정',school:'두레중',year:'3',course:'ch2',round:7,lastAttempt:'재시',score:78,nextNeeded:'재재시',days:5,lastDate:'6/15',reportLink:R+'demo2'},
+    {name:'심청',school:'새얼중',year:'2',course:'ch1',round:12,lastAttempt:'정시',score:68,nextNeeded:'재시',days:3,lastDate:'6/17',reportLink:R+'demo3'},
+    {name:'놀부',school:'가온중',year:'1',course:'gc',round:3,lastAttempt:'정시',score:71,nextNeeded:'재시',days:2,lastDate:'6/18',reportLink:R+'demo4'}
   ], stale:[
     {name:'정민서',school:'개포중',year:'3',course:'ch2',round:4,lastAttempt:'정시',score:62,nextNeeded:'재시',days:23,lastDate:'5/28',reportLink:R+'demo5'},
     {name:'한지우',school:'구룡중',year:'2',course:'ch1',round:9,lastAttempt:'재시',score:75,nextNeeded:'재재시',days:31,lastDate:'5/20',reportLink:R+'demo6'}
