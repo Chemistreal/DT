@@ -117,13 +117,22 @@ def absorb():
     if not parts:
         print('옮길 조각이 없다 (%s 가 비어 있다)' % WIP)
         return 1
-    added = paired = noted = 0
+    added = paired = noted = untouched = 0
     ghosts = []
     for p in parts:
         for mis, v in load(p).items():
             v = v or {}
             pick, why = v.get('pick') or '', v.get('why') or ''
             per = v.get('byUnit') or {}
+            # ⚠ **아무도 안 본 자리를 「강의가 없다」고 적지 않는다.**
+            #   조각은 pick·why 가 빈 채로 만들어진다. 아직 집필 안 한 조각을
+            #   그대로 옮기면, 사람이 들여다본 적도 없는 개념이 unmapped 에
+            #   「맞는 강의가 목록에 없다」는 이유를 달고 앉는다 — 저장소가
+            #   스스로 거짓말을 하게 되고, 다음 사람은 그 자리를 이미 판정이
+            #   끝난 곳으로 읽고 건너뛴다.
+            if not pick and not why and not per:
+                untouched += 1
+                continue
             if pick:
                 n = f2n.get(pick)
                 if not n:
@@ -151,6 +160,9 @@ def absorb():
     save(doc)
     print('조각 %d개 → 이은 오개념 %d · 단원별로 갈린 짝 %d · 강의 없음 %d'
           % (len(parts), added, paired, noted))
+    if untouched:
+        print('아직 아무도 안 본 자리 %d — 옮기지 않았다(집필이 끝나면 다시 부른다)'
+              % untouched)
     if moved:
         print('byUnit 이 맡은 이름 %d개를 map 에서 뺐다: %s'
               % (len(moved), ', '.join(moved[:8])))
