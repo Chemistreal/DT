@@ -53,7 +53,14 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MAP = os.path.join(ROOT, 'concept-lecture-dt.json')
 SEAL = os.path.join(ROOT, 'tools', 'lec_link.json')
-WIP = '/tmp/claude-0/-home-user-study64-report/2113474c-4485-592e-912d-e7d09ec51ec8/scratchpad/dtlecwip'
+# 집필 조각이 놓이는 자리. **저장소 안**이다 — 임시 폴더에 두었다가 컨테이너가
+# 사라지면서 여덟 시간치 배선 작업을 통째로 잃었다(2026-09-02). 저장소 안에
+# 두면 자동 저장이 4분마다 밀어 넣으므로 같은 일이 안 난다.
+#
+# ⚠ 이 폴더는 **작업 중인 원고**다. 검증을 다 거치지 않은 조각이 섞여 있을 수
+#   있으므로, 여기 있는 것을 바로 화면에 쓰지 않는다 — `--absorb` 로 표에
+#   옮긴 것만 쓴다.
+WIP = os.path.join(ROOT, 'tools', '_lecwip')
 EXAM = '/home/user/exam'
 SEP = '|'
 
