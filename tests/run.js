@@ -252,8 +252,8 @@ async function assertNoOverflow(page, label) {
     assert(/같은 사람 합치기/.test(txt), '합치는 자리가 없다');
     /* 무엇을 합칠지 눌러 보기 전에 다 적혀 있어야 한다 — 학생키와 이미 보낸
        리포트 주소가 걸린 일이라, 누른 뒤에 알게 되면 늦다. */
-    assert(/서울대청중-이시현/.test(txt) && /대청중-이시현/.test(txt), '무엇을 합칠지 안 적었다');
-    assert(/대청중학교/.test(txt), '표기 정리 대상을 안 적었다');
+    assert(/서울두레중-이몽룡/.test(txt) && /두레중-이몽룡/.test(txt), '무엇을 합칠지 안 적었다');
+    assert(/두레중학교/.test(txt), '표기 정리 대상을 안 적었다');
     assert(/동명이인/.test(txt), '동명이인 주의를 안 적었다');
     const btn = await page.$('#mgGo');
     assert(btn, '합치는 버튼이 없다');
@@ -1136,11 +1136,15 @@ async function assertNoOverflow(page, label) {
       bad: !!document.querySelector('#banner .banner.bad'),
       text: document.getElementById('banner').textContent,
       retry: !!document.getElementById('retry'),
+      n: state.classes.length,
     }));
     assert(st.load === 'fail', '상태가 fail 이 아니다: ' + st.load);
     assert(st.disabled, '저장 단추가 안 잠겼다');
     assert(st.bad, '실패 배너가 안 뜬다');
-    assert(/서버에 저장된 명단이 아닙니다/.test(st.text), '무엇이 보이는지 안 알려 준다');
+    assert(/지금 물어보지 못했다/.test(st.text), '무엇이 보이는지 안 알려 준다');
+    /* 옛 사본을 명단인 척 띄우지 않는다 — 그 화면이 저장 사고의 씨앗이었고,
+       그 사본 자체가 공개 저장소에 박힌 아이들 실명이었다(2026-09-02). */
+    assert(st.n === 0, '못 물어봤는데 명단이 보인다 (' + st.n + '반)');
     assert(st.retry, '다시 불러오는 길이 없다');
 
     /* 단추를 막아 뒀지만 스크립트로도 눌린다. 덮어쓰기는 되돌릴 수 없으므로
@@ -1166,19 +1170,25 @@ async function assertNoOverflow(page, label) {
       disabled: document.getElementById('save').disabled,
       bad: !!document.querySelector('#banner .banner.bad'),
       n: state.classes.length,
+      text: document.getElementById('banner').textContent,
     }));
-    /* 진짜 첫 설정이다 — 이때는 기본 명단을 띄우고 저장을 열어 둬야 한다. */
+    /* 진짜 첫 설정이다 — 저장은 열어 두되, **명단을 지어내지 않는다.**
+       예전에는 여기서 화면에 박아 둔 «기본 명단» 을 띄웠다. 그 명단은
+       서버와 어긋난 옛 사본이었고(선생님이 그대로 저장하면 낡은 명단이
+       서버에 박힌다), 무엇보다 실제 학생 여든한 명의 이름이 공개 저장소에
+       그대로 실려 있었다(2026-09-02). 첫 설정 화면은 비어 있는 것이 맞다. */
     assert(st.load === 'empty', '상태가 empty 가 아니다: ' + st.load);
     assert(!st.disabled, '저장이 잠겨 있다 — 첫 설정을 못 한다');
     assert(!st.bad, '붉은 배너가 뜬다 — 실패가 아닌데');
-    assert(st.n > 0, '기본 명단이 안 떴다');
+    assert(st.n === 0, '없는 명단을 지어내 띄웠다 (' + st.n + '반)');
+    assert(/아직 없습니다/.test(st.text), '첫 설정이라는 것을 안 알려 준다');
   }, { adminGate: true });
 
   await test('roster · 서버 명단이 오면 그것을 쓴다', async page => {
     await page.route('**/macros/s/**', route => route.fulfill({
       status: 200, contentType: 'application/json',
       body: JSON.stringify({ ok: true, classes: [
-        { label: '화학1 일6-10', course: 'ch1', students: ['강신우', '고영훈'], round: 7 } ] }) }));
+        { label: '화학1 일6-10', course: 'ch1', students: ['가나다', '라마바'], round: 7 } ] }) }));
     await page.goto(BASE + 'roster.html');
     await page.waitForTimeout(1200);
     const st = await page.evaluate(() => ({
@@ -1350,7 +1360,7 @@ async function assertNoOverflow(page, label) {
         ['hw_grader.html', extract('hw_grader.html', 'pubId')],
         ['apps-script.gs', extract('apps-script.gs', 'pubId_')],
       ];
-      const keys = ['잠실중-김예성', '과천문원중-최민준', '문원중-최민준', '대치초-홍길동', '서울고-김철수', ''];
+      const keys = ['한별중-성춘향', '과천두레중-이몽룡', '두레중-이몽룡', '대치초-홍길동', '서울고-김철수', ''];
       for (const k of keys) {
         const outs = impls.map(([, f]) => f(k));
         for (let i = 1; i < outs.length; i++) {
@@ -1393,28 +1403,28 @@ async function assertNoOverflow(page, label) {
 
       // schoolAkin_ 규칙
       const F = make({});
-      assert(F.schoolAkin_('문원중', '과천문원중') === true, '포함관계 학교 미인식');
+      assert(F.schoolAkin_('두레중', '과천두레중') === true, '포함관계 학교 미인식');
       assert(F.schoolAkin_('대치중', '청담중') === false, '무관 학교 오인식');
-      assert(F.schoolAkin_('중', '과천문원중') === false, '2자 이하 공통 오연결(가드 실패)');
-      assert(F.schoolAkin_('문원중', '문원고') === false, '중/고 구분 실패');
+      assert(F.schoolAkin_('중', '과천두레중') === false, '2자 이하 공통 오연결(가드 실패)');
+      assert(F.schoolAkin_('두레중', '문원고') === false, '중/고 구분 실패');
       assert(F.schoolAkin_('휘문', '휘문중') === true, '학교종류 접미 유무만 다른 경우 미인식(휘문/휘문중)');
       assert(F.schoolAkin_('휘문중', '휘문고') === false, '동일 지역명 다른 학교종류 오인식(휘문중/휘문고)');
 
-      // 기존: 문원중-최민준 한 명. 과천문원중으로 다시 오면 그 키로 연결
-      const idxOne = { '문원중-최민준': { name: '최민준', schools: ['문원중'] } };
+      // 기존: 두레중-이몽룡 한 명. 과천두레중으로 다시 오면 그 키로 연결
+      const idxOne = { '두레중-이몽룡': { name: '이몽룡', schools: ['두레중'] } };
       const A = make(idxOne);
-      assert(A.canonicalKey_('최민준', '과천문원중') === '문원중-최민준', '포함관계 학생 자동 연결 실패');
-      assert(A.canonicalKey_('최민준', '문원중') === '문원중-최민준', '동일 학교 연결 실패');
-      assert(A.canonicalKey_('김서준', '문원중') === '문원중-김서준', '동명이 아닌 신규가 잘못 연결됨');
-      assert(A.canonicalKey_('최민준', '단대부중') === '단대부중-최민준', '무관 학교인데 잘못 연결됨');
+      assert(A.canonicalKey_('이몽룡', '과천두레중') === '두레중-이몽룡', '포함관계 학생 자동 연결 실패');
+      assert(A.canonicalKey_('이몽룡', '두레중') === '두레중-이몽룡', '동일 학교 연결 실패');
+      assert(A.canonicalKey_('임꺽정', '두레중') === '두레중-임꺽정', '동명이 아닌 신규가 잘못 연결됨');
+      assert(A.canonicalKey_('이몽룡', '단대부중') === '단대부중-이몽룡', '무관 학교인데 잘못 연결됨');
 
-      // 오병합 방지: 같은 이름 최민준이 서로 다른(둘 다 포함관계) 학교로 이미 2명 → 연결하지 않음
+      // 오병합 방지: 같은 이름 이몽룡이 서로 다른(둘 다 포함관계) 학교로 이미 2명 → 연결하지 않음
       const idxAmb = {
-        '동문원중-최민준': { name: '최민준', schools: ['동문원중'] },
-        '서문원중-최민준': { name: '최민준', schools: ['서문원중'] },
+        '동두레중-이몽룡': { name: '이몽룡', schools: ['동두레중'] },
+        '서두레중-이몽룡': { name: '이몽룡', schools: ['서두레중'] },
       };
       const B = make(idxAmb);
-      assert(B.canonicalKey_('최민준', '문원중') === '문원중-최민준', '모호(2명+)한데 임의 연결됨 — 분리 유지 실패');
+      assert(B.canonicalKey_('이몽룡', '두레중') === '두레중-이몽룡', '모호(2명+)한데 임의 연결됨 — 분리 유지 실패');
 
       results.push({ name, ok: true, ms: Date.now() - t0 });
       console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
@@ -1441,7 +1451,7 @@ async function assertNoOverflow(page, label) {
         'return { pubIdS_: pubIdS_, tokenForS_: tokenForS_, pubMatch_: pubMatch_, tokenOk_: tokenOk_ };');
       const SALT = 'chemistreal::s4lt::9f3Kq2026';
       const S = make(SALT);
-      const key = '잠실중-김예성';
+      const key = '한별중-성춘향';
       // 빈 salt(레거시)로 만든 코드/토큰이, 속성이 채워진 상태에서도 해석돼야 한다
       assert(S.pubMatch_(key, S.pubIdS_(key, '')) === true, '레거시(빈 salt) 코드가 안 열림');
       assert(S.pubMatch_(key, S.pubIdS_(key, SALT)) === true, '기본 salt 코드가 안 열림');
@@ -1837,9 +1847,9 @@ async function assertNoOverflow(page, label) {
   }
 
   /* ── 문자에 실리는 이름 ──────────────────────────────────────────
-     명단·시트의 이름 칸에 `김지완 대청중` 처럼 학교가 붙어 있을 수 있다
+     명단·시트의 이름 칸에 `홍길동 청운중` 처럼 학교가 붙어 있을 수 있다
      (명단에 두 명을 넣을 방법이 없던 때의 흔적). 그대로 실려 학부모에게
-     "김지완 대청중 학생" 이라고 나갔다 — 선생님이 받은 실물이 그랬다.
+     "홍길동 청운중 학생" 이라고 나갔다 — 선생님이 받은 실물이 그랬다.
      문구를 짓는 **마지막 자리**에서 막는다. 여기가 마지막 관문이라 어디를
      거쳐 왔든 안 샌다. */
   {
@@ -1853,19 +1863,19 @@ async function assertNoOverflow(page, label) {
       )({ ch1: '화학Ⅰ', ch2: '화학Ⅱ', gc: '일반화학' });
       const L = 'https://x/exam.html?c=ch1&r=7';
       const outs = [
-        ctx.absentMsg({ name: '김지완 대청중', course: 'ch1', round: 7, link: L }, '1'),
-        ctx.absentMsg({ name: '김지완 대청중', course: 'ch1', round: 7, link: L }, '2'),
-        ctx.shareMsg({ name: '김지완 내정중', course: 'ch1', round: 7, att: '정시',
+        ctx.absentMsg({ name: '홍길동 청운중', course: 'ch1', round: 7, link: L }, '1'),
+        ctx.absentMsg({ name: '홍길동 청운중', course: 'ch1', round: 7, link: L }, '2'),
+        ctx.shareMsg({ name: '홍길동 백운중', course: 'ch1', round: 7, att: '정시',
                        score: 62, next: '재시', link: '' }, '1'),
-        ctx.passMsg({ name: '김지완(대청중)', course: 'ch1', round: 7, att: '정시',
+        ctx.passMsg({ name: '홍길동(청운중)', course: 'ch1', round: 7, att: '정시',
                       score: 92, tries: 1, link: '' }),
       ];
       const dirty = outs.filter(o => /(내정|대청)/.test(o));
       assert(!dirty.length, '학교가 문구에 실렸다: ' + (dirty[0] || '').split('\n')[0]);
-      assert(outs.every(o => o.indexOf('김지완 학생') >= 0),
-             "'김지완 학생' 이 없다: " + outs.map(o => o.split('\n')[0]).join(' / '));
+      assert(outs.every(o => o.indexOf('홍길동 학생') >= 0),
+             "'홍길동 학생' 이 없다: " + outs.map(o => o.split('\n')[0]).join(' / '));
       /* 붙여 쓴 이름은 안 가른다 — 멀쩡한 이름이 잘리면 더 나쁘다. */
-      assert(ctx.justName('김지완대청중') === '김지완대청중', '붙여 쓴 이름을 갈랐다');
+      assert(ctx.justName('홍길동청운중') === '홍길동청운중', '붙여 쓴 이름을 갈랐다');
       assert(ctx.justName('김 지완') === '김 지완', '짧은 이름을 갈랐다');
       results.push({ name, ok: true, ms: Date.now() - t0 });
       console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');

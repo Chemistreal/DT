@@ -44,8 +44,12 @@ PERSONAL = {
     'exam': ['final.html', 'note.html', 'batch-report.html',
              'integrated-report.html', 'grade-j0.html', 'sample_report.html',
              'final-submit.html'],
+    # 선생님 화면도 아이 이름이 뜨면 같다(2026-09-02). roster 는 반 명단을,
+    # pending 은 미제출·통과 학생과 학부모 문자 문구를, admin 은 반 통계와
+    # 학생별 진단을 그린다. 셋 다 암호를 묻지 않고 주소만 알면 열린다.
     'dt': ['report.html', 'parent_report.html', 'OX_grader.html',
-           'OX_grader_prescription.html', 'hw_grader.html'],
+           'OX_grader_prescription.html', 'hw_grader.html',
+           'roster.html', 'pending.html', 'admin.html'],
     'kmchc': ['report.html', 'answers.html',
               '리포트_고급_미리보기.html', '리포트링크생성기.html'],
 }

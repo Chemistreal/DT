@@ -210,11 +210,11 @@ const XO60 = 'XO'.repeat(30);
 SHEETS['결과']._rows = [
   HEADERS.slice(),
   // V2 (사용자가 붙여넣은 실제 시트 배열): 이름,링크,시각,회차,시도,점수,통과,학생키,학교,학년,과목,...
-  ['고승원','https://chemistreal.github.io/DT/report.html?student=서일중-고승원', new Date('2026-07-04T08:27:09Z'),
-   15,'첫 응시',61.7,'미달','서일중-고승원','서일중','2','ch2',37,23,'적정·가수분해·다양성자','{"A2":1}','',
+  ['장보고','https://chemistreal.github.io/DT/report.html?student=새얼중-장보고', new Date('2026-07-04T08:27:09Z'),
+   15,'첫 응시',61.7,'미달','새얼중-장보고','새얼중','2','ch2',37,23,'적정·가수분해·다양성자','{"A2":1}','',
    '[{"u":"적정","t":30,"w":16}]','[{"k":"A2","t":5,"w":1}]', XO60],
-  ['이세현','L', new Date('2026-07-04T08:29:27Z'),
-   15,'첫 응시',70,'미달','휘문중-이세현','휘문중','1','ch2',42,18,'적정','{"A2":0}','','[]','[]', XO60],
+  ['놀부','L', new Date('2026-07-04T08:29:27Z'),
+   15,'첫 응시',70,'미달','휘문중-놀부','휘문중','1','ch2',42,18,'적정','{"A2":0}','','[]','[]', XO60],
   // V1 (핸드오버 문서의 구 배열): 이름,링크,시각,학생키,학교,학년,과목,회차,시도,점수,통과,...
   ['옛학생','L', new Date('2026-05-01T01:00:00Z'),
    '중앙중-옛학생','중앙중','3','ch1',2,'정시',88.3,'통과',53,7,'몰 개념','{}','','[]','[]','O'.repeat(60)],
@@ -225,9 +225,9 @@ SHEETS['결과']._rows = [
 ctx.reorderColumnsToNew();
 function isNewRow(r){ return typeof r[3]==='number' && String(r[5]).indexOf('-')>0 && ['ch1','ch2','gc','jm1'].indexOf(String(r[8]))>=0 && String(r[18]).length===60; }
 T('4행 전부 신 순서로 정규화', SHEETS['결과']._rows.slice(1).every(isNewRow));
-T('V2 값 보존: 고승원 점수61.7/과목ch2/회차15/답안60자', (function(){
+T('V2 값 보존: 장보고 점수61.7/과목ch2/회차15/답안60자', (function(){
   var r=SHEETS['결과']._rows[1];
-  return r[3]===61.7 && r[4]==='미달' && r[5]==='서일중-고승원' && r[6]==='서일중' && r[7]==='2' && r[8]==='ch2' && r[9]===15 && r[10]==='첫 응시' && r[11]===37 && r[12]===23 && r[18]===XO60;
+  return r[3]===61.7 && r[4]==='미달' && r[5]==='새얼중-장보고' && r[6]==='새얼중' && r[7]==='2' && r[8]==='ch2' && r[9]===15 && r[10]==='첫 응시' && r[11]===37 && r[12]===23 && r[18]===XO60;
 })());
 T('V1 값 보존: 옛학생 ch1 2회 88.3', (function(){
   var r=SHEETS['결과']._rows[3];
@@ -240,15 +240,15 @@ T('NEW 행 무변경', (function(){
 var snap = JSON.stringify(SHEETS['결과']._rows);
 ctx.reorderColumnsToNew();
 T('멱등성: 재실행해도 동일', JSON.stringify(SHEETS['결과']._rows) === snap);
-r = J(ctx.doGet({ parameter: { student: '서일중-고승원' } }));
+r = J(ctx.doGet({ parameter: { student: '새얼중-장보고' } }));
 // 마이그레이션과 무관하게, 이름만으로는 못 연다(위 [5] 와 같은 규칙)
 T('마이그레이션 뒤에도 이름만으로는 차단', r.ok===true && r.rows.length===0 && r.cumulative===null);
-r = J(ctx.doGet({ parameter: { student: ctx.pubId_('서일중-고승원') } }));
-T('마이그레이션 후 불투명 코드로 실데이터 조회', r.ok===true && r.rows.length===1 && r.rows[0].name==='고승원'
+r = J(ctx.doGet({ parameter: { student: ctx.pubId_('새얼중-장보고') } }));
+T('마이그레이션 후 불투명 코드로 실데이터 조회', r.ok===true && r.rows.length===1 && r.rows[0].name==='장보고'
   && r.rows[0].score===61.7 && r.rows[0].course==='ch2' && Number(r.rows[0].round)===15
   && r.cumulative!==null && r.cumulative.trend.length===1 && r.cumulative.trend[0].course==='ch2');
-r = J(ctx.doGet({ parameter: { student: '서일중-고승원-' + ctx.tokenFor_('서일중-고승원') } }));
-T('토큰 링크도 동일 데이터', r.rows.length===1 && r.rows[0].name==='고승원');
+r = J(ctx.doGet({ parameter: { student: '새얼중-장보고-' + ctx.tokenFor_('새얼중-장보고') } }));
+T('토큰 링크도 동일 데이터', r.rows.length===1 && r.rows[0].name==='장보고');
 
 
 console.log('[9] 성적표를 열어 봤는가');
@@ -257,7 +257,7 @@ console.log('[9] 성적표를 열어 봤는가');
      그 화면이 이미 이 창구를 부른다. **코드 모양으로 들어온 것만** 센다. */
   /* 앞선 [8] 이 시트를 마이그레이션 자료로 갈아 끼운다. 그 뒤에도 남아 있는
      학생으로 본다 — 없는 학생으로 부르면 키가 안 풀려 아무것도 안 세인다. */
-  const key = '서일중-고승원';
+  const key = '새얼중-장보고';
   const pub = ctx.pubId_(key);
   const before = (ctx.views_()[key] || {}).n || 0;
   ctx.doGet({ parameter: { student: pub } });
@@ -327,21 +327,21 @@ console.log('[11] 트리거를 스스로 건다');
   /* 트리거를 거는 데는 권한이 하나 더 필요하다. 그것 때문에 학부모 화면이
      막히면 본말이 뒤집힌다 — 학부모 경로에서는 아예 살피지 않는다. */
   TRIGGERS.length = 0; delete PROPS.TRIG_CHECKED;
-  ctx.doGet({ parameter: { student: ctx.pubId_('서일중-고승원') } });
+  ctx.doGet({ parameter: { student: ctx.pubId_('새얼중-장보고') } });
   T('학부모 경로에서는 안 건드린다', TRIGGERS.length === 0, JSON.stringify(TRIGGERS));
 }
 
 console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
 {
-  /* 2026-08-15, 선생님이 물으셨다 — 이시현 학생에게 화학Ⅱ 9회 재시 안내가
+  /* 2026-08-15, 선생님이 물으셨다 — 이몽룡 학생에게 화학Ⅱ 9회 재시 안내가
      나갔는데 학생은 통과했다고 한다.
 
      computePending_ 은 (학생키 + 과목 + 회차) 로 묶어 통과가 하나도 없으면
      재시로 센다. 학생키는 «학교-이름» 이라 **학교 표기가 갈리면 두 사람이
-     된다** — 정시는 «대청중-이시현», 재시는 «서울대청중-이시현» 으로 들어가면
+     된다** — 정시는 «두레중-이몽룡», 재시는 «서울두레중-이몽룡» 으로 들어가면
      정시 묶음에는 통과가 없어 영영 재시 목록에 남는다.
 
-     ⚠ 처음엔 갈라지는 예로 «대청중» ↔ «대청중학교» 를 적었다. **틀렸다.**
+     ⚠ 처음엔 갈라지는 예로 «두레중» ↔ «두레중학교» 를 적었다. **틀렸다.**
        normSchool_ 이 «중학교» 꼬리를 잘라 내므로 그 둘은 애초에 같은 열쇠다
        (아래 [11.6] 이 그것도 잰다). 실제로 갈라지는 것은 지역명 접두처럼
        꼬리가 아닌 차이다.
@@ -353,12 +353,12 @@ console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
   const sh = SHEETS['결과'];
   const before = sh._rows.length;
   sh._rows.push(
-    ['이시현','L',D3,73.3,'미달','대청중-이시현','대청중','2','ch2',9,'정시',44,16,'총괄성 크기','{}','','[]','[]','O'.repeat(60)],
-    ['이시현','L',D4,85,'통과','서울대청중-이시현','서울대청중','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)]);
+    ['이몽룡','L',D3,73.3,'미달','두레중-이몽룡','두레중','2','ch2',9,'정시',44,16,'총괄성 크기','{}','','[]','[]','O'.repeat(60)],
+    ['이몽룡','L',D4,85,'통과','서울두레중-이몽룡','서울두레중','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)]);
 
   const P = ctx.computePending_(60);
   const all = (P.active || []).concat(P.stale || []);
-  const row = all.filter(x => x.name === '이시현' && x.course === 'ch2' && Number(x.round) === 9)[0];
+  const row = all.filter(x => x.name === '이몽룡' && x.course === 'ch2' && Number(x.round) === 9)[0];
 
   T('아직 재시 목록에 남는다(자동으로 안 뺀다)', !!row,
     all.map(x => x.name + ' ' + x.course + x.round).join(' / ') || '없음');
@@ -370,7 +370,7 @@ console.log('[11.5] 「자기는 통과했다는데 왜 재시죠?」');
     /* ② 같은 이름이 다른 열쇠로 통과해 있으면 짚어 준다 — 이것이 이 물음의 답이다. */
     T('같은 이름이 다른 열쇠로 통과한 것을 짚는다',
       Array.isArray(row.alsoPassed) && row.alsoPassed.length === 1 &&
-      row.alsoPassed[0].studentKey === '서울대청중-이시현' &&
+      row.alsoPassed[0].studentKey === '서울두레중-이몽룡' &&
       Number(row.alsoPassed[0].score) === 85,
       JSON.stringify(row.alsoPassed));
     T('통과한 시도가 무엇이었는지도 적는다',
@@ -401,11 +401,11 @@ console.log('[11.6] 「같은 사람으로 처리해 줘」');
   /* 선생님: "같은 사람으로 처리해줘. OO중이나 OO중학교나 같은걸로 표기 자동 수정"
      (2026-08-15)
 
-     먼저 사실부터 잰다 — «대청중» 과 «대청중학교» 는 **이미** 같은 열쇠다.
+     먼저 사실부터 잰다 — «두레중» 과 «두레중학교» 는 **이미** 같은 열쇠다.
      이것을 안 재고 «갈라진다» 고 적었던 것이 위 [11.5] 의 첫 주석이었다. */
-  T('«대청중» 과 «대청중학교» 는 원래 같은 열쇠다',
-    ctx.keyOf_('이시현', '대청중') === ctx.keyOf_('이시현', '대청중학교'),
-    ctx.keyOf_('이시현', '대청중') + ' vs ' + ctx.keyOf_('이시현', '대청중학교'));
+  T('«두레중» 과 «두레중학교» 는 원래 같은 열쇠다',
+    ctx.keyOf_('이몽룡', '두레중') === ctx.keyOf_('이몽룡', '두레중학교'),
+    ctx.keyOf_('이몽룡', '두레중') + ' vs ' + ctx.keyOf_('이몽룡', '두레중학교'));
   T('고·초도 같다',
     ctx.keyOf_('A', '휘문고') === ctx.keyOf_('A', '휘문고등학교') &&
     ctx.keyOf_('A', '개포초') === ctx.keyOf_('A', '개포초등학교'));
@@ -413,9 +413,9 @@ console.log('[11.6] 「같은 사람으로 처리해 줘」');
   /* 표기를 정규형으로 고쳐도 학생키는 한 글자도 안 바뀐다 — 이 화면이
      «학생키는 안 바뀝니다» 라고 적기 때문에, 그 말이 참인지 여기서 잰다.
      (화면에 적은 말은 참이어야 한다) */
-  ['대청중학교', '대청 중학교', '휘문고등학교', '개포초등학교', '대청중', '서울대청중', '대청'].forEach(s => {
+  ['두레중학교', '대청 중학교', '휘문고등학교', '개포초등학교', '두레중', '서울두레중', '대청'].forEach(s => {
     T('표기를 고쳐도 열쇠가 안 변한다 · ' + s,
-      ctx.keyOf_('이시현', s) === ctx.keyOf_('이시현', ctx.normSchool_(s)),
+      ctx.keyOf_('이몽룡', s) === ctx.keyOf_('이몽룡', ctx.normSchool_(s)),
       s + ' -> ' + ctx.normSchool_(s));
   });
 
@@ -424,17 +424,17 @@ console.log('[11.6] 「같은 사람으로 처리해 줘」');
   const before = sh._rows.length;
   /* 실제로 갈라지는 갈래(지역명 접두) + 표기만 어긋난 칸을 같이 심는다. */
   sh._rows.push(
-    ['이시현','L',D3,73.3,'미달','대청중-이시현','대청중','2','ch2',9,'정시',44,16,'','{}','','[]','[]','O'.repeat(60)],
-    ['이시현','L',D4,85,'통과','서울대청중-이시현','서울대청중','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)],
+    ['이몽룡','L',D3,73.3,'미달','두레중-이몽룡','두레중','2','ch2',9,'정시',44,16,'','{}','','[]','[]','O'.repeat(60)],
+    ['이몽룡','L',D4,85,'통과','서울두레중-이몽룡','서울두레중','2','ch2',9,'재시',51,9,'','{}','','[]','[]','O'.repeat(60)],
     ['김하늘','L',D3,90,'통과','언주중-김하늘','언주중학교','1','ch1',2,'정시',54,6,'','{}','','[]','[]','O'.repeat(60)],
     /* 서로 무관한 학교의 동명이인 — 여기 올라오면 안 된다. */
     ['박서준','L',D3,70,'미달','휘문중-박서준','휘문중','2','ch1',3,'정시',42,18,'','{}','','[]','[]','O'.repeat(60)],
     ['박서준','L',D4,70,'미달','개포중-박서준','개포중','2','ch1',3,'정시',42,18,'','{}','','[]','[]','O'.repeat(60)]);
 
   const plan = ctx.mergeScan_();
-  const g = plan.groups.filter(x => x.name === '이시현')[0];
-  T('갈라진 같은 학생을 찾아낸다', !!g && g.canon === '대청중-이시현' &&
-    g.from.length === 1 && g.from[0].key === '서울대청중-이시현',
+  const g = plan.groups.filter(x => x.name === '이몽룡')[0];
+  T('갈라진 같은 학생을 찾아낸다', !!g && g.canon === '두레중-이몽룡' &&
+    g.from.length === 1 && g.from[0].key === '서울두레중-이몽룡',
     JSON.stringify(plan.groups));
   T('동명이인은 안 건드린다', !plan.groups.some(x => x.name === '박서준'),
     JSON.stringify(plan.groups.map(x => x.name)));
@@ -443,13 +443,13 @@ console.log('[11.6] 「같은 사람으로 처리해 줘」');
     JSON.stringify(plan.schoolFix));
   /* 세기만 하는 자는 아무것도 안 쓴다 — 읽는 것은 조용해도 되고 쓰는 것은 안 된다. */
   T('세는 동안에는 시트를 안 건드린다',
-    sh._rows.some(r => r[5] === '서울대청중-이시현') &&
+    sh._rows.some(r => r[5] === '서울두레중-이몽룡') &&
     sh._rows.some(r => r[6] === '언주중학교'));
 
   /* 창구도 세기만 한다(GET mergeplan). */
   const got = JSON.parse(ctx.doGet({ parameter: { action: 'mergeplan', token: 'adm-secret-123' } }).getContent());
   T('창구가 합칠 목록을 내준다', got.ok === true && got.plan &&
-    got.plan.groups.some(x => x.name === '이시현'), JSON.stringify(got).slice(0, 160));
+    got.plan.groups.some(x => x.name === '이몽룡'), JSON.stringify(got).slice(0, 160));
   /* ⚠ 여기서 «토큰이 틀리면 막힌다» 를 기대했다가 빨간 줄을 봤다. adminOk_ 는
      지금 **전체 공개**라 아무나 통과한다(pending·roster·exclude 도 전부 같다).
      그러니 막힌다고 적지 않는다 — 없는 자물쇠를 있다고 하는 셈이다.
@@ -463,9 +463,9 @@ console.log('[11.6] 「같은 사람으로 처리해 줘」');
 
   const res = ctx.applyMergeScan_();
   T('누르면 하나로 모인다',
-    !sh._rows.some(r => r[5] === '서울대청중-이시현') &&
-    sh._rows.filter(r => r[5] === '대청중-이시현').length === 2,
-    JSON.stringify(sh._rows.filter(r => r[0] === '이시현').map(r => r[5])));
+    !sh._rows.some(r => r[5] === '서울두레중-이몽룡') &&
+    sh._rows.filter(r => r[5] === '두레중-이몽룡').length === 2,
+    JSON.stringify(sh._rows.filter(r => r[0] === '이몽룡').map(r => r[5])));
   T('표기도 정규형으로 고친다',
     !sh._rows.some(r => r[6] === '언주중학교') &&
     sh._rows.some(r => r[6] === '언주중'));
@@ -478,7 +478,7 @@ console.log('[11.6] 「같은 사람으로 처리해 줘」');
   /* 합친 뒤에는 재시 목록에서 빠진다 — 이것이 선생님이 물으신 것의 끝이다. */
   const after = ctx.computePending_(60);
   T('합치고 나면 재시 안내가 안 나간다',
-    !(after.active || []).concat(after.stale || []).some(x => x.name === '이시현'),
+    !(after.active || []).concat(after.stale || []).some(x => x.name === '이몽룡'),
     JSON.stringify((after.active || []).concat(after.stale || []).map(x => x.name)));
 
   /* 두 번 눌러도 같다(멱등). 이미 하나면 더 할 것이 없다. */
@@ -744,50 +744,50 @@ console.log('[반 갈래] 파이널 반은 DT 계산에서 빠진다');
 
 console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
 {
-  /* 화학1 일6-10 반에 김지완(내정중)·김지완(대청중) 두 학생이 있다.
+  /* 화학1 일6-10 반에 홍길동(한별중)·홍길동(두레중) 두 학생이 있다.
      여태 명단은 이름 글자열 배열이라 둘을 구분할 수 없었고, 한 명만
      등록돼 반 인원이 한 명 모자랐다. 한 명이 시험을 보면 이름만으로
      맞춰 보니 **둘 다 응시한 것**이 되어 미응시 문자가 안 나갔다. */
   const before = JSON.parse(SHEETS['_roster']._rows[0][0]).classes;
   const saved = ctx.setRoster_([
     { label: '화학1 일6-10', round: null, students: [
-      { n: '김지완', s: '내정중' },
-      { n: '김지완', s: '대청중' },
-      '홍길동',                                   // 학교 없는 옛 칸도 그대로
+      { n: '홍길동', s: '한별중' },
+      { n: '홍길동', s: '두레중' },
+      '김철수',                                   // 학교 없는 옛 칸도 그대로
     ] },
   ]);
-  T('두 김지완이 다 남는다', (saved[0].students || []).length === 3,
+  T('두 홍길동이 다 남는다', (saved[0].students || []).length === 3,
     JSON.stringify(saved[0].students));
   T('학교를 적은 칸만 객체로 남는다',
-    typeof saved[0].students[0] === 'object' && saved[0].students[2] === '홍길동',
+    typeof saved[0].students[0] === 'object' && saved[0].students[2] === '김철수',
     JSON.stringify(saved[0].students));
 
   /* 명단 창구가 **명단에 적은 학교**를 그대로 내줘야 한다. 시트에서 이름만으로
      찾으면 동명이인이 최근 기록 하나로 뭉개져 둘이 같은 학교로 보인다. */
   const nm = J(ctx.doGet({ parameter: { action: 'names' } }));
   const cls = (nm.classes || []).filter(c => c.label === '화학1 일6-10')[0] || {};
-  const kims = (cls.students || []).filter(x => x.name === '김지완');
+  const kims = (cls.students || []).filter(x => x.name === '홍길동');
   T('창구가 두 명을 다 준다', kims.length === 2,
     JSON.stringify(cls.students));
   T('학교가 서로 다르다', kims.length === 2 && kims[0].school !== kims[1].school,
     JSON.stringify(kims));
-  /* ⚠ 이름은 **그대로 '김지완'** 이어야 한다. 여기에 학교를 붙이면 학부모에게
-     '김지완 내정중 학생' 이라고 문자가 나간다. */
-  T('이름에 학교를 안 붙인다', kims.every(x => x.name === '김지완'),
+  /* ⚠ 이름은 **그대로 '홍길동'** 이어야 한다. 여기에 학교를 붙이면 학부모에게
+     '홍길동 한별중 학생' 이라고 문자가 나간다. */
+  T('이름에 학교를 안 붙인다', kims.every(x => x.name === '홍길동'),
     JSON.stringify(kims.map(x => x.name)));
 
   /* 미응시: 한 명만 시험을 봤을 때 나머지 한 명이 잡혀야 한다. */
-  /* 시트 이름은 '결과' 다. 한 명(내정중)만 9회를 봤다고 적어 둔다. */
+  /* 시트 이름은 '결과' 다. 한 명(한별중)만 9회를 봤다고 적어 둔다. */
   SHEETS['결과']._rows.push(
-    ['김지완', 'L', new Date(), 55, '통과', '내정중-김지완', '내정중', '2',
+    ['홍길동', 'L', new Date(), 55, '통과', '한별중-홍길동', '한별중', '2',
      'ch1', 9, '정시', 30, 30, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
   const ab = ctx.computeAbsentees_(8, { '화학1 일6-10': 9 });
   const c = (ab.classes || []).filter(x => x.label === '화학1 일6-10')[0] || {};
   T('본 사람은 미응시에서 빠진다',
-    (c.absentWho || []).filter(w => w.name === '김지완' && w.school === '내정중').length === 0,
+    (c.absentWho || []).filter(w => w.name === '홍길동' && w.school === '한별중').length === 0,
     JSON.stringify(c.absentWho));
   T('안 본 동명이인은 그대로 잡힌다',
-    (c.absentWho || []).filter(w => w.name === '김지완' && w.school === '대청중').length === 1,
+    (c.absentWho || []).filter(w => w.name === '홍길동' && w.school === '두레중').length === 1,
     JSON.stringify(c.absentWho));
   /* ⚠ 옛 화면·문자·메일이 읽는 absent 는 **글자열 배열**이어야 한다.
      객체를 넣으면 문자가 '[object Object] 학생' 이 된다. */
@@ -800,16 +800,16 @@ console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
   SHEETS['결과']._rows.pop();
 
   /* ── 이름 칸에 학교를 붙여 적어 둔 옛 명단 ──────────────────────────
-     명단에 두 명을 넣을 방법이 없던 때 이름 칸에 '김지완 대청중' 이라고
+     명단에 두 명을 넣을 방법이 없던 때 이름 칸에 '홍길동 두레중' 이라고
      적어 구분해 두었다. 그 값이 그대로 문자에 실려 학부모에게
-     "김지완 대청중 학생" 이라고 나갔다 — 실제로 그렇게 나갔다. */
+     "홍길동 두레중 학생" 이라고 나갔다 — 실제로 그렇게 나갔다. */
   const saved2 = ctx.setRoster_([
     { label: '화학1 일6-10', round: null,
-      students: ['김지완 내정중', '김지완 대청중', '홍길동'] },
+      students: ['홍길동 한별중', '홍길동 두레중', '김철수'] },
   ]);
   T('이름 칸의 학교를 갈라 낸다',
-    ctx.stuName_(saved2[0].students[0]) === '김지완' &&
-    ctx.stuSchool_(saved2[0].students[0]) === '내정중',
+    ctx.stuName_(saved2[0].students[0]) === '홍길동' &&
+    ctx.stuSchool_(saved2[0].students[0]) === '한별중',
     JSON.stringify(saved2[0].students));
   const nm2 = J(ctx.doGet({ parameter: { action: 'names' } }));
   const cls2 = (nm2.classes || []).filter(c => c.label === '화학1 일6-10')[0] || {};
@@ -817,12 +817,12 @@ console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
     (cls2.students || []).every(x => !/[초중고]$/.test(x.name)),
     JSON.stringify((cls2.students || []).map(x => x.name)));
   T('학교는 따로 온다',
-    (cls2.students || []).filter(x => x.name === '김지완').map(x => x.school).sort()
-      .join(',') === '내정중,대청중',
+    (cls2.students || []).filter(x => x.name === '홍길동').map(x => x.school).sort()
+      .join(',') === '두레중,한별중',
     JSON.stringify((cls2.students || []).map(x => [x.name, x.school])));
   /* 붙여 쓴 이름은 안 가른다 — 멀쩡한 이름이 잘리면 더 나쁘다. */
-  T('구분자가 없으면 안 가른다', ctx.splitSchool_('김지완대청중').school === '');
-  T('짧은 이름은 안 가른다', ctx.splitSchool_('김 대청중').name === '김 대청중');
+  T('구분자가 없으면 안 가른다', ctx.splitSchool_('홍길동두레중').school === '');
+  T('짧은 이름은 안 가른다', ctx.splitSchool_('김 두레중').name === '김 두레중');
 
   ctx.setRoster_(before);
 }

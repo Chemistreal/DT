@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>반 명단 · 시험 미응시 현황 · Chemistreal</title>
 <style>
@@ -134,21 +135,29 @@ function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catc
 function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
 
 
-var DEFAULT_ROSTER=[
-  {label:'화학2 토1:30-5:30',students:['고승원','곽도윤','권효주','김두은','김시헌','김연준','김채원','김태연','석지후','송지호','안승재','안지원','오가연','오승민','이건우','이도현','이세현','이원준','이정민','이지한','이지호','이지환','이채연','장재민','최시아','현정욱','최민준']},
-  {label:'일반화학 일1:30-5:30',students:['강태영','권지유','김민결','김영우','이도형','전준','전하연','황승하','황예린']},
-  {label:'화학1 일6-10',students:['강신우','고영훈','구자홍','권승현','김도현','김명준','김서준','김승현','김예성',{n:'김지완',s:'내정중'},{n:'김지완',s:'대청중'},'김현승','박정현','옥윤아','온주호','유민상','윤정원','이다인','이동선','이민성','이아은','이지율','이지호','이진혁','이하윤','이한주','이현욱','임병준','임준휘','임하율','장윤아','전주환','최준혁','최지호','한이주','한준태','홍아라','황윤성']},
-  {label:'화학2 토6-10',students:['박건태','박소영','이지안','정예찬','조예준','최승규','홍수환','고유진','홍선우']}
-];
+/* ── 기본 명단을 여기 두지 않는다 (2026-09-02) ───────────────────────
+   여기에는 실제 학생 여든한 명의 이름과 학교 둘이 그대로 적혀 있었다.
+   이 저장소는 **공개**이고, 이 화면은 암호도 noindex 도 없이
+   https://chemistreal.github.io/DT/roster.html 로 그냥 열린다.
+   즉 아이들 이름이 브라우저 주소 하나로 읽히고 검색에도 잡힐 수 있었다.
+
+   명단의 원본은 시트(_roster 탭)다. 이 화면은 그것을 불러와 고치는
+   창구일 뿐이고, 여기에 사본을 둘 이유가 없다. 그 사본은 서버 명단과
+   어긋나기까지 했다 — 서버 명단이 비었을 때 이 옛 명단이 화면에 뜨고,
+   선생님이 그대로 «명단 저장» 을 누르면 낡은 명단이 서버에 박힌다.
+
+   불러오지 못했으면 **빈 화면과 그 사실**을 보여 준다. 명단인 척하는
+   옛 사본을 보여 주는 것보다 낫다. */
+var DEFAULT_ROSTER=[];
 
 var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
 /* 이 반이 어느 앱의 반인가. 안 적힌 옛 명단은 예전처럼 DT 로 본다. */
 /* 명단 한 칸은 이름 글자열이거나 {n:이름, s:학교} 다. 학교는 **가르는 데만**
-   쓴다 — 문자는 예전 그대로 '김지완 학생' 이다. */
-/* 명단에 두 명을 넣을 방법이 없던 때, 이름 칸에 `김지완 대청중` 처럼 학교를
+   쓴다 — 문자는 예전 그대로 '홍길동 학생' 이다. */
+/* 명단에 두 명을 넣을 방법이 없던 때, 이름 칸에 `홍길동 두레중` 처럼 학교를
    같이 적어 구분해 두었다. 그 값이 그대로 문자에 실려 학부모에게
-   "김지완 대청중 학생" 이라고 나갔다. 여기서 갈라 놓으면 이름 칸에는
-   `김지완`, 학교 칸에는 `대청중` 이 들어가고 문자는 이름만 쓴다.
+   "홍길동 두레중 학생" 이라고 나갔다. 여기서 갈라 놓으면 이름 칸에는
+   `홍길동`, 학교 칸에는 `두레중` 이 들어가고 문자는 이름만 쓴다.
    ⚠ 띄어쓰기 같은 **구분자가 있을 때만** 가른다 — 붙여 쓴 것까지 가르려
      들면 멀쩡한 이름이 잘린다. */
 var SCHOOL_TAIL=/^(.+?)[\s·,\/(\[]+([가-힣A-Za-z]{2,10}(?:초|중|고)(?:등학교|학교)?)[\)\]]?\s*$/;
@@ -283,7 +292,7 @@ function renderAbsentees(A){
 }
 
 /* 앱스크립트가 줄을 세우는 동안 한 번 실패하는 것은 흔하다. 몇 번 더 물어본다 —
-   여기서 포기하면 화면이 기본 명단으로 되돌아가고, 그게 저장 사고로 이어진다. */
+   여기서 포기하면 화면이 비어 버리고, 선생님은 명단이 사라진 줄 아신다. */
 async function askRoster(tries){
   var last=null;
   for(var i=0;i<(tries||3);i++){
@@ -325,7 +334,8 @@ async function loadRoster(){
   setStat('<span class="spin"></span>명단 불러오는 중...');
   var j=await askRoster(3);
   if(!j){
-    /* 못 물어봤다. 화면은 기본 명단을 보여 주되 **저장은 막는다.** */
+    /* 못 물어봤다. 화면은 **비워 두고** 저장도 막는다. 옛 사본을 명단인
+       척 띄우지 않는다 — 그것이 저장 사고의 씨앗이었다. */
     state.classes=normalize(DEFAULT_ROSTER); state.load='fail';
     setStat('<span style="color:var(--bad);font-weight:600">불러오기 실패</span>');
   } else {
@@ -349,12 +359,12 @@ function banner(){
   var b=document.getElementById('banner'), sv=document.getElementById('save');
   if(state.load==='fail'){
     b.innerHTML='<div class="banner bad"><b>서버 명단을 불러오지 못했습니다.</b> '+
-      '지금 보이는 것은 <b>기본 명단</b>이며, <b>서버에 저장된 명단이 아닙니다.</b> '+
-      '이 상태로 저장하면 서버 명단을 덮어씁니다 — 그래서 저장을 막아 두었습니다. '+
+      '명단이 비었다는 뜻이 아니라, <b>지금 물어보지 못했다</b>는 뜻입니다. '+
+      '이 상태로 저장하면 서버 명단을 지웁니다 — 그래서 저장을 막아 두었습니다. '+
       '<button class="ghost" id="retry" style="margin-left:6px">다시 불러오기</button></div>';
     var rb=document.getElementById('retry'); if(rb) rb.addEventListener('click',loadRoster);
   } else if(state.load==='empty'){
-    b.innerHTML='<div class="banner">서버에 저장된 명단이 없어 <b>기본 명단</b>을 불러왔습니다. 확인 후 아래 <b>명단 저장</b>을 누르면 반영됩니다. (화학1의 중복 이름 등은 저장 전에 정리하세요.)</div>';
+    b.innerHTML='<div class="banner">서버에 저장된 명단이 <b>아직 없습니다.</b> 아래 <b>+ 반 추가</b>로 반을 만들고 학생을 넣은 뒤 <b>명단 저장</b>을 누르면 서버에 들어갑니다. (학생 추가칸에는 여러 명을 줄바꿈·쉼표로 한 번에 붙여넣을 수 있습니다.)</div>';
   } else b.innerHTML='';
   /* 못 물어본 상태에서는 저장 단추 자체를 막는다. 안내만으로는 눌린다. */
   if(sv){ sv.disabled = (state.load==='fail');
@@ -425,7 +435,7 @@ var cont=document.getElementById('classes');
 cont.addEventListener('input',function(e){
   var t=e.target, ci=+t.getAttribute('data-ci');
   if(t.classList.contains('snm')){ var si=+t.getAttribute('data-si');
-    /* 이름 칸에 '김지완 대청중' 이라고 쳐도 그 자리에서 갈라 준다.
+    /* 이름 칸에 '홍길동 두레중' 이라고 쳐도 그 자리에서 갈라 준다.
        학교 칸이 이미 차 있으면 그것을 그대로 둔다. */
     var sp=splitSchool(t.value), had=stuSchool(state.classes[ci].students[si]);
     state.classes[ci].students[si]=stuMake(sp.name, had||sp.school); }

@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>미응시 현황 · Chemistreal</title>
 <style>
@@ -206,9 +207,9 @@ function setAbsRoundVal(el){
 }
 
 var STAGE_LABEL={'1':'1단계 · 월요일','2':'2단계 · 수요일','3':'3단계 · 최종'};
-/* ⚠ **문자에는 이름까지만.** 명단이나 시트의 이름 칸에 `김지완 대청중` 처럼
+/* ⚠ **문자에는 이름까지만.** 명단이나 시트의 이름 칸에 `홍길동 두레중` 처럼
    학교가 붙어 있을 수 있다(명단에 두 명을 넣을 방법이 없던 때의 흔적). 그대로
-   실으면 학부모에게 "김지완 대청중 학생" 이라고 나간다 — 실제로 그렇게 나갔다.
+   실으면 학부모에게 "홍길동 두레중 학생" 이라고 나간다 — 실제로 그렇게 나갔다.
    창구에서 이미 갈라 보내지만, 문구를 짓는 **마지막 자리**에서 한 번 더 막는다.
    여기가 마지막 관문이라 여기서 막으면 어디를 거쳐 왔든 안 샌다. */
 var SCHOOL_TAIL = /^(.+?)[\s·,\/(\[]+([가-힣A-Za-z]{2,10}(?:초|중|고)(?:등학교|학교)?)[\)\]]?\s*$/;
@@ -629,9 +630,9 @@ function whyHTML(p){
   return '<div class="rwhy">'+bits.join('')+'</div>';
 }
 /* ── 「같은 사람으로 처리해 줘」 ─────────────────────────────────────
-   먼저 사실부터. «대청중» 과 «대청중학교» 는 이미 같은 열쇠다 — 창구의
+   먼저 사실부터. «두레중» 과 «두레중학교» 는 이미 같은 열쇠다 — 창구의
    normSchool_ 이 «중학교» 꼬리를 잘라 낸다. 갈라지는 것은 그 꼬리가 아니라
-   «서울대청중»(지역명 접두)·«대청»(종류 없음) 같은 차이이고, 그것도 지금은
+   «서울두레중»(지역명 접두)·«대청»(종류 없음) 같은 차이이고, 그것도 지금은
    저장할 때 canonicalKey_ 가 붙여 준다. 남는 것은 그 연결이 생기기 전에
    이미 갈라져 저장된 옛 기록뿐이다.
 
@@ -828,8 +829,8 @@ function render(P, ABS, absFail, PASS, MERGE){
 function demo(){
   var R='https://chemistreal.github.io/DT/report.html?student=';
   return { activeDays:14, generatedAt:'2026-06-20 14:30', active:[
-    {name:'이지호',school:'휘문중',year:'2',course:'ch2',round:5,lastAttempt:'정시',score:73,nextNeeded:'재시',days:9,lastDate:'6/11',reportLink:R+'%ED%9C%98%EB%AC%B8%EC%A4%91-%EC%9D%B4%EC%A7%80%ED%98%B8'},
-    {name:'박서준',school:'대청중',year:'3',course:'ch2',round:7,lastAttempt:'재시',score:78,nextNeeded:'재재시',days:5,lastDate:'6/15',reportLink:R+'demo2'},
+    {name:'성춘향',school:'한별중',year:'2',course:'ch2',round:5,lastAttempt:'정시',score:73,nextNeeded:'재시',days:9,lastDate:'6/11',reportLink:R+'%ED%95%9C%EB%B3%84%EC%A4%91-%EC%84%B1%EC%B6%98%ED%96%A5'},
+    {name:'박서준',school:'두레중',year:'3',course:'ch2',round:7,lastAttempt:'재시',score:78,nextNeeded:'재재시',days:5,lastDate:'6/15',reportLink:R+'demo2'},
     {name:'최예린',school:'역삼중',year:'2',course:'ch1',round:12,lastAttempt:'정시',score:68,nextNeeded:'재시',days:3,lastDate:'6/17',reportLink:R+'demo3'},
     {name:'김도윤',school:'언주중',year:'1',course:'gc',round:3,lastAttempt:'정시',score:71,nextNeeded:'재시',days:2,lastDate:'6/18',reportLink:R+'demo4'}
   ], stale:[
@@ -840,26 +841,26 @@ function demo(){
 
 function demoAbs(){
   return { generatedAt:'2026-06-20 14:30', classes:[
-    {label:'화학1 토1:30-5:30', course:'ch1', round:12, total:8, present:6, absent:['김도윤','최예린']},
+    {label:'화학1 토1:30-5:30', course:'ch1', round:12, total:8, present:6, absent:['홍길동','성춘향']},
     {label:'화학2 일6-10', course:'ch2', round:7, total:6, present:6, absent:[]},
-    {label:'일반화학 토10-2', course:'gc', round:3, total:5, present:3, absent:['한지우','박서준']}
+    {label:'일반화학 토10-2', course:'gc', round:3, total:5, present:3, absent:['심청','장보고']}
   ]};
 }
 
 /* 갈라진 예는 «중학교» 꼬리가 아니라 지역명 접두다 — 꼬리는 창구가 이미 자른다. */
 function demoMerge(){
   return { groups:[
-    { name:'이시현', canon:'대청중-이시현', canonRows:3,
-      from:[{key:'서울대청중-이시현', rows:1}] }
-  ], schoolFix:[ { from:'대청중학교', to:'대청중', rows:2 } ] };
+    { name:'이몽룡', canon:'두레중-이몽룡', canonRows:3,
+      from:[{key:'서울두레중-이몽룡', rows:1}] }
+  ], schoolFix:[ { from:'두레중학교', to:'두레중', rows:2 } ] };
 }
 
 function demoPass(){
   var R='https://chemistreal.github.io/DT/report.html?student=';
   return { days:14, generatedAt:'2026-06-20 14:30', passed:[
-    {name:'김서준',school:'휘문중',year:'2',course:'ch2',round:7,attempt:'정시',tries:1,score:96,date:'6/19',days:1,reportLink:R+'demoP1'},
-    {name:'이하윤',school:'대원국제중',year:'3',course:'ch1',round:12,attempt:'재시',tries:2,score:84,date:'6/18',days:2,reportLink:R+'demoP2'},
-    {name:'박하람',school:'중대부중',year:'2',course:'gc',round:3,attempt:'정시',tries:1,score:100,date:'6/16',days:4,reportLink:R+'demoP3'}
+    {name:'임꺽정',school:'한별중',year:'2',course:'ch2',round:7,attempt:'정시',tries:1,score:96,date:'6/19',days:1,reportLink:R+'demoP1'},
+    {name:'춘향이',school:'새얼중',year:'3',course:'ch1',round:12,attempt:'재시',tries:2,score:84,date:'6/18',days:2,reportLink:R+'demoP2'},
+    {name:'흥부',school:'가온중',year:'2',course:'gc',round:3,attempt:'정시',tries:1,score:100,date:'6/16',days:4,reportLink:R+'demoP3'}
   ]};
 }
 
