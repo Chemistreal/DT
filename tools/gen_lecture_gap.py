@@ -29,6 +29,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import theme  # noqa: E402  — 생성기가 옷을 직접 입힌다(아래 까닭)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'concept-lecture-dt.json')
 OUT = os.path.join(ROOT, 'lecture-gap.html')
@@ -130,8 +133,9 @@ def build(rows):
              '보시면 된다.</div>')
 
     p.append('<div class="scroll"><table>')
-    p.append('<tr><th>문항</th><th>주제</th><th>나오는 회차</th>'
-             '<th>왜 이을 강의가 없나</th></tr>')
+    p.append('<tr><th scope="col">문항</th><th scope="col">주제</th>'
+             '<th scope="col">나오는 회차</th>'
+             '<th scope="col">왜 이을 강의가 없나</th></tr>')
     for r in rows:
         p.append('<tr><td class="n">%s</td><td class="t">%s</td>'
                  '<td class="r">%s</td><td>%s</td></tr>'
@@ -145,6 +149,18 @@ def build(rows):
     return '\n'.join(p) + '\n'
 
 
+def themed(page):
+    """옷을 여기서 입힌다.
+
+    ⚠ 이걸 안 하면 생성기와 `theme.py` 가 서로 다툰다. 한쪽이 쓰면 다른
+      쪽이 「어긋났다」고 빨간불을 켜고, 그쪽이 쓰면 이번엔 이쪽이 켠다 —
+      마지막에 돌린 쪽만 통과하고 판은 영영 빨갛다.
+      2026-09-09 에 실제로 그랬다(exam 의 gen_review_notes.py 에서도
+      같은 일이 있어 같은 방법으로 고쳤다). 옷의 주인은 theme.py 이므로,
+      생성기가 theme 을 불러 입힌 것을 «맞는 것»으로 삼는다."""
+    return theme.apply(page, theme.plan(os.path.basename(OUT), page)) or page
+
+
 def main():
     check = '--check' in sys.argv
     write = '--write' in sys.argv
@@ -154,7 +170,7 @@ def main():
     for r in rows[:12]:
         print('  %4s  %s' % (r['n'] or '·', r['topic']))
 
-    want = build(rows)
+    want = themed(build(rows))
     have = io.open(OUT, encoding='utf-8').read() if os.path.exists(OUT) else None
     if write:
         io.open(OUT, 'w', encoding='utf-8').write(want)

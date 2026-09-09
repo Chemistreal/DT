@@ -41,6 +41,10 @@ jobs:
         run: python3 tools/ci_deps.py --check
       - name: 자료 목록이 실제 파일과 일치
         run: python3 tools/gen_materials.py --check
+      # 강의가 없는 주제를 세어 보여 주는 장. 안 걸어 두면 자료가 바뀌어도
+      # 장이 옛말을 하고, 그걸 아무도 모른다 — 걸지 않은 자는 없는 자와 같다.
+      - name: 강의 없는 주제 목록이 자료와 일치
+        run: python3 tools/gen_lecture_gap.py --check
       # 심화 도전은 **과목 접두만** 보고 문제를 뽑았다 — 회차를 아예 안 봤다.
       # 화학Ⅰ 1회를 막 통과한 학생에게 후보 54개념 중 44개(81%)가 18회까지
       # 가야 배우는 것이었다(2026-08-15). 이제 «개념이 몇 회차에 처음 나오나»
