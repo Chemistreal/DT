@@ -41,6 +41,13 @@ jobs:
         run: python3 tools/ci_deps.py --check
       - name: 자료 목록이 실제 파일과 일치
         run: python3 tools/gen_materials.py --check
+      # 해설지 HTML(haeseol_*)과 회차 JSON 은 같은 문항을 두 곳에 적어 둔 것이다.
+      # 재어 보니 92문항의 해설이 서로 달랐다(2026-09-11) — JSON 의 해설을 문장으로
+      # 늘려 놓고 HTML 은 다시 안 만든 것. 학생은 HTML 을 찍은 루트 PDF 를 받고 앱은
+      # JSON 을 보여 준다(HTML 을 고치면 tools/haeseol_pdf.js 로 PDF 도 다시 찍는다).
+      # 화학Ⅱ 1·2회는 문항 세트가 통째로 뒤바뀌어 있어(선생님 확인 대기) 세기만 한다.
+      - name: 해설지 HTML 이 회차 JSON 과 같은 말을 한다
+        run: python3 tools/haeseol_sync.py --check
       # 강의가 없는 주제를 세어 보여 주는 장. 안 걸어 두면 자료가 바뀌어도
       # 장이 옛말을 하고, 그걸 아무도 모른다 — 걸지 않은 자는 없는 자와 같다.
       - name: 강의 없는 주제 목록이 자료와 일치
@@ -51,6 +58,11 @@ jobs:
       # 표를 회차 파일에서 만들어 걸러 낸다. 손으로 적으면 반드시 어긋난다.
       - name: 심화 회차 표가 회차 파일과 일치
         run: python3 tools/challenge_scope.py --check
+      # 심화 문제은행도 손으로 박힌 상수였다 — 140개념 480문장이 전부 이미 있는
+      # 문장이었고 그중 lvl3(심화)은 15%, 빈 개념이 20개였다(2026-09-11). 이제
+      # 회차 파일의 lvl3 문항에서 만든다. 손으로 고르면 회차가 늘어도 아무도 안 고른다.
+      - name: 심화 문제은행이 회차 파일(lvl3)과 일치
+        run: python3 tools/challenge_bank.py --check
       # 자료 화면 132장은 위의 목록이 지킨다. 앱 화면에는 지키는 자가 없어서
       # 주소를 아는 사람만 열 수 있는 장이 여섯 장 떠 있었다(2026-08-10).
       # 셋은 선생님이 지우기로 정했고, 셋은 index.html 에 문을 냈다.
@@ -114,6 +126,12 @@ jobs:
       # 통과했다 — 아무도 그 화면을 안 열어 봤기 때문이다. 이제 기계가 연다.
       - name: 화면 안 자바스크립트가 안 깨졌다
         run: python3 tools/js_syntax.py --check
+      # 성적표(report.html)는 chemengine.js 를 <script src> 로 부르지 않고 베껴 넣어 둔다. 두
+      # 사본은 이미 갈라져 있고(finalScore 의 대표 시도 규칙 — 선생님 결정 대기) 통째로 합치는
+      # 일은 그 뒤로 미뤘다. 그 사이 오개념 대표 이름 표(MIS_CANON·misCanon)만 사본에 먼저
+      # 들였다 — 표는 chemengine.js 에서만 고치고 사본은 --write 로 맞춘다. 갈라지면 여기서 걸린다.
+      - name: 성적표 안 엔진 사본의 오개념 대표 이름 표가 chemengine.js 와 같다
+        run: python3 tools/engine_sync.py --check --quiet
       # 이 저장소는 공개이고 Pages 로 그대로 열린다. 그런데 roster.html 의
       # 「기본 명단」과 apps-script.gs 의 초기화 함수에 실제 학생 여든한 명의
       # 이름이 박혀 있었고, pending.html 의 데모 자료와 tests/ 픽스처에도
