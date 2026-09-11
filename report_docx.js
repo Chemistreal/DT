@@ -342,6 +342,30 @@
        ══════════════════════════════════════════════════════════════ */
     var WB = (typeof window !== 'undefined' && window.__wrongbook) || null;
     if (WB && WB.items && WB.items.length) {
+      /* ── 화면이 다섯 칸(번호·개념·문장·정답·내 답·해설) 말고 더 실어 보내는
+           것 — **있으면 쓰고 없으면 그 줄만 뺀다.** 이름은 화면(report.html
+           buildSolutions)이 정한다. 여기서 CORE 사전을 다시 찾지 않는다 —
+           사전이 화면 안에 있어 못 읽고, 따로 들면 언젠가 어긋난다.
+
+             it.f              정답이 X 인 문항의 «바르게 고친 문장».
+                               정답이 X 면 s 는 **틀린 문장**이다. 해설(w)이
+                               f 를 되풀이한 것이면 «왜 거짓인가» 가 안 보였다.
+                               그래서 s 바로 아래에 f 를 둔다.
+             it.lvl            1·2·3 → 기본·표준·심화 (화면의 SEGLVL 과 같은 낱말).
+             it.core           개념 설명 맨글(굵게 표시 없음).
+             WB.cores[mis]     같은 것이 개념별로도 온다 — 둘 중 있는 쪽을 쓴다.
+                               개념 묶음마다 **한 번만** 적는다(문항마다 걸면 같은
+                               설명이 세 번 나란히 선다 — 화면과 같은 규칙). */
+      var LVL_WORD = { 1: '기본', 2: '표준', 3: '심화' };
+      var coreOf = function (mis, it) {
+        var c = (it && it.core) || (WB.cores && mis != null && WB.cores[mis]) || '';
+        return String(c).replace(/\*\*/g, '').trim();
+      };
+      /* 정답이 X 이고 f 가 있고 s 와 다를 때만 — 화면의 solFix 와 같은 규칙.
+         정답이 O 인 문항은 f 가 s 와 같은 문장이라 «바르게 고치면» 이 말이 안 된다. */
+      var fixOf = function (it) {
+        return (it.a === 'X' && it.f && String(it.f) !== String(it.s || '')) ? String(it.f) : '';
+      };
       body.push(txt('오답노트', { bold: true, color: EM, size: 26, serif: true,
                                   before: 260, after: 40 }),
         txt('이번 회차에서 틀린 ' + WB.items.length + '문항입니다. 개념이 같은 것끼리 묶었고, ' +
@@ -353,11 +377,18 @@
           seen = it.mis;
           body.push(txt('· ' + (it.mis || '기타'), { bold: true, color: EM, size: 19,
                                                      before: 140, after: 40 }));
+          var core = coreOf(it.mis, it);
+          if (core) body.push(txt(core, { color: INK, size: 17, after: 70 }));
         }
         body.push(P([run(String(it.n) + '번  ', { bold: true, color: GOLD, size: 18 }),
                      run(it.s || '', { size: 18 })], { after: 20 }));
+        var fix = fixOf(it);
+        if (fix) body.push(P([run('바르게 고치면: ', { bold: true, color: OK, size: 17 }),
+                              run(fix, { color: OK, size: 17 })], { after: 20 }));
+        var lvlW = LVL_WORD[it.lvl] || '';
         body.push(P([run('정답 ' + it.a + '  ·  내 답 ', { color: MUT, size: 16 }),
-                     run(it.mine || '–', { bold: true, color: 'B23B3B', size: 16 })],
+                     run(it.mine || '–', { bold: true, color: 'B23B3B', size: 16 }),
+                     run(lvlW ? ('  ·  ' + lvlW) : '', { color: MUT, size: 16 })],
                     { after: it.w ? 20 : 90 }));
         if (it.w) body.push(txt('→ ' + it.w, { color: MUT, size: 16, i: true, after: 90 }));
       });

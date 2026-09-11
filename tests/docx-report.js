@@ -91,20 +91,29 @@ function docxText(file, tmp) {
 
      시트를 통째로 흉내 내는 대신, **진짜 코드 길은 그대로 두고** 답안만
      넣어 다시 그리게 한다: 문항은 저장소의 round 파일에서 오고, 묶고 세는
-     것도 buildSolutions 가 한다. 앞 다섯 문항만 틀린 답안이다. */
+     것도 buildSolutions 가 한다. 앞 다섯 문항만 틀린 답안이다.
+
+     ⚠ 그 다섯 안에 **정답이 X 이고 고친 문장(f)이 있는 문항**이 하나는
+       있어야 한다 — 아래에서 «바르게 고치면: f» 줄을 재기 때문이다. 회차
+       파일이 바뀌어 앞 다섯이 전부 O 문항이 되면, 첫 X 문항 하나를 더 틀린
+       것으로 심는다(없으면 검사가 «잴 것이 없다» 로 넘어가지 않고 실패한다). */
   const seeded = await p.evaluate(async () => {
     const items = await loadRoundItems(latest.course, latest.round);
     if (!items || !items.length) return { no: '회차 문항을 못 읽었다' };
+    const isFixX = it => String(it.a).toUpperCase() === 'X' && !!it.f && it.f !== it.s;
+    const extra = items.slice(0, 5).some(isFixX) ? -1 : items.findIndex(isFixX);
+    const flip = it => (String(it.a).toUpperCase() === 'O' ? 'X' : 'O');
     const ans = items.map((it, i) =>
-      i < 5 ? (String(it.a).toUpperCase() === 'O' ? 'X' : 'O') : String(it.a).toUpperCase()).join('');
+      (i < 5 || i === extra) ? flip(it) : String(it.a).toUpperCase()).join('');
     (allRows || []).forEach(r => {
       if (r.course === latest.course && Number(r.round) === Number(latest.round)) r.answers = ans;
     });
     (latestRows || []).forEach(r => { r.answers = ans; });
     await fillMainSolutions();
-    return { n: items.length, wrong: 5 };
+    return { n: items.length, wrong: 5 + (extra >= 0 ? 1 : 0), extra: extra >= 0 };
   });
-  chk('답안을 심어 오답노트를 만들 수 있다', !seeded.no, seeded.no || (seeded.n + '문항'));
+  chk('답안을 심어 오답노트를 만들 수 있다', !seeded.no,
+      seeded.no || (seeded.n + '문항 · 틀린 ' + seeded.wrong + (seeded.extra ? ' (X 문항 하나 더 심음)' : '')));
 
   /* ── 화면이 말하는 숫자를 먼저 걷는다 ── */
   const screen = await p.evaluate(() => {
@@ -171,6 +180,72 @@ function docxText(file, tmp) {
     const mis = [...new Set(wb.items.map(it => it.mis).filter(Boolean))];
     chk('개념 이름도 같다', mis.every(m => txt.includes(m)),
         mis.filter(m => !txt.includes(m)).join(' ') || mis.length + '개 다 있음');
+
+    /* ── X 문항의 «바르게 고치면: f» ────────────────────────────────────
+       O/X 시험이라 정답이 X 인 문항의 s 는 **틀린 문장**이다. 종이에 s 와
+       해설(w)만 있으면 — 그리고 w 가 f 를 되풀이한 것이면 — «왜 거짓인가» 가
+       안 보인다. 화면이 __wrongbook 에 f(정답 X 문항만) · lvl · core 를 더
+       실어 보내고, 종이는 **있는 것만** 쓴다. 여기서도 화면이 넘긴 값을
+       그대로 견준다 — 회차 파일을 다시 읽어 맞추지 않는다. */
+    const esc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const fixed = wb.items.filter(it => it.a === 'X' && it.f && it.f !== it.s);
+    chk('심은 답안에 정답 X 문항이 있어 f 를 잴 수 있다', fixed.length > 0, fixed.length + '문항');
+    if (fixed.length) {
+      /* 문장(s) 바로 뒤에 «바르게 고치면: f» 가 와야 한다 — 해설 뒤에 숨으면 늦다.
+         «s 뒤 어딘가에 있다» 로 재면 f 문단을 정답 줄·해설(w) 뒤로 옮겨도 초록이라,
+         **자리를 잰다**: s → f → «정답 a» 줄 차례. f 가 정답 줄을 넘어가면 실패다. */
+      const FIX = '바르게 고치면: ';
+      const fixOk = fixed.filter(it => {
+        const iS = txt.indexOf(it.n + '번 ' + it.s.slice(0, 16));
+        if (iS < 0) return false;
+        const iF = txt.indexOf(FIX + it.f.slice(0, 16), iS);
+        const iA = txt.indexOf('정답 ' + it.a, iS);
+        return iF > iS && iA > iF;
+      });
+      chk('X 문항마다 문장 아래에 «바르게 고치면: f» 가 실린다 (s → f → 정답 줄 차례)',
+          fixOk.length === fixed.length, fixOk.length + ' / ' + fixed.length);
+      /* O 문항에는 안 붙는다 — O 문항의 f 는 s 와 같은 문장이라 «고치면» 이 말이 안 된다.
+         세는 자리는 «오답노트» 제목 뒤, 세는 말은 콜론까지 붙은 라벨 — 다른 칸의 글이나
+         해설(w)·개념 설명(core)에 «바르게 고치면» 이라는 말이 들어와도 거짓 실패하지 않게. */
+      const countFix = t => (t.slice(Math.max(0, t.indexOf('오답노트'))).match(/바르게 고치면: /g) || []).length;
+      const nFix = countFix(txt);
+      chk('«바르게 고치면» 은 정답 X 문항 수만큼만 있다', nFix === fixed.length, nFix + ' / ' + fixed.length);
+      /* 위 개수 검사는 종이 쪽 가드(report_docx.js fixOf 의 it.a === 'X')를 못 잰다 —
+         화면(solFix)이 O 문항에 f:'' 를 보내므로 그 가드를 지워도 개수가 같다. 그래서
+         O 문항 하나에 f 를 심어 다시 만들고 «바르게 고치면» 이 안 느는지 본다. 심은 값은
+         되돌리고, 그 파일은 아래 검사에 안 쓴다. */
+      const oItem = wb.items.find(it => it.a === 'O');
+      if (oItem) {
+        const b64 = await p.evaluate(async n => {
+          const it = window.__wrongbook.items.find(x => x.n === n), keep = it.f;
+          it.f = (it.s || '') + ' (심은 값)';
+          try { const made = await DTDOCX.build(); return await made.Packer.toBase64String(made.doc); }
+          finally { it.f = keep; }
+        }, oItem.n);
+        const planted = path.join(tmp, 'planted.docx');
+        fs.writeFileSync(planted, Buffer.from(b64, 'base64'));
+        const nPlanted = countFix(docxText(planted, tmp));
+        chk('O 문항에 f 를 심어도 «바르게 고치면» 이 안 는다 (정답 X 에만 붙는다)',
+            nPlanted === fixed.length, nPlanted + ' / ' + fixed.length + ' (' + oItem.n + '번에 심음)');
+      } else console.log('  (정답 O 문항이 없다 — O 문항 가드는 안 잰다)');
+    }
+    /* 난도 한 낱말 — 화면(SEGLVL)과 같은 말: 1 기본 · 2 표준 · 3 심화. 있는 문항만. */
+    const LVL = { 1: '기본', 2: '표준', 3: '심화' };
+    const lv = wb.items.filter(it => LVL[it.lvl]);
+    if (lv.length) {
+      const lvOk = lv.filter(it =>
+        new RegExp(esc(it.n + '번 ' + it.s.slice(0, 16)) + '[\\s\\S]{0,400}?정답 ' + it.a + ' · 내 답 ' + esc(it.mine || '–') + ' · ' + LVL[it.lvl]).test(txt));
+      chk('난도 낱말(기본/표준/심화)이 정답 줄에 실린다', lvOk.length === lv.length, lvOk.length + ' / ' + lv.length);
+    } else console.log('  (lvl 이 있는 문항이 없다 — 난도 낱말은 안 잰다)');
+    /* 개념 설명(core) — 개념 묶음 제목 바로 뒤에 한 번. 화면이 넘긴 맨글 그대로. */
+    const cores = mis.map(m => ({ m, c: (wb.items.filter(it => it.mis === m && it.core)[0] || {}).core || (wb.cores && wb.cores[m]) || '' }))
+                     .filter(x => x.c);
+    if (cores.length) {
+      const coreOk = cores.filter(x => new RegExp(esc('· ' + x.m) + '\\s+' + esc(x.c.slice(0, 20))).test(txt));
+      chk('개념 설명이 개념 제목 바로 뒤에 실린다', coreOk.length === cores.length,
+          coreOk.length + ' / ' + cores.length + (coreOk.length < cores.length ? '  빠짐: ' + cores.filter(x => coreOk.indexOf(x) < 0).map(x => x.m).join(' ') : ''));
+      chk('«**» 굵게 표시가 종이에 새지 않는다', !/\*\*/.test(txt), true);
+    } else console.log('  (개념 설명(core)이 있는 개념이 없다 — 안 잰다)');
   } else if (wb) {
     /* 틀린 것이 없는데 «오답노트» 라는 빈 제목만 남으면 빠뜨린 줄 안다. */
     chk('틀린 것이 없으면 빈 칸을 안 남긴다', !txt.includes('오답노트'), true);
