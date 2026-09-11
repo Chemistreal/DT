@@ -228,7 +228,8 @@ function copyMsg(btn){
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(msg).then(done).catch(fallback); }
   else fallback();
   function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=msg; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done(); }catch(e){ prompt('메시지 복사', msg); } }
+    document.body.appendChild(ta); ta.select(); var ok=false; try{ ok=document.execCommand('copy')===true; }finally{ if(ta.parentNode) ta.parentNode.removeChild(ta); }
+    if(ok) done(); else prompt('메시지 복사', msg); }catch(e){ prompt('메시지 복사', msg); } }
 }
 
 renderTabs(); renderGrid();

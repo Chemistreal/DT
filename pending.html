@@ -298,8 +298,12 @@ function copyShare(btn){
     setTimeout(function(){ btn.textContent=orig; btn.classList.remove('copied'); }, 1800); };
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(msg).then(done).catch(fallback); }
   else fallback();
-  function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=msg; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done(); }catch(e){ prompt('메시지 복사', msg); } }
+  /* 임시 textarea 칸은 execCommand 가 던져도 지운다(안 지우면 보이지 않는 칸이 body 에 남는다).
+     execCommand 가 false 를 돌려주면 복사된 것이 아니므로 「복사됨」 이라 하지 않고 창에 띄운다. */
+  function fallback(){ var ta=document.createElement('textarea'), ok=false; ta.value=msg; ta.style.position='fixed'; ta.style.opacity='0';
+    try{ document.body.appendChild(ta); ta.select(); ok=document.execCommand('copy')===true; }catch(e){ ok=false; }
+    if(ta.parentNode) ta.parentNode.removeChild(ta);
+    if(ok) done(); else prompt('메시지 복사', msg); }
 }
 
 function siteBase(){ var b=location.href.split('?')[0].split('#')[0]; return b.slice(0,b.lastIndexOf('/')+1); }

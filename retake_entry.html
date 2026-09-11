@@ -314,7 +314,12 @@ async function gradeAndSave(){
   var saved=false;
   try{
     var _pr=await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
-    try{ var _pj=await _pr.json(); if(_pj && _pj.ok===false && _pj.error==='already_passed'){ SAVING=false; refreshBar(); st.innerHTML='<span class="ok">이미 통과한 회차입니다.</span> 서버가 재시 저장을 거부했습니다(통과 학생은 재시 불필요).'; return; } }catch(e){}
+    try{ var _pj=await _pr.json();
+      if(_pj && _pj.ok===false && _pj.error==='already_passed'){ SAVING=false; refreshBar(); st.innerHTML='<span class="ok">이미 통과한 회차입니다.</span> 서버가 재시 저장을 거부했습니다(통과 학생은 재시 불필요).'; return; }
+      /* attempt_regress: 같은 학생·회차에 더 나중 시도가 이미 있어 서버가 이 시도를 받지 않았다. 다시 보내도 같은 답이라
+         «저장 확인 실패 · 네트워크·배포를 확인» 으로 흘리지 않고 서버의 msg 를 그대로 보여 준다(index.html 의 SAVE_STATE='refused' 와 같은 판단). */
+      if(_pj && _pj.ok===false && _pj.error==='attempt_regress'){ SAVING=false; refreshBar(); console.warn('[Chemistreal] 시트 저장 거부:',_pj.error,_pj.msg); st.innerHTML='<span class="err">시트에 저장되지 않았습니다.</span> '+esc(_pj.msg||'서버가 저장을 받지 않았습니다'); return; }
+    }catch(e){}
     try{
       var vr=await fetch(SAVE_URL+'?student='+encodeURIComponent(DTRetake.tokWith(sk))+'&t='+Date.now(),{cache:'no-store'});
       var vj=await vr.json();
