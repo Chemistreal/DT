@@ -228,6 +228,35 @@ async function assertNoOverflow(page, label) {
     assert(/report\.html\?student=/.test(one), '통과 문자에 리포트 링크 없음');
   }, { clipboard: true });
 
+  /* ── 4-3. 복사 폴백(clipboard API 가 없는 브라우저) ────────────────
+     execCommand('copy') 가 false 를 돌려주면 복사된 것이 아니다 — 「복사됨 ✓」 이라
+     하지 않고 창(prompt)에 문자를 띄운다. 임시 textarea 는 execCommand 가 던져도
+     지운다(안 지우면 보이지 않는 칸이 body 에 쌓인다). */
+  await test('pending · 복사 폴백은 실패를 «복사됨» 이라 하지 않고 textarea 를 남기지 않는다', async page => {
+    await page.addInitScript(() => { try { Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true }); } catch (e) {} });
+    await page.goto(BASE + 'pending.html?demo'); await page.waitForTimeout(500);
+    assert(await page.evaluate(() => !navigator.clipboard), 'clipboard API 를 못 없앴다 — 폴백이 아니라 API 경로를 재고 있다');
+    const before = await page.$$eval('textarea', t => t.length);
+    for (const mode of ['false', 'throw']) {
+      const r = await page.evaluate(m => {
+        window.__prompts = 0; window.prompt = function () { window.__prompts++; return null; };
+        document.execCommand = function () { if (m === 'throw') throw new Error('copy blocked'); return false; };
+        const btn = document.querySelector('.copybtn.s1'); btn.click();
+        return { label: btn.textContent, copied: btn.classList.contains('copied'), prompts: window.__prompts, tas: document.querySelectorAll('textarea').length };
+      }, mode);
+      assert(r.tas === before, mode + ': 임시 textarea 가 ' + (r.tas - before) + '개 남았다');
+      assert(!/복사됨/.test(r.label) && !r.copied, mode + ': 복사 안 됐는데 «복사됨» 이라 한다: ' + r.label);
+      assert(r.prompts === 1, mode + ': 창을 ' + r.prompts + '번 띄웠다(1번이어야 한다)');
+    }
+    /* 반대로 execCommand 가 true 면 «복사됨» — 폴백이 성공을 실패로 읽지도 않는다 */
+    const okr = await page.evaluate(() => {
+      window.__prompts = 0; document.execCommand = function () { return true; };
+      const btn = document.querySelector('.copybtn.s2'); btn.click();
+      return { label: btn.textContent, prompts: window.__prompts, tas: document.querySelectorAll('textarea').length };
+    });
+    assert(/복사됨/.test(okr.label) && okr.prompts === 0 && okr.tas === before, '복사가 됐는데 «복사됨» 이 아니거나 창을 띄웠다: ' + JSON.stringify(okr));
+  });
+
   /* ── 5. 미응시 현황: 안내 완료 숨김 → 새로고침 유지 → 복원 ── */
   await test('pending · 숨김/복원 흐름', async page => {
     const url = BASE + 'pending.html?demo';
@@ -517,7 +546,10 @@ async function assertNoOverflow(page, label) {
     const a = chips.find(c => c.text.startsWith(got.on)), b = chips.find(c => c.text.startsWith(got.off));
     assert(a && a.tag === 'A' && a.target === '_blank', '표에 있는 개념인데 링크가 아니다: ' + JSON.stringify(a));
     const file = lec.lectures[lec.map[got.on]].file;
-    assert(a.href === 'https://chemistreal.github.io/exam/' + file, '강의 주소가 성적표 규칙과 다르다: ' + a.href);
+    /* 절이 적힌 개념이면 성적표와 같은 꼬리(#sNN / #q)까지 같아야 한다. 없으면 꼬리도 없다. */
+    const sec = (lec.sec || {})[got.on] || '';
+    const tail = sec === 'q' ? '#q' : (sec ? '#s' + sec : '');
+    assert(a.href === 'https://chemistreal.github.io/exam/' + file + tail, '강의 주소가 성적표 규칙과 다르다: ' + a.href);
     assert(b && b.tag === 'SPAN' && !b.href, '표에 없는 개념인데 링크를 지어냈다: ' + JSON.stringify(b));
     const txt = await page.evaluate(() => document.body.innerText);
     assert(/누르면 개념 강의/.test(txt), '링크가 있는데 누르라는 말이 없다');
@@ -535,6 +567,49 @@ async function assertNoOverflow(page, label) {
     });
     assert(!r.lec && r.chips === r.want && r.chips > 0 && r.links === 0 && r.copy,
            '표 없이도 이름 칩·복사 단추가 그대로여야 한다: ' + JSON.stringify(r));
+  });
+
+  /* ── 강의 링크가 강의 머리가 아니라 **절**까지 간다 (2026-09-11) ─────────
+     강의 한 편은 대여섯 절이다. concept-lecture-dt.json 의 sec 표가 절을 알면
+     (집필자가 why 에 「lec-060 본문 03절이 …」라고 적어 둔 것) --emit 이 주소 뒤에
+     #sNN(본문 절) / #q(확인 문제) 를 붙인다. 여기서 못 박는 것:
+     · 표본 하나 — 성적표의 lecFor 가 그 개념을 '…html#sNN' 으로 낸다
+     · 전수 — LECMAP·LECUNIT 의 꼬리가 표의 sec 와 **정확히** 같다(있으면 붙고,
+       없으면 안 붙는다 — 없는 절을 지어내지 않는다). anchor 가 exam 쪽 파일에
+       실제로 있는지는 lec_link.py --check 가 디스크에서 본다. */
+  await test('성적표 강의 링크가 절 anchor 를 갖는다(한 개념 표본)', async () => {
+    const lec = JSON.parse(fs.readFileSync(path.join(ROOT, 'concept-lecture-dt.json'), 'utf8'));
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const constOf = (name) => {
+      const m = src.match(new RegExp('\\nconst ' + name + '=(\\{[^\\n]*\\});\\n'));
+      assert(m, name + ' 상수를 못 찾았다');
+      return JSON.parse(m[1]);
+    };
+    const LECMAP = constOf('LECMAP'), LECUNIT = constOf('LECUNIT');
+    const at = src.indexOf('function lecFor(');
+    assert(at > 0, 'lecFor 를 못 찾았다');
+    const lecFor = new Function('LECMAP', 'LECUNIT', src.slice(at, src.indexOf('\n}\n', at) + 3) + '\nreturn lecFor;')(LECMAP, LECUNIT);
+    const sec = lec.sec || {};
+    const tail = k => sec[k] ? (sec[k] === 'q' ? '#q' : '#s' + sec[k]) : '';
+    /* (1) 표본: 본문 절이 적힌 map 개념 하나 */
+    const mis = Object.keys(sec).find(k => k.indexOf('|') < 0 && lec.map[k] && /^\d\d$/.test(sec[k]));
+    assert(mis, '본문 절이 적힌 개념이 하나도 없다');
+    const want = lec.base + lec.lectures[lec.map[mis]].file + '#s' + sec[mis];
+    assert(lecFor(mis, '', '') === want, mis + ' 의 주소가 절까지 안 간다: ' + lecFor(mis, '', '') + ' (기대 ' + want + ')');
+    /* (2) 확인 문제만 근거인 개념은 #q */
+    const qm = Object.keys(sec).find(k => k.indexOf('|') < 0 && lec.map[k] && sec[k] === 'q');
+    if (qm) assert(/\.html#q$/.test(lecFor(qm, '', '')), qm + ' 이 확인 문제로 안 간다: ' + lecFor(qm, '', ''));
+    /* (3) 절이 없는 개념은 꼬리 없이 강의 머리로 */
+    const plain = Object.keys(lec.map).find(k => !sec[k]);
+    assert(plain && lecFor(plain, '', '').indexOf('#') < 0, '절이 없는 개념에 꼬리를 지어냈다: ' + plain + ' → ' + lecFor(plain, '', ''));
+    /* (4) 전수: 두 상수의 꼬리가 표와 같다 */
+    let n = 0;
+    [LECMAP, LECUNIT].forEach(T => Object.keys(T).forEach(k => {
+      const h = T[k], i = h.indexOf('#'), got = i < 0 ? '' : h.slice(i);
+      assert(got === tail(k), k + ' 의 꼬리가 표와 다르다: ' + got + ' vs ' + tail(k));
+      if (got) n++;
+    }));
+    assert(n === Object.keys(sec).length, '절 anchor 붙은 주소 수가 표와 다르다: ' + n + ' vs ' + Object.keys(sec).length);
   });
 
   /* 은행의 문장·개념 이름·해설은 JSON 글자 그대로다. innerHTML 에 날로 넣으면
@@ -2343,6 +2418,57 @@ async function assertNoOverflow(page, label) {
     assert(rest[0] === ' 다음 문장. 끝' && rest[1] === '마침표 없음' && rest[2] === '나。다', 'restAfterFirst 가 다르다: ' + JSON.stringify(rest));
   });
 
+  /* ── 대표 이름으로 합쳐진 고질에도 강의 문이 남는다 (2026-09-11) ──
+     서버 cumulative_ 와 엔진 cumulative·spacedReview 는 고질을 대표 이름(misCanon)으로 내는데, 강의 표
+     (LECMAP·LECUNIT)는 회차 자료의 원본 이름으로 짜여 있다 — '결합 에너지 적용'·'결합 에너지로 ΔH' 는
+     표에 있고 대표 이름 '결합 에너지' 는 없다. 서버가 이름을 합치기 시작한 날 「반복해서 막히는 곳」·
+     「이번 주 확인할 개념」 의 「▶ 개념 강의 보기」 가 그 개념에서만 조용히 사라졌다. lecFor 가 대표 이름을
+     표의 역방향(그 대표로 합쳐진 원본 이름)으로 되짚는다. 여기서 못 박는 것:
+     · 표본 — 대표 이름은 표에 없고 원본 이름은 있는 개념으로 고질을 만들어 두 카드에 강의 문이 선다
+       (그런 개념이 표에 다 들어가 하나도 안 남는 날엔 표에 있는 대표 이름으로 같은 화면을 잰다)
+     · 전수 — 원본 이름 중 하나라도 강의가 있는 대표 이름은 어느 과목에서든 강의가 있고,
+       어느 이름에도 강의가 없는 대표 이름에는 강의를 지어내지 않는다 */
+  await test('report · 대표 이름으로 합쳐진 고질도 강의 링크가 남는다', async page => {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const LECMAP = JSON.parse(src.match(/\nconst LECMAP=(\{[^\n]*\});\n/)[1]);
+    const reps = {};
+    Object.keys(CE.MIS_CANON).forEach(k => { (reps[CE.MIS_CANON[k]] = reps[CE.MIS_CANON[k]] || []).push(k); });
+    const merged = Object.keys(reps).filter(r => reps[r].some(k => LECMAP[k]));
+    const rep = merged.find(r => !LECMAP[r]) || merged.find(r => LECMAP[r]);
+    assert(rep, '원본 이름에 강의가 있는 대표 이름이 하나도 없다');
+    const keys = reps[rep].filter(k => LECMAP[k]);
+    const want = LECMAP[rep] || LECMAP[keys[0]];
+    const K = '가상중-합침';
+    const R = (round, mis) => ({ studentKey: K, name: '합침', school: '가상중', year: '2026', course: 'ch1', round, attempt: '첫 응시',
+      score: 70, pass: false, date: '2026-08-0' + round, wrongMis: [mis], wrongAxes: {}, units: [], axes: [] });
+    const rows = [R(1, keys[0]), R(2, keys[keys.length - 1])];
+    const A = CE.cumulative(rows)[K];
+    assert(A.chronicMis.length === 1 && A.chronicMis[0].mis === rep, '집계가 대표 이름 하나로 오지 않았다: ' + JSON.stringify(A.chronicMis));
+    await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, student: 'x', rows: rows, excluded: [], cumulative: A, rank: null, cohort: null }) }));
+    await page.goto(BASE + 'report.html?student=x');
+    await page.waitForSelector('.ladder', { timeout: 20000 });
+    /* (1) 「반복해서 막히는 곳」 카드 — 이름은 대표 이름, 강의 문은 원본 이름의 강의 */
+    const rx = await page.evaluate(m => {
+      const box = [].slice.call(document.querySelectorAll('.rx')).filter(r => (r.querySelector('.nm') || {}).textContent === m)[0];
+      const a = box && box.querySelector('a.leclink');
+      return { has: !!box, href: a ? a.getAttribute('href') : null, target: a ? a.getAttribute('target') : null };
+    }, rep);
+    assert(rx.has, '반복해서 막히는 곳에 「' + rep + '」 카드가 없다');
+    assert(rx.href === want && rx.target === '_blank', '대표 이름으로 합쳐지자 강의 문이 사라졌다: ' + JSON.stringify(rx) + ' (기대 ' + want + ')');
+    /* (2) 「이번 주 확인할 개념」 도 같은 이름·같은 강의 */
+    const todo = await page.evaluate(() => { const t = document.querySelector('.card.todo'); if (!t) return null;
+      const a = t.querySelector('.todohead a.leclink'); return { mis: (t.querySelector('.todomis') || {}).textContent, href: a ? a.getAttribute('href') : null }; });
+    assert(todo && todo.mis === rep && todo.href === want, '확인할 개념의 강의 문이 없거나 다르다: ' + JSON.stringify(todo));
+    /* (3) 전수 — 화면의 lecFor 로 모든 대표 이름을 잰다 */
+    const all = await page.evaluate(rs => rs.map(r => [r, lecFor(r, 'ch1', ''), lecFor(r, 'ch2', '')]), Object.keys(reps));
+    const missing = all.filter(x => merged.indexOf(x[0]) >= 0 && (!x[1] || !x[2])).map(x => x[0]);
+    assert(!missing.length, '원본 이름엔 강의가 있는데 대표 이름엔 없다: ' + JSON.stringify(missing));
+    const invented = all.filter(x => merged.indexOf(x[0]) < 0 && !LECMAP[x[0]] && (x[1] || x[2])).map(x => x[0]);
+    assert(!invented.length, '어느 이름에도 강의가 없는 대표 이름에 강의를 지어냈다: ' + JSON.stringify(invented));
+  });
+
   /* ── 성적표 문구 두 가지 ──
      ① latestWrong 은 그 회차에서 틀린 개념의 합집합이다. 통과 전에는 아직 잡은 게
         아니므로 「이번 회차에서 틀린 개념」 이라고 적는다. 통과했을 때만 「바로잡은 개념」.
@@ -2432,6 +2558,67 @@ async function assertNoOverflow(page, label) {
              '「틀림」 두 칸이 출제 난이도로 말하지 않는다: ' + qs.join(' | '));
       const qp = await page.$$eval('.qprow', es => es.map(e => e.textContent));
       assert(qp.length > 0 && qp.every(x => /출제 난이도 (기본|표준|심화)/.test(x)), '먼저 잡을 문항 줄에 출제 난이도 이름이 없다');
+    });
+
+    /* ── 「바로잡은 개념」 누적(ccum) 은 회차마다 「이번 회차」 카드와 같은 셈법이다 ──
+       예전엔 회차마다 «첫 응시 오답 개념 수» 를 더했다 — 통과한 재시에서도 틀린 개념, 재시가 못 물은
+       개념, 첫 응시에서 바로 통과해 고칠 기회가 없었던 회차의 오답까지 「바로잡았다」 고 셌다.
+       이제 회차마다 fixedListOf(통과한 시도보다 앞 시도에서 틀렸고, 통과한 시도에서는 틀리지도
+       못 묻지도 않은 개념)의 수를 더한다. 첫 응시 통과·통과 전 회차는 0. 0 이면 「N개 개념을
+       바로잡았습니다」 문장·누적 그래프를 내지 않는다(0개를 바로잡았다고 쓰지 않는다). */
+    await test('report · 「바로잡은 개념」 누적은 이번 회차 카드와 같은 셈법 · 0 이면 문장을 내지 않는다', async page => {
+      await mockReport(page);
+      const uniq = a => a.filter((m, i) => a.indexOf(m) === i);
+      const journeyN = () => page.evaluate(() => {
+        const m = (document.getElementById('app').textContent || '').match(/지금까지 (\d+)개 개념을 바로잡았습니다/);
+        return m ? +m[1] : null;
+      });
+      const chipN = () => page.evaluate(() => {
+        const lab = [].slice.call(document.querySelectorAll('.muted')).filter(e => /이번 회차에서 바로잡은 개념/.test(e.textContent))[0];
+        return lab ? lab.parentNode.querySelectorAll('span').length : 0;
+      });
+      const cumSvg = () => page.$('svg[aria-label="바로잡은 개념 누적"]');
+      /* ① 첫 응시 실패(오답 15) → 재시 통과(오답 3 · 그중 2는 첫 응시에도 틀림) */
+      const RW = [0, 5, 20];                                                // 0·5 는 첫 응시(0~14)에도 틀림 · 20 은 재시에서만
+      /* 재시가 못 물은 개념(retakeUnasked · '|' 구분) 하나 — 첫 응시에서 틀렸고 재시에선 안 틀렸지만
+         「고침」 이 아니다(안 물었으니). 이번 회차 카드처럼 누적에서도 빠져야 한다. */
+      const first = mkRow('첫 응시', firstN(15));
+      const ru = uniq(first.wrongMis).filter(m => mkRow('재시', RW).wrongMis.indexOf(m) < 0)[0];
+      const mkRetake = () => Object.assign(mkRow('재시', RW), { retakeUnasked: ru });   // 재시 57/60 = 95점 · 통과
+      cur = [first, mkRetake()];
+      let txt = await openReport(page);
+      const still = cur[1].wrongMis, bad = still.concat([ru]);
+      const same = (a, b) => CE.misCanon(a) === CE.misCanon(b);            // 화면의 misKeyIn 과 같은 맞대기
+      const expNoRU = uniq(cur[0].wrongMis).filter(m => !still.some(b => same(b, m)));   // 첫 응시 오답 중 재시에서 안 틀린 개념
+      const exp = uniq(cur[0].wrongMis).filter(m => !bad.some(b => same(b, m)));         // … 그중 재시가 물은 개념만
+      assert(ru && exp.length > 0 && exp.length < expNoRU.length && expNoRU.length < uniq(cur[0].wrongMis).length && exp.length < cur[0].wrongMis.length,
+             '검사 자료가 옛 셈법(첫 응시 오답 수)·못 물은 개념을 안 빼는 셈법·새 셈법을 가르지 못한다');
+      let n = await journeyN();
+      assert(n === exp.length, '여정 카드의 누적이 「첫 응시 오답 − 통과 시도 오답」 이 아니다: ' + n + ' (기대 ' + exp.length + ')');
+      assert((await chipN()) === n, '이번 회차 카드의 바로잡은 개념 수와 누적이 어긋난다: ' + (await chipN()) + ' vs ' + n);
+      assert(await cumSvg(), '바로잡은 개념 누적 그래프가 없다');
+      /* ② 첫 응시 통과만 있는 학생 → 고칠 기회가 없었다 · 「바로잡았습니다」 문장이 없다 */
+      cur = [mkRow('첫 응시', firstN(5))];                                    // 91.67점 · 첫 응시 통과
+      txt = await openReport(page);
+      assert(/통과/.test(txt) && !/통과 전/.test(txt), '첫 응시 통과가 아니다');
+      assert(!/개념을 바로잡았/.test(txt), '첫 응시 통과뿐인데 「개념을 바로잡았습니다」 라고 한다');
+      assert(!(await cumSvg()), '바로잡은 것이 없는데 누적 그래프가 있다');
+      /* ③ 통과 못 한 회차 → 0 */
+      cur = [mkRow('첫 응시', firstN(15))];                                   // 75점 · 통과 전
+      txt = await openReport(page);
+      assert(/통과 전/.test(txt) && !/개념을 바로잡았/.test(txt), '통과 전인데 「개념을 바로잡았습니다」 라고 한다');
+      /* ④ 두 회차(1회 첫 응시 통과 · 2회 재시 통과) → 성장 카드의 「바로잡은 개념」 은 2회의 것만 · 라벨은 원래 말 */
+      const asRound2 = rows => rows.map(r => Object.assign({}, r, { round: 2, date: '2026-09-08' }));
+      cur = [mkRow('첫 응시', firstN(5))].concat(asRound2([mkRow('첫 응시', firstN(15)), mkRetake()]));
+      txt = await openReport(page);
+      const g = await page.evaluate(() => {
+        const c = document.querySelector('.card.growth .gcell');
+        return c ? { v: c.querySelector('.gv').textContent.trim(), l: c.querySelector('.gl').textContent.trim() } : null;
+      });
+      assert(g && g.l === '바로잡은 개념', '성장 카드 라벨이 「바로잡은 개념」 이 아니다: ' + JSON.stringify(g));
+      assert(g.v === String(exp.length), '성장 카드의 바로잡은 개념 수가 2회에서 바로잡은 수(' + exp.length + ')가 아니다: ' + g.v);
+      n = await journeyN();
+      assert(n === exp.length && (await chipN()) === n, '두 회차 누적이 이번 회차 카드와 어긋난다: ' + n);
     });
 
     /* ── 근본 원인 진단 · 우연 기준선 ──
@@ -2762,6 +2949,39 @@ async function assertNoOverflow(page, label) {
       assert(posts === 2, '손으로 재시도해도 안 보낸다: ' + posts);
     }, { adminGate: true });
 
+    /* (e″) 재시 입력 페이지(retake_entry.html)도 같은 판단이다. 서버가 attempt_regress 로 거부하면 서버의 말을
+       statusline 에 그대로 싣고 거기서 멈춘다 — «저장 확인» GET 으로 흘러가 «저장 확인 실패 · 네트워크·배포를 확인»
+       이라고 엉뚱한 곳을 가리키지 않는다. 학생·회차 자료는 위 픽스처(FIRST)를 그대로 쓴다. */
+    await test('재시 입력 · 저장 거부(attempt_regress)는 서버의 말을 싣고 확인 GET 을 안 보낸다', async page => {
+      let posts = 0, getsAfterPost = 0;
+      await page.route('**/script.google.com/**', route => {
+        const u = route.request().url();
+        if (route.request().method() === 'POST') { posts++; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'attempt_regress', msg: '이미 더 나중 시도가 저장돼 있어 이 시도는 저장하지 않았습니다.' }) }); }
+        if (u.includes('student=')) { if (posts) getsAfterPost++; return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, student: KEY, rows: [FIRST], excluded: [], cumulative: null, rank: null, cohort: null }) }); }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, classes: [] }) });
+      });
+      await page.goto(BASE + 'retake_entry.html');
+      await page.waitForFunction(() => document.querySelectorAll('#rd option').length > 0, null, { timeout: 10000 });
+      await page.selectOption('#rd', 'ch2|3'); await page.selectOption('#att', '2');
+      await page.evaluate(() => manualStudent());
+      await page.fill('#mNm', FIRST.name); await page.fill('#mSc', FIRST.school);
+      await page.evaluate(() => loadForManual());
+      await page.waitForFunction(() => typeof ITEMS !== 'undefined' && ITEMS && ITEMS.length > 0, null, { timeout: 15000 });
+      const n = await page.evaluate(() => { OX = KEYARR.slice(); renderGrid(); refreshBar(); return ITEMS.length; });
+      assert(n > 0, '재시 문항이 만들어지지 않았다');
+      await page.evaluate(() => gradeAndSave());
+      await page.waitForFunction(() => typeof SAVING !== 'undefined' && !SAVING && !/저장 중/.test(document.getElementById('statusline').textContent) && document.getElementById('statusline').textContent.trim() !== '', null, { timeout: 15000 });
+      await page.waitForTimeout(600);
+      const line = await page.$eval('#statusline', e => e.textContent);
+      assert(/시트에 저장되지 않았습니다/.test(line) && /더 나중 시도/.test(line), '거부를 서버의 말로 안 알린다: ' + line);
+      assert(!/저장 확인 실패|네트워크·배포/.test(line), '거부를 네트워크·배포 탓으로 돌린다: ' + line);
+      assert(!/시트 저장 확인/.test(line), '거부됐는데 «저장 확인» 이라고 한다: ' + line);
+      assert(posts === 1, '저장을 ' + posts + '번 보냈다');
+      assert(getsAfterPost === 0, '거부 뒤에 확인 GET 을 ' + getsAfterPost + '번 보냈다');
+      assert((await page.$$eval('#loglist .logrow', r => r.length)) === 0, '거부됐는데 저장 기록 줄이 생겼다');
+      assert(!(await page.$eval('#saveBtn', b => b.disabled)), '거부 뒤 단추가 잠겨 다시 저장할 수 없다');
+    }, { adminGate: true });
+
     /* (f) 게이트 단계 이름: 폴백 확인 문제(옳은 문장 O · 틀린 문장 원래 정답)는 «개념 확인 / 적용» 이 아니다 */
     await test('게이트 · 폴백 확인 문제에는 «개념 확인 / 적용» 단계 이름을 안 붙인다', async page => {
       await mockRows(page, () => [FIRST]);
@@ -2787,6 +3007,53 @@ async function assertNoOverflow(page, label) {
       assert(!/개념 → 적용/.test(r.lede) && /1~2문제/.test(r.lede), '게이트 안내가 폴백에도 «개념 → 적용» 을 약속한다: ' + r.lede);
     });
   }
+
+  /* ── 회차 상세·구간 재계산의 대표 시도 ────────────────────────────
+     운영 성적표의 누적(A)은 서버(apps-script.gs cumulative_)가 계산해 보낸다 — 회차의 대표
+     점수(finalScore)는 «처음 통과한 시도, 없으면 마지막». 그런데 학부모가 회차 카드를 눌러 여는
+     「N회 시점 상세」(renderRoundEmbed)와 구간 종합(?seg=)은 **브라우저 안 엔진 사본**으로 다시
+     센다. 2026-09-11 까지 그 사본은 «마지막 시도» 였다 — 재시로 통과한 뒤 또 본 행이 있으면 같은
+     학생이 같은 화면에서 두 숫자를 받았다. 이제 사본은 chemengine.js 그대로다(tools/engine_sync.py).
+     여기서는 화면이 실제로 그 규칙으로 그리는지 본다. */
+  await test('report · 회차 상세·구간 재계산의 finalScore 가 서버 규칙(처음 통과한 시도)과 같다', async page => {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const K = '가상중-검사';
+    const R = (round, attempt, score, pass, date) => ({ studentKey: K, name: '검사', school: '가상중', year: '2026', course: 'ch1',
+      round, attempt, score, pass, date, wrongMis: [], wrongAxes: {}, units: [], axes: [] });
+    const rows = [
+      R(1, '첫 응시', 70, false, '2026-08-01'),
+      R(1, '재시', 85, true, '2026-08-02'),      // 처음 통과한 시도 → 대표
+      R(1, '재재시', 60, false, '2026-08-03'),   // 통과한 뒤 또 본 행 — 마지막 시도 규칙이면 이것이 뜬다
+      R(2, '첫 응시', 90, true, '2026-08-08'),
+    ];
+    const A = CE.cumulative(rows)[K];                               // 서버와 같은 규칙(repr)
+    assert(A.trend[0].finalScore === 85 && A.trend[0].finalAttempt === '재시', '기준이 서버 규칙이 아니다: ' + JSON.stringify(A.trend[0]));
+    const want = A.trend.map(t => [t.round, t.finalScore, t.finalAttempt]);
+    await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, student: 'x', rows: rows, excluded: [], cumulative: A, rank: null, cohort: null }) }));
+    await page.goto(BASE + 'report.html?student=x');
+    await page.waitForSelector('.rcard', { timeout: 20000 });
+    /* (1) 화면 안 엔진 사본이 같은 답을 낸다 */
+    const got = await page.evaluate(([rows, K]) => ChemEngine.cumulative(rows)[K].trend.map(t => [t.round, t.finalScore, t.finalAttempt]), [rows, K]);
+    assert(JSON.stringify(got) === JSON.stringify(want), '화면 안 엔진 사본의 대표 시도가 서버와 다르다: ' + JSON.stringify(got) + ' vs ' + JSON.stringify(want));
+    /* (2) 「1회 시점 상세」 — 1회까지의 기록으로 다시 그린 점수 추이의 최종 점수가 85 (60 아님) */
+    await page.evaluate(() => showRoundDetail('ch1', 1));
+    await page.waitForSelector('.round-embed svg', { timeout: 20000 });
+    const finals = await page.evaluate(() => {
+      const card = [].slice.call(document.querySelectorAll('.round-embed .card')).filter(c => /점수 추이/.test((c.querySelector('h2') || {}).textContent || ''))[0];
+      return card ? [].slice.call(card.querySelectorAll('svg text[font-weight="700"]')).map(e => e.textContent.trim()) : null;
+    });
+    assert(finals && finals.indexOf('85') >= 0 && finals.indexOf('60') < 0, '회차 상세의 최종 점수가 서버 규칙과 다르다: ' + JSON.stringify(finals));
+    /* (3) 구간 종합(1~2회) — 「재시까지 반영 평균」 = (85 + 90) / 2. 마지막 시도 규칙이면 (60 + 90) / 2 */
+    await page.goto(BASE + 'report.html?student=x&seg=1-2&c=ch1');
+    await page.waitForSelector('.segstat', { timeout: 20000 });
+    const avg = await page.evaluate(() => {
+      const el = [].slice.call(document.querySelectorAll('.segstat')).filter(e => /재시까지 반영 평균/.test(e.textContent))[0];
+      return el ? el.querySelector('b').textContent.trim() : null;
+    });
+    const wantAvg = (want.reduce((s, t) => s + t[1], 0) / want.length).toFixed(2);
+    assert(avg === wantAvg, '구간 재계산의 재시까지 반영 평균이 서버 규칙과 다르다: ' + avg + ' (기대 ' + wantAvg + ')');
+  });
 
   await BROWSER.close();
   srv.close();

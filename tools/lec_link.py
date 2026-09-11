@@ -35,10 +35,30 @@
 ⚠ 이 자는 «배정이 옳은지» 를 안 본다. 「전기음성도」를 015강에 보낸 것이 맞는지는
   화학을 아는 사람이 본다. 여기서 재는 것은 «이어져 있는가» 뿐이다.
 
+■ 강의 한 편이 아니라 **절 하나**로 (2026-09-11)
+
+강의 한 편은 대여섯 절이다. 집필자가 why 에 「lec-060 본문 03절이 …」라고 근거를
+적어 두었으므로, 그 절을 `sec` 표에 따로 둔다 — { "<map 키 또는 byUnit 키>":
+"03" | "q" }. "q" 는 근거가 확인 문제 해설뿐인 자리다. exam 쪽 강의 파일은 본문
+절에 id="sNN"(인쇄 번호와 같다), 확인 문제에 id="q" 를 달아 두었으므로, --emit 이
+주소 뒤에 '#s03' / '#q' 를 붙이면 그 자리로 바로 열린다.
+
+    · `--secs`  가 why 의 절 인용(「03절」「§03」「03·04 절」…)을 읽어 조각의 sec 칸에
+      적는다. **고른 강의의 절일 때만** 쓴다 — why 가 다른 강의 번호 옆에서 절을
+      말하면(「lec-059 는 01절만 …」) 버린다. 여러 절이면 첫 번째. 본문 절 인용이
+      없고 확인 문제만 근거로 들면 "q".
+      첫 채움만 한다 — 조각에 sec 칸이 **이미 있으면 손대지 않는다**(사람이 고쳐
+      둔 값이 산다). 사람이 판정한 것이 원고의 값이고, 이 자는 초안만 낸다.
+    · `--absorb` 가 sec 칸을 표로 옮긴다. `--check` 는 sec 표의 키가 map·byUnit 에
+      있는지, 값이 두 자리 숫자 또는 "q" 인지, 그리고 exam 저장소가 디스크에
+      있으면 그 강의 파일에 id="sNN" / id="q" 가 **실제로** 있는지 본다(없으면
+      빨간불; exam 이 없으면 형식만 본다).
+
     python3 tools/lec_link.py           # 지금 얼마나 이어져 있나
     python3 tools/lec_link.py --check   # 끊기거나 줄면 빨간불 (CI)
     python3 tools/lec_link.py --seal    # 지금 덮는 수를 새 바닥으로
     python3 tools/lec_link.py --chunks  # 아직 안 이은 것을 집필 조각으로 끊는다
+    python3 tools/lec_link.py --secs    # 조각의 why 에서 절 인용을 sec 칸으로(첫 채움만)
     python3 tools/lec_link.py --absorb  # 집필 조각을 표로 옮긴다
     python3 tools/lec_link.py --emit    # 표를 report.html 의 LECMAP 으로
     python3 tools/lec_link.py --sync    # exam 저장소에서 강의 목록을 다시 베낀다
@@ -105,14 +125,113 @@ def sync():
     return 0
 
 
+# ── why 의 절 인용 → sec ──────────────────────────────────────────────
+# ⚠ 정규식에 lookbehind 를 쓰지 않는다 — 화면 쪽 JS 는 옛 사파리에서 lookbehind 로
+#   페이지가 죽으므로 금지인데, 파이썬 쪽도 같은 제약을 지켜 두 쪽이 같은 꼴을 유지한다.
+RX_LEC = re.compile(r'lec-(\d{3})')                         # 「lec-060」
+RX_BARE = re.compile(r'(?:^|[^0-9.,−\-×+=/])(\d{3})(?![0-9°℃%.])')   # 「060 의」 「050 은」
+# 세 자리 수 뒤에 단위·「강」·「배」·「도」가 오면 강의 번호가 아니라 값이다(「125강」「100 mL」「273 K」).
+RX_NOTLEC = re.compile(r'\s?(?:kJ|kPa|K(?![A-Za-z])|J(?![A-Za-z])|mL|mol|g(?![A-Za-z])|nm|pm|atm|°|℃|%|강|배|도)')
+# 「03절」「03 절」「§03」「03·04절」 — 여러 개면 첫 번째. 「절반·절대·절차」는 절이 아니다.
+RX_SEC = re.compile(r'§\s*(\d{1,2})|(\d{1,2})(?:\s*[·,~]\s*\d{1,2})*\s*절(?![반대차연약])')
+RX_THIS = re.compile(r'이 강의')
+RX_QUIZ = re.compile(r'확인\s*문제')
+
+
+def sec_from_why(why, n, lec):
+    """why 가 강의 n 의 어느 절을 근거로 드는가 → "03" | "q" | "".
+
+    왼쪽에서 오른쪽으로 읽으며 「지금 말하고 있는 강의」를 따라간다. 처음은 n 이다
+    (why 는 고른 강의 이야기다). 다른 강의 번호(lec-059, 059 는 …)가 나오면 그
+    뒤의 절은 그 강의 것이라 버리고, 「이 강의」가 나오면 다시 n 으로 돌아온다.
+    n 의 절이 하나도 없고 n 의 확인 문제만 들먹였으면 "q".
+    """
+    ev = []
+    for m in RX_LEC.finditer(why):
+        ev.append((m.start(), 'lec', m.group(1)))
+    for m in RX_BARE.finditer(why):
+        v = m.group(1)
+        if v not in lec or RX_NOTLEC.match(why, m.end(1)):
+            continue
+        if why[max(0, m.start(1) - 4):m.start(1)] == 'lec-':
+            continue
+        ev.append((m.start(1), 'lec', v))
+    for m in RX_SEC.finditer(why):
+        ev.append((m.start(), 'sec', m.group(1) or m.group(2)))
+    for m in RX_THIS.finditer(why):
+        ev.append((m.start(), 'this', ''))
+    for m in RX_QUIZ.finditer(why):
+        ev.append((m.start(), 'quiz', ''))
+    cur, quiz = n, False
+    for _, kind, val in sorted(ev):
+        if kind == 'lec':
+            cur = val
+        elif kind == 'this':
+            cur = n
+        elif kind == 'sec' and cur == n:
+            return '%02d' % int(val)
+        elif kind == 'quiz' and cur == n:
+            quiz = True
+    return 'q' if quiz else ''
+
+
+def secs():
+    """조각의 why 에서 절 인용을 읽어 sec 칸에 적는다 — **첫 채움만**.
+
+    pick 항목은 sec 가 글자열("03"·"q"·""), byUnit 항목은 단원마다 하나인 사전
+    {"ch2/액체": "02", …}. 이미 sec 칸이 있는 항목은 건드리지 않는다 — 사람이
+    읽고 고친 값이 이 자의 짐작보다 앞선다.
+    """
+    doc = load(MAP)
+    lec = doc['lectures']
+    f2n = {d['file']: n for n, d in lec.items()}
+    filled = kept = body = quiz = none = 0
+    for p in sorted(glob.glob(os.path.join(WIP, '*.json'))):
+        d = load(p)
+        dirty = False
+        for mis, v in d.items():
+            v = v or {}
+            pick, per = v.get('pick') or '', v.get('byUnit') or {}
+            if not pick and not per:
+                continue
+            if 'sec' in v:
+                kept += 1
+                continue
+            # 목록에 없는 강의(ghost)는 절도 못 찾은 것으로 둔다 — --absorb 가 따로 빨간불을 켠다.
+            why = v.get('why') or ''
+            if pick:
+                got = sec_from_why(why, f2n[pick], lec) if pick in f2n else ''
+            else:
+                got = {u: (sec_from_why(why, f2n[f], lec) if f in f2n else '')
+                       for u, f in per.items()}
+            v['sec'] = got
+            dirty = True
+            filled += 1
+            for x in ([got] if isinstance(got, str) else got.values()):
+                if x == 'q':
+                    quiz += 1
+                elif x:
+                    body += 1
+                else:
+                    none += 1
+        if dirty:
+            io.open(p, 'w', encoding='utf-8').write(
+                json.dumps(d, ensure_ascii=False, indent=1) + '\n')
+    print('sec 칸을 새로 적은 항목 %d (본문 절 %d · 확인 문제 %d · 못 찾음 %d) · 이미 있어 둔 항목 %d'
+          % (filled, body, quiz, none, kept))
+    print('⚠ 초안이다 — why 를 읽고 틀린 것은 조각의 sec 칸을 손으로 고친 뒤 --absorb 한다.')
+    return 0
+
+
 def absorb():
-    """집필 조각(dtlecwip/*.json)을 표로 옮긴다."""
+    """집필 조각(dtlecwip/*.json)을 표로 옮긴다. 조각의 sec 칸도 함께 옮긴다."""
     doc = load(MAP)
     lec = doc['lectures']
     f2n = {d['file']: n for n, d in lec.items()}
     mp = doc.setdefault('map', {})
     bu = doc.setdefault('byUnit', {})
     un = doc.setdefault('unmapped', {})
+    sc = doc.setdefault('sec', {})
     parts = sorted(glob.glob(os.path.join(WIP, '*.json')))
     if not parts:
         print('옮길 조각이 없다 (%s 가 비어 있다)' % WIP)
@@ -133,6 +252,7 @@ def absorb():
             if not pick and not why and not per:
                 untouched += 1
                 continue
+            sec = v.get('sec')
             if pick:
                 n = f2n.get(pick)
                 if not n:
@@ -140,6 +260,11 @@ def absorb():
                     continue
                 mp[mis] = n
                 added += 1
+                # 절: 조각에 적힌 것이 곧 표의 값이다. 비어 있으면 표에서도 뺀다.
+                if isinstance(sec, str) and sec:
+                    sc[mis] = sec
+                else:
+                    sc.pop(mis, None)
             for u, f in per.items():
                 n = f2n.get(f)
                 if not n:
@@ -147,6 +272,11 @@ def absorb():
                     continue
                 bu[u + SEP + mis] = n
                 paired += 1
+                us = (sec or {}).get(u) if isinstance(sec, dict) else ''
+                if us:
+                    sc[u + SEP + mis] = us
+                else:
+                    sc.pop(u + SEP + mis, None)
             if not pick and not per:
                 un[mis] = why or '맞는 강의가 목록에 없다'
                 noted += 1
@@ -157,9 +287,11 @@ def absorb():
     doc['map'] = dict(sorted(mp.items()))
     doc['byUnit'] = dict(sorted(bu.items()))
     doc['unmapped'] = dict(sorted(un.items()))
+    # sec 는 map·byUnit 에 있는 키만 남긴다(byUnit 이 맡아 map 에서 뺀 이름의 절도 함께 빠진다).
+    doc['sec'] = dict(sorted((k, x) for k, x in sc.items() if k in mp or k in bu))
     save(doc)
-    print('조각 %d개 → 이은 오개념 %d · 단원별로 갈린 짝 %d · 강의 없음 %d'
-          % (len(parts), added, paired, noted))
+    print('조각 %d개 → 이은 오개념 %d · 단원별로 갈린 짝 %d · 강의 없음 %d · 절까지 %d'
+          % (len(parts), added, paired, noted, len(doc['sec'])))
     if untouched:
         print('아직 아무도 안 본 자리 %d — 옮기지 않았다(집필이 끝나면 다시 부른다)'
               % untouched)
@@ -181,9 +313,12 @@ def emit():
     doc = load(MAP)
     lec = doc['lectures']
     base = doc.get('base') or ''
+    sc = doc.get('sec', {})
     fn = lambda n: (lec.get(n) or {}).get('file') or ''
-    m = {k: base + fn(v) for k, v in sorted(doc.get('map', {}).items()) if fn(v)}
-    u = {k: base + fn(v) for k, v in sorted(doc.get('byUnit', {}).items()) if fn(v)}
+    # 절이 적힌 자리는 '#s03' / '#q' 를 붙여 그 절로 바로 연다. 없으면 강의 머리.
+    tail = lambda k: ('#q' if sc.get(k) == 'q' else '#s' + sc[k]) if sc.get(k) else ''
+    m = {k: base + fn(v) + tail(k) for k, v in sorted(doc.get('map', {}).items()) if fn(v)}
+    u = {k: base + fn(v) + tail(k) for k, v in sorted(doc.get('byUnit', {}).items()) if fn(v)}
     src = os.path.join(ROOT, 'report.html')
     s = io.open(src, encoding='utf-8').read()
     out = 0
@@ -205,7 +340,9 @@ def emit():
             s = s[:at] + line + s[at:]
         out += len(table)
     io.open(src, 'w', encoding='utf-8').write(s)
-    print('report.html 에 LECUNIT %d · LECMAP %d 를 썼다.' % (len(u), len(m)))
+    anchored = sum(1 for k in list(m) + list(u) if sc.get(k))
+    print('report.html 에 LECUNIT %d · LECMAP %d 를 썼다 (절 anchor 붙은 주소 %d).'
+          % (len(u), len(m), anchored))
     return 0
 
 
@@ -220,6 +357,8 @@ def chunks(per=45):
         guess    이름만 보고 짐작한 강의. **믿으라고 주는 것이 아니라 의심하라고 준다.**
         pick     집필자가 채운다. 맞는 강의가 없으면 빈 글자열로 두고 why 에 적는다
         why      왜 그 강의인가 / 왜 없는가
+        sec      그 강의의 어느 절인가 — "03" 또는 확인 문제만 근거면 "q". --secs 가
+                 why 에서 초안을 적고, 사람이 고친다. byUnit 항목은 단원마다 하나인 사전.
 
     ⚠ `guess` 를 그대로 두는 것이 가장 흔한 실패다. 이름이 닮았다고 내용이
       같지는 않다 — 「결합 차수」가 그랬다. exam 의 lec-020 은 결합 차수를
@@ -266,7 +405,7 @@ def chunks(per=45):
         body = {}
         for m in part:
             body[m] = {'n': n[m], 'units': sorted(unit[m]), 'ex': ex.get(m, []),
-                       'guess': guess(m), 'pick': '', 'why': ''}
+                       'guess': guess(m), 'pick': '', 'why': '', 'sec': ''}
         io.open(os.path.join(WIP, key + '.json'), 'w', encoding='utf-8').write(
             json.dumps(body, ensure_ascii=False, indent=1) + '\n')
         made.append(key)
@@ -281,6 +420,8 @@ def main():
     check = '--check' in sys.argv
     if '--sync' in sys.argv:
         return sync()
+    if '--secs' in sys.argv:
+        return secs()
     if '--absorb' in sys.argv:
         return absorb()
     if '--emit' in sys.argv:
@@ -319,7 +460,42 @@ def main():
         print('못 이은 오개념 %d종(문항 %d개) — 까닭이 적혀 있다'
               % (len(un), sum(n.get(t, 0) for t in un)))
 
+    # ── 절(anchor) 표 ──
+    sc = doc.get('sec', {})
+    sec_key = sorted(k for k in sc if k not in mp and k not in bu)
+    sec_val = sorted(k for k, x in sc.items() if not re.match(r'^(\d\d|q)$', str(x)))
+    sec_ghost = []
+    exam_here = os.path.isdir(EXAM)
+    if exam_here:
+        cache = {}
+        for k, x in sorted(sc.items()):
+            if k in sec_key or k in sec_val:
+                continue
+            nn = bu.get(k) if k in bu else mp.get(k)
+            f = os.path.join(EXAM, (lec.get(nn) or {}).get('file') or '_')
+            if f not in cache:
+                cache[f] = io.open(f, encoding='utf-8').read() if os.path.isfile(f) else ''
+            want = 'id="q"' if x == 'q' else 'id="s%s"' % x
+            if want not in cache[f]:
+                sec_ghost.append('%s → %s#%s' % (k, nn, x))
+    names = set(mp) | bu_names
+    sec_names = {k.split(SEP, 1)[1] if SEP in k else k for k in sc}
+    print('절까지 이어진 오개념 %d종(%d 중) · 자리 %d(map·byUnit %d 중; 본문 절 %d · 확인 문제 %d)%s'
+          % (len(sec_names & names), len(names), len(sc), len(mp) + len(bu),
+             sum(1 for x in sc.values() if x != 'q'), sum(1 for x in sc.values() if x == 'q'),
+             '' if exam_here else ' — exam 저장소가 없어 anchor 는 형식만 봤다'))
+
     bad = False
+    if sec_key:
+        bad = True
+        print('\nsec 표의 키가 map·byUnit 에 없다 %d: %s' % (len(sec_key), ', '.join(sec_key[:8])))
+    if sec_val:
+        bad = True
+        print('\nsec 값이 두 자리 숫자도 "q" 도 아니다 %d: %s'
+              % (len(sec_val), ', '.join('%s=%r' % (k, sc[k]) for k in sec_val[:8])))
+    if sec_ghost:
+        bad = True
+        print('\nexam 강의 파일에 그 절 anchor 가 없다 %d: %s' % (len(sec_ghost), ', '.join(sec_ghost[:8])))
     if ghost:
         bad = True
         print('\n없는 강의로 보내는 자리 %d: %s' % (len(ghost), ', '.join(ghost[:10])))

@@ -443,15 +443,18 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
   var SPACED_DUE = [1, 4, 11];        // 1 → +3 → +7 (누적)
 
   function spacedReview(rows, currentRound) {
-    var ord = { '정시': 0, '첫번째시험': 0, '이번주 테스트': 0, '첫 응시': 0, '재시': 1, '재재시': 2 };
+    /* 시도 순서는 order()('재' 글자 수) — cumulative·서버 attOrd_ 와 같은 규칙. 옛 라벨 표는 재재재시 이상을 첫 응시로 오인했다. */
     var byRound = {};
     (rows || []).forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
     var byConcept = {};
     Object.keys(byRound).forEach(function (rd) {
-      var rs = byRound[rd].slice().sort(function (a, b) { return (ord[a.attempt] || 0) - (ord[b.attempt] || 0); });
+      var rs = byRound[rd].slice().sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
       var first = rs[0]; if (!first) return;
       (first.wrongMis || []).forEach(function (m) {
-        var o = byConcept[m] || (byConcept[m] = { rounds: {}, last: 0 });
+        /* 집계는 대표 이름으로 — cumulative(고질)·서버 cumulative_ 와 같은 규칙.
+           안 맞추면 `옥텟규칙` 과 `옥텟 규칙` 이 따로 떠서 같은 개념이 두 줄로 나온다. */
+        var mk = misCanon(m);
+        var o = byConcept[mk] || (byConcept[mk] = { rounds: {}, last: 0 });
         o.rounds[rd] = 1; o.last = Math.max(o.last, Number(rd));
       });
     });

@@ -113,7 +113,9 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
    없었다. 성적표(report.html)는 concept-lecture-dt.json 의 map[mis] 로 강의를
    건다. 여기서도 같은 표를 읽어 같은 규칙으로 건다(byUnit 은 이 화면에 단원이
    없어 안 쓴다). 표가 안 오면(망·주소) 지금처럼 이름만 보인다 — 화면은 그대로다.
-   표는 도전을 시작할 때 한 번만 읽는다(64KB — 들어오자마자 읽을 까닭이 없다). */
+   표는 도전을 시작할 때 한 번만 읽는다(64KB — 들어오자마자 읽을 까닭이 없다).
+   표의 sec[mis] 가 절을 알면 성적표와 같은 꼬리(#s03 본문 절 / #q 확인 문제)를
+   붙여 그 절로 바로 연다 — 있을 때만, 꼴이 맞을 때만(지어내지 않는다). */
 var LEC_BASE='https://chemistreal.github.io/exam/';
 var LEC=null, LEC_ASKED=false;
 function loadLec(){
@@ -126,7 +128,10 @@ function loadLec(){
 function lecFor(mis){
   if(!LEC||!mis) return '';
   var id=LEC.map[mis], l=id&&LEC.lectures[id];
-  return (l&&l.file) ? (LEC.base||LEC_BASE)+l.file : '';
+  if(!(l&&l.file)) return '';
+  var sec=(LEC.sec&&LEC.sec[mis])||'';
+  var tail = sec==='q' ? '#q' : (/^\d\d$/.test(sec) ? '#s'+sec : '');
+  return (LEC.base||LEC_BASE)+l.file+tail;
 }
 function chipHTML(m){
   var h=lecFor(m);

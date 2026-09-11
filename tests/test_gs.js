@@ -957,5 +957,41 @@ console.log('[게이트 form 예약] 재시·재재시 몫 두 문장은 게이�
   T('재시 문장은 게이트 확인 문장과 겹치지 않는다', rt.items.length === 1 && rt.items[0].s === 'A 옳다' && !g2.checks.some(c => c.s === rt.items[0].s), JSON.stringify([g2.checks.map(c => c.s), rt.items.map(x => x.s)]));
 }
 
+/* ── 오개념 대표 이름 · 서버 집계 ──────────────────────────────────
+   같은 개념이 시트에 두 이름으로 적혀 있다 — `불활성 기체` 는 2026-08 에 `비활성 기체` 로
+   표기를 통일했지만 그 전에 쌓인 행은 옛 표기 그대로다. 서버 cumulative_ 가 이름을 글자로
+   세면 두 회차를 틀린 학생의 고질이 한 회차짜리 둘로 갈려 «반복해서 막히는 개념» 에 안 뜬다.
+   chemengine.js 의 MIS_CANON·misCanon 과 같은 표로 세는지, 표가 같은지, 세 곳(엔진
+   cumulative · spacedReview · 서버 cumulative_)이 같은 답을 내는지 실제로 돌려 본다
+   (글자 비교는 tools/engine_sync.py --check 가 한다). */
+console.log('[오개념 대표 이름] 서버 cumulative_ 가 chemengine.js 와 같은 표로 센다');
+{
+  const CE = require('../chemengine.js');
+  T('apps-script.gs 에 misCanon 이 있다', typeof ctx.misCanon === 'function');
+  T('MIS_CANON 표가 chemengine.js 와 같다', JSON.stringify(ctx.MIS_CANON) === JSON.stringify(CE.MIS_CANON));
+  T("misCanon('불활성 기체') → '비활성 기체' (대표 이름은 그대로)",
+    ctx.misCanon('불활성 기체') === '비활성 기체' && ctx.misCanon('비활성 기체') === '비활성 기체');
+  const rows = [
+    { course: 'ch1', round: 1, attempt: '첫 응시', score: 70, pass: false, isTest: false, wrongMis: ['불활성 기체'], wrongAxes: {} },
+    { course: 'ch1', round: 2, attempt: '첫 응시', score: 75, pass: false, isTest: false, wrongMis: ['비활성 기체'], wrongAxes: {} },
+  ];
+  const c = ctx.cumulative_(rows);
+  T('불활성 기체(1회) + 비활성 기체(2회) → 고질 하나 · 비활성 기체 · 2회차',
+    c.chronicMis.length === 1 && c.chronicMis[0].mis === '비활성 기체' && c.chronicMis[0].rounds === 2, JSON.stringify(c.chronicMis));
+  const e = CE.cumulative(rows.map(r => Object.assign({ studentKey: 'k' }, r)))['k'];
+  T('chemengine.js cumulative 와 같은 고질', JSON.stringify(e.chronicMis) === JSON.stringify(c.chronicMis), JSON.stringify([e.chronicMis, c.chronicMis]));
+  const sr = CE.spacedReview(rows, 3);
+  T('chemengine.js spacedReview 도 대표 이름 하나로 센다(2회 틀림)', sr.length === 1 && sr[0].mis === '비활성 기체' && sr[0].times === 2, JSON.stringify(sr));
+  /* 대표 시도(finalScore)도 서버·엔진이 같은 규칙 — 처음 통과한 시도, 없으면 마지막 */
+  const rows2 = [
+    { course: 'ch1', round: 1, attempt: '첫 응시', score: 70, pass: false, isTest: false, wrongMis: [], wrongAxes: {} },
+    { course: 'ch1', round: 1, attempt: '재시', score: 85, pass: true, isTest: false, wrongMis: [], wrongAxes: {} },
+    { course: 'ch1', round: 1, attempt: '재재시', score: 60, pass: false, isTest: false, wrongMis: [], wrongAxes: {} },
+  ];
+  const c2 = ctx.cumulative_(rows2).trend[0], e2 = CE.cumulative(rows2.map(r => Object.assign({ studentKey: 'k' }, r)))['k'].trend[0];
+  T('대표 시도 = 처음 통과한 재시(85) · 서버와 엔진이 같다(마지막 60 아님)',
+    c2.finalScore === 85 && c2.finalAttempt === '재시' && e2.finalScore === 85 && e2.finalAttempt === '재시', JSON.stringify([c2, e2]));
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);
