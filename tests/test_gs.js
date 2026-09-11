@@ -827,5 +827,135 @@ console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
   ctx.setRoster_(before);
 }
 
+console.log('[재시 되감기 금지] 더 나중 시도가 있으면 낮은 시도는 안 받는다');
+{
+  /* 재시에 떨어진 학생이 성적표 링크로 다시 들어오면 앱이 «재시» 부터 다시 시작해
+     이전 재시 행을 덮어썼다(멱등 덮어쓰기가 되감기까지 받아 준 셈). 서버가 막는다:
+     같은 (학생·과목·회차)에 더 높은 시도가 있으면 낮은 시도는 attempt_regress.
+     같은 라벨의 재저장(네트워크 재시도)은 그대로 멱등. TEST 행과 실제 행은 서로 안 본다. */
+  const sh = SHEETS['결과'];
+  const before = sh._rows.length;
+  const base = { name: '검사', school: '가상중', year: '2', course: 'ch1', round: 7, isTest: false,
+    score: 60, pass: false, correctCount: 36, wrongCount: 24, wrongMis: ['몰 개념'], wrongAxes: {}, units: [], axes: [], answers: 'X'.repeat(60) };
+  const post = d => J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
+  let r1 = post(Object.assign({}, base, { attempt: '첫 응시' }));
+  T('첫 응시 저장 ok', r1.ok === true);
+  let r2 = post(Object.assign({}, base, { attempt: '재시', score: 70, retakeCids: 'CH1-001,CH1-002', retakeKeys: 'OX', retakeUnasked: '몰 개념|원자 구조' }));
+  T('재시 저장 ok', r2.ok === true);
+  /* 재시 행에 세 칸이 실린다 — 앞 19열은 그대로, 뒤에 붙는다. */
+  const rowRe = sh._rows.filter(r => r[5] === '가상중-검사' && r[10] === '재시')[0];
+  T('재시 행 뒤 세 칸: 재시개념·재시정답·재시미출제', !!rowRe && rowRe[19] === 'CH1-001,CH1-002' && rowRe[20] === 'OX' && rowRe[21] === '몰 개념|원자 구조', JSON.stringify(rowRe && rowRe.slice(18)));
+  T('헤더도 세 칸이 늘었다(자동 갱신)', sh._rows[0].length === 22 && sh._rows[0][19] === '재시개념' && sh._rows[0][21] === '재시미출제', JSON.stringify(sh._rows[0].slice(18)));
+  const rowFirst = sh._rows.filter(r => r[5] === '가상중-검사' && r[10] === '첫 응시')[0];
+  T('첫 응시 행의 세 칸은 빈칸', rowFirst[19] === '' && rowFirst[20] === '' && rowFirst[21] === '');
+  /* 되감기: 재시가 있는데 첫 응시를 다시 보내면 거부 */
+  let r3 = post(Object.assign({}, base, { attempt: '첫 응시', score: 95, pass: true }));
+  T('재시 뒤 첫 응시 재저장 -> attempt_regress', r3.ok === false && r3.error === 'attempt_regress' && /더 나중 시도/.test(r3.msg), JSON.stringify(r3));
+  T('거부된 저장은 시트를 안 건드린다', sh._rows.filter(r => r[5] === '가상중-검사' && r[10] === '첫 응시')[0][3] === 60);
+  /* 같은 라벨은 멱등 */
+  let r4 = post(Object.assign({}, base, { attempt: '재시', score: 72, retakeCids: 'CH1-001,CH1-002', retakeKeys: 'OX' }));
+  T('같은 라벨(재시) 재저장은 그대로 덮어쓴다', r4.ok === true && r4.updated === true && sh._rows.filter(r => r[5] === '가상중-검사' && r[10] === '재시').length === 1);
+  let r5 = post(Object.assign({}, base, { attempt: '재재시', score: 74 }));
+  T('재재시 저장 ok', r5.ok === true);
+  let r6 = post(Object.assign({}, base, { attempt: '재시', score: 71 }));
+  T('재재시 뒤 재시 -> attempt_regress', r6.ok === false && r6.error === 'attempt_regress');
+  /* TEST 행은 실제 행을 안 본다 */
+  let r7 = post(Object.assign({}, base, { attempt: '첫 응시', isTest: true, score: 50 }));
+  T('TEST 첫 응시는 실제 재재시가 있어도 저장된다', r7.ok === true);
+  /* doGet rows 에도 세 칸이 나온다 */
+  const g = J(ctx.doGet({ parameter: { student: ctx.pubId_('가상중-검사') } }));
+  const gr = (g.rows || []).filter(x => x.attempt === '재시')[0];
+  T('doGet rows 에 retakeCids·retakeKeys·retakeUnasked', !!gr && gr.retakeCids === 'CH1-001,CH1-002' && gr.retakeKeys === 'OX' && gr.retakeUnasked === '', JSON.stringify(gr && [gr.retakeCids, gr.retakeKeys, gr.retakeUnasked]));
+  const P1 = ctx.computePending_(3650);
+  const pr = (P1.active || []).concat(P1.stale || []).filter(x => x.studentKey === '가상중-검사' && x.course === 'ch1')[0];
+  T('재재시까지 실패 -> needs1on1:true', !!pr && pr.needs1on1 === true && pr.lastAttempt === '재재시', JSON.stringify(pr && [pr.lastAttempt, pr.needs1on1]));
+  const pk = (P1.active || []).concat(P1.stale || []).filter(x => x.name === '김민준')[0];
+  if (pk) T('정시만 실패한 학생은 needs1on1:false', pk.needs1on1 === false);
+  sh._rows.length = before;                       // 심은 줄을 걷어낸다
+}
+
+console.log('[이미 통과 판정] TEST 통과 행은 실제 재시를 막지 않는다 (hasPassed_ 도 isTest 쪽만 본다)');
+{
+  /* index.html enterRetake 는 «같은 쪽(TEST 여부)의 통과 행» 만 본다. 서버 hasPassed_ 가 TEST 를 안 가리면
+     실제 학생의 유일한 통과 행이 TEST 행일 때 화면은 게이트·재시를 내주고 서버만 already_passed 로 거부해
+     «시트에 저장되지 않았습니다» 가 떴다. 서버도 같은 쪽만 본다. */
+  const sh = SHEETS['결과'];
+  const before = sh._rows.length;
+  const base = { name: '검사둘', school: '가상중', year: '2', course: 'ch1', round: 9,
+    score: 60, pass: false, correctCount: 36, wrongCount: 24, wrongMis: [], wrongAxes: {}, units: [], axes: [], answers: 'X'.repeat(60) };
+  const post = d => J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
+  /* 같은 (학생·과목·회차·시도) 는 TEST 여부와 무관하게 한 행이다(findRow_ 멱등 덮어쓰기). 그래서 TEST 통과 행은
+     다른 라벨(재시)로 둔다 — 선생님이 ?test=1 로 재시를 시험해 본 뒤 실제 학생이 첫 응시를 본 꼴. */
+  T('TEST 재시 통과 저장', post(Object.assign({}, base, { attempt: '재시', isTest: true, score: 95, pass: true })).ok === true);
+  T('실제 첫 응시 미달 저장', post(Object.assign({}, base, { attempt: '첫 응시', isTest: false })).ok === true);
+  T('hasPassed_ 실제 쪽: TEST 통과 행은 안 센다', ctx.hasPassed_(sh, '가상중-검사둘', 'ch1', 9, false) === false);
+  T('hasPassed_ TEST 쪽: TEST 통과 행을 센다', ctx.hasPassed_(sh, '가상중-검사둘', 'ch1', 9, true) === true);
+  const r1 = post(Object.assign({}, base, { attempt: '재시', isTest: false, score: 70, retakeCids: 'CH1-001', retakeKeys: 'O' }));
+  T('TEST 통과 행만 있으면 실제 재시는 저장된다(already_passed 아님)', r1.ok === true, JSON.stringify(r1));
+  const r2 = post(Object.assign({}, base, { attempt: '재시', isTest: false, score: 90, pass: true, retakeCids: 'CH1-001', retakeKeys: 'O' }));
+  T('실제 재시 통과 재저장(같은 라벨·멱등)', r2.ok === true && r2.updated === true);
+  const r3 = post(Object.assign({}, base, { attempt: '재재시', isTest: false, score: 50 }));
+  T('실제 통과 행이 있으면 실제 재재시는 already_passed', r3.ok === false && r3.error === 'already_passed' && /이미 통과/.test(r3.msg), JSON.stringify(r3));
+  sh._rows.length = before;
+}
+
+console.log('[재시 세 칸 읽기] T·U·V 잔여 값은 재시 칸으로 읽지 않는다 (retakeCols_)');
+{
+  /* 이 열들에는 전체열 수식이 남아 있던 적이 있다. 잔여 값이 재시개념·재시정답으로 나가면 index.html 의
+     문항 대조가 «불일치» 로 빠지고 성적표가 엉뚱한 값을 개념 목록으로 읽는다. 앱이 적은 꼴만 받는다. */
+  const D = new Date('2026-07-01T01:00:00Z');
+  const row = (att, t, u, v) => ['검사셋', 'L', D, 60, '미달', '가상중-검사셋', '가상중', '2', 'ch1', 9, att, 36, 24, '', '{}', '', '[]', '[]', 'X'.repeat(60), t, u, v];
+  let m = ctx.mapRow_(row('첫 응시', '#N/A', 'OX', '뭔가'));
+  T('첫 응시 행의 세 칸은 무엇이 있어도 빈칸', m.retakeCids === '' && m.retakeKeys === '' && m.retakeUnasked === '', JSON.stringify([m.retakeCids, m.retakeKeys, m.retakeUnasked]));
+  m = ctx.mapRow_(row('재시', 'CH1-001,CH1-002,', 'OXO', '몰 개념|원자 구조'));
+  T('재시 행의 앱 꼴(cid 목록 · O/X · 빈 토큰 허용)은 그대로', m.retakeCids === 'CH1-001,CH1-002,' && m.retakeKeys === 'OXO' && m.retakeUnasked === '몰 개념|원자 구조', JSON.stringify(m));
+  m = ctx.mapRow_(row('재시', 'CH1-001,CH1-002', '#REF!', ''));
+  T('재시정답이 O/X 꼴이 아니면 세 칸 모두 빈칸(옛 행 취급)', m.retakeCids === '' && m.retakeKeys === '' && m.retakeUnasked === '');
+  m = ctx.mapRow_(row('재시', 'CH1-001,CH1-002', 'OXO', ''));
+  T('개념 수와 정답 수가 다르면 세 칸 모두 빈칸', m.retakeCids === '' && m.retakeKeys === '');
+  m = ctx.mapRow_(row('재시', 12345, 'OX', ''));
+  T('개념 칸이 숫자 잔여값이면 빈칸', m.retakeCids === '' && m.retakeKeys === '', JSON.stringify(m.retakeCids));
+  m = ctx.mapRow_(row('재재시', '', '', ''));
+  T('빈칸은 빈칸', m.retakeCids === '' && m.retakeKeys === '' && m.retakeUnasked === '');
+  m = ctx.mapRow_(row('재시', undefined, undefined, undefined));
+  T('옛 행(칸 자체가 없음)도 빈칸', m.retakeCids === '' && m.retakeKeys === '' && m.retakeUnasked === '');
+}
+
+console.log('[게이트 form 예약] 재시·재재시 몫 두 문장은 게이트가 안 쓴다');
+{
+  const CE = require('../chemengine.js');
+  const FB = {
+    'T-2': { m: '둘짜리', forms: [{ a: 'O', s: 'A 옳다', f: 'A 옳다', w: '' }, { a: 'X', s: 'A 틀리다', f: 'A 옳다', w: '' }] },
+    'T-5': { m: '다섯짜리', forms: [1, 2, 3, 4, 5].map(i => ({ a: 'O', s: '문장' + i, f: '문장' + i, w: '' })) },
+    'T-3': { m: '셋짜리', forms: [1, 2, 3].map(i => ({ a: 'O', s: '셋' + i, f: '셋' + i, w: '' })) },
+  };
+  T('GATE_RESERVE = 2', CE.GATE_RESERVE === 2);
+  /* form 2개 · 틀린 문장도 옳은 문장도 form 이 아닌 경우 → 새로 쓰는 form 0, 폴백 2 */
+  let seen = {};
+  let gt = CE.buildGate([{ c: 'T-2', unit: 'u', mis: '둘짜리', fix: '따로 적은 옳은 문장', why: '', s: '학생이 틀린 문장', a: 'X' }], FB, seen).gates[0];
+  T('form 2개: 새로 쓰는 form 0', gt.checks.every(c => !FB['T-2'].forms.some(f => CE.norm(f.s) === CE.norm(c.s))), JSON.stringify(gt.checks.map(c => c.s)));
+  T('form 2개: 폴백 2 (① 옳은 문장 O, ② 틀린 문장을 원래 정답으로)', gt.checks.length === 2 && gt.checks[0].s === '따로 적은 옳은 문장' && gt.checks[0].a === 'O' && gt.checks[1].s === '학생이 틀린 문장' && gt.checks[1].a === 'X', JSON.stringify(gt.checks));
+  T('form 2개: 둘 다 seen 에 안 들어간다(재시 몫)', !seen[CE.norm('A 옳다')] && !seen[CE.norm('A 틀리다')]);
+  T('check(첫 확인) 도 폴백이다', gt.check === gt.checks[0] && gt.fallback === true);
+  /* 실제 자료의 꼴: fix 가 곧 O form 이다(form≤2 개념 339문항 전부). 그 옳은 문장은 form 이라 안 쓴다 → ② 만 */
+  seen = { [CE.norm('A 틀리다')]: 1 };
+  gt = CE.buildGate([{ c: 'T-2', unit: 'u', mis: '둘짜리', fix: 'A 옳다', why: '', s: 'A 틀리다', a: 'X' }], FB, seen).gates[0];
+  T('fix 가 form 이면 안 쓴다: 확인 문제 1개(틀린 문장), O form 은 재시 몫으로 남는다', gt.checks.length === 1 && gt.checks[0].s === 'A 틀리다' && gt.checks[0].a === 'X' && !seen[CE.norm('A 옳다')], JSON.stringify(gt.checks));
+  /* form 5개 → 새 form 2개, seen 에 들어간다 */
+  seen = {};
+  gt = CE.buildGate([{ c: 'T-5', unit: 'u', mis: '다섯짜리', fix: 'x', why: '', s: '문장1', a: 'O' }], FB, seen).gates[0];
+  T('form 5개: 새로 쓰는 form 2', gt.checks.length === 2 && gt.checks.every(c => FB['T-5'].forms.some(f => f.s === c.s)) && Object.keys(seen).length === 2, JSON.stringify(gt.checks.map(c => c.s)));
+  T('form 5개: 폴백 아님', gt.fallback === false && gt.checks.every(c => !c.fallback));
+  /* form 3개 → 새 form 1개 + 폴백 1개 */
+  seen = {};
+  gt = CE.buildGate([{ c: 'T-3', unit: 'u', mis: '셋짜리', fix: '옳은 문장 따로', why: '', s: '학생 오답', a: 'X' }], FB, seen).gates[0];
+  T('form 3개: 새 form 1 + 폴백 1', gt.checks.length === 2 && FB['T-3'].forms.some(f => f.s === gt.checks[0].s) && gt.checks[1].fallback === true, JSON.stringify(gt.checks.map(c => c.s)));
+  /* 게이트가 남긴 form 을 재시가 실제로 쓴다 — 방금 답을 본 문장이 재시에 그대로 나오지 않는다 */
+  seen = { [CE.norm('A 틀리다')]: 1 }; const ws = { [CE.norm('A 틀리다')]: 1 };
+  const g2 = CE.buildGate([{ c: 'T-2', unit: 'u', mis: '둘짜리', fix: 'A 옳다', why: '', s: 'A 틀리다', a: 'X' }], FB, seen).gates[0];
+  const rt = CE.buildRetake(2, [{ v: 'C', items: [{ c: 'T-2', u: 'u', a: 'X', s: 'A 틀리다', f: 'A 옳다', w: '' }] }], ['T-2'], FB, seen, ws);
+  T('재시 문장은 게이트 확인 문장과 겹치지 않는다', rt.items.length === 1 && rt.items[0].s === 'A 옳다' && !g2.checks.some(c => c.s === rt.items[0].s), JSON.stringify([g2.checks.map(c => c.s), rt.items.map(x => x.s)]));
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

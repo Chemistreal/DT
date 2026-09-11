@@ -22,7 +22,7 @@ body{font-family:'Noto Sans CJK KR','Noto Sans KR',system-ui,sans-serif;margin:0
 .stat{flex:1;min-width:96px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 12px;text-align:center}
 .stat .n{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
 .stat .l{font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:600}
-.stat.act .n{color:var(--red)} .stat.stl .n{color:var(--muted)}
+.stat.act .n{color:var(--red)} .stat.one .n{color:var(--amber)} .stat.stl .n{color:var(--muted)}
 .sec-h{font-size:14px;font-weight:800;color:var(--char);margin:18px 0 9px;display:flex;align-items:center;gap:7px}
 .sec-h .tag{font-size:11.5px;font-weight:700;color:#fff;background:var(--char);border-radius:5px;padding:1px 7px}
 .row{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:8px;
@@ -748,7 +748,7 @@ function rowHTML(p){
     +'<div class="rname">'+esc(p.name)+'</div>'
     +'<div class="rsub">'+sub+'</div>'
     +'<div class="rwhat"><b>'+(COURSE[p.course]||esc(p.course))+' '+esc(p.round)+'회</b> · '
-      +esc(p.lastAttempt)+' '+esc(p.score)+'점 미통과 → <span class="rneed">'+esc(p.nextNeeded)+' 미응시</span></div>'
+      +esc(p.lastAttempt)+' '+esc(p.score)+'점 미통과 → <span class="rneed">'+(p.needs1on1?'선생님과 1:1 (재재시까지 실패)':esc(p.nextNeeded)+' 미응시')+'</span></div>'
     +whyHTML(p)
     +(p.reportLink?'<div class="copygrp" data-link="'+escAttr(p.reportLink)+'" data-name="'+escAttr(p.name)+'" data-course="'+escAttr(p.course)+'" data-round="'+escAttr(p.round)+'" data-att="'+escAttr(p.lastAttempt)+'" data-score="'+escAttr(p.score)+'" data-next="'+escAttr(p.nextNeeded)+'">'
     +'<div class="cglab">카톡 안내 복사</div>'
@@ -793,10 +793,12 @@ function render(P, ABS, absFail, PASS, MERGE){
   MERGE=_LASTMERGE;
   var a0=P.active||[], s0=P.stale||[];
   var hid=pruneHidden(a0.concat(s0));
-  var a=[], s=[], hidden=[];
-  a0.forEach(function(p){ (hid[hkey(p)]?hidden:a).push(p); });
+  var a=[], s=[], hidden=[], one=[];
+  /* 재재시까지 떨어진 학생(needs1on1)은 재시 독촉 줄이 아니라 «선생님과 1:1» 로 따로 묶는다.
+     창구가 flag 만 얹어 보내므로 문자·ZIP·숨김은 그대로 쓴다. */
+  a0.forEach(function(p){ (hid[hkey(p)]?hidden:(p.needs1on1?one:a)).push(p); });
   s0.forEach(function(p){ (hid[hkey(p)]?hidden:s).push(p); });
-  _ACTIVE=a.slice();
+  _ACTIVE=a.concat(one);
   /* 미응시 수는 실제 미응시자만 세되, 카드는 **모든 반**을 세운다 —
      거른 반은 사라진 반이고, 사라진 반은 고칠 수도 없다. */
   var absAll=(ABS&&ABS.classes||[]);
@@ -807,6 +809,7 @@ function render(P, ABS, absFail, PASS, MERGE){
   h+='<div class="bar">'
     +'<div class="stat exabs"><div class="n">'+absN+'</div><div class="l">시험 미응시</div></div>'
     +'<div class="stat act"><div class="n">'+a.length+'</div><div class="l">재시 필요 (2주 내)</div></div>'
+    +'<div class="stat one"><div class="n">'+one.length+'</div><div class="l">선생님과 1:1</div></div>'
     +'<div class="stat stl"><div class="n">'+s.length+'</div><div class="l">이탈 추정 (2주+)</div></div>'
     +'<div class="stat pss"><div class="n">'+pass.length+'</div><div class="l">통과 (2주 내)</div></div>'
     +'<div class="stat"><div class="n">'+(P.activeDays||14)+'</div><div class="l">기준 일수</div></div></div>';
@@ -821,9 +824,15 @@ function render(P, ABS, absFail, PASS, MERGE){
     h+=absAll.map(absentClassHTML).join('');
   }
 
-  h+='<div class="sec-h">재시 필요 <span class="tag">'+a.length+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 오래된 순</span>'+(a.length?'<button class="zipbtn" style="margin-left:auto" onclick="zipRetakePending(this)">재시지 ZIP ('+a.length+'명)</button>':'')+'</div>';
+  h+='<div class="sec-h">재시 필요 <span class="tag">'+a.length+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 오래된 순</span>'+(_ACTIVE.length?'<button class="zipbtn" style="margin-left:auto" onclick="zipRetakePending(this)">재시지 ZIP ('+_ACTIVE.length+'명'+(one.length?' · 1:1 '+one.length+'명 포함':'')+')</button>':'')+'</div>';
   if(!a.length){ h+='<div class="empty">'+(hidden.length?'표시할 재시 미응시 학생이 없습니다. (숨김 '+hidden.length+'명)':'2주 이내 재시 미응시 학생이 없습니다.')+'</div>'; }
   else{ h+='<div class="muted-note">정시(또는 재시) 미통과 후 다음 재시를 아직 보지 않은 학생입니다. 토요일 수업 전에 확인하세요. 안내를 보낸 학생은 행 오른쪽 <b>안내함 · 숨김</b> 버튼으로 이 페이지에서만 감출 수 있습니다.</div>'; h+=a.map(rowHTML).join(''); }
+
+  /* 재재시까지 실패한 학생. 앱은 재재시 뒤 «강의록 복습 · 선생님과 1:1» 로 보낸다 — 여기서도 재시 독촉과
+     같은 줄에 두지 않는다. 문자 단추는 그대로 둔다(문안은 선생님 것). */
+  h+='<div class="sec-h">선생님과 1:1 (재재시까지 실패) <span class="tag" style="background:var(--amber)">'+one.length+'</span><span style="font-weight:600;color:var(--muted);font-size:11.5px">· 2주 내</span></div>';
+  if(!one.length){ h+='<div class="empty">재재시까지 떨어진 학생이 없습니다.</div>'; }
+  else{ h+='<div class="muted-note">정시·재시·재재시 세 번 모두 통과선에 못 미친 학생입니다. 앱은 이 학생을 강의록 복습으로 보내고 추가 재시를 내지 않습니다. 수업에서 1:1로 점검할 학생이며, 아래 문자 단추는 재시 안내 문안 그대로입니다. 위 «재시지 ZIP» 은 이 학생의 재재재시지도 함께 만듭니다.</div>'; h+=one.map(rowHTML).join(''); }
 
   if(hidden.length){
     h+='<div class="hidwrap"><details><summary>안내 완료로 숨긴 학생 '+hidden.length+'명 ▾ <span style="font-weight:600">(이 브라우저에서만 적용)</span></summary>'
@@ -865,7 +874,8 @@ function demo(){
     {name:'성춘향',school:'한별중',year:'2',course:'ch2',round:5,lastAttempt:'정시',score:73,nextNeeded:'재시',days:9,lastDate:'6/11',reportLink:R+'%ED%95%9C%EB%B3%84%EC%A4%91-%EC%84%B1%EC%B6%98%ED%96%A5'},
     {name:'임꺽정',school:'두레중',year:'3',course:'ch2',round:7,lastAttempt:'재시',score:78,nextNeeded:'재재시',days:5,lastDate:'6/15',reportLink:R+'demo2'},
     {name:'심청',school:'새얼중',year:'2',course:'ch1',round:12,lastAttempt:'정시',score:68,nextNeeded:'재시',days:3,lastDate:'6/17',reportLink:R+'demo3'},
-    {name:'놀부',school:'가온중',year:'1',course:'gc',round:3,lastAttempt:'정시',score:71,nextNeeded:'재시',days:2,lastDate:'6/18',reportLink:R+'demo4'}
+    {name:'놀부',school:'가온중',year:'1',course:'gc',round:3,lastAttempt:'정시',score:71,nextNeeded:'재시',days:2,lastDate:'6/18',reportLink:R+'demo4'},
+    {name:'데모학생',school:'데모중',year:'2',course:'ch2',round:6,lastAttempt:'재재시',score:74,nextNeeded:'재재재시',needs1on1:true,days:4,lastDate:'6/16',reportLink:R+'demo7'}
   ], stale:[
     {name:'정민서',school:'개포중',year:'3',course:'ch2',round:4,lastAttempt:'정시',score:62,nextNeeded:'재시',days:23,lastDate:'5/28',reportLink:R+'demo5'},
     {name:'한지우',school:'구룡중',year:'2',course:'ch1',round:9,lastAttempt:'재시',score:75,nextNeeded:'재재시',days:31,lastDate:'5/20',reportLink:R+'demo6'}

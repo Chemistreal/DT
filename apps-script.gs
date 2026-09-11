@@ -6,7 +6,9 @@
    ============================================================ */
 var SHEET_ID = '1WVK-m8PUVm9Hg7bvxuIrk3_VzxPqO4vym1qpatoSM7s';
 var TAB = '결과';
-var HEADERS = ['이름','리포트링크','시각','점수','통과','학생키','학교','학년','과목','회차','시도','맞음','틀림','오개념','축','테스트','단원상세','축상세','답안'];
+/* 마지막 세 열(재시개념·재시정답·재시미출제)은 재시 행에만 값이 있다 — 재시 문항의 개념 cid 목록(',')·정답 O/X
+   문자열·이전 시도에서 틀렸는데 이번 재시에 안 실린 오개념 이름('|'). 앞 19열(r[0]~r[18])의 번호는 절대 안 옮긴다. */
+var HEADERS = ['이름','리포트링크','시각','점수','통과','학생키','학교','학년','과목','회차','시도','맞음','틀림','오개념','축','테스트','단원상세','축상세','답안','재시개념','재시정답','재시미출제'];
 
 /* ---- 접근 제어 (프로젝트 설정 > 스크립트 속성) ----
    ADMIN_TOKEN  : 관리자 코드. roster/pending/absentees 조회, 명단 저장, 전체 조회(all=1), exclude, 메일 발송.
@@ -73,14 +75,32 @@ function findRow_(sh, studentKey, course, round, attempt) {
   return -1;
 }
 
-/* 이 학생이 해당 (과목·회차)를 이미 통과했는지 (통과=E열) */
-function hasPassed_(sh, key, course, round) {
+/* 같은 (학생키·과목·회차)에 저장된 가장 나중 시도의 순서(attOrd_). 없으면 -1.
+   TEST 행과 실제 행은 서로 안 본다 — isTest 쪽만 센다. */
+function maxAttemptOrd_(sh, key, course, round, isTest) {
+  if (!key) return -1;
+  var data = sh.getDataRange().getValues(), mx = -1;
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (String(r[5]) === String(key) && String(r[8]) === String(course) &&
+        String(r[9]) === String(round) && ((r[15] === 'TEST') === !!isTest)) {
+      var o = attOrd_(r[10]); if (o > mx) mx = o;
+    }
+  }
+  return mx;
+}
+
+/* 이 학생이 해당 (과목·회차)를 이미 통과했는지 (통과=E열).
+   isTest 쪽만 본다 — TEST 행과 실제 행은 서로 안 본다(maxAttemptOrd_·index.html enterRetake 와 같은 판단).
+   예전에는 TEST 통과 행 하나가 실제 학생의 재시 저장을 already_passed 로 막았다(화면은 게이트·재시를 내주고
+   서버만 거부해 «시트에 저장되지 않았습니다» 가 떴다). */
+function hasPassed_(sh, key, course, round, isTest) {
   if (!key) return false;
   var data = sh.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
     if (String(r[5]) === String(key) && String(r[8]) === String(course) &&
-        String(r[9]) === String(round) && r[4] === '통과') return true;
+        String(r[9]) === String(round) && ((r[15] === 'TEST') === !!isTest) && r[4] === '통과') return true;
   }
   return false;
 }
@@ -98,20 +118,20 @@ function lastDataRow_(sh) {
 }
 
 /* ★ 편집기에서 1회 실행: 결과 탭의 빈 유령 행을 제거하고 실데이터만 남긴다.
-   - 학생키(F)가 있는 행만 유지(헤더 포함), A~S 19열만 보존(T+ 잔여 수식 제거)
+   - 학생키(F)가 있는 행만 유지(헤더 포함), HEADERS 열만 보존(그 뒤 잔여 수식 제거)
    - 남은 여분 물리 행 삭제로 시트를 실제 크기로 축소
    - 데이터는 보존됨(정렬만 위로 당겨짐). 실행 후 색을 쓰면 applySheetColors 재실행 권장. */
 function compactResultSheet() {
   var sh = sheet_();                                        // 결과 탭
-  var last = sh.getLastRow(), lastCol = Math.max(19, sh.getLastColumn());
+  var last = sh.getLastRow(), lastCol = Math.max(HEADERS.length, sh.getLastColumn());
   if (last < 2) { Logger.log('데이터 없음'); return; }
   var data = sh.getRange(1, 1, last, lastCol).getValues();
-  var keep = [data[0].slice(0, 19)];                        // 헤더(A~S)
+  var keep = [data[0].slice(0, HEADERS.length)];            // 헤더
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][5] || '').trim()) keep.push(data[i].slice(0, 19));   // F 학생키 있는 행만
+    if (String(data[i][5] || '').trim()) keep.push(data[i].slice(0, HEADERS.length));   // F 학생키 있는 행만
   }
-  sh.clearContents();                                       // 값·수식 제거(T+ 전체열 수식 포함), 서식은 유지
-  sh.getRange(1, 1, keep.length, 19).setValues(keep);
+  sh.clearContents();                                       // 값·수식 제거(뒤쪽 전체열 수식 포함), 서식은 유지
+  sh.getRange(1, 1, keep.length, HEADERS.length).setValues(keep);
   var maxRows = sh.getMaxRows();
   if (maxRows > keep.length + 2) sh.deleteRows(keep.length + 1, maxRows - keep.length - 2);  // 여분 행 삭제
   SpreadsheetApp.flush();
@@ -128,7 +148,7 @@ function compactResultSheet() {
    - 삭제된 행은 로그에 남김. 실행 후 색을 쓰면 applySheetColors 재실행 권장. */
 function cleanupPassedRetakes() {
   var sh = sheet_();
-  var last = sh.getLastRow(), lastCol = Math.max(19, sh.getLastColumn());
+  var last = sh.getLastRow(), lastCol = Math.max(HEADERS.length, sh.getLastColumn());
   if (last < 2) { Logger.log('데이터 없음'); return; }
   var data = sh.getRange(1, 1, last, lastCol).getValues();
   var minPassOrd = {};                                     // 그룹키 -> 통과한 가장 이른 시도차수
@@ -139,7 +159,7 @@ function cleanupPassedRetakes() {
       if (minPassOrd[gk] == null || o < minPassOrd[gk]) minPassOrd[gk] = o;
     }
   }
-  var keep = [data[0].slice(0, 19)];                       // 헤더
+  var keep = [data[0].slice(0, HEADERS.length)];           // 헤더
   var removed = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i]; var key = String(r[5] || '').trim();
@@ -149,11 +169,11 @@ function cleanupPassedRetakes() {
       removed.push((r[0] || '') + ' / ' + r[8] + ' ' + r[9] + '회 / ' + r[10] + ' / ' + r[3] + '점 (통과 후 불필요)');
       continue;                                            // 삭제 대상: 통과 시도보다 뒤의 재시
     }
-    keep.push(r.slice(0, 19));
+    keep.push(r.slice(0, HEADERS.length));
   }
   if (!removed.length) { Logger.log('정리 대상 없음 (통과 후 남은 불필요한 재시가 없습니다)'); return; }
   sh.clearContents();
-  sh.getRange(1, 1, keep.length, 19).setValues(keep);
+  sh.getRange(1, 1, keep.length, HEADERS.length).setValues(keep);
   var maxRows = sh.getMaxRows();
   if (maxRows > keep.length + 2) sh.deleteRows(keep.length + 1, maxRows - keep.length - 2);
   SpreadsheetApp.flush();
@@ -169,7 +189,7 @@ function cleanupPassedRetakes() {
 function untagMistaggedJeongsi() {
   var sh = sheet_();
   var last = sh.getLastRow(); if (last < 2) { Logger.log('데이터 없음'); return; }
-  var data = sh.getRange(1, 1, last, 19).getValues();
+  var data = sh.getRange(1, 1, last, HEADERS.length).getValues();
   var hasRealRetake = {};                                   // 그룹키 -> 비테스트 재시 존재
   for (var i = 1; i < data.length; i++) {
     var r = data[i]; var key = String(r[5] || '').trim(); if (!key) continue;
@@ -212,7 +232,7 @@ function untagMistaggedJeongsi() {
 function mergeScan_() {
   var sh = sheet_(); var last = sh.getLastRow();
   if (last < 2) return { groups: [], schoolFix: [] };
-  var data = sh.getRange(1, 1, last, 19).getValues();
+  var data = sh.getRange(1, 1, last, HEADERS.length).getValues();
   var idx = {}, firstAt = {}, rowsOf = {}, fix = {};
   for (var i = 1; i < data.length; i++) {
     /* 표기 고치기는 학생키와 무관하다 — keyOf_ 가 이미 normSchool_ 을 거치므로
@@ -262,7 +282,7 @@ function applyMergeScan_() {
   scan.groups.forEach(function (g) {
     g.from.forEach(function (f) { remap[f.key] = g.canon; log.push(f.key + '  =>  ' + g.canon); });
   });
-  var data = sh.getRange(1, 1, last, 19).getValues();
+  var data = sh.getRange(1, 1, last, HEADERS.length).getValues();
   var link = {}, keys = 0, fixed = 0;
   for (var i = 1; i < data.length; i++) {
     var raw = String(data[i][6] || ''), ns = normSchool_(raw);
@@ -352,15 +372,22 @@ function doPost(e) {
       _key = _selfKey;
     }
     // 이미 통과한 회차엔 재시(재 포함) 저장 거부 - 통과 학생은 재시 볼 필요 없음
-    if (attOrd_(d.attempt || '') >= 1 && !d.isTest && hasPassed_(sh, _key, d.course || '', d.round || '')) {
+    if (attOrd_(d.attempt || '') >= 1 && !d.isTest && hasPassed_(sh, _key, d.course || '', d.round || '', !!d.isTest)) {
       return json_({ ok: false, error: 'already_passed', msg: '이미 통과한 회차라 재시가 저장되지 않았습니다.' });
+    }
+    /* 더 나중 시도가 이미 있으면 낮은 시도는 안 받는다. 재시 링크로 다시 들어온 학생이 «재시» 부터
+       다시 시작해 이전 재시 행을 덮어쓰던 일을 막는다. 같은 라벨의 재저장(네트워크 재시도)은 그대로
+       멱등(덮어쓰기). TEST 행과 실제 행은 서로 안 본다. */
+    if (maxAttemptOrd_(sh, _key, d.course || '', d.round || '', !!d.isTest) > attOrd_(d.attempt || '')) {
+      return json_({ ok: false, error: 'attempt_regress', msg: '이미 더 나중 시도가 저장돼 있어 이 시도는 저장하지 않았습니다.' });
     }
     var rowVals = [
       d.name || '', linkOf_(_key), new Date(), d.score || 0, d.pass ? '통과' : '미달', _key, normSchool_(d.school || ''), normGrade_(d.year || ''),
       d.course || '', d.round || '', d.attempt || '',
       d.correctCount || 0, d.wrongCount || 0, (d.wrongMis || []).join(' / '),
       JSON.stringify(d.wrongAxes || {}), d.isTest ? 'TEST' : '',
-      JSON.stringify(d.units || []), JSON.stringify(d.axes || []), d.answers || ''
+      JSON.stringify(d.units || []), JSON.stringify(d.axes || []), d.answers || '',
+      String(d.retakeCids || ''), String(d.retakeKeys || ''), String(d.retakeUnasked || '')   // 재시 행에만 값이 있다
     ];
     var existing = findRow_(sh, _key, d.course || '', d.round || '', d.attempt || '');
     if (existing > 0) { sh.getRange(existing, 1, 1, rowVals.length).setValues([rowVals]); } // 멱등: 덮어쓰기
@@ -374,6 +401,7 @@ function doPost(e) {
 
 /* 살아있는 리포트 데이터 (GET ?student=학교-이름 → 누적 JSON) ---------- */
 function mapRow_(r) {
+  var rk = retakeCols_(r);
   return {
     name: r[0], reportLink: r[1], date: r[2],
     score: Number(r[3]), pass: r[4] === '통과',
@@ -381,8 +409,22 @@ function mapRow_(r) {
     course: r[8], round: Number(r[9]), attempt: r[10],
     wrongMis: String(r[13] || '').split(' / ').filter(String),
     wrongAxes: parse_(r[14]), isTest: r[15] === 'TEST',
-    units: parseA_(r[16]), axes: parseA_(r[17]), answers: r[18] || ''
+    units: parseA_(r[16]), axes: parseA_(r[17]), answers: r[18] || '',
+    retakeCids: rk.cids, retakeKeys: rk.keys, retakeUnasked: rk.unasked
   };
+}
+/* 재시 세 칸(T·U·V)은 재시 행에만, 앱이 적은 꼴(개념 cid ',' 목록 · O/X 문자열)로만 읽는다.
+   이 열들에는 예전에 전체열 수식이 남아 있던 적이 있다(lastDataRow_·compactResultSheet 주석). 잔여 값이
+   그대로 나가면 index.html 의 문항 대조가 «불일치» 로 빠지고 성적표가 엉뚱한 값을 개념 목록으로 읽는다.
+   꼴이 다르면 세 칸을 통째로 빈칸으로 준다(옛 행과 같은 취급). */
+function retakeCols_(r) {
+  var none = { cids: '', keys: '', unasked: '' };
+  if (attOrd_(r[10]) < 1) return none;                                   // 첫 응시 행에는 값이 없어야 한다
+  var cids = String(r[19] == null ? '' : r[19]), keys = String(r[20] == null ? '' : r[20]);
+  if (!cids && !keys) return none;
+  if (!/^[OX]+$/.test(keys) || !/^[A-Za-z0-9_\-]*(,[A-Za-z0-9_\-]*)*$/.test(cids)) return none;
+  if (cids.split(',').length !== keys.length) return none;               // 문항 수가 서로 맞아야 한다
+  return { cids: cids, keys: keys, unasked: String(r[21] == null ? '' : r[21]) };
 }
 /* ── 읽기 창구 하나 ────────────────────────────────────────────────
    **평범한 객체**를 돌려준다(ContentService 출력이 아니다). 그래야 묶음
@@ -800,6 +842,9 @@ function computePending_(activeDays) {
       studentKey: lastRow.studentKey, name: _p.name,
       school: lastRow.school || _p.school, year: lastRow.year,
       course: lastRow.course, round: lastRow.round, lastAttempt: lastRow.attempt, nextNeeded: next,
+      /* 재재시까지 떨어진 학생. 앱은 재재시 뒤 «강의록 복습 · 선생님과 1:1» 로 보내므로
+         화면에서 재시 독촉과 갈라 보여 준다. 목록에서 빼지는 않는다 — 문자·ZIP 은 그대로. */
+      needs1on1: maxo >= 2,
       score: lastRow.score, reportLink: lastRow.reportLink || '',
       lastDate: Utilities.formatDate(d, 'Asia/Seoul', 'M/d'), days: days, active: days < activeDays,
       /* 이 묶음에 무엇이 있었나. «정시 73.3» 만 있으면 재시 기록이 아예 없다는
@@ -1398,7 +1443,7 @@ function setResultCondFormat_(sh) {
   var rngScore = sh.getRange(2, 4, n, 1);   // D 점수
   var rngPass = sh.getRange(2, 5, n, 1);    // E 통과
   var rngAtt = sh.getRange(2, 11, n, 1);    // K 시도
-  var rngAll = sh.getRange(2, 1, n, 19);    // A..S
+  var rngAll = sh.getRange(2, 1, n, HEADERS.length);    // A.. 마지막 열
   var rules = [];
   // 통과 / 미달
   rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('통과').setBackground('#C6EFCE').setFontColor('#0B6E39').setRanges([rngPass]).build());
@@ -1458,7 +1503,8 @@ function reorderColumnsToNew() {
      이미 NEW 인 행은 건드리지 않는다. 몇 번을 실행해도 결과가 같다(멱등). */
   var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB);
   var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
-  if (lastRow < 1 || lastCol < 19) { Logger.log('열 수 부족: ' + lastCol); return; }
+  var LEGACY_COLS = 19;                                        // 옛 배열(V1·V2)의 열 수 — 마이그레이션 대상의 최소 폭. HEADERS 가 늘어도 여기는 옛 폭이다.
+  if (lastRow < 1 || lastCol < LEGACY_COLS) { Logger.log('열 수 부족: ' + lastCol); return; }
   var C = { ch1: 1, ch2: 1, gc: 1, jm1: 1 };
   function isCourse(v) { return C[String(v || '').trim()] === 1; }
   function isKey(v) {
@@ -1467,19 +1513,21 @@ function reorderColumnsToNew() {
   }
   var PERM_V2 = [0,1,2,5,6,7,8,9,10,3,4,11,12,13,14,15,16,17,18];
   var PERM_V1 = [0,1,2,9,10,3,4,5,6,7,8,11,12,13,14,15,16,17,18];
-  var data = sh.getRange(1, 1, lastRow, 19).getValues();
+  var data = sh.getRange(1, 1, lastRow, HEADERS.length).getValues();
   var stat = { NEW: 0, V2: 0, V1: 0, SKIP: 0 };
+  /* 옛 배열은 19열이라 자리를 바꾼 뒤 HEADERS 길이만큼 빈 칸을 채운다(setValues 는 열 수가 같아야 한다). */
+  function pad_(row) { row = row.slice(); while (row.length < HEADERS.length) row.push(''); return row; }
   var out = data.map(function (row, i) {
     if (i === 0) return row;                                   // 헤더는 아래에서 강제 정합
     if (!String(row[0] || '').trim()) { stat.SKIP++; return row; }
     if (isCourse(row[8]) && isKey(row[5])) { stat.NEW++; return row; }
-    if (isCourse(row[10]) && isKey(row[7])) { stat.V2++; return PERM_V2.map(function (oi) { return row[oi]; }); }
-    if (isCourse(row[6]) && isKey(row[3])) { stat.V1++; return PERM_V1.map(function (oi) { return row[oi]; }); }
+    if (isCourse(row[10]) && isKey(row[7])) { stat.V2++; return pad_(PERM_V2.map(function (oi) { return row[oi]; })); }
+    if (isCourse(row[6]) && isKey(row[3])) { stat.V1++; return pad_(PERM_V1.map(function (oi) { return row[oi]; })); }
     stat.SKIP++; Logger.log('감지 실패, 원본 유지: ' + (i + 1) + '행 (' + row[0] + ')');
     return row;
   });
-  sh.getRange(1, 1, lastRow, 19).setValues(out);
-  sh.getRange(1, 1, 1, 19).setValues([HEADERS]);               // 헤더 강제 정합
+  sh.getRange(1, 1, lastRow, HEADERS.length).setValues(out);
+  sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);   // 헤더 강제 정합
   SpreadsheetApp.flush();
   Logger.log('reorderColumnsToNew: 이미신순서 ' + stat.NEW + ' / V2변환 ' + stat.V2 + ' / V1변환 ' + stat.V1 + ' / 건너뜀 ' + stat.SKIP);
 }

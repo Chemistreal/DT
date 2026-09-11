@@ -95,7 +95,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
       perItem.push({
         idx: i, id: it.n, c: it.c || null, unit: it.u, mis: it.mis,
         lvl: it.lvl || 1, studentAns: isBlank ? '' : sa, correctAns: it.a,
-        ok: ok, blank: isBlank, f: it.f, w: it.w
+        ok: ok, blank: isBlank, f: it.f, w: it.w, s: it.s
       });
     }
     var scoreRaw = correct * per;
@@ -117,7 +117,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
       var keyC = p.c || ('NOID:' + p.idx);      // cid 없으면 문항별 폴백키
       if (seenCid[keyC]) { seenCid[keyC].count++; return; }
       var rec = { c: p.c || null, unit: p.unit, mis: p.mis, lvl: p.lvl,
-                  f: p.f, w: p.w, count: 1, blank: p.blank };
+                  f: p.f, w: p.w, s: p.s, a: p.correctAns, count: 1, blank: p.blank };
       seenCid[keyC] = rec; out.push(rec);
     });
     return out;
@@ -147,7 +147,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     var wrongConcepts = notCorrectConcepts(graded).map(function (w) {
       var reading = (w.c && formsBank[w.c] && formsBank[w.c].reading) ? formsBank[w.c].reading : null;
       return { c: w.c, unit: w.unit, mis: w.mis, lvl: w.lvl, blank: w.blank,
-               reading: reading, fix: w.f, why: w.w,
+               reading: reading, fix: w.f, why: w.w, s: w.s, a: w.a,
                hasReading: !!(reading && (reading.oneline || reading.core)) };
     });
     function toSortedArr(obj, rateBase) {
@@ -167,25 +167,52 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
 
   // ---------- 5) 읽음 확인 게이트 ----------
   // wrongConcepts: diagnose의 wrongConcepts
-  // 각 개념: 강의록(있으면) + 확인질문(아직 안 본 다른 form O/X) 1개. 없으면 폴백(옳은문장 재확인).
+  // 각 개념: 강의록(있으면) + 확인질문(아직 안 본 다른 form O/X) 최대 2개. 모자라면 form 을 안 쓰는 폴백.
+  /* ── form 예약 ──────────────────────────────────────────────────
+     게이트는 개념마다 안 본 form 두 개를 확인 문제로 쓰고 seen 에 넣는다.
+     재시(buildRetake)는 seen 을 피한다. 그런데 form 이 두 개뿐인 개념이
+     162개다(1개 2 · 2개 160). 게이트가 둘을 다 써 버리면 재시는 피할 문장이
+     없어 **방금 게이트에서 답을 본 문장을 그대로** 내고(46회차 × 2시도
+     시뮬레이션에서 form≤2 개념의 재시 문항 118개 중 118개가 그랬다),
+     재재시에서는 그 개념이 아예 사라진다.
+
+     그래서 개념마다 재시·재재시 몫으로 form 두 개를 남긴다(GATE_RESERVE).
+     form 이 n 개면 게이트가 새로 쓰는 form 은 min(2, max(0, n−2)) 개.
+     모자라는 확인 문제는 form 을 안 쓰는 폴백으로 채운다:
+       ① 옳은 문장(w.fix, 정답 O) — 단, 그 문장이 이 개념의 form 과 글자까지
+          같으면 그것도 form 을 쓰는 셈이라 안 쓴다(form≤2 개념 339문항 전부가
+          그렇다: fix 가 곧 O form 이다). 그때는 ② 만 남는다.
+       ② 그 학생이 틀린 원래 문장 s 를 원래 정답으로 다시 묻기 — 재시는 틀린
+          문장을 절대 다시 안 내므로(wrongStmts) 겹칠 일이 없다.
+     확인 문제가 하나뿐인 게이트도 된다 — 화면은 checks.length 로 단계 수를 정한다. */
+  var GATE_RESERVE = 2;
   function buildGate(wrongConcepts, formsBank, seenStatements) {
     formsBank = formsBank || {}; seenStatements = seenStatements || {};
     var gates = [];
     wrongConcepts.forEach(function (w) {
       var checks = [], fallback = false;
+      var formSet = {};
+      function has(stmt) { var k = norm(stmt); return checks.some(function (c) { return norm(c.s) === k; }); }
       if (w.c && formsBank[w.c] && formsBank[w.c].forms) {
-        var fresh = formsBank[w.c].forms.filter(function (fm) { return !seenStatements[norm(fm.s)]; });
-        for (var i = 0; i < 2 && i < fresh.length; i++) { var p = fresh[i]; checks.push({ s: p.s, a: p.a, f: p.f, w: p.w }); seenStatements[norm(p.s)] = 1; }
-        if (checks.length < 2) {          // 새 문장 부족 → 본 적 있는 form으로 2단 채움
-          var more = formsBank[w.c].forms.filter(function (fm) { return !checks.some(function (c) { return norm(c.s) === norm(fm.s); }); });
-          for (var j = 0; checks.length < 2 && j < more.length; j++) { checks.push({ s: more[j].s, a: more[j].a, f: more[j].f, w: more[j].w }); }
-        }
+        var all = formsBank[w.c].forms;
+        all.forEach(function (fm) { formSet[norm(fm.s)] = 1; });
+        var budget = Math.min(2, Math.max(0, all.length - GATE_RESERVE));
+        var fresh = all.filter(function (fm) { return !seenStatements[norm(fm.s)]; });
+        for (var i = 0; i < budget && i < fresh.length; i++) { var p = fresh[i]; checks.push({ s: p.s, a: p.a, f: p.f, w: p.w }); seenStatements[norm(p.s)] = 1; }
       }
-      if (!checks.length) {               // 폴백: cid 없거나 form 없음 → 옳은 문장 재확인(정답 O)
-        fallback = true;
-        var cf = { s: w.fix || w.mis, a: 'O', f: w.fix, w: w.why };
+      if (checks.length < 2 && w.fix && !formSet[norm(w.fix)] && !has(w.fix)) {   // ① 옳은 문장(form 이 아닐 때만)
+        var cf = { s: w.fix, a: 'O', f: w.fix, w: w.why, fallback: true };
         checks.push(cf); seenStatements[norm(cf.s)] = 1;
       }
+      if (checks.length < 2 && w.s && (w.a === 'O' || w.a === 'X') && !has(w.s)) {  // ② 틀린 원래 문장을 원래 정답으로
+        var cs = { s: w.s, a: w.a, f: w.fix, w: w.why, fallback: true };
+        checks.push(cs); seenStatements[norm(cs.s)] = 1;
+      }
+      if (!checks.length) {               // 최후 폴백: cid 없고 문장도 없음 → 옳은 문장 재확인(정답 O)
+        var cl = { s: w.fix || w.mis, a: 'O', f: w.fix, w: w.why, fallback: true };
+        checks.push(cl); seenStatements[norm(cl.s)] = 1;
+      }
+      fallback = checks.every(function (c) { return !!c.fallback; });
       gates.push({
         c: w.c, unit: w.unit, mis: w.mis,
         reading: w.reading || null, hasReading: w.hasReading,
@@ -197,7 +224,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
 
   // ---------- 6) 재시 생성 (점점 쉽게 + 개별화) ----------
   // attemptNo: 2=재시, 3=재재시  (정시=1)
-  // cbandVersions: round.retakeC = [{v,items:[{c,u,a,s,f,w}]}...] (C=기본, 더 쉬움)
+  // cbandVersions: round.retakeC = [{v,items:[{c,u,a,s,f,w}]}...] (같은 범위의 새 문장 — 난이도 표시는 없다)
   // wrongCids: 직전 시도에서 틀린 개념 cid 집합(객체/배열)
   // formsBank: 개별화용 대체 form 소스
   // seenStatements: 이미 학생이 본 문장(중복 방지) · 갱신해서 반환
@@ -449,7 +476,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     gradeAttempt: gradeAttempt, notCorrectConcepts: notCorrectConcepts,
     misCanon: misCanon, MIS_CANON: MIS_CANON,
     diagnose: diagnose, buildGate: buildGate, buildRetake: buildRetake, cumulative: cumulative,
-    spacedReview: spacedReview
+    spacedReview: spacedReview, attemptOrder: order, GATE_RESERVE: GATE_RESERVE
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ChemEngine = api;
