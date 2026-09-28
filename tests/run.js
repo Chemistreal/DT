@@ -2231,15 +2231,18 @@ async function assertNoOverflow(page, label) {
     const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
     const loadItems = r => JSON.parse(fs.readFileSync(
       path.join(ROOT, 'appdata', 'round_ch1_0' + r + '.json'), 'utf8')).jeongsi.items;
-    const I1 = loadItems(1), I2 = loadItems(2);
+    /* 고질은 «출제 3회 이상 · 절반 이상 틀림»(2026-09-28) — 세 회차를 보고 1회·3회에서 틀린다(2회는 물었지만 다 맞음).
+       이번 회차(최근)는 3회다. I2 는 그 3회 문항이다. */
+    const I1 = loadItems(1), IM = loadItems(2), I2 = loadItems(3);
     const hasCore = m => src.indexOf('"' + m + '": "') > 0;          // CORE 사전의 키 모양
     const isFix = it => it.a === 'X' && !!it.f && it.f !== it.s;   // 정답 X · 고친 문장 있음
-    /* 두 회차에 다 나오는 개념 하나를 고른다 — 2회 쪽은 정답 X 에 고친 문장·설명이
-       있는 문항이어야 (a) 를 잴 수 있다. 같은 개념을 두 회차에서 틀리면 반복 오개념이다. */
+    /* 세 회차에 다 나오는 개념 하나를 고른다 — 3회 쪽은 정답 X 에 고친 문장·설명이
+       있는 문항이어야 (a) 를 잴 수 있다. 세 번 물어 두 번 틀리면 반복 오개념이다. */
     const in1 = {}; I1.forEach((it, i) => { (in1[it.mis] = in1[it.mis] || []).push(i); });
+    const inM = {}; IM.forEach(it => { inM[CE.misCanon(it.mis)] = 1; });
     let c2 = -1;
-    I2.forEach((it, i) => { if (c2 < 0 && isFix(it) && hasCore(it.mis) && in1[it.mis] && CE.misCanon(it.mis) === it.mis) c2 = i; });
-    assert(c2 >= 0, '두 회차에 같이 나오는 개념을 못 골랐다');
+    I2.forEach((it, i) => { if (c2 < 0 && isFix(it) && hasCore(it.mis) && in1[it.mis] && inM[it.mis] && CE.misCanon(it.mis) === it.mis) c2 = i; });
+    assert(c2 >= 0, '세 회차에 같이 나오는 개념을 못 골랐다');
     const chronic = I2[c2].mis;
     const w1 = [in1[chronic][0]];
     I1.forEach((it, i) => { if (w1.length < 3 && isFix(it) && w1.indexOf(i) < 0) w1.push(i); });
@@ -2255,7 +2258,7 @@ async function assertNoOverflow(page, label) {
                wrongMis: wrong.map(i => items[i].mis), wrongAxes: {},
                units: Object.keys(units).map(k => units[k]), axes: [] };
     };
-    const rows = [mkRow(1, I1, w1), mkRow(2, I2, w2)];
+    const rows = [mkRow(1, I1, w1), mkRow(2, IM, []), mkRow(3, I2, w2)];
     const cum = CE.cumulative(rows); const A = cum[Object.keys(cum)[0]];
     assert((A.chronicMis || []).some(m => m.mis === chronic), '반복 오개념이 안 만들어졌다');
     await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
@@ -2341,15 +2344,16 @@ async function assertNoOverflow(page, label) {
       return row ? (row.querySelector('.sol-h .freq') || {}).textContent : null;
     }, xIt.s);
     assert(xBadge === LV[xIt.lvl], '뱃지가 문항의 lvl 과 다르다: ' + xBadge + ' ≠ ' + LV[xIt.lvl]);
-    /* ② 고질 분모: 「N개 회차 반복」 이 회차 파일을 다 받은 뒤 「출제 M회 중 N회 틀림」 으로 —
-          같은 개념이 1·2회 둘 다에 나오고 둘 다 틀렸으니 2회 중 2회. 판정은 그대로다. */
-    const M = [I1, I2].filter(its => its.some(it => it.mis === chronic)).length;
+    /* ② 고질 분모: 「출제 M회 중 N회 틀림」 — 같은 개념이 1·2·3회 다 나오고 1·3회에서 틀렸으니 3회 중 2회.
+          집계가 asked 를 같이 주면 그대로 쓰고, 없을 때만 회차 파일을 받아 센다(fillChronicDenom). */
+    const M = [I1, IM, I2].filter(its => its.some(it => CE.misCanon(it.mis) === chronic)).length;
+    assert(A.chronicMis.filter(m => m.mis === chronic)[0].asked === M, '집계의 asked 가 회차 파일로 센 분모와 다르다');
     const N = A.chronicMis.filter(m => m.mis === chronic)[0].rounds;
     await page.waitForFunction(m => { const e = document.querySelector('.rx .freq[data-mis="' + m + '"]'); return !!e && /출제 \d+회 중/.test(e.textContent); }, chronic, { timeout: 15000 });
     const freq = await page.$eval('.rx .freq[data-mis="' + chronic + '"]', e => e.textContent);
     assert(freq === '출제 ' + M + '회 중 ' + N + '회 틀림', '고질 분모가 다르다: ' + freq + ' (M=' + M + ', N=' + N + ')');
     assert(M >= N, '분모가 분자보다 작다: ' + M + ' < ' + N);
-    /* ③ 복습 시점: 항목마다 이번 회차(2회) 문항에 그 개념이 실제로 나왔는지를 가른다. */
+    /* ③ 복습 시점: 항목마다 이번 회차(3회) 문항에 그 개념이 실제로 나왔는지를 가른다. */
     const rv = await page.evaluate(() => [].slice.call(document.querySelectorAll('.rvrow')).map(e => ({ m: e.querySelector('.rvm').textContent, g: e.querySelector('.rvg').textContent })));
     const in2 = {}; I2.forEach(it => { in2[it.mis] = 1; });
     rv.forEach(r => {
@@ -2371,12 +2375,14 @@ async function assertNoOverflow(page, label) {
     const CE = require(path.join(ROOT, 'chemengine.js'));
     const loadItems = r => JSON.parse(fs.readFileSync(
       path.join(ROOT, 'appdata', 'round_ch1_0' + r + '.json'), 'utf8')).jeongsi.items;
-    const I1 = loadItems(1), I2 = loadItems(2);
+    /* 고질은 «출제 3회 이상 · 절반 이상 틀림»(2026-09-28). 1·2·3회 모두 '옥텟규칙' 을 묻는다 — 1·3회에서 틀리고
+       2회는 다 맞힌다. 이번 회차(최근)는 3회이고 I2 가 그 문항이다. */
+    const I1 = loadItems(1), IM = loadItems(2), I2 = loadItems(3);
     const ALIAS = '옥텟규칙', CANON = CE.misCanon(ALIAS);
     assert(CANON !== ALIAS, '별칭이 아니다: ' + ALIAS);
     const idx = its => its.map((it, i) => it.mis === ALIAS ? i : -1).filter(i => i >= 0);
     const w1 = idx(I1), w2 = idx(I2);
-    assert(w1.length && w2.length, '1·2회에 ' + ALIAS + ' 문항이 없다');
+    assert(w1.length && w2.length && idx(IM).length, '1·2·3회에 ' + ALIAS + ' 문항이 없다');
     const mkRow = (round, items, wrong) => {
       const ans = items.map((it, i) => wrong.indexOf(i) >= 0 ? (it.a === 'O' ? 'X' : 'O') : it.a).join('');
       const units = {};
@@ -2387,7 +2393,7 @@ async function assertNoOverflow(page, label) {
                wrongMis: wrong.map(i => items[i].mis), wrongAxes: {},
                units: Object.keys(units).map(k => units[k]), axes: [] };
     };
-    const rows = [mkRow(1, I1, w1), mkRow(2, I2, w2)];
+    const rows = [mkRow(1, I1, w1), mkRow(2, IM, []), mkRow(3, I2, w2)];
     const cum = CE.cumulative(rows); const A = cum[Object.keys(cum)[0]];
     assert(A.chronicMis.length === 1 && A.chronicMis[0].mis === CANON, '집계가 대표 이름 하나로 오지 않았다: ' + JSON.stringify(A.chronicMis));
     await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
@@ -2397,7 +2403,7 @@ async function assertNoOverflow(page, label) {
     /* 박힌 엔진 사본도 대표 이름 표를 내보낸다(tools/engine_sync.py --check 가 chemengine.js 와 같은지 잰다) */
     const eng = await page.evaluate(a => ({ has: !!(window.ChemEngine && ChemEngine.misCanon), canon: ChemEngine.misCanon(a) }), ALIAS);
     assert(eng.has && eng.canon === CANON, '성적표 안 엔진 사본에 misCanon 이 없거나 다르다: ' + JSON.stringify(eng));
-    /* 「다시 볼 개념」: 이름은 대표 이름, 아래에 2회에서 틀린 '옥텟규칙' 문장이 붙는다 */
+    /* 「다시 볼 개념」: 이름은 대표 이름, 아래에 3회(이번 회차)에서 틀린 '옥텟규칙' 문장이 붙는다 */
     const rx = await page.evaluate(m => {
       const card = [].slice.call(document.querySelectorAll('.card')).filter(c => /다시 볼 개념/.test((c.querySelector('h2') || {}).textContent || ''))[0];
       const box = card ? [].slice.call(card.querySelectorAll('.rx')).filter(r => (r.querySelector('.nm') || {}).textContent === m)[0] : null;
@@ -2405,14 +2411,14 @@ async function assertNoOverflow(page, label) {
     }, CANON);
     assert(rx, '다시 볼 개념에 「' + CANON + '」 카드가 없다');
     assert(rx.length >= 1 && rx.some(t => t.indexOf(I2[w2[0]].s) > 0), '갈린 이름이라 틀린 문장이 안 붙었다: ' + JSON.stringify(rx));
-    /* 「이번 주 확인할 개념」: 앵커 문장이 CORE 폴백이 아니라 2회 문항의 문장이다 */
+    /* 「이번 주 확인할 개념」: 앵커 문장이 CORE 폴백이 아니라 3회 문항의 문장이다 */
     const a0 = I2[w2[0]];
     const todo = await page.evaluate(() => (document.querySelector('.card.todo') || {}).textContent || '');
     assert(todo.indexOf(a0.f || a0.s) >= 0, '갈린 이름이라 확인할 개념의 앵커가 회차 문장이 아니다');
-    /* 고질 분모: 1·2회 둘 다 '옥텟규칙' 을 물었다 → 출제 2회 중 2회 */
+    /* 고질 분모: 1·2·3회 모두 '옥텟규칙' 을 물었고 1·3회에서 틀렸다 → 출제 3회 중 2회 */
     await page.waitForFunction(m => { const e = document.querySelector('.rx .freq[data-mis="' + m + '"]'); return !!e && /출제 \d+회 중/.test(e.textContent); }, CANON, { timeout: 15000 });
     const freq = await page.$eval('.rx .freq[data-mis="' + CANON + '"]', e => e.textContent);
-    assert(freq === '출제 2회 중 2회 틀림', '갈린 이름이라 고질 분모가 안 세졌다: ' + freq);
+    assert(freq === '출제 3회 중 2회 틀림', '갈린 이름이라 고질 분모가 안 세졌다: ' + freq);
     /* 「한 겹 더」 의 ONELINE 폴백이 쓰는 첫 문장 떼기 — 소수점에서 안 자르고, 마침표 종류·나머지는 원문 그대로 */
     const rest = await page.evaluate(() => [restAfterFirst('몰농도 0.5 M 로 계산한다. 다음 문장. 끝'), restAfterFirst('마침표 없음'), restAfterFirst('가。나。다')]);
     assert(rest[0] === ' 다음 문장. 끝' && rest[1] === '마침표 없음' && rest[2] === '나。다', 'restAfterFirst 가 다르다: ' + JSON.stringify(rest));
@@ -2442,7 +2448,8 @@ async function assertNoOverflow(page, label) {
     const K = '가상중-합침';
     const R = (round, mis) => ({ studentKey: K, name: '합침', school: '가상중', year: '2026', course: 'ch1', round, attempt: '첫 응시',
       score: 70, pass: false, date: '2026-08-0' + round, wrongMis: [mis], wrongAxes: {}, units: [], axes: [] });
-    const rows = [R(1, keys[0]), R(2, keys[keys.length - 1])];
+    /* 고질은 «출제 3회 이상 · 절반 이상 틀림»(2026-09-28) — 세 회차에서 원본 이름을 번갈아 틀린다 */
+    const rows = [R(1, keys[0]), R(2, keys[keys.length - 1]), R(3, keys[0])];
     const A = CE.cumulative(rows)[K];
     assert(A.chronicMis.length === 1 && A.chronicMis[0].mis === rep, '집계가 대표 이름 하나로 오지 않았다: ' + JSON.stringify(A.chronicMis));
     await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
@@ -2689,17 +2696,15 @@ async function assertNoOverflow(page, label) {
     });
   }
 
-  /* ── 재재시까지 떨어진 학생은 재시 독촉 줄이 아니라 «선생님과 1:1» 로 ──
-     앱은 재재시 뒤 «강의록 복습 · 선생님과 1:1» 로 보내는데, 미응시 현황은 그
-     학생을 «재재재시 미응시» 로 세워 두었다. 창구가 needs1on1 을 얹어 보내고
-     화면이 따로 묶는다. 문자 문안은 그대로다(선생님 것). */
-  await test('pending · 재재시까지 실패한 학생은 1:1 로 따로 묶는다', async page => {
+  /* ── 재재시까지 떨어진 학생도 그냥 «재시 필요» ──
+     예전에는 앱이 재재시 뒤 «강의록 복습 · 선생님과 1:1» 로 보냈고, 미응시 현황도 그 학생을
+     «선생님과 1:1» 로 따로 묶었다. 선생님이 재시를 통과할 때까지 계속 내기로 했다(2026-09-28) —
+     그 학생의 다음 시도는 재시 3차(시트 라벨 재재재시)이고, 다른 재시 필요 학생과 같은 줄에 선다. */
+  await test('pending · 재재시까지 실패한 학생도 «재시 필요» 에 · 1:1 묶음 없음', async page => {
     await page.goto(BASE + 'pending.html?demo'); await page.waitForTimeout(500);
     const heads = await page.$$eval('.sec-h', es => es.map(e => e.textContent));
-    assert(heads.some(h => /선생님과 1:1/.test(h) && /재재시까지 실패/.test(h)), '1:1 묶음 머리가 없다: ' + heads.join(' | '));
-    const n1 = await page.$eval('.stat.one .n', e => e.textContent);
-    assert(n1 === '1', '1:1 수가 1 이 아니다: ' + n1);
-    /* 1:1 학생은 «재시 필요» 머리 아래가 아니라 1:1 머리 아래에 있고, 다음 시도가 아니라 1:1 이라고 적힌다 */
+    assert(!heads.some(h => /1:1/.test(h)), '1:1 묶음 머리가 남아 있다: ' + heads.join(' | '));
+    assert(!(await page.$('.stat.one')), '1:1 통계 칸이 남아 있다');
     const where = await page.evaluate(() => {
       const out = {}; let cur = '';
       [].slice.call(document.querySelectorAll('.sec-h, .row')).forEach(el => {
@@ -2708,12 +2713,13 @@ async function assertNoOverflow(page, label) {
       });
       return out;
     });
-    assert(/선생님과 1:1/.test(where.sec || ''), '1:1 학생이 엉뚱한 묶음에 있다: ' + where.sec);
-    assert(/선생님과 1:1/.test(where.need || '') && !/미응시/.test(where.need || ''), '1:1 학생 줄이 «미응시» 로 적혀 있다: ' + where.need);
-    /* 재시 안내 문자는 그대로 복사된다(문안 불변) */
+    assert(/재시 필요/.test(where.sec || ''), '재재시 실패 학생이 «재시 필요» 아래에 없다: ' + where.sec);
+    assert(where.need === '재시 3차 미응시', '다음 시도가 «재시 3차 미응시» 로 안 적혔다: ' + where.need);
     const act = await page.$eval('.stat.act .n', e => e.textContent);
-    assert(act === '4', '재시 필요 수가 1:1 을 뺀 4 가 아니다: ' + act);
-    await assertNoOverflow(page, 'pending-1on1');
+    assert(act === '5', '재시 필요 수가 active 전원(5)이 아니다: ' + act);
+    const body = await page.evaluate(() => document.body.innerText);
+    assert(!/선생님과 1:1/.test(body), '화면에 «선생님과 1:1» 이 남아 있다');
+    await assertNoOverflow(page, 'pending-no1on1');
   });
 
   /* ── 재시 링크 재진입 ────────────────────────────────────────────────
@@ -2737,14 +2743,14 @@ async function assertNoOverflow(page, label) {
     items.forEach(it => { seen[CE.norm(it.s)] = 1; });
     g1.perItem.forEach((p, i) => { if (!p.ok) ws[CE.norm(items[i].s)] = 1; });
     CE.buildGate(dx1.wrongConcepts, FORMS, seen);                                   // 앱과 같은 차례: 게이트가 seen 을 먼저 쓴다
-    const rt2 = CE.buildRetake(2, RD.retakeC, dx1.wrongConcepts.map(w => w.c).filter(Boolean), FORMS, seen, ws);
+    const rt2 = CE.buildRetake(2, RD.retakeC, dx1.wrongConcepts.map(w => w.c).filter(Boolean), FORMS, seen, ws, CE.lvlOn(RD.course, RD.round) ? items : false);   // 앱과 같이: 새 회차만 정시 lvl 기준으로 쉬운 문장부터
     const sig = its => ({ cids: its.map(x => x.c || '').join(','), keys: its.map(x => (String(x.a).toUpperCase() === 'O' ? 'O' : 'X')).join('') });
     const s2 = sig(rt2.items);
     const ans2 = rt2.items.map((x, i) => (i % 4 === 0 ? flip(x.a) : x.a));          // 15개 틀림 → 75 미달
     const g2 = CE.gradeAttempt(ans2, rt2.items, RD.scoring), dx2 = CE.diagnose(g2, FORMS);
     g2.perItem.forEach((p, i) => { if (!p.ok) ws[CE.norm(rt2.items[i].s)] = 1; });
     CE.buildGate(dx2.wrongConcepts, FORMS, seen);
-    const rt3 = CE.buildRetake(3, RD.retakeC, dx2.wrongConcepts.map(w => w.c).filter(Boolean), FORMS, seen, ws);
+    const rt3 = CE.buildRetake(3, RD.retakeC, dx2.wrongConcepts.map(w => w.c).filter(Boolean), FORMS, seen, ws, CE.lvlOn(RD.course, RD.round) ? items : false);   // 앱과 같이: 새 회차만 정시 lvl 기준으로 쉬운 문장부터
     const s3 = sig(rt3.items);
     const ans3 = rt3.items.map((x, i) => (i % 5 === 0 ? flip(x.a) : x.a));          // 12개 틀림 → 80 … 통과선이라 하나 더
     ans3[1] = flip(rt3.items[1].a);                                                  // 13개 틀림 → 78.3 미달
@@ -2836,21 +2842,82 @@ async function assertNoOverflow(page, label) {
       assert(st2.no === 2 && st2.score === g1.score, '대조 불일치인데 재시 기준으로 세웠다: ' + JSON.stringify(st2));
     });
 
-    /* (b) 재재시까지 실패 → 앱 안 흐름과 같은 «강의록 복습» 모드 (선생님과 1:1) */
-    await test('재시 링크 · 재재시 실패 뒤 다시 들어오면 복습 모드', async page => {
-      await mockRows(page, () => [FIRST, RETAKE, RERETAKE]);
+    /* (b) 재재시까지 실패 → 다음은 재시 3차(시트 라벨 재재재시). 재시는 통과할 때까지 끝이 없다(선생님 결정
+       2026-09-28) — 예전에는 여기서 «강의록 복습 · 선생님과 1:1» 로 끝냈다. 저장되는 라벨까지 본다. */
+    const mockRowsPost = (page, rowsFn, posted) => page.route('**/script.google.com/**', route => {
+      const req = route.request();
+      if (req.method() === 'POST') { try { posted.push(JSON.parse(req.postData() || '{}')); } catch (e) {} return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, updated: false, reportLink: LINK }) }); }
+      if (req.url().includes('student=')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, student: KEY, rows: rowsFn(), excluded: [], cumulative: null, rank: null, cohort: null }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    });
+    const waitPosts = (page, posted, n) => (async () => { for (let i = 0; i < 100 && posted.length < n; i++) await page.waitForTimeout(100); })();
+    await test('재시 링크 · 재재시 실패 뒤 다시 들어오면 재시 3차 (재재재시로 저장)', async page => {
+      const posted = [];
+      await mockRowsPost(page, () => [FIRST, RETAKE, RERETAKE], posted);
       await page.goto(URL); await waitView(page, 'gate');
       const st = await page.evaluate(() => ({ no: S.attemptNo, att: S.attempts.map(a => a.attempt), score: S.graded.score }));
       assert(st.no === 3, '시도 번호가 3 이 아니다: ' + st.no);
       assert(st.att.join(',') === '첫 응시,재시,재재시', '시도가 복원되지 않았다: ' + st.att);
       assert(st.score === g3.score, '게이트가 재재시 기준이 아니다: ' + st.score + ' ≠ ' + g3.score);
       const txt = await page.evaluate(() => document.body.innerText);
-      assert(/강의록 복습/.test(txt) && /재재시까지 응시했습니다/.test(txt), '복습 모드가 아니다');
-      assert(/선생님과 1:1/.test(txt), '1:1 안내가 없다');
+      assert(/강의록 확인/.test(txt) && !/강의록 복습/.test(txt), '재재시 실패인데 게이트가 아니라 복습 모드다');
+      assert(!/1:1/.test(txt), '«선생님과 1:1» 안내가 남아 있다');
+      await page.evaluate(() => { S.gate.gates.forEach(g => { g._unlocked = true; }); render(); });
       const btn = await page.$$eval('.btnrow button', bs => bs.map(b => b.textContent));
-      assert(!btn.some(t => /재시 시작/.test(t)), '복습 모드에 재시 단추가 있다: ' + btn.join(' / '));
-      assert(btn.some(t => /복습 마치기/.test(t)), '복습 마치기 단추가 없다');
-      await assertNoOverflow(page, 'retake-review');
+      assert(btn.some(t => /재시 3차 시작/.test(t)), '단추가 «재시 3차 시작» 이 아니다: ' + btn.join(' / '));
+      assert(!btn.some(t => /복습 마치기/.test(t)), '복습 마치기 단추가 남아 있다');
+      const rt = await page.evaluate(() => {
+        startRetake();
+        const N = ChemEngine.norm;
+        return { no: S.attemptNo, view: S.view, n: S.keyItems.length, head: document.body.innerText,
+                 bad: S.keyItems.filter(x => S.wrongStmts[N(x.s)] && !x.reusedWrong).length };
+      });
+      assert(rt.no === 4 && rt.view === 'retake', '재시 3차 화면이 아니다: ' + JSON.stringify([rt.no, rt.view]));
+      assert(rt.n === 60, '재시 3차 문항이 60개가 아니다: ' + rt.n);
+      assert(/재시 3차/.test(rt.head) && !/재재재시/.test(rt.head), '화면이 «재시 3차» 로 부르지 않는다');
+      assert(rt.bad === 0, '틀렸던 문장을 표시 없이 다시 냈다: ' + rt.bad);
+      await page.evaluate(() => { S.answers = S.keyItems.map(x => x.a); render(); });
+      await page.evaluate(() => doGrade());
+      await waitPosts(page, posted, 1);
+      const last = posted[posted.length - 1] || {};
+      assert(last.attempt === '재재재시', '저장 라벨이 재재재시가 아니다: ' + last.attempt);
+      assert(last.retakeCids && last.retakeKeys, '재시 3차 행에 문항 서명이 없다');
+      const done = await page.evaluate(() => ({ att: S.attempts.map(a => a.attempt).join(','), txt: document.body.innerText }));
+      assert(done.att === '첫 응시,재시,재재시,재재재시', '시도 기록이 이상하다: ' + done.att);
+      assert(/재시 3차/.test(done.txt), '성적 화면이 «재시 3차» 로 부르지 않는다');
+      await assertNoOverflow(page, 'retake-3rd');
+    });
+
+    /* (b′) 앱 안 흐름 — 재시에서 이어 재재시를 보고 또 떨어져도 게이트를 거쳐 재시 3차, 또 떨어지면 재시 4차.
+       재시 판(retakeC)은 셋뿐이라 재시 4차는 첫 판으로 돌아간다 — 그래도 문항 60개가 나온다. */
+    await test('앱 안 흐름 · 재재시에 떨어져도 게이트 → 재시 3차 → 재시 4차', async page => {
+      const posted = [];
+      await mockRowsPost(page, () => [FIRST, RETAKE], posted);
+      await page.goto(URL); await waitView(page, 'gate');
+      const flip = a => (a === 'O' ? 'X' : 'O');
+      const failOnce = async (expectNo, expectLabel) => {
+        const r = await page.evaluate(() => { S.gate.gates.forEach(g => { g._unlocked = true; }); startRetake(); return { no: S.attemptNo, view: S.view, n: S.keyItems.length }; });
+        assert(r.no === expectNo && r.view === 'retake' && r.n === 60, '재시 화면이 아니다: ' + JSON.stringify(r));
+        const before = posted.length;
+        await page.evaluate(() => { S.answers = S.keyItems.map((x, i) => (i % 3 === 0 ? (x.a === 'O' ? 'X' : 'O') : x.a)); render(); });
+        await page.evaluate(() => doGrade());
+        await waitPosts(page, posted, before + 1);
+        const p = posted[posted.length - 1] || {};
+        assert(p.attempt === expectLabel && p.pass === false, '저장 라벨·결과가 이상하다: ' + JSON.stringify([p.attempt, p.pass]));
+        await page.evaluate(() => afterReport()); await waitView(page, 'gate');
+        const txt = await page.evaluate(() => document.body.innerText);
+        assert(!/1:1/.test(txt) && !/강의록 복습/.test(txt), expectLabel + ' 실패 뒤 복습 모드·1:1 로 끝났다');
+      };
+      await failOnce(3, '재재시');
+      await page.evaluate(() => { S.gate.gates.forEach(g => { g._unlocked = true; }); render(); });
+      let btn = await page.$$eval('.btnrow button', bs => bs.map(b => b.textContent));
+      assert(btn.some(t => /재시 3차 시작/.test(t)), '재재시 실패 뒤 단추가 «재시 3차 시작» 이 아니다: ' + btn.join(' / '));
+      await failOnce(4, '재재재시');
+      await page.evaluate(() => { S.gate.gates.forEach(g => { g._unlocked = true; }); render(); });
+      btn = await page.$$eval('.btnrow button', bs => bs.map(b => b.textContent));
+      assert(btn.some(t => /재시 4차 시작/.test(t)), '재시 3차 실패 뒤 단추가 «재시 4차 시작» 이 아니다: ' + btn.join(' / '));
+      const r5 = await page.evaluate(() => { startRetake(); return { no: S.attemptNo, n: S.keyItems.length, head: document.body.innerText }; });
+      assert(r5.no === 5 && r5.n === 60 && /재시 4차/.test(r5.head), '재시 4차가 안 나온다: ' + JSON.stringify([r5.no, r5.n]));
     });
 
     /* (c) 서버가 바쁘면 «기록이 없다» 가 아니라 «못 물어봤다» 고 하고, 다시 시도할 자리를 준다 */

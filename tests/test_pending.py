@@ -84,15 +84,17 @@ def run():
         T('재시 필요 학생 행 존재', pg.locator('.row').count() >= 4)
         T('재시 3단계 버튼 유지', pg.locator('.copybtn.s1').count() >= 4 and pg.locator('.copybtn.s3').count() >= 4)
 
-        # --- 재재시까지 실패한 학생은 «선생님과 1:1» 로 따로 (needs1on1) ---
-        one = [p for p in pg.evaluate('demo()')['active'] if p.get('needs1on1')]
-        T('데모에 재재시까지 실패한 학생이 있다', len(one) == 1, one)
-        T('1:1 묶음 머리', any('선생님과 1:1' in h and '재재시까지 실패' in h for h in heads), heads)
-        T('통계바 1:1 수', pg.locator('.stat.one .n').inner_text() == str(len(one)), pg.locator('.stat.one .n').inner_text())
-        T('재시 필요 수는 1:1 을 뺀 수', pg.locator('.stat.act .n').inner_text() == str(len([p for p in pg.evaluate('demo()')['active'] if not p.get('needs1on1')])), pg.locator('.stat.act .n').inner_text())
-        row1 = pg.locator('.row').filter(has_text=one[0]['name']).first
-        T('1:1 학생 줄은 «미응시» 가 아니라 «선생님과 1:1»', '선생님과 1:1' in row1.locator('.rneed').inner_text() and '미응시' not in row1.locator('.rneed').inner_text(), row1.locator('.rneed').inner_text())
-        T('1:1 학생의 문자 단추(문안 불변)는 그대로', row1.locator('.copybtn.s1').count() == 1)
+        # --- 재재시까지 실패한 학생도 그냥 «재시 필요» (재시는 통과할 때까지 끝이 없다 · 2026-09-28) ---
+        act = pg.evaluate('demo()')['active']
+        deep = [p for p in act if p.get('lastAttempt') == '재재시']
+        T('데모에 재재시까지 실패한 학생이 있다', len(deep) == 1, deep)
+        T('«선생님과 1:1» 묶음이 없다', not any('1:1' in h for h in heads) and pg.locator('.stat.one').count() == 0, heads)
+        T('재시 필요 수는 active 전원', pg.locator('.stat.act .n').inner_text() == str(len(act)), pg.locator('.stat.act .n').inner_text())
+        row1 = pg.locator('.row').filter(has_text=deep[0]['name']).first
+        need = row1.locator('.rneed').inner_text()
+        T('재재시 실패 학생 줄: «재시 3차 미응시»', need == '재시 3차 미응시', need)
+        T('그 학생의 문자 단추도 그대로', row1.locator('.copybtn.s1').count() == 1)
+        T('화면 어디에도 «선생님과 1:1» 이 없다', '선생님과 1:1' not in pg.inner_text('body'))
 
         # --- 모바일 ---
         pg.set_viewport_size({'width': 390, 'height': 844}); pg.wait_for_timeout(300)

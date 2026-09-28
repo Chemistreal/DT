@@ -177,7 +177,7 @@ button.ghost.sm{padding:7px 14px;font-size:12.5px;margin-top:9px;width:auto}
 .reading.covered{border-left-color:#cbb06a;background:#fbfaf6}
 .coverhint{display:none}
 .reading.covered .coverhint{display:block;font-size:12.5px;color:#9a8049;font-weight:600;padding:2px 0 1px}
-.gexhaust{margin:14px 0 4px;padding:13px 15px;background:#f6f4ef;border:1px solid #e3d9c4;border-radius:10px;font-size:14px;color:#5a4e36;line-height:1.6}
+.gagain{margin:0 0 12px;padding:11px 14px;background:#f6f4ef;border:1px solid #e3d9c4;border-radius:10px;font-size:14px;color:#5a4e36;line-height:1.6}
 .rootpill{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:700;color:#7a5b1a;background:#f3e6c4;border:1px solid #e0c68f;border-radius:5px;padding:1px 6px;vertical-align:middle}
 .recurpill{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:700;color:#9a3b32;background:#f7e3e0;border:1px solid #e6b8b1;border-radius:5px;padding:1px 6px;vertical-align:middle}
 .rootnote{margin:8px 0 2px;font-size:12.5px;color:#3f6b5f;background:#eef5f2;border:1px solid #cfe5dd;border-radius:8px;padding:8px 11px}
@@ -281,6 +281,9 @@ async function loadJSON(file,embed){
 async function loadManifest(){ MANIFEST=await loadJSON('app_manifest.json',EMBED.manifest); }
 /* 시도 라벨의 순서 = '재' 글자 수(첫 응시 0 · 재시 1 · 재재시 2 …). 서버 attOrd_ 와 같은 규칙. */
 function attOrd(a){ return ChemEngine.attemptOrder(a); }
+/* 사람에게 보여 주는 시도 이름. 재시는 통과할 때까지 끝이 없어서(2026-09-28) 셋째 재시부터는
+   「재재재시」 대신 「재시 3차」 로 적는다. 시트에 적는 라벨(S.attempts[].attempt)은 그대로다. */
+function attName(a){ return ChemEngine.attemptName(a, (a && attOrd(a)===0) ? a : '첫 응시'); }
 function parseOX(str,n){ var a=String(str||'').split('').map(function(ch){return ch==='O'?'O':ch==='X'?'X':'';}); while(a.length<n) a.push(''); return a; }
 /* 재시 문항의 서명 — 시트에 적고(retakeCids·retakeKeys), 링크로 다시 들어왔을 때 같은 문항을 만들었는지 대조한다. */
 function retakeSig(items){ items=items||[]; return { cids:items.map(function(x){return x.c||'';}).join(','), keys:items.map(function(x){return String(x.a).toUpperCase()==='O'?'O':'X';}).join('') }; }
@@ -299,7 +302,8 @@ function rowMs(r){ var t=r&&r.date?new Date(r.date).getTime():0; return isFinite
        두되 attemptNo=2 로 두어 다음이 재재시가 되게 한다(재시 재방송은 안 한다). 이때도 다시
        만든 재시 문장은 seen 에 넣어 재재시가 그 문장을 되도록 피하게 하고, 재시 화면 문구는
        «겹칠 수 있다» 로 낮춘다(_retakeSeenGuess).
-     · 마지막이 재재시 실패면 attemptNo=3 — 앱 안 흐름과 같은 «강의록 복습» 게이트.
+     · 마지막이 재재시(또는 그 뒤) 실패면 attemptNo=3(4, 5 …) — 게이트를 다시 거쳐 다음 재시(재시 3차 …).
+       재시는 통과할 때까지 끝이 없다(선생님 결정 2026-09-28 · 예전에는 재재시 뒤 «강의록 복습» 으로 끝냈다).
    서버가 바쁘면(응답 없음·HTML 오류 페이지) «기록이 없다» 와 갈라 다시 시도할 자리를 준다. */
 async function enterRetake(key,course,round){
   if(!MANIFEST) await loadManifest();
@@ -346,7 +350,7 @@ async function enterRetake(key,course,round){
       var seenTry=Object.assign({},S.seen), wsTry=Object.assign({},S.wrongStmts);
       ChemEngine.buildGate(S.dx.wrongConcepts,FORMS,seenTry);   // 앱 안 흐름과 같이: 게이트가 seen 을 먼저 쓴 뒤 재시를 만든다
       var wrongC=S.dx.wrongConcepts.map(function(w){return w.c;}).filter(Boolean);
-      var rt=ChemEngine.buildRetake(lvl,rd.retakeC,wrongC,FORMS,seenTry,wsTry);
+      var rt=ChemEngine.buildRetake(lvl,rd.retakeC,wrongC,FORMS,seenTry,wsTry,ChemEngine.lvlOn(rd.course,rd.round)?rd.jeongsi.items:false);
       var sig=retakeSig(rt.items);
       var oldRow=(!r.retakeCids || !r.retakeKeys || !r.answers);
       if(oldRow || String(r.retakeCids)!==sig.cids || String(r.retakeKeys)!==sig.keys){
@@ -364,7 +368,7 @@ async function enterRetake(key,course,round){
       S.seen=seenTry; S.wrongStmts=wsTry; S.keyItems=rt.items; S.answers=a2; S.graded=g2; S.dx=dx2;
       restored.push(r.attempt); lvl++;
     }
-    S.attemptNo=ords[ords.length-1]+1;   // 재시 실패 → 2(다음 재재시) · 재재시 실패 → 3(복습 모드)
+    S.attemptNo=ords[ords.length-1]+1;   // 재시 실패 → 2(다음 재재시) · 재재시 실패 → 3(다음 재시 3차) … 통과할 때까지
     console.info('[Chemistreal] 재시 링크 재진입 · 복원 '+restored.join('·')+(missed.length?' · 못 함 '+missed.join('·'):'')+' · 다음 시도 번호 '+S.attemptNo);
   }
   try{ await ensureStudy(); }catch(e){ STUDY=STUDY||{}; }
@@ -489,7 +493,7 @@ function copyPassMsg(btn){
   var last=S.attempts[S.attempts.length-1];
   var course=COURSE[S.round.course]||S.round.course;
   var msg='[다원교육 영재관 화학] '+S.name+' 학생 학부모님께\n\n'
-    +course+' '+S.round.round+'회 '+last.attempt+' '+pt(last.score)+'점으로 통과했습니다. 축하드립니다. '
+    +course+' '+S.round.round+'회 '+attName(last.attempt)+' '+pt(last.score)+'점으로 통과했습니다. 축하드립니다. '
     +'아래 리포트에서 누적 성장 추이와 이번 회차 분석을 보실 수 있습니다.\n\n'
     +'▶ '+reportLink()+'\n\n감사합니다.\n조준모T';
   try{ navigator.clipboard.writeText(msg).then(function(){flashCopied(btn);},function(){window.prompt('아래 메시지를 복사하세요:',msg);}); }
@@ -500,7 +504,7 @@ function copyRetakeMsg(btn){
   var course=COURSE[S.round.course]||S.round.course;
   var pass=(MANIFEST&&MANIFEST.pass)||80;
   var msg='[다원교육 영재관 화학] '+S.name+' 학생 학부모님께\n\n'
-    +course+' '+S.round.round+'회 '+last.attempt+' '+pt(last.score)+'점으로 기준('+pt(pass)+'점)에 못 미쳤습니다. '
+    +course+' '+S.round.round+'회 '+attName(last.attempt)+' '+pt(last.score)+'점으로 기준('+pt(pass)+'점)에 못 미쳤습니다. '
     +'아래 리포트에서 틀린 개념과 교정 방향을 확인하실 수 있고, 같은 범위를 새 문항으로 다시 푸는 재시를 이어서 볼 수 있습니다(같은 문제는 다시 나오지 않습니다).\n\n'
     +'▶ '+reportLink()+'\n\n이번 주 안에 재시까지 마치면 다음 회차가 한결 수월합니다. 감사합니다.\n조준모T';
   try{ navigator.clipboard.writeText(msg).then(function(){flashCopied(btn);},function(){window.prompt('아래 메시지를 복사하세요:',msg);}); }
@@ -677,7 +681,7 @@ async function doGrade(){
     await ensureForms();
     const dx=ChemEngine.diagnose(g,FORMS); S.graded=g; S.dx=dx;
     g.perItem.forEach((p,i)=>{ if(!p.ok) S.wrongStmts[ChemEngine.norm(S.keyItems[i].s)]=1; });
-    S.attempts.push({attempt:S.attemptNo===1?'첫 응시':S.attemptNo===2?'재시':'재재시',score:g.score,pass:g.pass});
+    S.attempts.push({attempt:S.attemptNo===1?'첫 응시':ChemEngine.attemptLabel(S.attemptNo-1),score:g.score,pass:g.pass});   // 재시·재재시·재재재시… (끝 없음)
     S.keyItems.forEach(it=>{S.seen[ChemEngine.norm(it.s)]=1;});
     saveResult(g,dx);   // 시트 저장(비차단, 멱등)
     clearSession(); go('report');
@@ -713,7 +717,7 @@ function startRetake(){
   FORMS=FORMS||{};
   const wrong=S.dx.wrongConcepts.map(w=>w.c).filter(Boolean);
   const next=S.attemptNo+1;
-  const rt=ChemEngine.buildRetake(next,S.round.retakeC,wrong,FORMS,S.seen,S.wrongStmts);
+  const rt=ChemEngine.buildRetake(next,S.round.retakeC,wrong,FORMS,S.seen,S.wrongStmts,ChemEngine.lvlOn(S.round.course,S.round.round)?(S.round.jeongsi&&S.round.jeongsi.items):false);   // 정시 문항 lvl 보다 어렵지 않게
   S.seen=rt.seenStatements; var rwN=rt.items.filter(x=>x.reusedWrong).length; if(rwN) console.warn('[Chemistreal] 재노출 '+rwN+'문항(form 소진)');
   /* 이전 시도에서 틀렸는데 이번 재시에 개념으로 안 실린 오개념 — 시트에 같이 적어(retakeUnasked)
      성적표가 «안 물었다» 와 «맞혔다» 를 가를 수 있게 한다. */
@@ -831,9 +835,9 @@ function render(){
   else if(v==='retakebusy'){ h=`<div class="card"><h1>잠시 뒤 다시 시도해 주세요</h1><p class="lede">서버나 네트워크 사정으로 응시 기록을 불러오지 못했습니다. 링크에는 문제가 없습니다. 잠시 뒤 다시 시도해 주세요.</p><div class="btnrow"><button onclick="retryEnterRetake(this)">다시 시도</button></div></div>`; }
   else if(v==='retakepassed'){ const pr=S._passRow||{};
     h=`<div class="card"><div class="hero"><div class="seal">✓</div><h1>이미 통과한 회차입니다</h1>
-      <p class="lede" style="margin:0">${S.name?S.name+' · ':''}${S.round?(S.round.title||''):''} · ${pr.attempt||''} <b class="mono">${pt(pr.score)}</b>점 통과</p>
+      <p class="lede" style="margin:0">${S.name?S.name+' · ':''}${S.round?(S.round.title||''):''} · ${pr.attempt?attName(pr.attempt):''} <b class="mono">${pt(pr.score)}</b>점 통과</p>
       <p style="margin:14px 0 4px">통과한 회차의 재시는 받지 않습니다. 성적표에서 결과를 확인하세요.</p>
-      <div class="ladder" style="justify-content:center">${(S.attempts||[]).map(a=>`<span class="lstep ${a.pass?'p':'f'}">${a.attempt} ${pt(a.score)}${a.pass?' ✓':''}</span>`).join('')}</div></div>
+      <div class="ladder" style="justify-content:center">${(S.attempts||[]).map(a=>`<span class="lstep ${a.pass?'p':'f'}">${attName(a.attempt)} ${pt(a.score)}${a.pass?' ✓':''}</span>`).join('')}</div></div>
       <div class="btnrow" style="max-width:340px;margin:10px auto 0"><a class="pdfbtn" style="justify-content:center;text-decoration:none" href="${S._reportLink||'report.html'}">성적표로 돌아가기 →</a></div></div>`; }
   else if(v==='retakefail'){ h=`<div class="card"><h1>재시를 만들 수 없습니다</h1><p class="lede">이 회차의 첫 응시 답안 기록을 찾지 못했습니다. (답안이 시트에 저장된 응시부터 재시를 만들 수 있습니다.) 앱에서 직접 응시한 뒤 재시를 진행해 주세요.</p><div class="btnrow"><button onclick="S=blank();render()">학생 정보로</button></div></div>`; }
   else if(v==='select'){
@@ -842,7 +846,7 @@ function render(){
     const hist=(STUDENT_HIST_KEY===hk)?(STUDENT_HIST||{}):{};
     const anyHist=Object.keys(hist).length>0;
     const sv=savedSession();
-    h=(sv?`<div class="resume"><div style="flex:1">채점하던 내용이 있습니다 · <b>${sv.name}</b> · ${sv.attemptNo===1?'정시':sv.attemptNo===2?'재시':'재재시'} (${sv.answers.filter(a=>a).length}/${sv.keyItems.length})</div><button onclick="resume()">이어하기</button><button class="x" onclick="clearSession();render()">지우기</button></div>`:'')+
+    h=(sv?`<div class="resume"><div style="flex:1">채점하던 내용이 있습니다 · <b>${sv.name}</b> · ${ChemEngine.attemptName((sv.attemptNo||1)-1)} (${sv.answers.filter(a=>a).length}/${sv.keyItems.length})</div><button onclick="resume()">이어하기</button><button class="x" onclick="clearSession();render()">지우기</button></div>`:'')+
     `<div class="card"><h1>시험 선택</h1><p class="lede">${S.name?`${S.name} · ${S.school}${S.grade?' '+S.grade+'학년':''}`:'채점할 회차를 먼저 고르세요. 학생 이름은 다음 화면에서 넣습니다.'}</p>
       <div class="tabs">${Object.keys(COURSE).map(c=>`<button class="${c===courseTab?'sel':''}" onclick="courseTab='${c}';render()">${COURSE[c]}</button>`).join('')}</div>
       <div class="rgrid">${rounds.map(r=>{const st=hist[r.course+'#'+r.round];
@@ -868,7 +872,7 @@ function render(){
   }
   else if(v==='grade'){ h=inputScreen('첫 응시 채점','OMR을 보고 각 문항을 1(O)·2(X)로 입력하세요.','채점 완료','doGrade',false); }
   else if(v==='report'){
-    const g=S.graded,dx=S.dx,att=S.attempts[S.attempts.length-1].attempt,col=g.pass?'var(--o)':'var(--x)';
+    const g=S.graded,dx=S.dx,att=attName(S.attempts[S.attempts.length-1].attempt),col=g.pass?'var(--o)':'var(--x)';
     h=`<div class="card">
       <h1>성적 진단 <span class="muted" style="font-weight:500">· ${att}</span></h1>
       <div class="scorewrap"><div class="big mono" style="color:${col}">${g.score}</div><div class="denom mono">/ ${g.max}</div>
@@ -918,16 +922,17 @@ function render(){
               ${g._wrong?`<div class="feedback"><b>다시 봅시다.</b> 정답은 <b>${c.a}</b> 입니다.${c.f?' 핵심: '+c.f:''}${c.w?'<br><span class="muted">'+c.w+'</span>':''}<div><button class="ghost sm" onclick="retryCheck(${i})">다시 풀기</button></div></div>`
                 :`<div class="oxbtns" style="max-width:240px"><button class="o" style="padding:11px 0;font-size:17px" onclick="answerCheck(${i},'O')">O</button><button class="x" style="padding:11px 0;font-size:17px" onclick="answerCheck(${i},'X')">X</button></div>`}`}
         </div>`; };
-    h=`<div class="card"><h1>${S.attemptNo>=3?'강의록 복습':'강의록 확인'}</h1><p class="lede">${S.attemptNo>=3?'재재시까지 응시했습니다. 틀렸던 개념의 강의록을 다시 읽고 확인 문제로 스스로 점검해 보세요. 이번엔 추가 채점 없이 복습이 목적입니다.':'틀린 개념의 강의록을 읽고, 확인 문제(개념에 따라 1~2문제)를 모두 맞히면 잠금이 풀립니다.'+(hasOpt?' 오개념이 많아, <b>핵심 '+reqG.length+'개</b>를 먼저 해제하면 재시를 볼 수 있고 나머지는 권장 학습입니다.':'')}</p>
+    h=`<div class="card"><h1>강의록 확인</h1><p class="lede">틀린 개념의 강의록을 읽고, 확인 문제(개념에 따라 1~2문제)를 모두 맞히면 잠금이 풀립니다.${hasOpt?' 오개념이 많아, <b>핵심 '+reqG.length+'개</b>를 먼저 해제하면 재시를 볼 수 있고 나머지는 권장 학습입니다.':''}</p>
       <div class="gprog"><div class="gpbar"><i style="width:${pct}%"></i></div><span class="gpt">${reqUnlocked}/${reqG.length} ${hasOpt?'핵심 ':''}개념 해제</span></div>
-      ${(S.attemptNo||1)<3 && S.gate._hasStems?`<div class="rootnote"><b>뿌리 먼저</b> 표시 개념부터 잡으면, 거기서 갈라진 개념들이 한결 쉽게 풀립니다.</div>`:''}
+      ${(S.attemptNo||1)>=3?`<div class="gagain">재시는 통과할 때까지 이어집니다. 여기까지 온 것도 잘한 거예요. 틀린 개념을 강의록으로 한 번 더 다진 뒤 다음 재시를 봅시다.</div>`:''}
+      ${S.gate._hasStems?`<div class="rootnote"><b>뿌리 먼저</b> 표시 개념부터 잡으면, 거기서 갈라진 개념들이 한결 쉽게 풀립니다.</div>`:''}
       ${reqG.length>2?`<div class="gencourage">${gateEncourage(reqUnlocked,reqG.length)}</div>`:''}
       ${reqG.map(gateHTML).join('')}
       ${hasOpt?`<div class="gatedivider"><span>추가 권장 학습</span>통과에 필수는 아니지만, 함께 보면 더 단단해집니다</div>${optG.map(gateHTML).join('')}`:''}
-      ${S.attemptNo>=3?`<div class="gexhaust">3회(정시·재시·재재시) 모두 응시했습니다. 강의록을 충분히 복습한 뒤 <b>선생님과 1:1로 함께 점검</b>하면 확실히 잡을 수 있어요.</div><div class="btnrow"><button class="ghost" onclick="resetAll()">복습 마치기</button></div>`:`<div class="btnrow"><button ${allRequiredUnlocked()?'':'disabled'} onclick="startRetake()">${allRequiredUnlocked()?(S.attemptNo+1===3?'재재시 시작':'재시 시작'):(hasOpt?'핵심 개념 해제 후 재시':'모든 개념 해제 후 재시')}</button><button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button></div>`}</div>`;
+      <div class="btnrow"><button ${allRequiredUnlocked()?'':'disabled'} onclick="startRetake()">${allRequiredUnlocked()?(ChemEngine.attemptName(S.attemptNo)+' 시작'):(hasOpt?'핵심 개념 해제 후 재시':'모든 개념 해제 후 재시')}</button><button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button></div></div>`;
   }
   else if(v==='retake'){
-    const lb=S.attemptNo===2?'재시':'재재시';
+    const lb=ChemEngine.attemptName(S.attemptNo-1);   // 재시 · 재재시 · 재시 3차 …
     /* 링크 재진입에서 이전 재시의 문항을 확인하지 못한 경우(_retakeSeenGuess) — 재구성한 문장을 피할 뿐이라
        «다른 문장» 을 약속하지 않는다. */
     h=inputScreen(lb+' · 같은 범위의 새 문장',S._retakeSeenGuess
@@ -937,9 +942,9 @@ function render(){
   else if(v==='done'){
     const last=S.attempts[S.attempts.length-1];
     h=`<div class="card"><div class="hero"><div class="seal">✓</div><h1>통과했습니다</h1>
-      <p class="lede" style="margin:0">${S.name} · ${last.attempt} <b class="mono">${last.score}</b>점</p>
+      <p class="lede" style="margin:0">${S.name} · ${attName(last.attempt)} <b class="mono">${last.score}</b>점</p>
       <p style="margin:14px 0 4px">잘했습니다. 다음 수업에서 봅시다.</p>
-      <div class="ladder" style="justify-content:center">${S.attempts.map(a=>`<span class="lstep ${a.pass?'p':'f'}">${a.attempt} ${a.score}${a.pass?' ✓':''}</span>`).join('')}</div></div>
+      <div class="ladder" style="justify-content:center">${S.attempts.map(a=>`<span class="lstep ${a.pass?'p':'f'}">${attName(a.attempt)} ${a.score}${a.pass?' ✓':''}</span>`).join('')}</div></div>
       <!-- 회차를 같이 넘긴다. 안 넘기면 심화가 안 배운 단원까지 낸다. -->
       <a class="challengebtn" href="challenge.html?course=${S.round.course}&amp;round=${S.round.round}"><span class="cbadge">A밴드</span>한 단계 위 심화 도전 →<small>통과한 지금, 배운 데까지에서 더 어려운 문제로 실력의 끝을 확인해 보세요</small></a>
       <div style="max-width:340px;margin:16px auto 2px;padding-top:13px;border-top:1px solid #eee;text-align:center">

@@ -135,6 +135,12 @@ jobs:
       # 표가 같고 세 곳이 다 그 표로 집계하는지 본다. 엔진은 chemengine.js 에서만 고치고 --write 로 넣는다.
       - name: 화면 안 엔진 사본 세 벌이 chemengine.js 와 같고, 서버와 같은 규칙으로 센다
         run: python3 tools/engine_sync.py --check --quiet
+      # 「반복해서 막히는 곳」(고질)은 2026-09-28 부터 «물은 회차 3회 이상 · 그중 절반 이상 틀림» 이다
+      # (선생님 결정). «물었다» 를 세는 표(ROUND_MIS)는 회차 파일에서 만들어 chemengine.js 와 서버
+      # apps-script.gs 에 넣어 둔다 — 서버에는 회차 파일이 없다. 회차 파일이 바뀌었는데 표가 그대로면
+      # 분모가 틀려 고질이 조용히 늘거나 준다. 두 파일의 문턱 두 수가 같은지도 본다.
+      - name: 고질 분모 표(ROUND_MIS)가 회차 파일과 같다
+        run: python3 tools/gen_round_mis.py --check
       # 이 저장소는 공개이고 Pages 로 그대로 열린다. 그런데 roster.html 의
       # 「기본 명단」과 apps-script.gs 의 초기화 함수에 실제 학생 여든한 명의
       # 이름이 박혀 있었고, pending.html 의 데모 자료와 tests/ 픽스처에도

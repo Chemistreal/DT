@@ -102,6 +102,9 @@ footer{max-width:940px;margin:0 auto;padding:10px 16px 34px;
 
 def build(rows):
     tot = sum(r['n'] for r in rows)
+    # 강의 수는 표의 lectures 칸(exam 에서 --sync 로 베낀 목록)이 말한다.
+    # 125 를 박아 두었더니 126강이 생긴 뒤에도 「125강에 없는 것」이라 적었다.
+    nlec = len(json.load(io.open(SRC, encoding='utf-8')).get('lectures') or {})
     hit = [r for r in rows if r['n']]
     p = ['<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">',
          '<meta name="viewport" content="width=device-width, initial-scale=1, '
@@ -110,7 +113,7 @@ def build(rows):
          '<title>강의가 없는 주제 · 다원 화학</title>',
          '<style>%s</style></head><body>' % CSS,
          '<header><div class="logo">DAWON</div><h1>강의가 없는 주제</h1>'
-         '<div class="sub">문제로는 나오는데, 보낼 강의가 125강에 없는 것</div>'
+         '<div class="sub">문제로는 나오는데, 보낼 강의가 %d강에 없는 것</div>' % nlec +
          '</header>',
          '<div class="wrap">',
          '<a class="back" href="index.html">← 처음으로</a>']
@@ -125,7 +128,7 @@ def build(rows):
 
     p.append('<div class="lead">'
              '<b>이건 「못 이었다」가 아니라 「가르치는 데가 없다」다.</b> '
-             '주제마다 125강 본문을 실제로 훑고 확인한 것이고, 아래 「까닭」이 '
+             '주제마다 강의 본문을 실제로 훑고 확인한 것이고, 아래 「까닭」이 '
              '무엇을 찾아봤는지 적고 있다.<br><br>'
              '학생이 여기서 틀리면 성적표는 <b>「이 개념이 약하다」까지는 말하지만 '
              '보낼 강의가 없다.</b> 약점을 고치라고 만든 물건이 고칠 길을 못 주는 '

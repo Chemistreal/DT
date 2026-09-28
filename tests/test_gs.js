@@ -23,7 +23,9 @@ function makeSheet(name, rows) {
         setBackgrounds() { return this; }
       };
     },
-    setConditionalFormatRules() {}
+    setConditionalFormatRules() {},
+    clearContents() { this._rows.length = 0; return this; },
+    deleteRows() { return this; }
   };
 }
 
@@ -46,7 +48,7 @@ const ctx = {
   console,
   SpreadsheetApp: {
     openById: () => ({ getSheetByName: n => SHEETS[n] || null, insertSheet: n => (SHEETS[n] = makeSheet(n, [[]]), SHEETS[n]) }),
-    newConditionalFormatRule() { const b = { whenTextEqualTo(){return b;}, whenFormulaSatisfied(){return b;}, setBackground(){return b;}, setFontColor(){return b;}, setRanges(){return b;}, build(){return {};} }; return b; },
+    newConditionalFormatRule() { const b = { whenTextEqualTo(){return b;}, whenTextContains(){return b;}, whenFormulaSatisfied(){return b;}, setBackground(){return b;}, setFontColor(){return b;}, setRanges(){return b;}, build(){return {};} }; return b; },
     flush() {}
   },
   /* 실제 ContentService 에 가깝게. 예전 흉내는 MIME 을 통째로 버려서, 응답을
@@ -866,11 +868,35 @@ console.log('[재시 되감기 금지] 더 나중 시도가 있으면 낮은 시
   const g = J(ctx.doGet({ parameter: { student: ctx.pubId_('가상중-검사') } }));
   const gr = (g.rows || []).filter(x => x.attempt === '재시')[0];
   T('doGet rows 에 retakeCids·retakeKeys·retakeUnasked', !!gr && gr.retakeCids === 'CH1-001,CH1-002' && gr.retakeKeys === 'OX' && gr.retakeUnasked === '', JSON.stringify(gr && [gr.retakeCids, gr.retakeKeys, gr.retakeUnasked]));
+  /* 재시는 통과할 때까지 끝이 없다(선생님 결정 2026-09-28). 재재시까지 떨어진 학생도 «선생님과 1:1» 로
+     따로 빠지지 않고 그냥 다음 재시(재재재시 = 재시 3차)가 필요한 학생이다. */
   const P1 = ctx.computePending_(3650);
   const pr = (P1.active || []).concat(P1.stale || []).filter(x => x.studentKey === '가상중-검사' && x.course === 'ch1')[0];
-  T('재재시까지 실패 -> needs1on1:true', !!pr && pr.needs1on1 === true && pr.lastAttempt === '재재시', JSON.stringify(pr && [pr.lastAttempt, pr.needs1on1]));
-  const pk = (P1.active || []).concat(P1.stale || []).filter(x => x.name === '김민준')[0];
-  if (pk) T('정시만 실패한 학생은 needs1on1:false', pk.needs1on1 === false);
+  T('재재시까지 실패 -> 다음은 재재재시 (1:1 묶음 없음)', !!pr && pr.lastAttempt === '재재시' && pr.nextNeeded === '재재재시' && !('needs1on1' in pr), JSON.stringify(pr && [pr.lastAttempt, pr.nextNeeded, pr.needs1on1]));
+  T('pending 응답 어디에도 needs1on1 이 없다', !JSON.stringify(P1).includes('needs1on1'));
+  /* 넷째 시도(재재재시) 저장 · 그 뒤 낮은 시도는 거부 · 다섯째도 받는다 */
+  let r8 = post(Object.assign({}, base, { attempt: '재재재시', score: 76, retakeCids: 'CH1-001', retakeKeys: 'O', retakeUnasked: '' }));
+  T('재재재시(재시 3차) 저장 ok', r8.ok === true && sh._rows.some(r => r[5] === '가상중-검사' && r[10] === '재재재시' && r[3] === 76), JSON.stringify(r8));
+  let r9 = post(Object.assign({}, base, { attempt: '재재시', score: 90, pass: true }));
+  T('재재재시 뒤 재재시 -> attempt_regress (시트 불변)', r9.ok === false && r9.error === 'attempt_regress' && sh._rows.filter(r => r[5] === '가상중-검사' && r[10] === '재재시')[0][3] === 74, JSON.stringify(r9));
+  const P2 = ctx.computePending_(3650);
+  const pr2 = (P2.active || []).concat(P2.stale || []).filter(x => x.studentKey === '가상중-검사' && x.course === 'ch1')[0];
+  T('재재재시 실패 -> 다음은 재재재재시', !!pr2 && pr2.lastAttempt === '재재재시' && pr2.nextNeeded === '재재재재시', JSON.stringify(pr2 && [pr2.lastAttempt, pr2.nextNeeded]));
+  let r10 = post(Object.assign({}, base, { attempt: '재재재재시', score: 88, pass: true }));
+  T('재재재재시(재시 4차) 통과 저장 ok', r10.ok === true);
+  const P3 = ctx.computePending_(3650);
+  T('통과하면 pending 에서 빠진다', !(P3.active || []).concat(P3.stale || []).some(x => x.studentKey === '가상중-검사' && x.course === 'ch1'));
+  let r11 = post(Object.assign({}, base, { attempt: '재재재재재시', score: 50 }));
+  T('통과 뒤 재시 -> already_passed', r11.ok === false && r11.error === 'already_passed', JSON.stringify(r11));
+  /* cleanupPassedRetakes — 넷째 재시에서 통과했으면 그 뒤 행만 지운다(앞 시도는 그대로) */
+  const snap = sh._rows.map(r => r.slice());
+  sh._rows.push(['검사','L',D2,40,'미달','가상중-검사','가상중','2','ch1',7,'재재재재재시',24,36,'','{}','','[]','[]','X'.repeat(60)]);
+  ctx.cleanupPassedRetakes();
+  const left = sh._rows.filter(r => r[5] === '가상중-검사' && r[8] === 'ch1' && String(r[9]) === '7').map(r => r[10]);   // 첫 응시 행은 위에서 TEST 로 덮였다(멱등 저장) — 그대로 센다
+  T('cleanupPassedRetakes: 재재재재시 통과 뒤의 재재재재재시만 지운다', left.join(',') === '첫 응시,재시,재재시,재재재시,재재재재시', left.join(','));
+  sh._rows.length = 0; snap.forEach(r => sh._rows.push(r));
+  /* 사람에게 보이는 이름 — 서버 메일(weeklyPendingEmail)도 셋째 재시부터 「재시 k차」 */
+  T('attDisp_: 정시·재시·재재시·재시 3차·재시 4차', [ctx.attDisp_('첫 응시'), ctx.attDisp_('재시'), ctx.attDisp_('재재시'), ctx.attDisp_('재재재시'), ctx.attDisp_('재재재재시')].join('|') === '정시|재시|재재시|재시 3차|재시 4차');
   sh._rows.length = before;                       // 심은 줄을 걷어낸다
 }
 
@@ -971,16 +997,19 @@ console.log('[오개념 대표 이름] 서버 cumulative_ 가 chemengine.js 와 
   T('MIS_CANON 표가 chemengine.js 와 같다', JSON.stringify(ctx.MIS_CANON) === JSON.stringify(CE.MIS_CANON));
   T("misCanon('불활성 기체') → '비활성 기체' (대표 이름은 그대로)",
     ctx.misCanon('불활성 기체') === '비활성 기체' && ctx.misCanon('비활성 기체') === '비활성 기체');
+  /* 비활성 기체는 화학Ⅰ 7·13회와 일반화학 5회 정시에서 묻는다(ROUND_MIS). 세 회차를 보고 둘에서
+     (한 번은 옛 표기로) 틀렸으면 고질이다 — 출제 3 · 틀림 2. 이름이 갈리면 1·1 로 쪼개져 안 뜬다. */
   const rows = [
-    { course: 'ch1', round: 1, attempt: '첫 응시', score: 70, pass: false, isTest: false, wrongMis: ['불활성 기체'], wrongAxes: {} },
-    { course: 'ch1', round: 2, attempt: '첫 응시', score: 75, pass: false, isTest: false, wrongMis: ['비활성 기체'], wrongAxes: {} },
+    { course: 'ch1', round: 7, attempt: '첫 응시', score: 70, pass: false, isTest: false, wrongMis: ['불활성 기체'], wrongAxes: {} },
+    { course: 'ch1', round: 13, attempt: '첫 응시', score: 75, pass: false, isTest: false, wrongMis: ['비활성 기체'], wrongAxes: {} },
+    { course: 'gc', round: 5, attempt: '첫 응시', score: 90, pass: true, isTest: false, wrongMis: [], wrongAxes: {} },
   ];
   const c = ctx.cumulative_(rows);
-  T('불활성 기체(1회) + 비활성 기체(2회) → 고질 하나 · 비활성 기체 · 2회차',
-    c.chronicMis.length === 1 && c.chronicMis[0].mis === '비활성 기체' && c.chronicMis[0].rounds === 2, JSON.stringify(c.chronicMis));
+  T('불활성 기체(7회) + 비활성 기체(13회) · 출제 3회 → 고질 하나 · 비활성 기체 · 2회 틀림 · 출제 3',
+    c.chronicMis.length === 1 && c.chronicMis[0].mis === '비활성 기체' && c.chronicMis[0].rounds === 2 && c.chronicMis[0].asked === 3, JSON.stringify(c.chronicMis));
   const e = CE.cumulative(rows.map(r => Object.assign({ studentKey: 'k' }, r)))['k'];
   T('chemengine.js cumulative 와 같은 고질', JSON.stringify(e.chronicMis) === JSON.stringify(c.chronicMis), JSON.stringify([e.chronicMis, c.chronicMis]));
-  const sr = CE.spacedReview(rows, 3);
+  const sr = CE.spacedReview(rows.slice(0, 2).map(r => Object.assign({}, r, { round: r.round === 7 ? 1 : 2 })), 3);
   T('chemengine.js spacedReview 도 대표 이름 하나로 센다(2회 틀림)', sr.length === 1 && sr[0].mis === '비활성 기체' && sr[0].times === 2, JSON.stringify(sr));
   /* 대표 시도(finalScore)도 서버·엔진이 같은 규칙 — 처음 통과한 시도, 없으면 마지막 */
   const rows2 = [
@@ -991,6 +1020,124 @@ console.log('[오개념 대표 이름] 서버 cumulative_ 가 chemengine.js 와 
   const c2 = ctx.cumulative_(rows2).trend[0], e2 = CE.cumulative(rows2.map(r => Object.assign({ studentKey: 'k' }, r)))['k'].trend[0];
   T('대표 시도 = 처음 통과한 재시(85) · 서버와 엔진이 같다(마지막 60 아님)',
     c2.finalScore === 85 && c2.finalAttempt === '재시' && e2.finalScore === 85 && e2.finalAttempt === '재시', JSON.stringify([c2, e2]));
+}
+
+/* ── 고질 문턱: 출제 3회 이상 · 절반 이상 틀림 (선생님 결정 2026-09-28) ─────────────
+   예전에는 «서로 다른 두 회차에서 틀림» 이면 고질이었다 — 몇 번 물었는지는 안 봤다.
+   «물었다» 는 회차 정시 문항에 그 오개념이 있다는 뜻이고(ROUND_MIS), 회차마다 첫 응시만 센다.
+   루이스 전자점식은 화학Ⅰ 1~18회 정시에 다 있다. 서버와 엔진이 같은 답을 내는지도 본다. */
+console.log('[고질 문턱] 출제 3회 이상 · 절반 이상 틀림 · 서버와 엔진이 같다');
+{
+  const CE = require('../chemengine.js');
+  T('ROUND_MIS 표가 chemengine.js 와 같다', JSON.stringify(ctx.ROUND_MIS) === JSON.stringify(CE.ROUND_MIS));
+  T('문턱 두 수가 chemengine.js 와 같다(3 · 0.5)', ctx.CHRONIC_MIN_ASKED === 3 && CE.CHRONIC_MIN_ASKED === 3 && ctx.CHRONIC_MIN_RATE === 0.5 && CE.CHRONIC_MIN_RATE === 0.5);
+  const M = '루이스 전자점식';
+  T('루이스 전자점식은 화학Ⅰ 1~4회에서 묻는다', [1, 2, 3, 4].every(r => CE.roundMisOf('ch1', r).indexOf(M) >= 0));
+  const mk = (wrongIn, n, extra) => {
+    const out = [];
+    for (let r = 1; r <= n; r++) out.push({ course: 'ch1', round: r, attempt: '첫 응시', score: 70, pass: false, isTest: false, wrongMis: wrongIn.indexOf(r) >= 0 ? [M] : [], wrongAxes: {} });
+    return out.concat(extra || []);
+  };
+  const both = rows => {
+    const c = ctx.cumulative_(rows), e = CE.cumulative(rows.map(r => Object.assign({ studentKey: 'k' }, r)))['k'];
+    const pick = x => x.chronicMis.filter(m => m.mis === M)[0] || null;
+    return { s: pick(c), e: pick(e), same: JSON.stringify(c.chronicMis) === JSON.stringify(e.chronicMis) };
+  };
+  let b = both(mk([1, 2], 2));
+  T('출제 2회 · 2회 틀림 → 고질 아님 (출제 3회 미만)', !b.s && !b.e && b.same, JSON.stringify(b));
+  b = both(mk([1, 3], 4));
+  T('출제 4회 · 2회 틀림 → 고질 {rounds 2 · asked 4}', !!b.s && b.s.rounds === 2 && b.s.asked === 4 && b.same, JSON.stringify(b));
+  b = both(mk([2], 4));
+  T('출제 4회 · 1회 틀림 → 고질 아님', !b.s && !b.e && b.same, JSON.stringify(b));
+  b = both(mk([1, 2, 3], 3));
+  T('출제 3회 · 3회 틀림 → 고질 {rounds 3 · asked 3}', !!b.s && b.s.rounds === 3 && b.s.asked === 3 && b.same, JSON.stringify(b));
+  /* 재시에서 틀린 것은 세지 않는다 — 회차마다 첫 응시만 */
+  b = both(mk([1], 4, [{ course: 'ch1', round: 2, attempt: '재시', score: 70, pass: false, isTest: false, wrongMis: [M], wrongAxes: {} },
+                       { course: 'ch1', round: 2, attempt: '재재시', score: 90, pass: true, isTest: false, wrongMis: [M], wrongAxes: {} }]));
+  T('재시·재재시에서만 틀린 회차는 세지 않는다 → 출제 4 · 틀림 1 → 고질 아님', !b.s && !b.e && b.same, JSON.stringify(b));
+  /* 표에 없는 회차(과목)는 틀린 것만 물은 것으로 센다 */
+  const odd = [1, 2, 3].map(r => ({ course: 'zz', round: r, attempt: '첫 응시', score: 70, pass: false, isTest: false, wrongMis: r < 3 ? ['표밖 개념'] : [], wrongAxes: {} }));
+  const co = ctx.cumulative_(odd).chronicMis;
+  T('표에 없는 회차: 틀린 두 회차만 물은 것으로 → 출제 2 → 고질 아님', co.length === 0, JSON.stringify(co));
+}
+
+/* ── 재시는 더 쉽게: 문장에 lvl 이 있으면 낮은 것부터 (선생님 결정 2026-09-28) ─────────
+   retakeC 문항과 forms_bank 문장에 lvl(1 기본 · 2 표준 · 3 심화)이 붙기 시작한다. 후보를 고를 때
+   lvl 이 낮은 것부터 보고, lvl 이 없는 문장은 정시 원래 문항의 lvl 로 본다. 이미 본 문장·틀린 문장
+   규칙과 GATE_RESERVE 는 그대로이고, lvl 이 하나도 없으면 결과가 예전과 같다. */
+console.log('[재시 난이도] lvl 이 낮은 문장을 먼저 고른다 · 없으면 예전과 같다');
+{
+  const CE = require('../chemengine.js');
+  const N = CE.norm;
+  const F = (s, a, lvl) => Object.assign({ a, s, f: s + ' (옳음)', w: '' }, lvl != null ? { lvl } : {});
+  const FB = {
+    'L-1': { m: '틀린 개념', forms: [F('어려운 문장', 'O', 3), F('표시 없는 문장', 'X'), F('쉬운 문장', 'O', 1), F('보통 문장', 'X', 2)] },
+    'L-2': { m: '맞힌 개념', forms: [F('맞힌 개념 쉬운 문장', 'O', 1), F('맞힌 개념 표준 문장', 'X', 2)] },
+  };
+  const VER = [{ v: 'C', items: [{ c: 'L-1', u: 'u', a: 'O', s: '재시판 틀린 개념 원문', f: '', w: '' },
+                                 { c: 'L-2', u: 'u', a: 'X', s: '재시판 맞힌 개념 원문', f: '', w: '', lvl: 3 }] }];
+  const REF = [{ c: 'L-1', lvl: 2 }, { c: 'L-2', lvl: 2 }];
+  const run = (fb, ver, seen, ws) => CE.buildRetake(2, ver, ['L-1'], fb, seen || {}, ws || {}, REF);
+  let rt = run(FB, VER);
+  T('틀린 개념: lvl 1 문장이 먼저 (어려운 문장이 앞에 있어도)', rt.items[0].s === '쉬운 문장' && rt.items[0].lvl === 1, JSON.stringify(rt.items[0]));
+  T('맞힌 개념: 원문(lvl 3)보다 쉬운 안 본 문장(lvl 1)이 있으면 그것', rt.items[1].s === '맞힌 개념 쉬운 문장' && rt.items[1].lvl === 1, JSON.stringify(rt.items[1]));
+  T('같은 입력이면 같은 결과', JSON.stringify(run(FB, VER).items) === JSON.stringify(rt.items));
+  /* 보장은 그대로 — 틀린 문장은 lvl 이 낮아도 절대 안 낸다, 이미 본 문장은 안 본 것이 있으면 피한다 */
+  rt = run(FB, VER, { [N('보통 문장')]: 1 }, { [N('쉬운 문장')]: 1 });
+  T('틀린 문장(lvl 1)은 안 내고, 본 문장(lvl 2)은 피해 → 표시 없는 문장(=정시 lvl 2)', rt.items[0].s === '표시 없는 문장' && !('lvl' in rt.items[0]), JSON.stringify(rt.items[0]));
+  /* lvl 이 없는 문장은 정시 원래 문항의 lvl 로 본다 */
+  const FB2 = { 'L-1': { m: 'x', forms: [F('표준 표시', 'O', 2), F('표시 없음', 'X')] } };
+  const V2 = [{ v: 'C', items: [{ c: 'L-1', u: 'u', a: 'O', s: '원문', f: '', w: '' }] }];
+  T('정시 lvl 1 이면 표시 없는 문장(=1)이 lvl 2 보다 먼저', CE.buildRetake(2, V2, ['L-1'], FB2, {}, {}, [{ c: 'L-1', lvl: 1 }]).items[0].s === '표시 없음');
+  T('정시 lvl 3 이면 lvl 2 가 표시 없는 문장(=3)보다 먼저', CE.buildRetake(2, V2, ['L-1'], FB2, {}, {}, { 'L-1': 3 }).items[0].s === '표준 표시');
+  /* lvl 이 하나도 없으면 예전과 글자까지 같다(원래 순서 · lvl 칸도 안 생긴다) */
+  const strip = fb => JSON.parse(JSON.stringify(fb, (k, v) => (k === 'lvl' ? undefined : v)));
+  const a1 = CE.buildRetake(2, strip(VER), ['L-1'], strip(FB), {}, {}, REF), a0 = CE.buildRetake(2, strip(VER), ['L-1'], strip(FB), {}, {});
+  T('lvl 이 없으면 첫 form · 원문 그대로 (refLvl 을 줘도 안 줘도 같다)', a1.items[0].s === '어려운 문장' && a1.items[1].s === '재시판 맞힌 개념 원문' && JSON.stringify(a1) === JSON.stringify(a0) && !JSON.stringify(a1.items).includes('"lvl"'), JSON.stringify(a1.items));
+  /* 게이트는 난이도 순서를 안 쓴다 — 쉬운 문장은 재시 몫으로 남긴다. 예약 두 개(GATE_RESERVE)도 그대로 */
+  const FB3 = { 'G-1': { m: 'g', forms: [F('g3', 'O', 3), F('g3b', 'X', 3), F('g2', 'O', 2), F('g1', 'X', 1), F('gx', 'O')] } };
+  const gt = CE.buildGate([{ c: 'G-1', unit: 'u', mis: 'g', lvl: 2, fix: 'x', why: '', s: '원문', a: 'O' }], FB3, {}).gates[0];
+  T('게이트: form 5개 중 2개를, 원래 순서대로(g3 · g3b — 쉬운 g1·g2 는 재시 몫)', gt.checks.map(c => c.s).join(',') === 'g3,g3b', JSON.stringify(gt.checks.map(c => c.s)));
+  /* 옛 회차는 난이도 순서를 끈다(refLvl=false) — 인쇄된 재시지·링크 재진입이 같은 문항을 받게 */
+  T('이미 치른 회차는 난이도 순서 꺼짐(ch1 11 · ch2 16 · gc 7 까지)', !CE.lvlOn('ch1', 11) && CE.lvlOn('ch1', 12) && !CE.lvlOn('ch2', 16) && CE.lvlOn('ch2', 17) && !CE.lvlOn('gc', 7) && CE.lvlOn('gc', 8));
+  const off = CE.buildRetake(2, VER, ['L-1'], FB, {}, {}, false);
+  T('refLvl=false 면 첫 form · 원문 그대로(lvl 이 있어도)', off.items[0].s === '어려운 문장' && off.items[1].s === '재시판 맞힌 개념 원문', JSON.stringify(off.items.map(x => x.s)));
+  /* 판이 모자라면 돌아간다 — 재시 3차는 셋째 판, 재시 4차는 첫 판 */
+  const VV = [0, 1, 2].map(i => ({ v: 'C' + i, items: [{ c: 'V-' + i, u: 'u', a: 'O', s: '판' + i + ' 원문', f: '', w: '' }] }));
+  const vOf = n => CE.buildRetake(n, VV, [], {}, {}, {}).items[0].s;
+  T('판 고르기: 재시 0 · 재재시 1 · 재시 3차 2 · 재시 4차 0 · 재시 5차 1', [2, 3, 4, 5, 6].map(vOf).join(',') === '판0 원문,판1 원문,판2 원문,판0 원문,판1 원문', [2, 3, 4, 5, 6].map(vOf).join(','));
+  /* 실제 자료(회차 파일·forms_bank 의 lvl) — 화학Ⅰ 5회에서 세 문항 중 하나를 틀린 학생.
+     틀린 개념 자리의 문장이 lvl 을 안 볼 때보다 쉬워지고(평균이 낮거나 같고, 더 쉬운 자리가 하나 이상),
+     틀린 문장은 표시(reusedWrong) 없이 다시 안 나오며, 같은 입력이면 같은 결과다. */
+  {
+    const FORMS = JSON.parse(fs.readFileSync('appdata/forms_bank.json', 'utf8'));
+    const RD = JSON.parse(fs.readFileSync('appdata/round_ch1_05.json', 'utf8'));
+    const items = RD.jeongsi.items;
+    const hasLvl = Object.keys(FORMS).some(c => (FORMS[c].forms || []).some(f => f.lvl != null));
+    if (!hasLvl) T('forms_bank 에 lvl 이 아직 없다 — 실제 자료 검사는 건너뛴다', true);
+    else {
+      const strip = o => JSON.parse(JSON.stringify(o, (k, v) => (k === 'lvl' ? undefined : v)));
+      const FS = strip(FORMS), VS = strip(RD.retakeC);
+      const lvlOf = {}; Object.keys(FORMS).forEach(c => (FORMS[c].forms || []).forEach(f => { lvlOf[N(f.s)] = f.lvl; }));
+      RD.retakeC.forEach(v => v.items.forEach(it => { if (lvlOf[N(it.s)] == null) lvlOf[N(it.s)] = it.lvl; }));
+      const g = CE.gradeAttempt(items.map((it, i) => (i % 3 === 0 ? (it.a === 'O' ? 'X' : 'O') : it.a)), items, RD.scoring);
+      const wrongC = CE.diagnose(g, FORMS).wrongConcepts.map(w => w.c).filter(Boolean);
+      const base = () => { const seen = {}, ws = {}; items.forEach(it => { seen[N(it.s)] = 1; }); g.perItem.forEach((p, i) => { if (!p.ok) ws[N(items[i].s)] = 1; }); return { seen, ws }; };
+      const b1 = base(), b2 = base(), b3 = base();
+      const now = CE.buildRetake(2, RD.retakeC, wrongC, FORMS, b1.seen, b1.ws, items);
+      const again = CE.buildRetake(2, RD.retakeC, wrongC, FORMS, b3.seen, b3.ws, items);
+      const blind = CE.buildRetake(2, VS, wrongC, FS, b2.seen, b2.ws, items);          // lvl 을 못 보는 엔진 = 예전 순서
+      const avg = its => { const t = its.filter(x => x.targeted); return t.reduce((a, x) => a + (lvlOf[N(x.s)] || 0), 0) / t.length; };
+      const easier = now.items.filter((x, i) => x.targeted && blind.items[i].targeted && x.c === blind.items[i].c && lvlOf[N(x.s)] < lvlOf[N(blind.items[i].s)]).length;
+      T('실제 자료: 틀린 개념 자리가 lvl 을 안 볼 때보다 쉽다 (평균 ' + avg(now.items).toFixed(2) + ' ≤ ' + avg(blind.items).toFixed(2) + ' · 더 쉬워진 자리 ' + easier + ')',
+        avg(now.items) <= avg(blind.items) && easier > 0);
+      T('실제 자료: 틀린 문장은 표시 없이 다시 안 나온다', now.items.every(x => !b1.ws[N(x.s)] || x.reusedWrong));
+      T('실제 자료: 같은 입력이면 같은 결과', JSON.stringify(now.items) === JSON.stringify(again.items));
+    }
+  }
+  T('attemptLabel·attemptName', [0, 1, 2, 3, 4].map(CE.attemptLabel).join(',') === '정시,재시,재재시,재재재시,재재재재시'
+    && ['첫 응시', '재시', '재재시', '재재재시', '재재재재시'].map(a => CE.attemptName(a)).join(',') === '정시,재시,재재시,재시 3차,재시 4차'
+    && CE.attemptName('첫 응시', '첫 응시') === '첫 응시');
 }
 
 console.log(`\n결과: pass=${pass} fail=${fail}`);

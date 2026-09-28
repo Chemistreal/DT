@@ -87,7 +87,7 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
     <div class="row">
       <div style="max-width:150px"><label for="rd">회차</label><select id="rd" onchange="onPick()"></select></div>
       <div><label for="cls">반</label><select id="cls" onchange="pickClass()"><option value="">명단 불러오는 중...</option></select></div>
-      <div style="max-width:130px"><label for="att">시도</label><select id="att" onchange="onPick()"><option value="2">재시</option><option value="3">재재시</option><option value="4">재재재시</option><option value="5">재재재재시</option><option value="6">재재재재재시</option></select></div>
+      <div style="max-width:130px"><label for="att">시도</label><select id="att" onchange="onPick()"><option value="2">재시</option><option value="3">재재시</option><option value="4">재시 3차</option><option value="5">재시 4차</option><option value="6">재시 5차</option><option value="7">재시 6차</option><option value="8">재시 7차</option><option value="9">재시 8차</option></select></div>
       <div style="flex:0;display:flex;align-items:flex-end"><button class="btn ghost" onclick="manualStudent()">직접 입력</button></div>
     </div>
     <div id="chips" class="chips"></div>
@@ -125,7 +125,9 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
 <script src="retakegen.js"></script>
 <script>
 var SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
-function attLabelN(n){ n=Number(n)||2; if(n<=1) return '정시'; var s=''; for(var i=1;i<n;i++) s+='재'; return s+'시'; }  // 2=재시,3=재재시,4=재재재시...
+function attLabelN(n){ n=Number(n)||2; return ChemEngine.attemptLabel(n-1); }  // 시트에 적는 라벨: 2=재시,3=재재시,4=재재재시...
+/* 사람에게 보여 주는 이름: 2=재시, 3=재재시, 4=재시 3차 … — 재시는 통과할 때까지 끝이 없다(2026-09-28). */
+function attNameN(n){ n=Number(n)||2; return ChemEngine.attemptName(n-1); }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function reportBase(){var p=location.href.split('?')[0].split('#')[0];return p.slice(0,p.lastIndexOf('/')+1);}
 
@@ -208,7 +210,7 @@ async function loadForStudent(){
   document.getElementById('entryCard').style.display='block';
   document.getElementById('manualRow').style.display=CUR.manual?'flex':'none';
   document.getElementById('stuNm').textContent=CUR.manual?(CUR.name||'직접 입력'):CUR.name;
-  document.getElementById('stuMeta').textContent=(CUR.school||'')+(CUR.year?(' \u00b7 '+CUR.year+'학년'):'')+' \u00b7 '+(attLabelN(CUR.att));
+  document.getElementById('stuMeta').textContent=(CUR.school||'')+(CUR.year?(' \u00b7 '+CUR.year+'학년'):'')+' \u00b7 '+(attNameN(CUR.att));
   document.getElementById('oxgrid').innerHTML=''; document.getElementById('gradebar').style.display='none';
   document.getElementById('statusline').innerHTML='';
   var li=document.getElementById('loadingItems'); li.style.display='block';
@@ -329,8 +331,8 @@ async function gradeAndSave(){
   SAVING=false; refreshBar();
   if(saved){
     DONE[sk+'#'+CUR.course+CUR.round+'#'+CUR.att]=true;
-    var okMsg='<span class="ok">시트 저장 확인</span> \u00b7 '+esc(CUR.name)+' '+CUR.round+'회 '+attLabel+' '+pt(g.score)+'점'+(g.pass?' <span class="ok">통과</span>':' <span class="err">미달</span>');
-    addLog(CUR.name, CUR.round, attLabel, g.score, g.pass, link);
+    var okMsg='<span class="ok">시트 저장 확인</span> \u00b7 '+esc(CUR.name)+' '+CUR.round+'회 '+attNameN(CUR.att)+' '+pt(g.score)+'점'+(g.pass?' <span class="ok">통과</span>':' <span class="err">미달</span>');
+    addLog(CUR.name, CUR.round, attNameN(CUR.att), g.score, g.pass, link);
     renderChips();
     st.innerHTML=okMsg;
   }else{

@@ -123,3 +123,4 @@ lec-122-complex-ion-coordinate-bond.html	착이온과 배위 결합
 lec-123-ligand-coordination-number.html	리간드와 배위수
 lec-124-complex-structure-properties.html	착물의 구조와 성질
 lec-125-coordination-synthesis.html	배위 화학 종합
+lec-126-orbital-nodes.html	오비탈의 마디

@@ -37,7 +37,7 @@
     var j = await r.json(); return (j && j.rows) || [];
   }
 
-  // 학생의 이 회차 재시/재재시 문항 재생성 (재재시는 재시에서 틀린 것 기준, 정시·재시 문장 재노출 방지)
+  // 학생의 이 회차 재시/재재시/재재재시… 문항 재생성 (다음 재시는 직전 재시에서 틀린 것 기준, 앞 시도 문장 재노출 방지 · 재시는 통과할 때까지 끝이 없다)
   function clone_(o) { var c = {}; for (var k in o) if (o.hasOwnProperty(k)) c[k] = o[k]; return c; }
   function parseOX_(s, n) { var a = String(s || '').split('').map(function (ch) { return ch === 'O' ? 'O' : ch === 'X' ? 'X' : ''; }); while (a.length < n) a.push(''); return a; }
 
@@ -68,7 +68,7 @@
     // 재시 레벨 2..attemptNo 를 순서대로 연쇄 재생성 (각 단계는 결정적)
     var curItems = null;
     for (var lvl = 2; lvl <= attemptNo; lvl++) {
-      var gen = CE.buildRetake(lvl, rd.retakeC, Object.keys(curWrongCids), FORMS, seen, curWrongStmts);  // seen 을 변형(누적)
+      var gen = CE.buildRetake(lvl, rd.retakeC, Object.keys(curWrongCids), FORMS, seen, curWrongStmts, CE.lvlOn(course, round) ? keyItems : false);  // seen 을 변형(누적) · 정시 문항 lvl 기준으로 쉬운 문장부터
       curItems = (gen && gen.items) || [];
       if (!curItems.length) return null;
       if (lvl === attemptNo) break;                              // 목표 레벨 문항 = 이번에 볼 시험
