@@ -552,7 +552,8 @@ async function assertNoOverflow(page, label) {
     /* 절이 적힌 개념이면 성적표와 같은 꼬리(#sNN / #q)까지 같아야 한다. 없으면 꼬리도 없다. */
     const sec = (lec.sec || {})[got.on] || '';
     const tail = sec === 'q' ? '#q' : (sec ? '#s' + sec : '');
-    assert(a.href === 'https://chemistreal.github.io/exam/' + file + tail, '강의 주소가 성적표 규칙과 다르다: ' + a.href);
+    /* 강의 쪽 띠(«DT 일반화학 10회에서 틀린 개념입니다»)를 위해 ?from=dt&c=과목&r=회차 가 #절 앞에 온다. */
+    assert(a.href === 'https://chemistreal.github.io/exam/' + file + '?from=dt&c=gc&r=10' + tail, '강의 주소가 성적표 규칙과 다르다: ' + a.href);
     assert(b && b.tag === 'SPAN' && !b.href, '표에 없는 개념인데 링크를 지어냈다: ' + JSON.stringify(b));
     const txt = await page.evaluate(() => document.body.innerText);
     assert(/누르면 개념 강의/.test(txt), '링크가 있는데 누르라는 말이 없다');
@@ -614,6 +615,56 @@ async function assertNoOverflow(page, label) {
       if (got) n++;
     }));
     assert(n === Object.keys(sec).length, '절 anchor 붙은 주소 수가 표와 다르다: ' + n + ' vs ' + Object.keys(sec).length);
+  });
+
+  /* ── 강의 문이 ?from=dt 를 달고, 일부만 맞는 자리는 회색 한 줄을 단다 (2026-09-28) ──
+     · exam 의 강의는 ?from=dt&c=<과목>&r=<회차> 로 열리면 «DT 화학Ⅰ 12회에서 틀린 개념입니다» 띠를
+       띄운다. 그 꼬리는 **#절 앞**에 와야 한다(뒤에 오면 절 이름의 일부가 된다). LECMAP 은 그대로다.
+     · 과목·회차를 모르면 ?from=dt 만 — 없는 회차를 지어내지 않는다.
+     · LECNOTE(부분 적합 한 줄)는 강의 문 아래 한 줄로 「§03 참고 · …」/「확인 문제 참고 · …」.
+       글은 이스케이프한다. note 가 없는 자리엔 줄을 만들지 않는다. */
+  await test('성적표 강의 문 · ?from=dt 꼬리와 부분 적합 한 줄', async () => {
+    const lec = JSON.parse(fs.readFileSync(path.join(ROOT, 'concept-lecture-dt.json'), 'utf8'));
+    const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+    const constOf = (name) => JSON.parse(src.match(new RegExp('\\nconst ' + name + '=(\\{[^\\n]*\\});\\n'))[1]);
+    const LECMAP = constOf('LECMAP'), LECUNIT = constOf('LECUNIT'), LECNOTE = constOf('LECNOTE');
+    const fnSrc = name => { const at = src.indexOf('function ' + name + '('); assert(at > 0, name + ' 를 못 찾았다');
+      return src.slice(at, src.indexOf('\n}\n', at) + 3); };
+    const api = new Function('LECMAP', 'LECUNIT', 'LECNOTE', 'rEsc',
+      ['lecFor', 'lecNoteFor', 'lecDtHref', 'lecLinkHTML'].map(fnSrc).join('\n')
+      + '\nreturn { lecFor: lecFor, lecLinkHTML: lecLinkHTML, lecDtHref: lecDtHref };')(LECMAP, LECUNIT, LECNOTE,
+      t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
+    /* 표와 같다 — 키는 map·byUnit 안, 글은 40자 이하 */
+    assert(JSON.stringify(LECNOTE) === JSON.stringify(lec.note), 'LECNOTE 가 표의 note 와 다르다 — lec_link.py --emit');
+    Object.keys(LECNOTE).forEach(k => {
+      assert(LECMAP[k] || LECUNIT[k], 'note 가 강의 없는 자리에 붙었다: ' + k);
+      assert(LECNOTE[k].length <= 40, 'note 가 40자를 넘는다: ' + k);
+    });
+    /* (1) ?from=dt 는 #절 앞에 — 과목·회차를 알 때만 c·r */
+    assert(api.lecDtHref('https://x/lec-1.html#s03', 'ch1', 12) === 'https://x/lec-1.html?from=dt&c=ch1&r=12#s03', '꼬리가 #절 앞에 안 온다');
+    assert(api.lecDtHref('https://x/lec-1.html#q', 'gc', '4') === 'https://x/lec-1.html?from=dt&c=gc&r=4#q', '확인 문제 주소에 꼬리가 틀리다');
+    assert(api.lecDtHref('https://x/lec-1.html', 'ch2', 7) === 'https://x/lec-1.html?from=dt&c=ch2&r=7', '절 없는 주소에 꼬리가 틀리다');
+    assert(api.lecDtHref('https://x/lec-1.html#s01', '', 5) === 'https://x/lec-1.html?from=dt#s01', '과목을 모르는데 c 를 지어냈다');
+    assert(api.lecDtHref('https://x/lec-1.html#s01', 'ch1', null) === 'https://x/lec-1.html?from=dt#s01', '회차를 모르는데 r 을 지어냈다');
+    assert(api.lecDtHref('https://x/lec-1.html', 'xx', 3) === 'https://x/lec-1.html?from=dt', '모르는 과목 이름을 그대로 실었다');
+    /* (2) note 있는 map 자리 — 본문 절이면 「§NN 참고 · 」 */
+    const bodyK = Object.keys(LECNOTE).find(k => k.indexOf('|') < 0 && /#s\d\d$/.test(LECMAP[k] || ''));
+    assert(bodyK, '본문 절 + note 인 자리가 없다');
+    const h1 = api.lecLinkHTML(bodyK, 'ch1', '', 9), s1 = LECMAP[bodyK].slice(-2);
+    assert(h1.indexOf('href="' + LECMAP[bodyK].replace('#', '?from=dt&amp;c=ch1&amp;r=9#') + '"') > 0, '강의 문 주소가 틀리다: ' + h1);
+    assert(h1.indexOf('<div class="muted lecnote">§' + s1 + ' 참고 · ') > 0, '부분 적합 한 줄이 없다: ' + h1);
+    /* (3) note 있는 확인 문제 자리 — 「확인 문제 참고 · 」 */
+    const qK = Object.keys(LECNOTE).find(k => k.indexOf('|') < 0 && /#q$/.test(LECMAP[k] || ''));
+    if (qK) assert(api.lecLinkHTML(qK, 'gc', '', 4).indexOf('>확인 문제 참고 · ') > 0, qK + ' 의 한 줄이 확인 문제를 안 가리킨다');
+    /* (4) byUnit 자리의 note 는 그 단원으로 찾는다 */
+    const uK = Object.keys(LECNOTE).find(k => k.indexOf('|') > 0);
+    if (uK) {
+      const cu = uK.split('|')[0], mis = uK.split('|')[1], c = cu.split('/')[0], u = cu.slice(c.length + 1);
+      assert(api.lecLinkHTML(mis, c, u, 3).indexOf('lecnote') > 0, uK + ' 의 한 줄이 안 뜬다');
+    }
+    /* (5) note 없는 자리엔 줄이 없다 */
+    const plain = Object.keys(LECMAP).find(k => !LECNOTE[k]);
+    assert(api.lecLinkHTML(plain, 'ch1', '', 2).indexOf('lecnote') < 0, '표시할 것이 없는데 한 줄을 만들었다: ' + plain);
   });
 
   /* 은행의 문장·개념 이름·해설은 JSON 글자 그대로다. innerHTML 에 날로 넣으면
@@ -2655,11 +2706,13 @@ async function assertNoOverflow(page, label) {
       return { has: !!box, href: a ? a.getAttribute('href') : null, target: a ? a.getAttribute('target') : null };
     }, rep);
     assert(rx.has, '반복해서 막히는 곳에 「' + rep + '」 카드가 없다');
-    assert(rx.href === want && rx.target === '_blank', '대표 이름으로 합쳐지자 강의 문이 사라졌다: ' + JSON.stringify(rx) + ' (기대 ' + want + ')');
+    /* 문 주소는 표의 주소에 ?from=dt&c=과목&r=최신 회차 를 #절 앞에 끼운 것이다(강의 쪽 띠 · 2026-09-28). */
+    const wi = want.indexOf('#'), wantHref = (wi < 0 ? want : want.slice(0, wi)) + '?from=dt&c=ch1&r=3' + (wi < 0 ? '' : want.slice(wi));
+    assert(rx.href === wantHref && rx.target === '_blank', '대표 이름으로 합쳐지자 강의 문이 사라졌다: ' + JSON.stringify(rx) + ' (기대 ' + wantHref + ')');
     /* (2) 「이번 주 확인할 개념」 도 같은 이름·같은 강의 */
     const todo = await page.evaluate(() => { const t = document.querySelector('.card.todo'); if (!t) return null;
       const a = t.querySelector('.todohead a.leclink'); return { mis: (t.querySelector('.todomis') || {}).textContent, href: a ? a.getAttribute('href') : null }; });
-    assert(todo && todo.mis === rep && todo.href === want, '확인할 개념의 강의 문이 없거나 다르다: ' + JSON.stringify(todo));
+    assert(todo && todo.mis === rep && todo.href === wantHref, '확인할 개념의 강의 문이 없거나 다르다: ' + JSON.stringify(todo));
     /* (3) 전수 — 화면의 lecFor 로 모든 대표 이름을 잰다 */
     const all = await page.evaluate(rs => rs.map(r => [r, lecFor(r, 'ch1', ''), lecFor(r, 'ch2', '')]), Object.keys(reps));
     const missing = all.filter(x => merged.indexOf(x[0]) >= 0 && (!x[1] || !x[2])).map(x => x[0]);

@@ -54,13 +54,30 @@
       있으면 그 강의 파일에 id="sNN" / id="q" 가 **실제로** 있는지 본다(없으면
       빨간불; exam 이 없으면 형식만 본다).
 
+■ 확인 문제만으로도 잇는다 · 부분 적합은 잇되 표시한다 (선생님 결정 2026-09-28)
+
+한 조각은 「본문에는 없고 확인 문제(해설)에만 나온다」며 비워 두고, 다른 조각은
+같은 까닭으로 이었다 — 판정이 갈려 있었다. 이제 확인 문제가 그 오개념을 실제로
+바로잡으면 잇고 sec 를 "q" 로 둔다(그 자리로 바로 열린다).
+
+강의가 **일부만** 맞는 자리(why 가 「다만 …」「…라는 말은 강의에 없다」처럼 스스로
+모자람을 적은 곳)도 잇되, 무엇이 모자란지를 `note` 표에 한 줄(40자 이하)로 적는다 —
+{ "<map 키 또는 byUnit 키>": "‘고장액’이라는 말은 강의에 없음" }. 성적표가 「▶ 개념
+강의 보기」 아래 회색 한 줄로 「§01 참고 · …」(확인 문제면 「확인 문제 참고 · …」)처럼
+보여 준다. 조각에서는 sec 와 같은 꼴의 `note` 칸이다(pick 항목은 글자열, byUnit 항목은
+단원마다 하나인 사전). `--absorb` 가 표로 옮기고, `--emit` 이 report.html 의 LECNOTE 로
+내보내고, `--check` 가 키·길이와 report.html 의 세 상수가 표와 같은지를 본다. note 는
+사람이 why 와 강의를 읽고 쓴다 — 이 자는 짓지 않는다.
+
+(표의 설명 글은 `about` 칸에 있다. 예전에는 그 자리가 `note` 였다.)
+
     python3 tools/lec_link.py           # 지금 얼마나 이어져 있나
     python3 tools/lec_link.py --check   # 끊기거나 줄면 빨간불 (CI)
     python3 tools/lec_link.py --seal    # 지금 덮는 수를 새 바닥으로
     python3 tools/lec_link.py --chunks  # 아직 안 이은 것을 집필 조각으로 끊는다
     python3 tools/lec_link.py --secs    # 조각의 why 에서 절 인용을 sec 칸으로(첫 채움만)
     python3 tools/lec_link.py --absorb  # 집필 조각을 표로 옮긴다
-    python3 tools/lec_link.py --emit    # 표를 report.html 의 LECMAP 으로
+    python3 tools/lec_link.py --emit    # 표를 report.html 의 LECMAP·LECUNIT·LECNOTE 로
     python3 tools/lec_link.py --sync    # exam 저장소에서 강의 목록을 다시 베낀다
 """
 import collections
@@ -84,6 +101,7 @@ SEAL = os.path.join(ROOT, 'tools', 'lec_link.json')
 WIP = os.path.join(ROOT, 'tools', '_lecwip')
 EXAM = '/home/user/exam'
 SEP = '|'
+NOTE_MAX = 40   # 부분 적합 한 줄의 글자 수 상한 — 휴대폰 한 줄
 
 
 def load(p):
@@ -223,15 +241,32 @@ def secs():
     return 0
 
 
+def upgrade(doc):
+    """표의 설명 글이 `note` 칸(글자열)에 있던 옛 꼴이면 `about` 으로 옮긴다(자리는 그대로).
+
+    2026-09-28 부터 `note` 는 「부분 적합」 한 줄을 담는 표다. 같은 이름을 두 뜻으로
+    쓰면 화면(challenge.html 도 이 파일을 읽는다)이 글자열을 표로 읽는다.
+    """
+    if isinstance(doc.get('note'), str):
+        doc = dict(('about', v) if k == 'note' else (k, v) for k, v in doc.items())
+    return doc
+
+
+def notes_of(doc):
+    nt = doc.get('note')
+    return nt if isinstance(nt, dict) else {}
+
+
 def absorb():
-    """집필 조각(dtlecwip/*.json)을 표로 옮긴다. 조각의 sec 칸도 함께 옮긴다."""
-    doc = load(MAP)
+    """집필 조각(dtlecwip/*.json)을 표로 옮긴다. 조각의 sec·note 칸도 함께 옮긴다."""
+    doc = upgrade(load(MAP))
     lec = doc['lectures']
     f2n = {d['file']: n for n, d in lec.items()}
     mp = doc.setdefault('map', {})
     bu = doc.setdefault('byUnit', {})
     un = doc.setdefault('unmapped', {})
     sc = doc.setdefault('sec', {})
+    nt = dict(notes_of(doc))
     parts = sorted(glob.glob(os.path.join(WIP, '*.json')))
     if not parts:
         print('옮길 조각이 없다 (%s 가 비어 있다)' % WIP)
@@ -253,6 +288,12 @@ def absorb():
                 untouched += 1
                 continue
             sec = v.get('sec')
+            note = v.get('note')
+            if pick or per:
+                # 이어진 이름은 unmapped 에서 뺀다 — 확인 문제만으로 잇기로 한 날(2026-09-28)
+                # 전에는 조각이 비었다가 채워지는 일이 없어 이 줄이 없었다. 없으면 한 이름이
+                # map 과 unmapped 에 함께 앉아 lecture-gap 화면이 «강의 없음» 이라고 거짓말한다.
+                un.pop(mis, None)
             if pick:
                 n = f2n.get(pick)
                 if not n:
@@ -265,6 +306,11 @@ def absorb():
                     sc[mis] = sec
                 else:
                     sc.pop(mis, None)
+                # 부분 적합 한 줄: 절과 같은 규칙 — 조각에 적힌 것이 곧 표의 값이다.
+                if isinstance(note, str) and note:
+                    nt[mis] = note
+                else:
+                    nt.pop(mis, None)
             for u, f in per.items():
                 n = f2n.get(f)
                 if not n:
@@ -277,6 +323,11 @@ def absorb():
                     sc[u + SEP + mis] = us
                 else:
                     sc.pop(u + SEP + mis, None)
+                un_ = (note or {}).get(u) if isinstance(note, dict) else ''
+                if un_:
+                    nt[u + SEP + mis] = un_
+                else:
+                    nt.pop(u + SEP + mis, None)
             if not pick and not per:
                 un[mis] = why or '맞는 강의가 목록에 없다'
                 noted += 1
@@ -289,9 +340,11 @@ def absorb():
     doc['unmapped'] = dict(sorted(un.items()))
     # sec 는 map·byUnit 에 있는 키만 남긴다(byUnit 이 맡아 map 에서 뺀 이름의 절도 함께 빠진다).
     doc['sec'] = dict(sorted((k, x) for k, x in sc.items() if k in mp or k in bu))
+    # note 도 같은 규칙 — map·byUnit 에 있는 키만 남긴다.
+    doc['note'] = dict(sorted((k, x) for k, x in nt.items() if k in mp or k in bu))
     save(doc)
-    print('조각 %d개 → 이은 오개념 %d · 단원별로 갈린 짝 %d · 강의 없음 %d · 절까지 %d'
-          % (len(parts), added, paired, noted, len(doc['sec'])))
+    print('조각 %d개 → 이은 오개념 %d · 단원별로 갈린 짝 %d · 강의 없음 %d · 절까지 %d · 부분 적합 표시 %d'
+          % (len(parts), added, paired, noted, len(doc['sec']), len(doc['note'])))
     if untouched:
         print('아직 아무도 안 본 자리 %d — 옮기지 않았다(집필이 끝나면 다시 부른다)'
               % untouched)
@@ -304,13 +357,19 @@ def absorb():
     return 0
 
 
-def emit():
-    """표를 report.html 의 LECMAP·LECUNIT 상수로 내보낸다.
+# report.html 에 내보내는 세 상수. 차례가 곧 파일 안의 차례다(LECNOTE 는 LECMAP 바로 뒤).
+CONSTS = (
+    ('LECUNIT', '과목·단원이 함께 정해 주는 강의. 같은 오개념 이름이 화학Ⅰ과\n'
+                '   화학Ⅱ에서 다른 것을 물을 때 쓴다. LECMAP 보다 먼저 본다.'),
+    ('LECMAP', '오개념 이름 → 개념강의 한 편(exam 저장소). 오답 개념 클리닉의\n'
+               '   「강의 보기」가 쓴다.'),
+    ('LECNOTE', '강의가 일부만 맞는 자리의 한 줄(키는 LECMAP·LECUNIT 과 같다). 「▶ 개념 강의\n'
+                '   보기」 아래 회색 한 줄로 뜬다 — 선생님 결정 2026-09-28 「부분 적합은 잇되 표시한다」.'),
+)
 
-    두 상수는 **여기서만** 만든다. 손으로 고치면 표와 화면이 갈리고, 갈린 것을
-    아무도 못 본다 — 화면은 잘못된 강의를 자신 있게 걸고 표는 옳은 것을 담고 있다.
-    """
-    doc = load(MAP)
+
+def tables(doc):
+    """표 → report.html 의 세 상수 값. emit 과 --check 가 같은 것을 쓴다."""
     lec = doc['lectures']
     base = doc.get('base') or ''
     sc = doc.get('sec', {})
@@ -319,30 +378,50 @@ def emit():
     tail = lambda k: ('#q' if sc.get(k) == 'q' else '#s' + sc[k]) if sc.get(k) else ''
     m = {k: base + fn(v) + tail(k) for k, v in sorted(doc.get('map', {}).items()) if fn(v)}
     u = {k: base + fn(v) + tail(k) for k, v in sorted(doc.get('byUnit', {}).items()) if fn(v)}
+    n = {k: x for k, x in sorted(notes_of(doc).items()) if k in m or k in u}
+    return {'LECUNIT': u, 'LECMAP': m, 'LECNOTE': n}
+
+
+def const_body(table):
+    # '<' 는 \u003c 로 — 표의 글이 '</script>' 를 품어도 script 가 끊기지 않게.
+    return json.dumps(table, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c')
+
+
+def const_pat(name):
+    return re.compile(r'(/\* %s —.*?\*/\n)?const %s=\{.*?\};\n' % (name, name), re.S)
+
+
+def emit():
+    """표를 report.html 의 LECMAP·LECUNIT·LECNOTE 상수로 내보낸다.
+
+    세 상수는 **여기서만** 만든다. 손으로 고치면 표와 화면이 갈리고, 갈린 것을
+    아무도 못 본다 — 화면은 잘못된 강의를 자신 있게 걸고 표는 옳은 것을 담고 있다.
+    (--check 가 세 상수가 표와 같은지 본다.)
+    """
+    doc = load(MAP)
+    sc = doc.get('sec', {})
+    T = tables(doc)
     src = os.path.join(ROOT, 'report.html')
     s = io.open(src, encoding='utf-8').read()
-    out = 0
-    for name, table, note in (
-            ('LECUNIT', u, '과목·단원이 함께 정해 주는 강의. 같은 오개념 이름이 화학Ⅰ과\n'
-                           '   화학Ⅱ에서 다른 것을 물을 때 쓴다. LECMAP 보다 먼저 본다.'),
-            ('LECMAP', m, '오개념 이름 → 개념강의 한 편(exam 저장소). 오답 개념 클리닉의\n'
-                          '   「강의 보기」가 쓴다.')):
-        body = json.dumps(table, ensure_ascii=False, separators=(',', ':'))
+    prev = None
+    for name, note in CONSTS:
         line = ('/* %s — tools/lec_link.py --emit 가 concept-lecture-dt.json 에서 만든다.\n'
                 '   %s\n'
                 '   ⚠ 손으로 고치지 않는다. 고치려면 표를 고치고 다시 내보낸다. */\n'
-                'const %s=%s;\n') % (name, note, name, body)
-        pat = re.compile(r'(/\* %s —.*?\*/\n)?const %s=\{.*?\};\n' % (name, name), re.S)
+                'const %s=%s;\n') % (name, note, name, const_body(T[name]))
+        pat = const_pat(name)
         if pat.search(s):
             s = pat.sub(lambda mm: line, s, count=1)
         else:
-            at = s.index('function segRankSec(')
+            # 처음 내보내는 상수는 앞 상수 바로 뒤에 둔다(없으면 segRankSec 앞).
+            mm = const_pat(prev).search(s) if prev else None
+            at = mm.end() if mm else s.index('function segRankSec(')
             s = s[:at] + line + s[at:]
-        out += len(table)
+        prev = name
     io.open(src, 'w', encoding='utf-8').write(s)
-    anchored = sum(1 for k in list(m) + list(u) if sc.get(k))
-    print('report.html 에 LECUNIT %d · LECMAP %d 를 썼다 (절 anchor 붙은 주소 %d).'
-          % (len(u), len(m), anchored))
+    anchored = sum(1 for k in list(T['LECMAP']) + list(T['LECUNIT']) if sc.get(k))
+    print('report.html 에 LECUNIT %d · LECMAP %d · LECNOTE %d 를 썼다 (절 anchor 붙은 주소 %d).'
+          % (len(T['LECUNIT']), len(T['LECMAP']), len(T['LECNOTE']), anchored))
     return 0
 
 
@@ -359,6 +438,8 @@ def chunks(per=45):
         why      왜 그 강의인가 / 왜 없는가
         sec      그 강의의 어느 절인가 — "03" 또는 확인 문제만 근거면 "q". --secs 가
                  why 에서 초안을 적고, 사람이 고친다. byUnit 항목은 단원마다 하나인 사전.
+        note     강의가 일부만 맞으면 무엇이 모자란지 한 줄(40자 이하, 예: 「‘고장액’이라는
+                 말은 강의에 없음」). 다 맞으면 비워 둔다. 모양은 sec 와 같다.
 
     ⚠ `guess` 를 그대로 두는 것이 가장 흔한 실패다. 이름이 닮았다고 내용이
       같지는 않다 — 「결합 차수」가 그랬다. exam 의 lec-020 은 결합 차수를
@@ -405,7 +486,7 @@ def chunks(per=45):
         body = {}
         for m in part:
             body[m] = {'n': n[m], 'units': sorted(unit[m]), 'ex': ex.get(m, []),
-                       'guess': guess(m), 'pick': '', 'why': '', 'sec': ''}
+                       'guess': guess(m), 'pick': '', 'why': '', 'sec': '', 'note': ''}
         io.open(os.path.join(WIP, key + '.json'), 'w', encoding='utf-8').write(
             json.dumps(body, ensure_ascii=False, indent=1) + '\n')
         made.append(key)
@@ -485,7 +566,43 @@ def main():
              sum(1 for x in sc.values() if x != 'q'), sum(1 for x in sc.values() if x == 'q'),
              '' if exam_here else ' — exam 저장소가 없어 anchor 는 형식만 봤다'))
 
+    # ── 부분 적합 한 줄(note) 표 ──
+    raw_nt = doc.get('note', {})
+    nt = notes_of(doc)
+    nt_type = not isinstance(raw_nt, dict)
+    nt_key = sorted(k for k in nt if k not in mp and k not in bu)
+    nt_val = sorted(k for k, x in nt.items()
+                    if not isinstance(x, str) or not x.strip() or len(x) > NOTE_MAX)
+    print('부분 적합 표시 %d자리(한 줄 %d자 이하)' % (len(nt), NOTE_MAX))
+    # 이어진 이름이 unmapped 에도 남아 있으면 lecture-gap 이 «강의 없음» 이라고 거짓말한다.
+    both = sorted((set(mp) | bu_names) & set(un))
+    # report.html 의 세 상수가 표와 같은가(손으로 고쳤거나 --emit 을 잊었으면 갈린다).
+    drift = []
+    src = os.path.join(ROOT, 'report.html')
+    if os.path.isfile(src):
+        s = io.open(src, encoding='utf-8').read()
+        for name, want in sorted(tables(doc).items()):
+            mm = re.search(r'\nconst %s=(\{[^\n]*\});\n' % name, s)
+            if not mm or json.loads(mm.group(1)) != want:
+                drift.append(name)
+
     bad = False
+    if nt_type:
+        bad = True
+        print('\nnote 칸이 표(사전)가 아니다 — 옛 꼴이면 --absorb 가 설명 글을 about 으로 옮긴다')
+    if nt_key:
+        bad = True
+        print('\nnote 표의 키가 map·byUnit 에 없다 %d: %s' % (len(nt_key), ', '.join(nt_key[:8])))
+    if nt_val:
+        bad = True
+        print('\nnote 가 비었거나 %d자를 넘는다 %d: %s'
+              % (NOTE_MAX, len(nt_val), ', '.join('%s=%r' % (k, nt[k]) for k in nt_val[:8])))
+    if both:
+        bad = True
+        print('\n이어졌는데 unmapped 에도 남은 이름 %d: %s' % (len(both), ', '.join(both[:8])))
+    if drift:
+        bad = True
+        print('\nreport.html 의 %s 가 표와 다르다 — python3 tools/lec_link.py --emit' % '·'.join(drift))
     if sec_key:
         bad = True
         print('\nsec 표의 키가 map·byUnit 에 없다 %d: %s' % (len(sec_key), ', '.join(sec_key[:8])))
