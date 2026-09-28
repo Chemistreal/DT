@@ -2639,7 +2639,9 @@ async function assertNoOverflow(page, label) {
     const R = (round, mis) => ({ studentKey: K, name: '합침', school: '가상중', year: '2026', course: 'ch1', round, attempt: '첫 응시',
       score: 70, pass: false, date: '2026-08-0' + round, wrongMis: [mis], wrongAxes: {}, units: [], axes: [] });
     /* 고질은 «출제 3회 이상 · 절반 이상 틀림»(2026-09-28) — 세 회차에서 원본 이름을 번갈아 틀린다 */
-    const rows = [R(1, keys[0]), R(2, keys[keys.length - 1]), R(3, keys[0])];
+    /* 마지막 회차는 통과로 둔다 — 통과 전이면 「이번 주 확인할 개념」 은 고질이 아니라 재시가 다시 묻는
+       개념(원본 이름)을 가리킨다(선생님 결정 2026-09-28 · weekTarget). 여기서 재는 것은 고질의 강의 문이다. */
+    const rows = [R(1, keys[0]), R(2, keys[keys.length - 1]), Object.assign(R(3, keys[0]), { score: 85, pass: true })];
     const A = CE.cumulative(rows)[K];
     assert(A.chronicMis.length === 1 && A.chronicMis[0].mis === rep, '집계가 대표 이름 하나로 오지 않았다: ' + JSON.stringify(A.chronicMis));
     await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
@@ -3311,6 +3313,178 @@ async function assertNoOverflow(page, label) {
     const wantAvg = (want.reduce((s, t) => s + t[1], 0) / want.length).toFixed(2);
     assert(avg === wantAvg, '구간 재계산의 재시까지 반영 평균이 서버 규칙과 다르다: ' + avg + ' (기대 ' + wantAvg + ')');
   });
+
+  /* ── 선생님 결정 2026-09-28 · 성적표 첫 화면·이번 주 목표·근본 원인·오개념 뱃지·심화 카드 ──
+     화학Ⅰ 1~3회 회차 파일로 기록을 지어 서버 응답을 흉내 낸다. 학생 이름은 가짜다. */
+  {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const IT = r => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_ch1_' + String(r).padStart(2, '0') + '.json'), 'utf8')).jeongsi.items;
+    const I = { 1: IT(1), 2: IT(2), 3: IT(3) };
+    const DEEPN = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'deep_notes.json'), 'utf8'));
+    const K = '가상중-주간점검';
+    const flip = a => a === 'O' ? 'X' : 'O';
+    /* 첫 응시 행: wrong 은 틀린 문항 자리(0부터). */
+    const first = (round, wrong, extra) => {
+      const items = I[round];
+      const ans = items.map((it, i) => wrong.indexOf(i) >= 0 ? flip(it.a) : it.a).join('');
+      const units = {};
+      items.forEach((it, i) => { const u = units[it.u] || (units[it.u] = { u: it.u, t: 0, w: 0 }); u.t++; if (wrong.indexOf(i) >= 0) u.w++; });
+      const score = Math.round(10000 * (items.length - wrong.length) / items.length) / 100;
+      return Object.assign({ studentKey: K, name: '주간점검', school: '가상중', year: '2026', course: 'ch1', round, attempt: '첫 응시',
+        score, pass: score >= 80, date: '2026-09-0' + round, answers: ans, wrongMis: wrong.map(i => items[i].mis), wrongAxes: {},
+        units: Object.keys(units).map(k => units[k]), axes: [] }, extra || {});
+    };
+    /* 재시 행(서명 있음): asked = [{c, ok}] — 재시가 물은 문항의 개념코드와 맞았는지. */
+    const retake = (round, attempt, asked, wrongMis, unasked, score) => {
+      const keys = asked.map((q, k) => (k % 2 ? 'O' : 'X')).join('');
+      const ans = asked.map((q, k) => q.ok ? keys.charAt(k) : flip(keys.charAt(k))).join('');
+      return { studentKey: K, name: '주간점검', school: '가상중', year: '2026', course: 'ch1', round, attempt,
+        score, pass: score >= 80, date: '2026-09-1' + round, answers: ans, retakeCids: asked.map(q => q.c).join(','),
+        retakeKeys: keys, retakeUnasked: (unasked || []).join('|'), wrongMis: wrongMis, wrongAxes: {}, units: [], axes: [] };
+    };
+    const idxOf = (round, mis) => I[round].map((it, i) => it.mis === mis ? i : -1).filter(i => i >= 0);
+    const codeOf = (round, mis) => I[round][idxOf(round, mis)[0]].c;
+    const serve = async (page, rows, more) => {
+      const A = CE.cumulative(rows)[K];
+      await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify(Object.assign({ ok: true, student: 'x', rows, excluded: [], cumulative: A, rank: null, cohort: null }, more || {})) }));
+      await page.goto(BASE + 'report.html?student=x');
+      await page.waitForSelector('.ladder', { timeout: 20000 });
+      return A;
+    };
+    const X = '분자 종류', Y = '루이스 전자점식', Z = '결합 기초', W = '물질 분류 판정';
+    const wrong1 = [].concat(idxOf(1, X), idxOf(1, Y), idxOf(1, Z), idxOf(1, W));   // 13문항 → 통과 전
+
+    /* C · A · B — 통과 전이면 이번 주 목표는 재시가 다시 묻는 개념(마지막 시도의 오답)이고, 처방 코멘트 ·
+       「위험」 카드의 안내가 같은 개념을 말한다. 첫 화면 판정 셋에는 이름표(추이·이번 회차·위험)가 붙는다.
+       아이에게 건넬 말은 부모에게 하는 말 안에 따옴표로 들어간다. */
+    await test('report · 이번 주 목표 하나 — 통과 전이면 재시가 묻는 개념 · 판정 이름표 · 부모에게 하는 말', async page => {
+      assert(wrong1.length === 13, '고른 문항 수가 다르다: ' + wrong1.length);
+      const r2 = retake(1, '재시', [{ c: codeOf(1, Y), ok: false }, { c: codeOf(1, Y), ok: false }, { c: codeOf(1, W), ok: false }, { c: codeOf(1, X), ok: true }],
+        [Y, Y, W], [Z], 75);
+      await serve(page, [first(1, wrong1), r2]);
+      const got = await page.evaluate(() => ({
+        todo: (document.querySelector('.card.todo .todomis') || {}).textContent,
+        tlab: (document.querySelector('.card.todo .todohome .tlab') || {}).textContent,
+        q: (document.querySelector('.card.todo .todohome') || {}).textContent,
+        rx: [].slice.call(document.querySelectorAll('.card')).filter(c => /처방 코멘트/.test((c.querySelector('h2') || {}).textContent || '')).map(c => c.textContent)[0] || '',
+        warn: (document.querySelector('.card.warn') || {}).textContent || '',
+        chip: (document.querySelector('.verdict5 .vlab') || {}).textContent,
+        band: (document.querySelector('.qbadge .vlab') || {}).textContent,
+        warnLab: (document.querySelector('.card.warn h2 .vlab') || {}).textContent,
+        app: document.getElementById('app').textContent }));
+      assert(got.todo === Y, '통과 전인데 목표가 재시가 묻는 개념(가장 많이 틀린 「' + Y + '」)이 아니다: ' + got.todo);
+      assert(got.rx.indexOf('「' + Y + '」') >= 0, '처방 코멘트가 같은 개념을 말하지 않는다: ' + got.rx.slice(0, 200));
+      assert(/이번 주 확인할 개념/.test(got.rx), '처방 코멘트가 카드 이름을 말하지 않는다');
+      assert(got.warn.indexOf('「이번 주 확인할 개념」 카드(「' + Y + '」)') >= 0, '「위험」 카드의 안내가 카드를 가리키지 않는다: ' + got.warn);
+      assert(!/이번 주 처방을 우선 진행해 주세요/.test(got.app), '어느 카드인지 모르는 옛 문장이 남았다');
+      assert(got.chip === '추이' && got.band === '이번 회차' && got.warnLab === '위험', '판정 이름표가 없다: ' + JSON.stringify([got.chip, got.band, got.warnLab]));
+      assert(got.tlab === '아이에게 이렇게 물어봐 주세요', '질문 칸 이름이 부모에게 하는 말이 아니다: ' + got.tlab);
+      const q = got.q.slice(got.tlab.length);
+      assert(q.charAt(0) === '“' && q.charAt(q.length - 1) === '”', '아이에게 건넬 말이 따옴표 안에 있지 않다: ' + q);
+      assert(!/(네가|볼래\?|해 봐)/.test(got.app.replace(/“[^”]*”/g, '')), '따옴표 밖에 아이에게 하는 말이 남았다');
+      /* 통과했고 고질이 없으면 이번 회차 오답의 첫째 — 처방 코멘트도 같은 개념 */
+      await page.unroute('**/macros/s/**');
+      const r2p = retake(1, '재시', [{ c: codeOf(1, Y), ok: true }], [], [Z, W], 95);
+      await serve(page, [first(1, wrong1), r2p]);
+      const p2 = await page.evaluate(() => ({ todo: (document.querySelector('.card.todo .todomis') || {}).textContent,
+        rx: [].slice.call(document.querySelectorAll('.card')).filter(c => /처방 코멘트/.test((c.querySelector('h2') || {}).textContent || '')).map(c => c.textContent)[0] || '' }));
+      assert(p2.todo === X, '통과했고 고질이 없으면 이번 회차 오답의 첫째여야 한다: ' + p2.todo);
+      assert(p2.rx.indexOf('「' + X + '」') >= 0, '통과 뒤 처방 코멘트가 같은 개념을 말하지 않는다');
+    });
+
+    /* E — 오개념 뱃지. 재시가 다시 물어 또 틀림 → 확인됨, 물어 맞힘 → 바로잡음, 안 물음 → 미확인.
+       서명 없는 옛 재시 행은 wrongMis 에 있으면 확인됨, 없으면 미확인(물었는지 모른다). */
+    await test('report · 오개념 뱃지(확인됨·바로잡음·미확인)는 재시가 다시 물었는지로 정한다', async page => {
+      const r2 = retake(1, '재시', [{ c: codeOf(1, X), ok: false }, { c: codeOf(1, X), ok: true }, { c: codeOf(1, Y), ok: true }, { c: codeOf(1, Y), ok: true }],
+        [X], [Z, W], 90);
+      await serve(page, [first(1, wrong1), r2]);
+      await page.waitForSelector('#main-sols .misgrp', { timeout: 15000 });
+      const b = await page.evaluate(() => {
+        const o = {}; [].slice.call(document.querySelectorAll('#main-sols .misgrp-h')).forEach(h => {
+          o[h.querySelector('.misgrp-t').textContent] = (h.querySelector('.misst') || {}).textContent; });
+        return { o, legend: !!document.querySelector('#main-sols .mslegend'),
+          rv: [].slice.call(document.querySelectorAll('.rvrow')).map(e => [e.querySelector('.rvm').textContent, (e.querySelector('.misst') || {}).textContent]) };
+      });
+      const want = {}; want[X] = '확인됨'; want[Y] = '바로잡음'; want[Z] = '미확인'; want[W] = '미확인';
+      Object.keys(want).forEach(m => assert(b.o[m] === want[m], '「' + m + '」 뱃지가 ' + want[m] + ' 이 아니다: ' + b.o[m]));
+      assert(b.legend, '뱃지 뜻풀이 한 줄이 없다');
+      /* 「다시 볼 개념」 의 복습 목록에도 같은 뱃지 */
+      b.rv.forEach(r => { if (want[r[0]]) assert(r[1] === want[r[0]], '다시 볼 개념의 「' + r[0] + '」 뱃지가 다르다: ' + r[1]); });
+      /* 옛 재시 행 · 문항을 못 받은 때 — 이름만으로 */
+      const old = await page.evaluate(() => {
+        const atts = [{ attempt: '첫 응시', wrongMis: ['갑', '을'] }, { attempt: '재시', wrongMis: ['갑'] }];
+        return [misRetakeStatus(atts, '갑', null), misRetakeStatus(atts, '을', null), misRetakeStatus([atts[0]], '갑', null)];
+      });
+      assert(JSON.stringify(old) === JSON.stringify(['no', 'un', 'un']), '옛 재시 행의 판정이 다르다: ' + JSON.stringify(old));
+    });
+
+    /* D — 근본 원인 진단은 최근 3회차 첫 응시 오답을 합쳐 판정하고, 우연 기준선도 같은 3회차 문항에서 뽑는다. */
+    await test('report · 근본 원인 진단은 최근 3회차 오답을 합친다(우연 기준선도 같은 회차들에서)', async page => {
+      const w = { 1: [0, 5, 9, 14, 21, 33, 40], 2: [2, 7, 12, 19, 26, 31], 3: [3, 6, 11, 18, 25, 30, 44] };
+      const rows = [first(1, w[1]), first(2, w[2]), first(3, w[3])];
+      await serve(page, rows);
+      const src = fs.readFileSync(path.join(ROOT, 'report.html'), 'utf8');
+      const a = src.indexOf('const ENGINE=');
+      const ENG = new Function(src.slice(a, src.indexOf('\n', a)) + '\nreturn ENGINE;')();
+      const codes = new Set(); [1, 2, 3].forEach(r => w[r].forEach(i => { const c = I[r][i].c; if (c && ENG[c]) codes.add(c); }));
+      const only3 = new Set(w[3].map(i => I[3][i].c).filter(c => c && ENG[c]));
+      assert(codes.size > only3.size, '픽스처가 합치기를 못 잰다');
+      const dx = await page.evaluate(() => ({ th: (document.querySelector('.dxroot .dxthesis') || {}).textContent || '',
+        eb: (document.querySelector('.dxroot .dxeyebrow') || {}).textContent || '',
+        pool: window._dxRecent && window._dxRecent.pool ? window._dxRecent.pool.items.length : -1, rounds: window._dxRecent ? window._dxRecent.rounds : 0 }));
+      assert(dx.th.indexOf('최근 3회차 오답 ' + codes.size + '개를 합쳐 보면') === 0, '합친 회차·개수를 말하지 않는다: ' + dx.th);
+      assert(/최근 3회차 합산/.test(dx.eb), '절 머리에 합산이 없다: ' + dx.eb);
+      const nItems = [1, 2, 3].reduce((s, r) => s + I[r].filter(x => x.c).length, 0);
+      assert(dx.rounds === 3 && dx.pool === nItems, '우연 기준선의 모집단이 3회차 문항 전체가 아니다: ' + dx.pool + ' / ' + nItems);
+      if (/단정하지 않습니다/.test(dx.th)) assert(/같은 3회차 문항에서 오답 \d+개를 무작위로 뽑아도/.test(dx.th), '기준선 문장이 합친 회차를 말하지 않는다: ' + dx.th);
+      await page.reload(); await page.waitForSelector('.dxroot', { timeout: 20000 });
+      const th2 = await page.evaluate(() => document.querySelector('.dxroot .dxthesis').textContent);
+      assert(th2 === dx.th, '새로고침에 문장이 달라졌다');
+    });
+
+    /* G · F — 심화 카드: 통과 전이어도 최근 3회차 기본·표준 정답률 90% 이상이면 선다. 도전 링크는 약한 개념
+       (&mis=)과 학생 코드(&stu=)를 같이 넘기고, 서버가 준 심화 기록을 한 줄로 적는다. 「한 겹 더」 글은
+       deep_notes.json 에 있는 개념만 — 없는 개념은 이름과 강의 링크만. */
+    await test('report · 심화 카드 문턱(기본·표준 90%) · 도전 링크의 mis·stu · 도전 기록 · 한 겹 더 글', async page => {
+      const lv12 = I[3].map((x, i) => (x.lvl === 1 || x.lvl === 2) ? i : -1).filter(i => i >= 0);
+      const w3 = lv12.slice(0, 14);
+      const rows = [first(1, []), first(2, []), first(3, w3)];
+      assert(!rows[2].pass, '3회가 통과 전이어야 한다');
+      const challenges = [{ date: '2026-09-20T10:00:00Z', course: 'ch1', round: 3, n: 12, ok: 9, weakN: 6, weakOk: 4, linkN: 2, linkOk: 1 },
+                          { date: '2026-09-12T10:00:00Z', course: 'ch1', round: 2, n: 12, ok: 5, weakN: 6, weakOk: 2, linkN: 2, linkOk: 0 }];
+      await serve(page, rows, { challenges });
+      const card = await page.evaluate(() => {
+        const c = [].slice.call(document.querySelectorAll('.card')).filter(e => /한 겹 더/.test((e.querySelector('h2') || {}).textContent || ''))[0];
+        if (!c) return null;
+        return { text: c.textContent, href: c.querySelector('a.cbtn').getAttribute('href'),
+          rec: (c.querySelector('.chrec') || {}).textContent || '',
+          rx: [].slice.call(c.querySelectorAll('.rx')).map(r => ({ nm: r.querySelector('.nm').textContent, ol: (r.querySelector('.ol') || {}).textContent || null })) };
+      });
+      assert(card, '기본·표준 정답률이 90% 이상인데 심화 카드가 없다');
+      const tot = [1, 2, 3].reduce((s, r) => s + I[r].filter(x => x.lvl === 1 || x.lvl === 2).length, 0);
+      assert(card.text.indexOf(Math.round(100 * (tot - 14) / tot) + '%') >= 0, '문턱 문장에 정답률이 없다');
+      const u = new URL(card.href, BASE);
+      assert(u.searchParams.get('course') === 'ch1' && u.searchParams.get('round') === '3', '회차를 안 넘긴다: ' + card.href);
+      assert(u.searchParams.get('stu') === 'x', '&stu= 가 성적표의 ?student= 와 다르다: ' + card.href);
+      const mis = (u.searchParams.get('mis') || '').split('|');
+      const lw = []; w3.forEach(i => { if (lw.indexOf(I[3][i].mis) < 0) lw.push(I[3][i].mis); });
+      assert(mis.length === Math.min(12, lw.length) && mis.every((m, k) => m === lw[k]), '&mis= 가 이번 회차 오답 개념(고질 먼저 · 12개까지)이 아니다: ' + mis.join('|'));
+      assert(card.rec === '심화 도전 기록 · 최근 2회 · 마지막 12문항 중 9 맞음', '심화 도전 기록 줄이 다르다: ' + card.rec);
+      assert(card.rx.length >= 1, '「한 겹 더」 개념이 없다');
+      card.rx.forEach(r => {
+        const note = DEEPN[r.nm] || DEEPN[CE.misCanon(r.nm)] || null;
+        if (note) assert(r.ol && r.ol.indexOf(note) >= 0, '「' + r.nm + '」 는 글이 있는데 안 실렸다');
+        else assert(r.ol === null, '「' + r.nm + '」 는 글이 없는데 무언가를 실었다(CORE 나머지?): ' + r.ol);
+      });
+      assert(card.rx.some(r => r.ol) && card.rx.some(r => !r.ol), '픽스처가 글 있음·없음을 둘 다 재지 않는다');
+      /* 기본·표준 정답률이 90% 아래면(통과 전) 카드가 없다 · 기록이 없으면 기록 줄도 없다 */
+      await page.unroute('**/macros/s/**');
+      await serve(page, [first(1, []), first(2, []), first(3, lv12.slice(0, 20))]);
+      const none = await page.evaluate(() => [].slice.call(document.querySelectorAll('.card h2')).some(h => /한 겹 더/.test(h.textContent)));
+      assert(!none, '기본·표준 정답률이 90% 아래이고 통과 전인데 심화 카드가 섰다');
+    });
+  }
 
   await BROWSER.close();
   srv.close();

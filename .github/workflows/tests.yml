@@ -161,6 +161,11 @@ jobs:
       # 오개념이 표에서 조용히 빠지지 않았는지 본다.
       - name: 오개념이 개념강의로 이어진다
         run: python3 tools/lec_link.py --check || echo "::warning title=개념강의 배선 미완::오개념→강의 표(concept-lecture-dt.json)가 아직 안 채워졌습니다."
+      # 「다음 단계 · 한 겹 더」 는 CORE 의 첫 문장을 잘라 낸 나머지를 보여 주고 있었다 — 같은 설명의
+      # 뒷부분이지 한 겹 더가 아니다. 이제 따로 쓴 글(appdata/deep_notes.json)을 성적표에 베껴 넣는다
+      # (선생님 결정 2026-09-28). json 을 고치고 --write 를 잊으면 화면은 옛 글을 말한다.
+      - name: 「한 겹 더」 글이 deep_notes.json 과 같다
+        run: python3 tools/deep_notes.py --check
       # 색 이름표만 재면 겹쳐 깔린 그림을 못 본다. 화면을 찍어 화소를 읽는다.
       # 브라우저는 인쇄할 때 배경을 기본으로 안 찍는다. 그래서 어두운 띠 위의
       # 흰 글씨는 **흰 종이에 흰 글씨**가 됐다 — OMR 제목띠·표 머리 46장,

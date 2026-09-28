@@ -124,3 +124,5 @@ lec-123-ligand-coordination-number.html	리간드와 배위수
 lec-124-complex-structure-properties.html	착물의 구조와 성질
 lec-125-coordination-synthesis.html	배위 화학 종합
 lec-126-orbital-nodes.html	오비탈의 마디
+lec-127-matter-classification.html	물질의 분류와 기본 정의
+lec-128-chemistry-and-humanity.html	화학과 인류
