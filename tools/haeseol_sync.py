@@ -269,8 +269,46 @@ def rebuild(src, items):
     return out
 
 
+def sukje_html(items):
+    """숙제 · 옳은문장집 — 단원(u)을 처음 나온 순서로 묶고, 문항 번호는 그대로. O 는 s, X 는 f + [교정]."""
+    order, groups = [], {}
+    for n, it in enumerate(items, 1):
+        u = it.get('u') or ''
+        if u not in groups:
+            groups[u] = []; order.append(u)
+        body = render(it.get('s') if it.get('a') == 'O' else it.get('f'))
+        mark = '' if it.get('a') == 'O' else '<span class="src">[교정]</span>'
+        groups[u].append('<li><span class="n">%d</span>%s%s</li>' % (n, body, mark))
+    return ''.join('<div class="ugroup"><div class="uhead">%s</div><ul class="s">%s</ul></div>'
+                   % (html.escape(u, quote=False), ''.join(groups[u])) for u in order)
+
+
+def make(course, rnd, template, bands):
+    """HTML 원본이 없는 회차의 해설지를 같은 과목 다른 회차의 틀로 만든다(2026-09-28: 화학Ⅱ 8~18회).
+    bands = (누적 구획 글, 신규 구획 글) — 예전 PDF 에 찍혀 있던 그대로 옮긴다."""
+    tsrc = io.open(os.path.join(ROOT, template), encoding='utf-8').read()
+    m = re.match(r'haeseol_([a-z0-9]+)_round(\d+)\.html$', template)
+    tr = int(m.group(2))
+    items = json.load(open(os.path.join(ROOT, 'appdata', 'round_%s_%02d.json' % (course, rnd)), encoding='utf-8'))['jeongsi']['items']
+    label = {'ch1': '화학1', 'ch2': '화학2', 'gc': '일반화학'}[course]
+    out = tsrc.replace('누적 OX %s %d회' % (label, tr), '누적 OX %s %d회' % (label, rnd))
+    out = re.sub(r'(<span class="sec">누적 1–30</span>)[^<]*', lambda mm: mm.group(1) + html.escape(bands[0], quote=False), out, count=1)
+    out = re.sub(r'(<span class="sec">신규 31–60</span>)[^<]*', lambda mm: mm.group(1) + html.escape(bands[1], quote=False), out, count=1)
+    i = out.find('<div class="lead">', out.find(SUKJE)); i = out.find('</div>', i) + len('</div>')
+    j = out.find('<div class="foot">')
+    k = out.rfind('</div>', 0, j)               # sukjepage 닫는 태그
+    out = out[:i] + sukje_html(items) + out[k:]
+    return rebuild(out, items)
+
+
 def main():
     argv = sys.argv[1:]
+    if '--make' in argv:
+        i = argv.index('--make'); course, rnd, tpl, b1, b2 = argv[i + 1], int(argv[i + 2]), argv[i + 3], argv[i + 4], argv[i + 5]
+        name = 'haeseol_%s_round%02d.html' % (course, rnd)
+        io.open(os.path.join(ROOT, name), 'w', encoding='utf-8').write(make(course, rnd, tpl, (b1, b2)))
+        print('%s: %s 틀로 만들었다' % (name, tpl))
+        return 0
     if '--rebuild' in argv:
         i = argv.index('--rebuild'); course, rnd = argv[i + 1], int(argv[i + 2])
         name = 'haeseol_%s_round%02d.html' % (course, rnd)
