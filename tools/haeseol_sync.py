@@ -52,6 +52,7 @@ HTML 과 PDF 가 다른 말을 한다.
        python3 tools/haeseol_sync.py --verbose  # 어긋난 문항마다 두 글을 나란히 찍는다
 """
 import html
+import io
 import json
 import os
 import re
@@ -60,7 +61,10 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # (과목, 회차). 「1·2회가 통째로 뒤바뀌어 있다 — 선생님이 실제 시행분을 확인한 뒤 맞바꾼다」
-KNOWN_SWAP = {('ch2', 1), ('ch2', 2)}
+# 2026-09-28 풀림: 선생님이 보내 주신 인쇄 문제지(화학Ⅱ 1·2회)가 JSON 과 60/60 같았다 — 채점은
+# 맞았고 해설지의 문항 행만 뒤바뀌어 있었다. --rebuild 로 두 장의 문항 행·빠른 정답표·
+# 옳은문장집을 JSON 에서 다시 썼다(제목·구획 띠는 원래 제 회차의 것이라 그대로).
+KNOWN_SWAP = set()
 SWAP_NOTE = ('화학Ⅱ 1·2회가 통째로 뒤바뀌어 있다(1회 HTML=JSON 2회 {a}/60 · 2회 HTML=JSON 1회 {b}/60) '
              '— 선생님이 실제 시행분을 확인한 뒤 맞바꾼다. 그때까지 세기만 하고 빨간불에 넣지 않는다.')
 
@@ -236,8 +240,46 @@ def patch(src, recs):
     return out, done, skipped
 
 
+def row_html(n, it):
+    a = it.get('a')
+    cls = 'o' if a == 'O' else 'x'
+    fix = ('<div class="fix"><b>옳은 문장</b> · %s</div>' % render(it.get('f'))) if a == 'X' else ''
+    return ('<tr><td class="no">%d</td><td class="an %s">%s</td><td class="bd"><div class="stmt">%s</div>'
+            '%s<div class="why"><b>해설</b> · %s</div></td></tr>' % (n, cls, a, render(it.get('s')), fix, render(it.get('w'))))
+
+
+def rebuild(src, items):
+    """문항 행 · 빠른 정답표 · 옳은문장집을 JSON 에서 통째로 다시 쓴다. 제목·구획 띠·꾸밈은 그대로.
+    문항 자체가 다른(뒤바뀐) 장에만 쓴다 — 보통은 patch() 가 f·w 만 고친다."""
+    out = ROW.sub(lambda m: row_html(int(m.group(1)), items[int(m.group(1)) - 1]), src)
+    def key(m):
+        n = int(m.group(1)); a = items[n - 1]['a']
+        return '<div class="kc %s"><span class="n">%d</span><span class="a">%s</span></div>' % ('o' if a == 'O' else 'x', n, a)
+    out = KEY.sub(key, out)
+    sk = out.find(SUKJE)
+    if sk >= 0:
+        head, tail = out[:sk], out[sk:]
+        for n, it in enumerate(items, 1):
+            body = render(it.get('s') if it.get('a') == 'O' else it.get('f'))
+            mark = '' if it.get('a') == 'O' else '<span class="src">[교정]</span>'
+            tail = li_re(n).sub(lambda m, b=body, k=mark: m.group(1) + b + k + '</li>', tail, count=1)
+        out = head + tail
+    nO = sum(1 for it in items if it.get('a') == 'O')
+    out = re.sub(r'정답 분포 O \d+개 · X \d+개', '정답 분포 O %d개 · X %d개' % (nO, len(items) - nO), out)
+    return out
+
+
 def main():
     argv = sys.argv[1:]
+    if '--rebuild' in argv:
+        i = argv.index('--rebuild'); course, rnd = argv[i + 1], int(argv[i + 2])
+        name = 'haeseol_%s_round%02d.html' % (course, rnd)
+        path = os.path.join(ROOT, name)
+        items = json.load(open(os.path.join(ROOT, 'appdata', 'round_%s_%02d.json' % (course, rnd)), encoding='utf-8'))['jeongsi']['items']
+        src = io.open(path, encoding='utf-8').read()
+        io.open(path, 'w', encoding='utf-8').write(rebuild(src, items))
+        print('%s: 문항 행·빠른 정답표·옳은문장집을 JSON 에서 다시 썼다' % name)
+        return 0
     write = '--write' in argv
     check = '--check' in argv
     verbose = '--verbose' in argv

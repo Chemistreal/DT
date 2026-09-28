@@ -15,8 +15,8 @@
 
    ⚠ appdata/haeseol_*.pdf 는 다른 판(두 쪽 「빠른 정답 + 문항 해설」)이고
      만든 도구가 저장소에 없다. 여기서 만들지 않는다.
-   ⚠ 화학Ⅱ 1·2회 PDF 는 pypdf 로 다시 묶인 것이라(제목이 HTML 과 엇갈려 있다)
-     tools/haeseol_sync.py 의 KNOWN_SWAP 이 풀리기 전에는 찍지 않는다.
+   ⚠ 화학Ⅱ 1·2회도 2026-09-28 부터 같은 방법으로 찍는다(전에는 pypdf 로 다시 묶인 판이었고 문항이 뒤바뀌어 있었다).
+     
 
    실행:
      NODE_PATH=tests/node_modules node tools/haeseol_pdf.js haeseol_ch1_round06.html [...]
@@ -33,7 +33,7 @@ const fs = require('fs');
 const PLAYWRIGHT = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const CHROMIUM = process.env.CHROMIUM_PATH || undefined;
 const ROOT = path.join(__dirname, '..');
-const SKIP = new Set(['haeseol_ch2_round01.html', 'haeseol_ch2_round02.html']);   // KNOWN_SWAP
+const SKIP = new Set();   // 화학Ⅱ 1·2회 뒤바뀜은 2026-09-28 에 풀렸다
 
 const argv = process.argv.slice(2);
 let out = ROOT;
