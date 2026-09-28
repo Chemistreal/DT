@@ -141,6 +141,11 @@ jobs:
       # 분모가 틀려 고질이 조용히 늘거나 준다. 두 파일의 문턱 두 수가 같은지도 본다.
       - name: 고질 분모 표(ROUND_MIS)가 회차 파일과 같다
         run: python3 tools/gen_round_mis.py --check
+      # 화학1 심화반 정시 10회(courses/ch1s/). 칸마다 설계표(design.json)의 개념·난이도·정답과
+      # 같아야 하고, 복습 재출제 칸은 원래 회차 문장과 글자까지 같아야 한다. 한쪽만 고치면
+      # 채점과 복습 설계가 조용히 갈라진다.
+      - name: 화학1 심화 회차 파일이 설계표와 맞다
+        run: python3 courses/ch1s/build_rounds.py --check
       # 이 저장소는 공개이고 Pages 로 그대로 열린다. 그런데 roster.html 의
       # 「기본 명단」과 apps-script.gs 의 초기화 함수에 실제 학생 여든한 명의
       # 이름이 박혀 있었고, pending.html 의 데모 자료와 tests/ 픽스처에도
