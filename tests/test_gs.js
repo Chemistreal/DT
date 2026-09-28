@@ -1140,5 +1140,81 @@ console.log('[재시 난이도] lvl 이 낮은 문장을 먼저 고른다 · 없
     && CE.attemptName('첫 응시', '첫 응시') === '첫 응시');
 }
 
+console.log('[심화 기록] kind:challenge 는 「심화기록」 탭에 · ?student= 조회가 challenges 로 돌려준다');
+{
+  /* 선생님 결정(2026-09-28) 「기록한다」. challenge.html 이 다 푼 한 판을 kind:'challenge' 로 보낸다.
+     결과 탭(정시·재시)은 한 줄도 안 건드리고, 성적표 조회(?student=)의 기존 칸도 그대로다. */
+  const res = SHEETS['결과'], before = res._rows.length;
+  const KEY = '가상중-심화', KEY2 = '가상중-심화둘';
+  res._rows.push(['심화', 'L', D1, 90, '통과', KEY, '가상중', '2', 'ch2', 5, '첫 응시', 54, 6, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
+  res._rows.push(['심화둘', 'L', D1, 90, '통과', KEY2, '가상중', '2', 'ch2', 5, '첫 응시', 54, 6, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
+  const withRes = res._rows.length;
+  const post = d => J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
+  const base = { kind: 'challenge', stu: ctx.pubId_(KEY), course: 'ch2', round: 5, n: 12, ok: 9,
+    weakN: 6, weakOk: 4, linkN: 6, linkOk: 5, concepts: ['CH2-010', 'CH2-020+CH1-005', 'CH1-001'], isTest: false };
+  T('심화기록 탭은 처음에 없다(만들어 두지 않는다)', !SHEETS['심화기록']);
+  const g0 = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY) } }));
+  T('탭이 없어도 조회는 된다 · challenges = []', g0.ok === true && Array.isArray(g0.challenges) && g0.challenges.length === 0, JSON.stringify(g0.challenges));
+  let r1 = post(base);
+  const CH = SHEETS['심화기록'];
+  T('저장 ok · 탭을 그때 만든다', r1.ok === true && !!CH, JSON.stringify(r1));
+  T('머리줄: 시각·학생키·과목·회차·문항수·맞음·약점문항수·약점맞음·연결문항수·연결맞음·개념·테스트',
+    CH && CH._rows[0].join('|') === '시각|학생키|과목|회차|문항수|맞음|약점문항수|약점맞음|연결문항수|연결맞음|개념|테스트', CH && CH._rows[0].join('|'));
+  const row = CH._rows[CH._rows.length - 1];
+  T('한 줄: 학생키는 코드로 찾은 키 · 수 · 개념(쉼표)', Object.prototype.toString.call(row[0]) === '[object Date]' && row[1] === KEY && row[2] === 'ch2' && row[3] === 5 && row[4] === 12 && row[5] === 9
+    && row[6] === 6 && row[7] === 4 && row[8] === 6 && row[9] === 5 && row[10] === 'CH2-010,CH2-020+CH1-005,CH1-001' && row[11] === '', JSON.stringify(row));
+  T('결과 탭은 안 건드린다', res._rows.length === withRes);
+  let r2 = post(base);
+  T('같은 판을 다시 보내면 한 줄 (dup)', r2.ok === true && r2.dup === true && CH._rows.length === 2, JSON.stringify(r2) + ' rows=' + CH._rows.length);
+  let r3 = post(Object.assign({}, base, { stu: 'zzzzzzzzzzzz' }));
+  T('모르는 코드 -> error student · 안 적는다', r3.ok === false && r3.error === 'student' && CH._rows.length === 2, JSON.stringify(r3));
+  let r4 = post(Object.assign({}, base, { stu: '' }));
+  T('코드 없음 -> error student', r4.ok === false && r4.error === 'student');
+  let r5 = post(Object.assign({}, base, { ok: 13 }));
+  T('맞음 > 문항수 -> error bad', r5.ok === false && r5.error === 'bad' && CH._rows.length === 2, JSON.stringify(r5));
+  let r6 = post(Object.assign({}, base, { weakN: 7, linkN: 6 }));
+  T('약점+연결 > 문항수 -> error bad', r6.ok === false && r6.error === 'bad');
+  let r7 = post(Object.assign({}, base, { course: 'xyz' }));
+  T('모르는 과목 -> error bad', r7.ok === false && r7.error === 'bad');
+  let r8 = post(Object.assign({}, base, { concepts: ['CH2-010', '<b>x</b>', 'CH2-011'] }));
+  T('개념 칸에는 개념 id 꼴만', r8.ok === true && CH._rows[CH._rows.length - 1][10] === 'CH2-010,CH2-011');
+  /* 옛 링크(학교-이름-토큰) 꼴의 코드도 성적표와 같이 받는다 */
+  let r9 = post(Object.assign({}, base, { stu: KEY + '-' + ctx.tokenFor_(KEY), round: 6 }));
+  T('옛 토큰 꼴 코드도 같은 학생', r9.ok === true && CH._rows[CH._rows.length - 1][1] === KEY);
+  let r10 = post(Object.assign({}, base, { isTest: true, round: 7 }));
+  T('TEST 판은 테스트 칸에 TEST', r10.ok === true && CH._rows[CH._rows.length - 1][11] === 'TEST');
+  post(Object.assign({}, base, { stu: ctx.pubId_(KEY2), round: 3, ok: 2 }));
+  /* 조회 */
+  const g = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY) } }));
+  const c = g.challenges || [];
+  T('기존 칸은 그대로(rows·cumulative·rank·ranks·cohort·excluded)', g.ok === true && g.student === KEY && Array.isArray(g.rows) && g.rows.length === 1
+    && 'cumulative' in g && 'rank' in g && Array.isArray(g.ranks) && 'cohort' in g && Array.isArray(g.excluded));
+  T('challenges: 이 학생 것만 · 실제 기록이 있으면 TEST 판은 뺀다', c.length === 3 && c.every(x => !x.isTest), JSON.stringify(c.map(x => x.round)));
+  T('challenges: 최근 것 먼저', c.map(x => x.round).join(',') === '6,5,5', c.map(x => x.round).join(','));
+  const k0 = c[0] || {};
+  T('challenges 한 판의 꼴 {date, course, round, n, ok, weakN, weakOk, linkN, linkOk}',
+    typeof k0.date === 'string' && !isNaN(Date.parse(k0.date)) && k0.course === 'ch2' && k0.round === 6 && k0.n === 12 && k0.ok === 9
+    && k0.weakN === 6 && k0.weakOk === 4 && k0.linkN === 6 && k0.linkOk === 5, JSON.stringify(k0));
+  const g2 = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY2) } }));
+  T('다른 학생 조회에는 그 학생 것만', (g2.challenges || []).length === 1 && g2.challenges[0].round === 3 && g2.challenges[0].ok === 2);
+  const gBad = J(ctx.doGet({ parameter: { student: 'zzzzzzzzzzzz' } }));
+  T('코드가 안 맞으면 challenges = []', Array.isArray(gBad.challenges) && gBad.challenges.length === 0);
+  /* 최근 20판만 */
+  for (let i = 0; i < 25; i++) post(Object.assign({}, base, { round: 1 + (i % 18), ok: i % 12, concepts: ['CH2-0' + (10 + i)] }));
+  const g3 = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY) } }));
+  T('challenges 는 최근 20판', (g3.challenges || []).length === 20 && g3.challenges[0].ok === 24 % 12, String((g3.challenges || []).length));
+  /* 전부 TEST 인 학생은 미리보기로 싣는다(결과 탭 cumulative_ 와 같은 규칙) */
+  CH._rows = CH._rows.filter(r => r[1] !== KEY2);
+  post(Object.assign({}, base, { stu: ctx.pubId_(KEY2), isTest: true, round: 2 }));
+  const g4 = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY2) } }));
+  T('전부 TEST 면 TEST 판도 싣는다(isTest:true)', (g4.challenges || []).length === 1 && g4.challenges[0].isTest === true);
+  /* 정시 저장은 전과 같다 — kind 가 없으면 결과 탭으로 */
+  const rn = post({ name: '심화', school: '가상중', year: '2', course: 'ch2', round: 6, attempt: '첫 응시', score: 80, pass: true,
+    correctCount: 48, wrongCount: 12, wrongMis: [], wrongAxes: {}, units: [], axes: [], answers: 'O'.repeat(60) });
+  T('kind 없는 저장은 결과 탭으로(심화기록은 그대로)', rn.ok === true && res._rows.length === withRes + 1 && !CH._rows.some(r => r[3] === 6 && r[1] === KEY && r[5] === 80));
+  res._rows.length = before;
+  delete SHEETS['심화기록'];
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

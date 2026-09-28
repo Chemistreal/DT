@@ -440,6 +440,8 @@ function doPost(e) {
       if (!adminOk_(d.token)) return json_({ ok: false, error: 'auth' });
       return json_({ ok: true, log: snooze_(d) });
     }
+    /* 심화 도전 한 판(challenge.html). 결과 탭이 아니라 「심화기록」 탭에 — 아래 정시·재시 저장과 섞지 않는다. */
+    if (d.kind === 'challenge') return json_(saveChallenge_(d));
     var sh = sheet_();
     var _selfKey = keyOf_(d.name || '', d.school || '');
     var _key = canonicalKey_(d.name || '', d.school || '');   // 같은 학생이 학교명을 다르게 적어도 기존 키로 자동 연결
@@ -602,15 +604,7 @@ function doGet(e) {
   var _one = readOne_(action, e, token);
   if (_one) return json_(_one);
   var raw = (e.parameter.student || '').trim();
-  var key = null;
-  if (raw) {
-    if (/^[0-9a-z]+$/i.test(raw)) {
-      key = findKeyByPubId_(raw);                 // 신규: 불투명 코드(한글·하이픈 없음) → 학생키 역조회
-    } else {
-      var li = raw.lastIndexOf('-');              // 기존: 학교-이름-토큰 (이미 보낸 링크 호환)
-      if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt) && tokenOk_(raw.slice(0, li), mt)) key = canonKeyOfRaw_(raw.slice(0, li)); }
-    }
-  }
+  var key = studentOfCode_(raw);
   var valid = !!key;   // ★보안: 유효한 코드/토큰이 있어야만 조회
   /* 학부모가 성적표를 열었는지를 여기서 센다. 따로 창구를 만들지 않는다 —
      학부모 링크는 report.html?student=<코드> 이고 그 화면이 이미 이 창구를
@@ -633,7 +627,97 @@ function doGet(e) {
     cumulative: valid ? cumulative_(rows) : null,
     rank: valid ? rank_(all, key, getExcluded_()) : null,
     ranks: valid ? ranksAll_(all, key, getExcluded_()) : [],
-    cohort: valid ? cohortItems_(all, key, getExcluded_()) : null });
+    cohort: valid ? cohortItems_(all, key, getExcluded_()) : null,
+    challenges: valid ? challengesOf_(key) : [] });
+}
+/* 성적표 주소의 ?student= 값 → 학생키. 없거나 안 맞으면 null.
+   doGet(성적표 조회)과 심화 기록(doPost kind:'challenge')이 같은 규칙을 쓴다 — 갈라 적으면 한쪽만 고쳐진다. */
+function studentOfCode_(raw) {
+  raw = String(raw || '').trim();
+  if (!raw) return null;
+  if (/^[0-9a-z]+$/i.test(raw)) return findKeyByPubId_(raw);   // 신규: 불투명 코드(한글·하이픈 없음) → 학생키 역조회
+  var li = raw.lastIndexOf('-');                                // 기존: 학교-이름-토큰 (이미 보낸 링크 호환)
+  if (li > 0) { var mt = raw.slice(li + 1); if (/^[0-9a-z]{8}$/.test(mt) && tokenOk_(raw.slice(0, li), mt)) return canonKeyOfRaw_(raw.slice(0, li)); }
+  return null;
+}
+
+/* ── 심화 기록 (선생님 결정 2026-09-28 · 「기록한다」) ─────────────────
+   challenge.html 이 다 푼 도전 한 판을 보낸다(성적표 링크가 &stu= 를 넘겼을 때만).
+   결과 탭(TAB)과는 **다른 탭**에 적는다 — 정시·재시 행의 열 번호와 집계는 한 줄도 안 건드린다.
+
+     보내는 꼴  {kind:'challenge', stu, course, round, n, ok, weakN, weakOk, linkN, linkOk,
+                 concepts:['CH2-010','CH2-020+CH1-005',…], isTest}
+                 stu      성적표 주소의 ?student= 와 같은 코드(doGet 과 같은 규칙으로 학생키를 찾는다)
+                 weakN·weakOk  넘겨받은 약한 개념(&mis=)에서 낸 문항 수·맞은 수
+                 linkN·linkOk  두 개념 엮기 문항 수·맞은 수 (나머지는 배운 개념에서 채운 문항)
+                 concepts 낸 문항의 개념 id. 엮기 문항은 'c+c2'
+     적는 열    시각 · 학생키 · 과목 · 회차 · 문항수 · 맞음 · 약점문항수 · 약점맞음 ·
+                연결문항수 · 연결맞음 · 개념(쉼표) · 테스트
+     돌려주는 꼴 {ok:true} · 같은 판을 다시 보내면(네트워크 재시도) {ok:true, dup:true} ·
+                받지 않으면 {ok:false, error, msg}
+   ?student= 조회는 이 학생의 최근 20판을 challenges 로 같이 준다(최근 것 먼저).
+   TEST 는 결과 탭과 같이 — 실제 기록이 있으면 TEST 판은 빼고, 전부 TEST 면 미리보기로 싣는다. */
+var CH_TAB = '심화기록';
+var CH_HEADERS = ['시각','학생키','과목','회차','문항수','맞음','약점문항수','약점맞음','연결문항수','연결맞음','개념','테스트'];
+function challengeSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(CH_TAB) || ss.insertSheet(CH_TAB);
+  var head = sh.getLastRow() > 0 ? String(sh.getRange(1, 1).getValue() || '') : '';
+  if (head === '' || head === CH_HEADERS[0]) sh.getRange(1, 1, 1, CH_HEADERS.length).setValues([CH_HEADERS]);
+  return sh;
+}
+function intIn_(v, lo, hi) {
+  var n = Number(v);
+  return (isFinite(n) && Math.floor(n) === n && n >= lo && n <= hi) ? n : null;
+}
+function saveChallenge_(d) {
+  var key = studentOfCode_(d.stu);
+  if (!key) return { ok: false, error: 'student', msg: '학생 코드를 찾지 못해 저장하지 않았습니다.' };
+  var course = String(d.course || '').toLowerCase();
+  if (!/^(ch1|ch2|gc)$/.test(course)) return { ok: false, error: 'bad', msg: '과목이 이상합니다.' };
+  var round = intIn_(d.round, 1, 99), n = intIn_(d.n, 1, 50);
+  var ok = n == null ? null : intIn_(d.ok, 0, n);
+  var weakN = n == null ? null : intIn_(d.weakN || 0, 0, n), linkN = n == null ? null : intIn_(d.linkN || 0, 0, n);
+  var weakOk = weakN == null ? null : intIn_(d.weakOk || 0, 0, weakN), linkOk = linkN == null ? null : intIn_(d.linkOk || 0, 0, linkN);
+  if (round == null || ok == null || weakOk == null || linkOk == null || weakN + linkN > n)
+    return { ok: false, error: 'bad', msg: '수가 서로 맞지 않아 저장하지 않았습니다.' };
+  var cs = (Array.isArray(d.concepts) ? d.concepts : []).map(function (c) { return String(c || '').trim(); })
+    .filter(function (c) { return /^[A-Za-z0-9]+-\d+(\+[A-Za-z0-9]+-\d+)?$/.test(c); }).slice(0, 50).join(',');
+  var test = d.isTest ? 'TEST' : '';
+  var row = [new Date(), key, course, round, n, ok, weakN, weakOk, linkN, linkOk, cs, test];
+  var lock = null;
+  try { if (typeof LockService !== 'undefined') { lock = LockService.getScriptLock(); lock.waitLock(10000); } } catch (eL) { lock = null; }
+  try {
+    var sh = challengeSheet_(), last = sh.getLastRow();
+    /* 같은 판을 다시 보낸 것(네트워크 재시도·두 번 누름)은 한 줄로. 10분 안 · 같은 학생 · 칸이 모두 같으면. */
+    var from = Math.max(2, last - 29), now = row[0].getTime();
+    var tail = last >= from ? sh.getRange(from, 1, last - from + 1, CH_HEADERS.length).getValues() : [];
+    for (var i = tail.length - 1; i >= 0; i--) {
+      var r = tail[i], t = r[0] ? new Date(r[0]).getTime() : 0;
+      if (now - t > 10 * 60 * 1000) continue;
+      var same = true;
+      for (var j = 1; j < row.length; j++) { if (String(r[j] == null ? '' : r[j]) !== String(row[j])) { same = false; break; } }
+      if (same) return { ok: true, dup: true };
+    }
+    sh.appendRow(row);
+    return { ok: true };
+  } finally { if (lock) { try { lock.releaseLock(); } catch (eR) {} } }
+}
+/* 성적표가 읽는 꼴. 기록이 없거나 탭이 없어도 성적표는 떠야 한다 — 통째로 감싼다.
+   읽기만 한다(탭이 없으면 만들지 않는다). */
+function challengesOf_(key) {
+  try {
+    var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(CH_TAB);
+    if (!sh || sh.getLastRow() < 2) return [];
+    var rows = sh.getDataRange().getValues().slice(1).filter(function (r) { return String(r[1] || '').trim() === key; });
+    var hasReal = rows.some(function (r) { return r[11] !== 'TEST'; });
+    if (hasReal) rows = rows.filter(function (r) { return r[11] !== 'TEST'; });
+    return rows.slice(-20).reverse().map(function (r) {
+      return { date: r[0], course: String(r[2] || ''), round: Number(r[3]) || 0, n: Number(r[4]) || 0, ok: Number(r[5]) || 0,
+        weakN: Number(r[6]) || 0, weakOk: Number(r[7]) || 0, linkN: Number(r[8]) || 0, linkOk: Number(r[9]) || 0,
+        isTest: r[11] === 'TEST' };
+    });
+  } catch (e) { return []; }
 }
 
 /* 명단 조회(반 코드 또는 관리자 코드). exam 드롭다운, hw_grader 명단에 사용.

@@ -119,10 +119,24 @@ def bank(src):
     return json.loads(m.group(1))
 
 
+def links(src):
+    """두 개념 엮기 문장(CHALLENGE_LINK). 아직 없는 옛 파일이면 빈 목록."""
+    m = re.search(r'const CHALLENGE_LINK=(\[.*?\]);\n', src, re.S)
+    return json.loads(m.group(1)) if m else []
+
+
 def build(src):
-    """심화 문제은행에 실린 개념만 골라 표를 만든다(파일이 쓸데없이 커지지 않게)."""
+    """심화 문제은행에 실린 개념만 골라 표를 만든다(파일이 쓸데없이 커지지 않게).
+
+    두 개념 엮기 문장의 개념도 싣는다 — 주인 개념(c)과, 같은 과목이면 엮인 개념(c2).
+    화면은 문장의 first_round 와 이 표를 **둘 다** 보고 늦은 쪽을 따른다(2026-09-28)."""
     first, last = first_round(), last_round()
-    used = sorted({c['c'] for lst in bank(src).values() for c in lst})
+    used = {c['c'] for lst in bank(src).values() for c in lst}
+    for e in links(src):
+        used.add(e['c'])
+        if e['c2'].rsplit('-', 1)[0] == e['c'].rsplit('-', 1)[0]:
+            used.add(e['c2'])
+    used = sorted(used)
     missing = [c for c in used if c not in first]
     table = {c: first[c][1] for c in used if c in first}
     body = (BEGIN + '\n'
