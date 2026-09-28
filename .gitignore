@@ -8,3 +8,4 @@ node_modules/
 .clasp.json
 creds.json
 client_secret*.json
+tools/_stage/
