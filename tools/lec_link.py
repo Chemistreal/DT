@@ -71,6 +71,18 @@
 
 (표의 설명 글은 `about` 칸에 있다. 예전에는 그 자리가 `note` 였다.)
 
+■ 과목 안에서만 찾는 과목 — 화학Ⅰ 심화 ch1s (설계 8단계, 2026-10-03)
+
+화학Ⅰ 심화의 개념 이름 211개 가운데 18개가 화학Ⅰ 이름과 글자까지 같다(「전기음성도」
+「헤스 법칙」 …). 그런데 뜻은 심화 개념이라 화학Ⅰ 표(map 은 이름 키)를 그대로 쓰면 안
+되고, 같은 이름을 byUnit 으로 옮기면 화학Ⅰ 의 이름 키(LECMAP)가 사라진다. 그래서 SCOPED
+과목은 **«과목/단원|이름» 키 하나로만** 잇는다 — byUnit 에 'ch1s/Ⅰ-1|동위원소 정의',
+강의가 없으면 unmapped 에 같은 키. 화면(report.html lecFor)도 이 과목은 LECUNIT 의 자기
+과목 키만 보고 LECMAP 으로 내려가지 않는다(같은 이름의 화학Ⅰ 강의로 새지 않는다).
+이 자는 SCOPED 과목의 문항을 이름 단위 검사(missing·straddle·thin)에 섞지 않고, 키
+단위로 따로 센다 — 회차 파일의 «과목/단원|이름» 이 byUnit·unmapped 중 한 곳에 있는가.
+--chunks·--absorb 는 이름 단위 과목만 다룬다(SCOPED 과목의 표는 사람이 키로 적는다).
+
     python3 tools/lec_link.py           # 지금 얼마나 이어져 있나
     python3 tools/lec_link.py --check   # 끊기거나 줄면 빨간불 (CI)
     python3 tools/lec_link.py --seal    # 지금 덮는 수를 새 바닥으로
@@ -113,24 +125,45 @@ def save(doc):
         json.dumps(doc, ensure_ascii=False, indent=1) + '\n')
 
 
-# 강의 표를 아직 안 이은 과목. 화학Ⅰ 심화(ch1s)는 개념 강의 연결이 설계 8단계라 그때까지 이 자가 안 센다 —
-# 성적표(report.html lecFor)도 그 과목에는 강의 문을 안 단다. 이을 때 여기서 빼고 표를 채운다.
-NOT_YET = {'ch1s'}
+# 과목 안에서만 찾는 과목(머리말 «과목 안에서만 찾는 과목»). 이 과목의 문항은 «과목/단원|이름» 키로만
+# 표에 앉고, 화면도 LECMAP(이름 키)으로 내려가지 않는다. report.html 의 lecFor 와 같은 목록이다.
+SCOPED = {'ch1s'}
 
 
-def round_files():
+def course_of(f):
+    return os.path.basename(f).split('_')[1]
+
+
+def round_files(scoped=False):
+    """이름 단위 과목의 회차 파일(scoped=True 면 SCOPED 과목의 회차 파일)."""
     for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
-        if os.path.basename(f).split('_')[1] in NOT_YET:
+        if (course_of(f) in SCOPED) != scoped:
             continue
         yield f
 
 
+def is_scoped(k):
+    return SEP in k and k.split('/', 1)[0] in SCOPED
+
+
+def rounds_scoped():
+    """SCOPED 과목 문항 → «과목/단원|이름» 키별 문항 수."""
+    n = collections.Counter()
+    for f in round_files(scoped=True):
+        course = course_of(f)
+        for it in ((load(f).get('jeongsi') or {}).get('items') or []):
+            m = str(it.get('mis') or '').strip()
+            if m:
+                n['%s/%s%s%s' % (course, it.get('u') or '', SEP, m)] += 1
+    return n
+
+
 def rounds():
-    """회차 자료의 오개념 → 문항 수, 그리고 어느 「과목/단원」에 나오는지."""
+    """회차 자료의 오개념 → 문항 수, 그리고 어느 「과목/단원」에 나오는지(이름 단위 과목만)."""
     n = collections.Counter()
     unit = collections.defaultdict(collections.Counter)
     for f in round_files():
-        course = os.path.basename(f).split('_')[1]
+        course = course_of(f)
         d = load(f)
         for it in ((d.get('jeongsi') or {}).get('items') or []):
             m = str(it.get('mis') or '').strip()
@@ -344,7 +377,7 @@ def absorb():
                 un[mis] = why or '맞는 강의가 목록에 없다'
                 noted += 1
     # byUnit 이 맡은 이름은 map 에서 뺀다 — 화면이 byUnit 을 먼저 보기 때문이다.
-    moved = sorted({k.split(SEP, 1)[1] for k in bu if SEP in k} & set(mp))
+    moved = sorted({k.split(SEP, 1)[1] for k in bu if SEP in k and not is_scoped(k)} & set(mp))
     for t in moved:
         mp.pop(t, None)
     doc['map'] = dict(sorted(mp.items()))
@@ -463,7 +496,7 @@ def chunks(per=45):
     """
     doc = load(MAP)
     mp, bu = doc.get('map', {}), doc.get('byUnit', {})
-    done = set(mp) | {k.split(SEP, 1)[1] for k in bu if SEP in k} | set(doc.get('unmapped', {}))
+    done = set(mp) | {k.split(SEP, 1)[1] for k in bu if SEP in k and not is_scoped(k)} | set(doc.get('unmapped', {}))
     n, unit = rounds()
     # 문항에 붙은 문장·해설을 오개념별로 두 개까지 모은다
     ex = collections.defaultdict(list)
@@ -526,15 +559,19 @@ def main():
     doc = load(MAP)
     lec, mp, un = doc['lectures'], doc.get('map', {}), doc.get('unmapped', {})
     bu = doc.get('byUnit', {})
-    bu_names = {k.split(SEP, 1)[1] for k in bu if SEP in k}
+    bu_names = {k.split(SEP, 1)[1] for k in bu if SEP in k and not is_scoped(k)}
     n, unit = rounds()
-    nQ = sum(n.values())
+    ns = rounds_scoped()
+    nQ = sum(n.values()) + sum(ns.values())
 
     ghost = sorted({v for v in mp.values() if v not in lec}
                    | {v for v in bu.values() if v and v not in lec})
     missing = sorted(t for t in n if t not in mp and t not in un and t not in bu_names)
-    stale = sorted(t for t in list(mp) + list(un) if t not in n)
+    stale = sorted(t for t in list(mp) + list(un) if t not in n and not is_scoped(t))
     straddle = sorted(bu_names & set(mp))
+    # SCOPED 과목: 회차 파일의 «과목/단원|이름» 키가 byUnit·unmapped 중 한 곳에 있는가(이름으로 대신하지 않는다).
+    missing_s = sorted(k for k in ns if k not in bu and k not in un)
+    stale_s = sorted(k for k in list(bu) + list(un) if is_scoped(k) and k not in ns)
     thin = []
     for t in sorted(bu_names):
         want = set(unit[t])
@@ -543,15 +580,21 @@ def main():
         if gap:
             thin.append((t, gap))
 
-    covQ = sum(n[t] for t in n if t in mp or t in bu_names)
-    covT = sum(1 for t in n if t in mp or t in bu_names)
-    print('오개념 %d종 · 문항 %d개 · 개념강의 %d편' % (len(n), nQ, len(lec)))
+    covQ = sum(n[t] for t in n if t in mp or t in bu_names) + sum(ns[k] for k in ns if k in bu)
+    covT = sum(1 for t in n if t in mp or t in bu_names) + sum(1 for k in ns if k in bu)
+    nT = len(n) + len(ns)
+    print('오개념 %d종 · 문항 %d개 · 개념강의 %d편' % (nT, nQ, len(lec)))
     print('이어진 오개념 %d종(%d%%) · 이어진 문항 %d개(%d%%)'
-          % (covT, round(100 * covT / max(1, len(n))),
+          % (covT, round(100 * covT / max(1, nT)),
              covQ, round(100 * covQ / max(1, nQ))))
     if un:
         print('못 이은 오개념 %d종(문항 %d개) — 까닭이 적혀 있다'
-              % (len(un), sum(n.get(t, 0) for t in un)))
+              % (len(un), sum(ns.get(t, 0) if is_scoped(t) else n.get(t, 0) for t in un)))
+    for c in sorted(SCOPED):
+        ks = [k for k in ns if k.startswith(c + '/')]
+        if ks:
+            print('  그 가운데 %s(과목 키): 개념 %d종 · 이은 %d · 강의 없음 %d'
+                  % (c, len(ks), sum(1 for k in ks if k in bu), sum(1 for k in ks if k in un)))
 
     # ── 절(anchor) 표 ──
     sc = doc.get('sec', {})
@@ -571,8 +614,8 @@ def main():
             want = 'id="q"' if x == 'q' else 'id="s%s"' % x
             if want not in cache[f]:
                 sec_ghost.append('%s → %s#%s' % (k, nn, x))
-    names = set(mp) | bu_names
-    sec_names = {k.split(SEP, 1)[1] if SEP in k else k for k in sc}
+    names = set(mp) | bu_names | {k for k in bu if is_scoped(k)}
+    sec_names = {k.split(SEP, 1)[1] if SEP in k and not is_scoped(k) else k for k in sc}
     print('절까지 이어진 오개념 %d종(%d 중) · 자리 %d(map·byUnit %d 중; 본문 절 %d · 확인 문제 %d)%s'
           % (len(sec_names & names), len(names), len(sc), len(mp) + len(bu),
              sum(1 for x in sc.values() if x != 'q'), sum(1 for x in sc.values() if x == 'q'),
@@ -587,7 +630,7 @@ def main():
                     if not isinstance(x, str) or not x.strip() or len(x) > NOTE_MAX)
     print('부분 적합 표시 %d자리(한 줄 %d자 이하)' % (len(nt), NOTE_MAX))
     # 이어진 이름이 unmapped 에도 남아 있으면 lecture-gap 이 «강의 없음» 이라고 거짓말한다.
-    both = sorted((set(mp) | bu_names) & set(un))
+    both = sorted(((set(mp) | bu_names) & set(un)) | {k for k in bu if is_scoped(k) and k in un})
     # report.html 의 세 상수가 표와 같은가(손으로 고쳤거나 --emit 을 잊었으면 갈린다).
     drift = []
     src = os.path.join(ROOT, 'report.html')
@@ -643,9 +686,19 @@ def main():
         print('\nbyUnit 이 단원을 다 안 적은 이름 %d종:' % len(thin))
         for t, g in thin[:10]:
             print('  %-20s 빠진 단원: %s' % (t, ', '.join(g[:6])))
+    if missing_s:
+        bad = True
+        print('\n과목 키(%s)가 byUnit·unmapped 어디에도 없다 %d종 (문항 %d개):'
+              % ('·'.join(sorted(SCOPED)), len(missing_s), sum(ns[k] for k in missing_s)))
+        for k in missing_s[:20]:
+            print('  %-36s %d문항' % (k, ns[k]))
     if stale:
         print('\n회차 자료에 없는 오개념이 표에 남아 있다 %d종: %s'
               % (len(stale), ', '.join(stale[:8])))
+    if stale_s:
+        bad = True
+        print('\n회차 자료에 없는 과목 키가 표에 남아 있다 %d: %s'
+              % (len(stale_s), ', '.join(stale_s[:8])))
 
     if '--seal' in sys.argv:
         io.open(SEAL, 'w', encoding='utf-8').write(json.dumps(

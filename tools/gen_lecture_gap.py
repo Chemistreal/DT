@@ -41,20 +41,34 @@ def esc(s):
     return html.escape(str(s), quote=True)
 
 
+# 과목 안에서만 찾는 과목(tools/lec_link.py SCOPED). unmapped 키가 이름이 아니라 «과목/단원|이름» 이다 —
+# 그 과목 문항은 그 키로만 세고, 이름 키 주제에는 섞지 않는다(심화 이름 18개가 화학Ⅰ 과 같다).
+SCOPED = {'ch1s': '화학Ⅰ 심화'}
+
+
 def collect():
     un = json.load(io.open(SRC, encoding='utf-8'))['unmapped']
     cnt = {}
     where = {}
     for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
         r = json.load(io.open(f, encoding='utf-8'))
-        rid = '%s %s회' % (r.get('course', ''), r.get('round', ''))
+        course = r.get('course', '')
+        rid = '%s %s회' % (course, r.get('round', ''))
         for it in (r.get('jeongsi') or {}).get('items') or []:
             m = it.get('mis')
             if not m:
                 continue
+            if course in SCOPED:
+                m = '%s/%s|%s' % (course, it.get('u') or '', m)
             cnt[m] = cnt.get(m, 0) + 1
             where.setdefault(m, set()).add(rid)
-    rows = [{'topic': k, 'n': cnt.get(k, 0), 'why': v,
+
+    def topic(k):
+        c = k.split('/', 1)[0]
+        if '|' in k and c in SCOPED:
+            return '%s (%s)' % (k.split('|', 1)[1], SCOPED[c])
+        return k
+    rows = [{'topic': topic(k), 'n': cnt.get(k, 0), 'why': v,
              'rounds': sorted(where.get(k, []))}
             for k, v in un.items()]
     rows.sort(key=lambda r: (-r['n'], r['topic']))

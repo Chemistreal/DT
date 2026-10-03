@@ -631,7 +631,7 @@ async function assertNoOverflow(page, label) {
     const fnSrc = name => { const at = src.indexOf('function ' + name + '('); assert(at > 0, name + ' 를 못 찾았다');
       return src.slice(at, src.indexOf('\n}\n', at) + 3); };
     const api = new Function('LECMAP', 'LECUNIT', 'LECNOTE', 'rEsc',
-      ['lecFor', 'lecNoteFor', 'lecDtHref', 'lecLinkHTML'].map(fnSrc).join('\n')
+      ['lecFor', 'lecScopedKey', 'lecNoteFor', 'lecDtHref', 'lecLinkHTML'].map(fnSrc).join('\n')
       + '\nreturn { lecFor: lecFor, lecLinkHTML: lecLinkHTML, lecDtHref: lecDtHref };')(LECMAP, LECUNIT, LECNOTE,
       t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
     /* 표와 같다 — 키는 map·byUnit 안, 글은 40자 이하 */
@@ -3721,7 +3721,7 @@ async function assertNoOverflow(page, label) {
     /* 5회: 격자 에너지(38) · 이온화 에너지 주기성(25) · 전기음성도(28) 는 화학Ⅰ DEEP 에도 같은 이름이 있다. */
     const W5 = [38, 25, 28, 3, 12];
 
-    await test('ch1s · 성적표: 심화반 행만으로 그려지고 · 한 겹 더는 코드로 · 강의·도전 링크는 숨긴다', async page => {
+    await test('ch1s · 성적표: 심화반 행만으로 그려지고 · 한 겹 더는 코드로 · 강의 문은 달고 도전 링크는 숨긴다', async page => {
       await serveRows(page, [row('ch1s', R5, 5, W5, '2026-09-20')]);
       const r = await page.evaluate(() => {
         const card = [].slice.call(document.querySelectorAll('.card')).filter(e => /한 겹 더/.test((e.querySelector('h2') || {}).textContent || ''))[0];
@@ -3731,7 +3731,7 @@ async function assertNoOverflow(page, label) {
           prereq: !!(typeof PREREQ !== 'undefined' && PREREQ.ch1s), eng: typeof ENGINE !== 'undefined' && !!ENGINE['CH1S-001'] };
       });
       assert(/화학 ?(I|Ⅰ) 심화/.test(r.text), '과목 이름표에 「화학Ⅰ 심화」 가 없다');
-      assert(r.lec === 0, 'ch1s 에 개념 강의 문이 ' + r.lec + '개 섰다(강의 연결은 8단계)');
+      assert(r.lec >= 1, 'ch1s 에 개념 강의 문이 하나도 없다(강의 연결은 8단계에서 켰다)');
       assert(r.rx && r.rx.length >= 1, '통과했는데 「한 겹 더」 카드가 없다');
       assert(r.cbtn === 0, 'ch1s 에 심화 도전 링크가 섰다(은행은 9단계)');
       const byName = {}; Object.keys(SRC).forEach(c => { byName[SRC[c].m] = c; });
@@ -3744,6 +3744,46 @@ async function assertNoOverflow(page, label) {
       assert(r.rx.some(x => DEEPN[x.nm]), '픽스처가 화학Ⅰ 과 이름이 같은 개념을 재지 않는다');
       assert(r.prereq && r.eng, '선수 단원(PREREQ.ch1s)·개념 그래프(ENGINE CH1S-)가 없다');
       await assertNoOverflow(page, 'report-ch1s');
+    });
+
+    /* 설계 8단계(2026-10-03) — 심화반 개념은 «ch1s/단원|이름» 과목 키로만 강의에 잇는다(tools/lec_link.py SCOPED).
+       심화 개념 18개가 화학Ⅰ 과 이름이 같아, 이름 키(LECMAP)로 내려가면 화학Ⅰ 강의·절로 샌다. 여기서 못 박는 것:
+       · 화면의 강의 문마다 주소가 표의 그 개념 과목 키 강의·절이고, 꼬리가 ?from=dt&c=ch1s&r=5 (#절 앞)
+       · 화학Ⅰ 과 이름이 같은데 절이 다른 개념(분자량·화학식량: 화학Ⅰ 036#s02 · 심화 036#s03)은 과목대로 갈린다
+       · 집계의 대표 이름(«동위원소»)·개념 코드(CH1S-025)도 심화반 키로 찾는다 · 강의가 없는 개념은 문을 안 단다 */
+    await test('ch1s · 성적표: 개념 강의 문이 심화반 표(과목 키)의 강의·절로 간다', async page => {
+      await serveRows(page, [row('ch1s', R5, 5, W5, '2026-09-20')]);
+      const lec = JSON.parse(fs.readFileSync(path.join(ROOT, 'concept-lecture-dt.json'), 'utf8'));
+      const keyOf = nm => Object.keys(lec.byUnit).filter(k => k.indexOf('ch1s/') === 0 && k.slice(k.indexOf('|') + 1) === nm)[0];
+      const url = k => lec.base + lec.lectures[lec.byUnit[k]].file;
+      const tail = k => lec.sec[k] ? (lec.sec[k] === 'q' ? '#q' : '#s' + lec.sec[k]) : '';
+      const r = await page.evaluate(() => ({
+        links: [].slice.call(document.querySelectorAll('.rx')).filter(x => x.querySelector('a.leclink'))
+          .map(x => ({ nm: x.querySelector('.nm').textContent, href: x.querySelector('a.leclink').getAttribute('href') })),
+        shared: lecFor('분자량·화학식량', 'ch1s', ''), sharedCh1: lecFor('분자량·화학식량', 'ch1', ''),
+        code: lecFor('CH1S-025', 'ch1s', ''), canon: lecFor(ChemEngine.misCanon('동위원소 정의'), 'ch1s', ''),
+        unit: lecFor('격자 에너지', 'ch1s', 'Ⅲ-1'), none: lecFor('배수 비례 비교', 'ch1s', ''),
+        noneHtml: lecLinkHTML('배수 비례 비교', 'ch1s', 'Ⅰ-2', 5),
+        note: lecLinkHTML('시성식은 없음', 'ch1s', '', 5) + '|' + lecLinkHTML('화학식 네 가지', 'ch1s', '', 5)
+      }));
+      assert(r.links.length >= 1, '심화반 성적표에 강의 문이 붙은 개념이 없다');
+      r.links.forEach(x => {
+        const k = keyOf(x.nm);
+        assert(k, '「' + x.nm + '」 가 심화반 과목 키로 표에 없는데 강의 문이 섰다');
+        const want = url(k) + '?from=dt&c=ch1s&r=5' + tail(k);
+        assert(x.href === want, '「' + x.nm + '」 강의 주소가 표와 다르다: ' + x.href + ' (기대 ' + want + ')');
+      });
+      const kS = keyOf('분자량·화학식량');
+      assert(r.shared === url(kS) + tail(kS) && /#s03$/.test(r.shared), '심화 「분자량·화학식량」 이 심화반 절로 안 간다: ' + r.shared);
+      assert(r.sharedCh1 === lec.base + lec.lectures[lec.map['분자량·화학식량']].file + '#s02', '화학Ⅰ 「분자량·화학식량」 이 바뀌었다: ' + r.sharedCh1);
+      assert(r.code === r.shared, '개념 코드로 찾은 강의가 이름으로 찾은 것과 다르다: ' + r.code);
+      const kI = keyOf('동위원소 정의');
+      assert(r.canon === url(kI) + tail(kI), '대표 이름으로 심화반 강의를 못 찾는다: ' + r.canon);
+      const kL = keyOf('격자 에너지');
+      assert(kL.indexOf('ch1s/Ⅲ-1|') === 0 && r.unit === url(kL) + tail(kL), '단원을 준 심화반 키가 틀리다: ' + r.unit);
+      assert(lec.unmapped['ch1s/Ⅰ-2|배수 비례 비교'] && r.none === '' && r.noneHtml === '', '강의가 없는 심화 개념에 문이 섰다: ' + r.none);
+      const kF = keyOf('화학식 네 가지');
+      assert(r.note.split('|')[0] === '' && r.note.indexOf('§04 참고 · ' + lec.note[kF]) > 0, '부분 적합 한 줄이 심화반 키로 안 뜬다: ' + r.note);
     });
 
     await test('ch1s · 성적표: 화학Ⅰ 행과 함께 있어도 깨지지 않는다', async page => {
