@@ -2419,6 +2419,58 @@ async function assertNoOverflow(page, label) {
     }
   }
 
+  /* ── 화학1 기록을 화학1 심화로 잇는다(carryOver) ───────────────────
+     학생 키는 과목과 무관해서 화학1 행이 같은 학생 기록에 이미 있다. 이름은 13개만 겹쳐서
+     개념 코드 대응표(courses/ch1s/link_ch1.json)로 옮긴다. 실제 화학1 회차 파일로 가상 학생을 만들어
+     ① 답안 자리 → 화학1 코드 → 심화 코드로 틀린 회차가 세어지는지 ② 세 회차 연속이면 고질로 넘어오는지
+     ③ 재시 서명으로 «고침» 이 잡히는지 ④ 본 문장·틀린 문장이 넘어오는지 ⑤ 다른 과목 행은 안 섞이는지
+     ⑥ 답안이 없는 옛 행은 오개념 이름으로 옮겨지는지 본다. */
+  {
+    const t0 = Date.now(), name = '화학1 기록이 화학1 심화 개념으로 이어진다(carryOver)';
+    try {
+      delete require.cache[require.resolve(path.join(ROOT, 'chemengine.js'))];
+      const CE = require(path.join(ROOT, 'chemengine.js'));
+      const link = JSON.parse(fs.readFileSync(path.join(ROOT, 'courses/ch1s/link_ch1.json'), 'utf8'));
+      const R = {};
+      [5, 6, 7].forEach(r => { R['ch1#' + r] = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata/round_ch1_0' + r + '.json'), 'utf8')).jeongsi.items; });
+      // 세 회차 모두에 나오는 심화 개념 하나
+      const tsets = [5, 6, 7].map(r => new Set(R['ch1#' + r].map(x => link.map[x.c]).filter(Boolean)));
+      const T = [...tsets[0]].find(t => tsets[1].has(t) && tsets[2].has(t));
+      assert(T, '세 회차에 걸친 심화 개념이 없다');
+      const ans = r => R['ch1#' + r].map(x => link.map[x.c] === T ? (x.a === 'O' ? 'X' : 'O') : x.a).join('');
+      const K = '가상중-연결';
+      const rows = [5, 6, 7].map(r => ({ studentKey: K, course: 'ch1', round: r, attempt: '첫 응시', answers: ans(r), wrongMis: [] }));
+      const codes7 = R['ch1#7'].filter(x => link.map[x.c] === T).map(x => x.c);
+      rows.push({ studentKey: K, course: 'ch1', round: 7, attempt: '재시', answers: codes7.map(() => 'O').join(''),
+                  retakeCids: codes7.join(','), retakeKeys: codes7.map(() => 'O').join('') });
+      rows.push({ studentKey: K, course: 'ch2', round: 5, attempt: '첫 응시', answers: 'X'.repeat(60), wrongMis: [] });
+      rows.push({ studentKey: K, course: 'ch1s', round: 1, attempt: '첫 응시', answers: 'X'.repeat(60), wrongMis: [] });
+      const out = CE.carryOver(rows, R, link);
+      const o = out.concepts[T];
+      assert(o && o.asked === 3 && o.wrong === 3, '틀린 회차 수가 안 맞다 → ' + JSON.stringify(o));
+      assert(out.chronic.indexOf(T) >= 0, '세 회차 연속 틀린 개념이 고질로 안 넘어왔다');
+      assert(o.fixed === true, '7회 재시에서 다 맞혔는데 고침이 아니다');
+      assert(out.rounds.join() === '5,6,7', '다른 과목 행이 섞였다 → ' + out.rounds);
+      const others = Object.values(out.concepts).filter(x => x.c !== T && x.wrong > 0);
+      assert(!others.length, '맞힌 개념이 틀림으로 잡혔다 → ' + others.map(x => x.c));
+      const wrongS = R['ch1#5'].find(x => link.map[x.c] === T).s;
+      assert(out.seen[CE.norm(R['ch1#5'][0].s)] && out.wrongStmts[CE.norm(wrongS)], '본 문장·틀린 문장이 안 넘어왔다');
+      const wrongSet = new Set([5, 6, 7].flatMap(r => R['ch1#' + r].filter(x => link.map[x.c] === T).map(x => CE.norm(x.s))));
+      assert(Object.keys(out.wrongStmts).length === wrongSet.size, '틀린 문장 수가 다르다');   // 복습 칸은 같은 문장을 다시 낸다 — 서로 다른 문장으로 센다
+      // 답안이 없는 옛 행: 오개념 이름으로
+      const nm = Object.keys(link.mis)[0];
+      const old = CE.carryOver([{ studentKey: K, course: 'ch1', round: 3, attempt: '정시', answers: '', wrongMis: [nm] }], {}, link);
+      assert(old.concepts[link.mis[nm]] && old.concepts[link.mis[nm]].wrong === 1, '옛 행의 오개념 이름이 안 옮겨졌다');
+      // 대응표 없음 → 빈 결과
+      assert(Object.keys(CE.carryOver(rows, R, {}).concepts).length === 0, '대응표 없이도 무언가 넘어왔다');
+      results.push({ name, ok: true, ms: Date.now() - t0 });
+      console.log('  PASS  ' + name + ' (' + (Date.now() - t0) + 'ms)');
+    } catch (e) {
+      results.push({ name, ok: false, ms: Date.now() - t0, err: String(e && e.message || e) });
+      console.log('  FAIL  ' + name + ' — ' + String(e && e.message || e).split('\n')[0]);
+    }
+  }
+
   /* ── 문자에 실리는 이름 ──────────────────────────────────────────
      명단·시트의 이름 칸에 `홍길동 청운중` 처럼 학교가 붙어 있을 수 있다
      (명단에 두 명을 넣을 방법이 없던 때의 흔적). 그대로 실려 학부모에게

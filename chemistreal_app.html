@@ -806,8 +806,93 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
       .sort(function (a, b) { return b.times - a.times || b.last - a.last; });
   }
 
+  /* ══════════════════════════════════════════════════════════
+     앞 과목 기록 잇기 — 화학1 을 들은 학생이 화학1 심화반에 오면 (선생님 결정 2026-10-03)
+
+     학생은 과목과 무관하게 «학교-이름» 키 하나라 화학1 기록은 이미 같은 학생 행에 있다.
+     그런데 이름으로는 이어지지 않는다 — 화학1 오개념 이름 330개와 심화 개념 이름 211개 중
+     겹치는 것은 13개뿐이다. 그래서 **개념 코드 대응표**(courses/ch1s/link_ch1.json,
+     design.json 의 ch1_equiv 에서 만든다)로 옮긴다.
+
+     첫 응시 행에는 개념 코드가 없다. answers 의 자리를 그 회차 파일 items[k].c 와 맞대야
+     코드가 나온다(성적표 segJoin 과 같은 방식). 답안 길이가 문항 수와 다르면(옛 행) 오개념
+     이름(wrongMis)을 대응표의 이름 표로 옮기고, 물은 회차는 ROUND_MIS 로 센다.
+
+     돌려주는 것
+       concepts[CH1S] = {c, m, asked(물은 회차 수), wrong(틀린 회차 수), rounds, wrongRounds, fixed}
+                        fixed: 마지막으로 틀린 회차의 재시에서 그 개념을 다 맞혔으면 true
+       chronic        고질 규칙(CHRONIC_MIN_ASKED · CHRONIC_MIN_RATE)을 화학1 기록만으로 넘긴 개념
+       weak           한 번이라도 틀린 개념 — 틀린 비율, 그다음 최근 순
+       seen           화학1 정시에서 본 문장(norm) — 심화 은행은 화학1 문장을 글자 그대로 가져온
+                      자리가 있어, 재시·게이트가 이미 본 문장을 다시 내지 않게 넘겨준다
+       wrongStmts     화학1 정시에서 틀린 문장 — 다시 내지 않는다
+     rows: 그 학생의 시트 행 전부(모든 과목) · itemsOf(course, round) → 회차 문항 배열(또는 회차 파일),
+     아니면 {'ch1#12': items} · link: {from, map:{CH1-코드: CH1S-코드}, names:{CH1S: 이름}, mis:{이름: CH1S}} */
+  var COURSE_LINK = { ch1s: 'ch1' };
+  function carryOver(rows, itemsOf, link) {
+    link = link || {};
+    var from = link.from, map = link.map || {}, names = link.names || {}, misMap = link.mis || {};
+    var out = { from: from, concepts: {}, chronic: [], weak: [], seen: {}, wrongStmts: {}, rounds: [] };
+    if (!from) return out;
+    var byRound = {};
+    (rows || []).forEach(function (r) {
+      if (r && String(r.course) === from && r.round != null) (byRound[Number(r.round)] || (byRound[Number(r.round)] = [])).push(r);
+    });
+    function itemsAt(rd) {
+      var x = typeof itemsOf === 'function' ? itemsOf(from, rd) : (itemsOf || {})[from + '#' + rd];
+      return Array.isArray(x) ? x : (x && x.jeongsi && x.jeongsi.items) || null;
+    }
+    Object.keys(byRound).map(Number).sort(function (a, b) { return a - b; }).forEach(function (rd) {
+      var atts = byRound[rd].slice().sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
+      var first = atts.filter(function (a) { return order(a.attempt) === 0; })[0];
+      if (!first) return;
+      var per = {}, its = itemsAt(rd), ans = String(first.answers || '');
+      function hit(t, wrong) { if (!t) return; var p = per[t] || (per[t] = { wrong: false }); if (wrong) p.wrong = true; }
+      if (its && its.length && ans.length === its.length) {
+        its.forEach(function (x, k) {
+          var wrong = ans.charAt(k) !== x.a;          // 빈칸도 «맞히지 못함» (notCorrectConcepts 와 같다)
+          out.seen[norm(x.s)] = 1;
+          if (wrong) out.wrongStmts[norm(x.s)] = 1;
+          hit(map[x.c], wrong);
+        });
+      } else {
+        (roundMisOf(from, rd) || []).forEach(function (m) { hit(misMap[misCanon(m)], false); });
+        (first.wrongMis || []).forEach(function (m) { hit(misMap[misCanon(m)], true); });
+      }
+      /* 재시에서 고침 — 재시 행의 서명(retakeCids: 개념 코드 차례, retakeKeys: 정답 차례)으로 개념 단위로 맞댄다.
+         뒤 시도가 앞 시도를 덮는다. 심화 개념 하나에 화학1 코드가 여럿이면 물은 코드가 다 맞아야 고침이다. */
+      var okc = {};
+      atts.forEach(function (r) {
+        if (order(r.attempt) === 0) return;
+        var a = String(r.answers || ''), rc = String(r.retakeCids || ''), rk = String(r.retakeKeys || '');
+        var arr = rc ? rc.split(',') : [];
+        if (!(rc && rk && a && arr.length === a.length && rk.length === a.length)) return;
+        var now = {};
+        arr.forEach(function (c, k) { if (!c) return; var ok = a.charAt(k) === rk.charAt(k); if (now[c] == null) now[c] = true; if (!ok) now[c] = false; });
+        Object.keys(now).forEach(function (c) { okc[c] = now[c]; });
+      });
+      var okT = {};
+      Object.keys(okc).forEach(function (c) { var t = map[c]; if (t) okT[t] = okT[t] !== false && okc[c]; });
+      Object.keys(per).forEach(function (t) {
+        var o = out.concepts[t] || (out.concepts[t] = { c: t, m: names[t] || '', asked: 0, wrong: 0, rounds: [], wrongRounds: [], fixed: null });
+        o.asked++; o.rounds.push(rd);
+        if (per[t].wrong) { o.wrong++; o.wrongRounds.push(rd); o.fixed = okT[t] === true; }
+      });
+      out.rounds.push(rd);
+    });
+    var all = Object.keys(out.concepts).map(function (t) { return out.concepts[t]; });
+    function rate(o) { return o.asked ? o.wrong / o.asked : 0; }
+    function lastW(o) { return o.wrongRounds.length ? o.wrongRounds[o.wrongRounds.length - 1] : -1; }
+    function byWeak(a, b) { return rate(b) - rate(a) || lastW(b) - lastW(a) || (a.c < b.c ? -1 : 1); }
+    out.weak = all.filter(function (o) { return o.wrong > 0; }).sort(byWeak).map(function (o) { return o.c; });
+    out.chronic = all.filter(function (o) { return o.asked >= CHRONIC_MIN_ASKED && rate(o) >= CHRONIC_MIN_RATE; })
+      .sort(byWeak).map(function (o) { return o.c; });
+    return out;
+  }
+
   // ---------- export (Node + 브라우저) ----------
   var api = {
+    carryOver: carryOver, COURSE_LINK: COURSE_LINK,
     norm: norm, studentKey: studentKey, axisOf: axisOf, axisName: axisName, AXES: AXES,
     gradeAttempt: gradeAttempt, notCorrectConcepts: notCorrectConcepts,
     misCanon: misCanon, MIS_CANON: MIS_CANON,
