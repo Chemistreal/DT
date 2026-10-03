@@ -18,6 +18,7 @@
 처음 한 번만 쓰는 것(집필 결과 tools/_stage/ch1s/ → 원본):
   --stage-rounds   w_*.json  → 회차 파일 신규·복습-새 칸
   --stage-forms    f_plan.json + f_*.json → 은행
+  --stage-reading  r_*.json → 은행 reading(핵심·흔한 오해·한 줄 정리) + deep_ch1s.json(한 겹 더)
 """
 import collections
 import glob
@@ -31,6 +32,8 @@ DT = os.path.dirname(os.path.dirname(HERE))
 STAGE = os.path.join(DT, 'tools', '_stage', 'ch1s')
 BANK = os.path.join(HERE, 'forms_bank_ch1s.json')
 LINK = os.path.join(HERE, 'link_ch1.json')
+DEEP = os.path.join(HERE, 'deep_ch1s.json')
+READ_LIM = {'core': (40, 180), 'kill': (60, 220), 'oneline': (20, 110)}
 KEYS = ('n', 'u', 'mis', 'a', 's', 'f', 'w', 'lvl', 'c')
 RKEYS = ('c', 'u', 'a', 's', 'f', 'w', 'lvl')
 SCORING = {'per': 1.6667, 'max': 100, 'wrong': 0, 'blank': 0, 'pass': 80}
@@ -132,6 +135,21 @@ def stage_forms(dz, rounds):
             forms.append({'a': x['a'], 's': x['s'], 'f': x['f'], 'w': x['w'], 'lvl': x['lvl'], 'from': x['src']})
         bank[code] = {'m': c['m'], 't': 'C', 'forms': forms}
     return bank
+
+
+def stage_reading(bank):
+    """r_*.json(핵심·흔한 오해·한 줄 정리·한 겹 더) → 은행 reading 과 deep_ch1s.json."""
+    got = {}
+    for p in sorted(glob.glob(os.path.join(STAGE, 'r_[A-Z].json'))):
+        got.update(load(p))
+    deep = {}
+    for code, e in bank.items():
+        if code not in got:
+            sys.exit('읽을거리 집필 결과에 %s 가 없다' % code)
+        x = got[code]
+        e['reading'] = {k: x[k] for k in ('core', 'kill', 'oneline')}
+        deep[code] = x['deep']
+    dump(DEEP, deep)
 
 
 # ───────── 화학1 → 심화 대응표 (엔진 carryOver 가 읽는다) ─────────
@@ -311,6 +329,12 @@ def check():
     for code, e in bank.items():
         if e.get('m') != cm.get(code, {}).get('m'):
             errs.append('%s 은행 m 이 개념 이름과 다름' % code)
+        rd = e.get('reading')
+        if rd is not None:
+            for k, (lo, hi) in READ_LIM.items():
+                v = rd.get(k, '')
+                if not (lo <= len(v) <= hi) or '℃' in v or v.count('**') % 2:
+                    errs.append('%s 읽을거리 %s (길이 %d · ℃ · 굵게 짝)' % (code, k, len(v)))
         forms = e['forms']
         own_n = [fm['n'] for fm in forms if 'n' in fm]
         want_n = [n for r in range(1, 11) for it, x in zip(rounds[r]['jeongsi']['items'], dz['blueprint'][str(r)])
@@ -345,6 +369,17 @@ def check():
                 errs += form_errs(tag, fm)
                 if k in old:
                     errs.append(tag + ' 기존 화학1 문장과 같음(가져온 문장이면 from 을 단다)')
+    # 읽을거리 — 한 개념이라도 있으면 전부 있어야 한다
+    has_rd = [c for c, e in bank.items() if e.get('reading')]
+    if has_rd and len(has_rd) != len(bank):
+        errs.append('읽을거리가 %d/%d 개념에만 있다' % (len(has_rd), len(bank)))
+    if has_rd:
+        dp = load(DEEP) if os.path.exists(DEEP) else {}
+        if sorted(dp) != sorted(bank):
+            errs.append('deep_ch1s.json 개념 목록이 은행과 다름')
+        for c, v in dp.items():
+            if not (90 <= len(v) <= 200) or '℃' in v:
+                errs.append('%s 한 겹 더 길이 %d · ℃' % (c, len(v)))
     # 재시
     for r in range(1, 11):
         rc = rounds[r].get('retakeC', [])
@@ -388,13 +423,19 @@ def form_errs(tag, x):
 
 def main():
     a = sys.argv[1:]
-    if any(x in a for x in ('--write', '--stage-rounds', '--stage-forms')):
+    if any(x in a for x in ('--write', '--stage-rounds', '--stage-forms', '--stage-reading')):
         dz = design()
         rounds = stage_rounds(dz) if '--stage-rounds' in a else load_rounds()
         if '--stage-forms' in a:
             bank = stage_forms(dz, rounds)
+            old = load(BANK) if os.path.exists(BANK) else {}
+            for c, e in bank.items():                      # 은행을 다시 들여도 읽을거리는 지킨다
+                if old.get(c, {}).get('reading'):
+                    e['reading'] = old[c]['reading']
         else:
             bank = load(BANK) if os.path.exists(BANK) else None
+        if '--stage-reading' in a:
+            stage_reading(bank)
         sync_review(dz, rounds)
         if bank is not None:
             sync_bank_own(dz, rounds, bank)
