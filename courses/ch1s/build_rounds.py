@@ -7,9 +7,14 @@
 원본(손으로 고치는 곳)
   · appdata/round_ch1s_NN.json 의 신규·복습-새 칸 문장 (앱이 읽는 자리가 곧 원본이다)
   · courses/ch1s/forms_bank_ch1s.json 의 확인 문장(n 이 없는 것)
+  · courses/ch1s/challenge_link_ch1s.json — 심화 도전의 «두 개념 엮기» 문장 211개(개념마다 하나, 설계 9단계).
+    꼴은 appdata/challenge_link.json 과 같다: [{c, c2, a, s, f, w, first_round}] (c·c2 는 CH1S 코드,
+    first_round = 두 개념을 다 배운 회차 = design.json 두 개념 first_round 의 큰 쪽)
 파생(--write 가 다시 만든다 — 손으로 고치지 않는다)
   · report.html·index.html 의 ENGINE CH1S- 항목(가족 f · 선수 pre), report.html 의 PREREQ["ch1s"](단원 선수): design.json 에서
   · appdata/forms_bank.json 의 CH1S- 항목: forms_bank_ch1s.json 을 글자 그대로 (앱은 이 한 파일만 읽는다)
+  · appdata/challenge_link.json 의 CH1S- 항목: challenge_link_ch1s.json 을 글자 그대로, 다른 과목 항목 뒤에
+    (다른 과목 항목은 순서·글자 그대로). 그다음 tools/challenge_bank.py --write 가 challenge.html 에 싣는다.
   · 복습-재출제 칸: design.json blueprint 의 from_round 회 from_n 번 문장을 글자 그대로
   · 은행의 정시 문장(n 이 붙은 form): 회차 파일 문장 그대로
   · 재시 3판(retakeC): 칸마다 그 개념의 은행 문장 가운데 정시보다 쉽거나 같은 것
@@ -37,6 +42,9 @@ LINK = os.path.join(HERE, 'link_ch1.json')
 DEEP = os.path.join(HERE, 'deep_ch1s.json')
 APPDATA = os.path.join(DT, 'appdata')
 APP_BANK = os.path.join(APPDATA, 'forms_bank.json')
+CHALLENGE = os.path.join(HERE, 'challenge_link_ch1s.json')
+APP_CHALLENGE = os.path.join(APPDATA, 'challenge_link.json')
+CKEYS = {'c', 'c2', 'a', 's', 'f', 'w', 'first_round'}
 PREFIX = 'CH1S-'
 READ_LIM = {'core': (40, 180), 'kill': (60, 220), 'oneline': (20, 110)}
 KEYS = ('n', 'u', 'mis', 'a', 's', 'f', 'w', 'lvl', 'c')
@@ -86,6 +94,68 @@ def write_app_bank(bank):
     merged = merged_app_bank(bank)          # 읽은 뒤에 연다 — 'w' 로 먼저 열면 읽을 것이 비어 있다
     with open(APP_BANK, 'w', encoding='utf-8') as f:
         json.dump(merged, f, ensure_ascii=False, indent=1)
+
+
+# ───────── 심화 도전 «두 개념 엮기»: challenge_link_ch1s.json → appdata/challenge_link.json ─────────
+def is_own(e):
+    return isinstance(e, dict) and str(e.get('c', '')).startswith(PREFIX)
+
+
+def merged_app_challenge(link):
+    """앱의 연결 파일에 심화 엮기 문장을 넣은 모양 — 다른 과목 항목은 순서·글자 그대로 앞에, CH1S- 는 뒤에.
+    앱 파일은 indent=1 · 끝 줄바꿈 없음(원래 꼴 그대로)."""
+    app = load(APP_CHALLENGE) if os.path.exists(APP_CHALLENGE) else []
+    return [e for e in app if not is_own(e)] + list(link)
+
+
+def write_app_challenge(link):
+    merged = merged_app_challenge(link)     # 읽은 뒤에 연다
+    with open(APP_CHALLENGE, 'w', encoding='utf-8') as f:
+        json.dump(merged, f, ensure_ascii=False, indent=1)
+
+
+def challenge_errs(dz, rounds):
+    """엮기 문장의 꼴·회차 검사(내용의 옳고 그름은 사람이 본다)와 앱 파일이 원본과 같은지."""
+    if not os.path.exists(CHALLENGE):
+        return ['challenge_link_ch1s.json 없음']
+    link = load(CHALLENGE)
+    cm = {c['c']: c for c in dz['concepts']}
+    errs, seen = [], {}
+    old = ch1_corpus()
+    for r in rounds:
+        old |= {norm(it['s']) for it in rounds[r]['jeongsi']['items']}
+        for v in rounds[r].get('retakeC', []):
+            old |= {norm(it['s']) for it in v['items']}
+    for e in load(BANK).values() if os.path.exists(BANK) else []:
+        old |= {norm(fm['s']) for fm in e['forms']}
+    for i, x in enumerate(link):
+        tag = '엮기 #%d (%s)' % (i, x.get('c') if isinstance(x, dict) else '?')
+        if not isinstance(x, dict) or set(x) != CKEYS:
+            errs.append(tag + ' 키가 c·c2·a·s·f·w·first_round 가 아님')
+            continue
+        c, c2 = x['c'], x['c2']
+        if c not in cm or c2 not in cm or c == c2:
+            errs.append('%s c·c2 가 서로 다른 심화 개념이 아님 (%s, %s)' % (tag, c, c2))
+            continue
+        want = max(cm[c]['first_round'], cm[c2]['first_round'])
+        if x['first_round'] != want:
+            errs.append('%s first_round %r ≠ 두 개념을 다 배운 회차 %d' % (tag, x['first_round'], want))
+        if x['a'] not in ('O', 'X'):
+            errs.append(tag + ' 정답이 O/X 가 아님')
+            continue
+        errs += form_errs(tag, x)
+        k = norm(x['s'])
+        if k in seen:
+            errs.append('%s 문장이 %s 와 같음' % (tag, seen[k]))
+        seen[k] = tag
+        if k in old:
+            errs.append(tag + ' 회차·재시·은행 문장과 같음')
+    app = load(APP_CHALLENGE) if os.path.exists(APP_CHALLENGE) else []
+    if [e for e in app if is_own(e)] != link:
+        errs.append('appdata/challenge_link.json 의 CH1S- 항목이 challenge_link_ch1s.json 과 다름 (--write)')
+    elif [e for e in app if not is_own(e)] + link != app:
+        errs.append('appdata/challenge_link.json 에서 CH1S- 항목이 맨 뒤에 모여 있지 않음 (--write)')
+    return errs
 
 
 # ───────── 화면 안 개념 그래프: report.html·index.html 의 ENGINE(개념 → 가족 f · 선수 pre),
@@ -359,6 +429,8 @@ def write_all(rounds, bank):
         dump(round_path(r), doc)
     dump(BANK, bank)
     write_app_bank(bank)
+    if os.path.exists(CHALLENGE):
+        write_app_challenge(load(CHALLENGE))
     dump(LINK, build_link(design()))
     write_page_graph(design())
 
@@ -419,6 +491,7 @@ def check():
             if k in old:
                 errs.append('%s 기존 화학1 문장과 같음' % tag)
     errs += page_graph_errs(dz)
+    errs += challenge_errs(dz, rounds)
     if not os.path.exists(LINK) or load(LINK) != build_link(dz):
         errs.append('link_ch1.json 이 design.json 대응과 다름 (--write)')
     if not os.path.exists(BANK):
@@ -569,13 +642,13 @@ def main():
             for r, doc in rounds.items():
                 dump(round_path(r), doc)
             dump(LINK, build_link(dz))
-        print('회차 파일 10개%s를 썼다.' % (' · 은행 · 재시 3판' if bank is not None else ''))
+        print('썼다: 회차 파일 10개%s' % (' · 은행 · 재시 3판 · 엮기 문장(앱 연결 파일)' if bank is not None else ''))
     errs = check()
     for e in errs[:80]:
         print('✗', e)
     if errs:
         sys.exit('%d건 어긋남' % len(errs))
-    print('화학1 심화 회차 파일 10개 · 은행 · 재시 OK')
+    print('화학1 심화 회차 파일 10개 · 은행 · 재시 · 엮기 문장 OK')
 
 
 if __name__ == '__main__':

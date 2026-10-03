@@ -16,7 +16,7 @@ challenge.html 의 CHALLENGE_BANK 는 **손으로 박힌 상수**였다. 140개�
 -----------
 appdata/round_*.json 의 jeongsi.items 중 **lvl==3 만** 모아 개념별로 묶는다.
 
-    과목    개념코드 접두(CH1/CH2/GC). 회차 파일의 과목이 아니다 — 일반화학
+    과목    개념코드 접두(CH1/CH1S/CH2/GC). 회차 파일의 과목이 아니다 — 일반화학
             회차 파일에 CH1·CH2 개념이 섞여 실린다(선수 내용을 다시 쓴다).
     c       개념 id
     m       그 개념의 오개념 이름(mis). 여럿이면 최빈, 같으면 먼저 나온 것
@@ -24,6 +24,16 @@ appdata/round_*.json 의 jeongsi.items 중 **lvl==3 만** 모아 개념별로 �
     forms   [{a, s}] — 같은 문장은 한 번만
 
 문장이 없는 개념은 넣지 않는다(빈 개념이 화면에 남을 이유가 없다).
+
+화학Ⅰ 심화(CH1S)만 은행 lvl3 확인 문장도 싣는다 (선생님 결정 2026-10-03)
+----------------------------------------------------------------------
+심화반 개념 211개 중 116개는 정시 lvl3 문장이 없어, 그 개념이 약해도 «약한 개념 다시»
+갈래에 못 나왔다 — 갈래가 얇았다(오답 5개 학생이 약한 개념 1개만 받았다). 그래서 CH1S
+개념에 한해 appdata/forms_bank.json 의 CH1S 항목(원본 courses/ch1s/forms_bank_ch1s.json)
+가운데 **lvl==3 이고 n·from 이 없는 확인 문장**(심화반이 새로 쓴 것 — n 은 정시 칸 문장,
+from 은 화학Ⅰ 은행에서 글자 그대로 가져온 것)을 정시 lvl3 문장 **뒤에** 더한다. 같은 문장은
+한 번만. 정시 lvl3 이 없는 개념의 m 은 은행의 개념 이름(m)이다(회차 파일의 mis 와 같다).
+lvl3 개념 95 → 149. 다른 과목(CH1·CH2·GC) 은행은 그대로 회차 파일 정시 lvl3 만이다.
 
     python3 tools/challenge_bank.py --write   # 은행을 다시 만들고 회차 표도 갱신
     python3 tools/challenge_bank.py --check   # 다시 만들어 파일과 다르면 빨간불
@@ -89,9 +99,12 @@ MEND = '/* /CHALLENGE_MIS */'
 # 화학Ⅰ 심화(ch1s)는 선수 과목을 두지 않는다 — 화학Ⅰ을 안 듣고 바로 오는 학생도 있다.
 PRECOURSE = {'ch1': ['CH1'], 'ch1s': ['CH1S'], 'ch2': ['CH2', 'CH1'], 'gc': ['GC', 'CH2', 'CH1']}
 PREFIX_COURSE = {'CH1': 'ch1', 'CH1S': 'ch1s', 'CH2': 'ch2', 'GC': 'gc'}
-# 은행에 싣는 접두. CH1S 는 아직 뺀다 — 심화반의 심화 도전 은행은 따로 고른다(설계 9단계).
-# 그때까지 challenge.html 은 ch1s 에 «준비 중» 이라고 말하고, 성적표는 도전 링크를 안 단다.
-PREFIXES = ('CH1', 'CH2', 'GC')
+# 은행에 싣는 접두. CH1S(화학Ⅰ 심화)는 설계 9단계(2026-10-03)에 켰다 — 정시 lvl3 문장(215)과
+# 엮기 문장(courses/ch1s/challenge_link_ch1s.json 이 원본, build_rounds.py --write 가 appdata 쪽에 넣는다).
+# 심화반 개념 이름 18개가 화학Ⅰ 과 같아 CHALLENGE_MIS 의 한 이름에 CH1-·CH1S- 가 함께 걸린다 —
+# 화면(challenge.html planFor)이 그 과목이 낼 수 있는 개념(PRECOURSE)으로만 거른다.
+# CH1S 는 은행 lvl3 확인 문장도 싣는다(BANK_LVL3_PREFIXES · 머리 설명).
+PREFIXES = ('CH1', 'CH1S', 'CH2', 'GC')
 LVL = 3
 
 
@@ -134,7 +147,37 @@ def collect():
             if s not in cur['seen']:               # 같은 문장은 한 번만
                 cur['seen'].add(s)
                 cur['forms'].append({'a': a, 's': s})
+    for c, fs, m in bank_lvl3():                   # CH1S 만 — 정시 문장 뒤에
+        cur = got.setdefault(c, {'mis': collections.Counter(), 'forms': [], 'seen': set()})
+        if not cur['mis'] and m:
+            cur['mis'][m] += 1
+        for a, s in fs:
+            if s not in cur['seen']:
+                cur['seen'].add(s)
+                cur['forms'].append({'a': a, 's': s})
     return got
+
+
+BANK_LVL3_PREFIXES = ('CH1S',)
+
+
+def bank_lvl3():
+    """[(개념 id, [(a, s)], 개념 이름)] — 문장 은행의 lvl3 확인 문장 중 n·from 이 없는 것(새로 쓴 심화 문장).
+    BANK_LVL3_PREFIXES 과목만(머리 설명 «화학Ⅰ 심화만 …»). 은행 파일 순서대로."""
+    if not os.path.exists(FORMS):
+        return []
+    with open(FORMS, encoding='utf-8') as fh:
+        fb = json.load(fh)
+    out = []
+    for c, v in fb.items():
+        if not (isinstance(v, dict) and c.rsplit('-', 1)[0] in BANK_LVL3_PREFIXES and c.rsplit('-', 1)[0] in PREFIXES):
+            continue
+        fs = [(f['a'], f['s']) for f in v.get('forms') or []
+              if isinstance(f, dict) and f.get('lvl') == LVL and 'n' not in f and 'from' not in f
+              and f.get('a') in ('O', 'X') and isinstance(f.get('s'), str) and f['s'].strip()]
+        if fs:
+            out.append((c, fs, v.get('m') if isinstance(v.get('m'), str) else ''))
+    return out
 
 
 def build():
