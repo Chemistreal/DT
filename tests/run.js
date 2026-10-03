@@ -892,7 +892,8 @@ async function assertNoOverflow(page, label) {
     await page.goto(BASE + 'letters.html'); await page.waitForTimeout(400);
     const tabs = await page.$$eval('#tabs button', bs => bs.map(b => b.textContent));
     assert(/16회.*16회.*6회/.test(tabs.join(' ')), '탭 구성(16/16/6) 불일치: ' + tabs.join(','));
-    await page.click('#tabs button:nth-child(2)');                       // 화학Ⅱ
+    /* 탭 순서는 화학Ⅰ → 화학Ⅰ 심화 → 화학Ⅱ → 일반화학. 자리 번호가 아니라 이름으로 누른다. */
+    await page.click('#tabs button:has-text("화학Ⅱ")');                  // 화학Ⅱ
     await page.click('#rgrid .rchip:nth-child(9)'); await page.waitForTimeout(250);
     const preview = await page.$eval('#pvText', t => t.value);
     assert(preview.includes('화학올림피아드 담당하는 조준모입니다'), '문자 골격 누락');
@@ -1343,6 +1344,16 @@ async function assertNoOverflow(page, label) {
       return JSON.parse(m[1]);
     };
     const ONELINE = dictOf('ONELINE'), CORE = dictOf('CORE');
+    /* 화학Ⅰ 심화 개념 글은 코드 키 표(CH1S_NOTE · tools/deep_notes.py)로 들어가고, 화면이 처음 열릴 때
+       ONELINE·CORE 에 없는 심화반 이름만 채운다(CH1S_BYNAME 앞의 즉시 함수). 그 규칙대로 합쳐 본다. */
+    const CH1S = (src.match(/^const CH1S_NOTE=(\{.*\});$/m) || [])[1];
+    assert(CH1S, 'CH1S_NOTE 표를 못 찾았다');
+    Object.values(JSON.parse(CH1S)).forEach(v => {
+      if (v.o && ONELINE[v.m] == null) ONELINE[v.m] = v.o;
+      if (v.c && CORE[v.m] == null) CORE[v.m] = v.c;
+    });
+    assert(/if\(v\.o&&ONELINE\[v\.m\]==null\) ONELINE\[v\.m\]=v\.o; if\(v\.c&&CORE\[v\.m\]==null\) CORE\[v\.m\]=v\.c;/.test(src),
+      '성적표가 심화반 글을 ONELINE·CORE 에 채우지 않는다');
 
     const used = {};
     let items = 0, rounds = 0;
@@ -3588,6 +3599,170 @@ async function assertNoOverflow(page, label) {
       await serve(page, [first(1, []), first(2, []), first(3, lv12.slice(0, 20))]);
       const none = await page.evaluate(() => [].slice.call(document.querySelectorAll('.card h2')).some(h => /한 겹 더/.test(h.textContent)));
       assert(!none, '기본·표준 정답률이 90% 아래이고 통과 전인데 심화 카드가 섰다');
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     화학Ⅰ 심화(ch1s) — 2026-10-03 앱에 과목을 넣었다. 회차 파일 appdata/round_ch1s_NN.json ·
+     문장 은행 appdata/forms_bank.json 의 CH1S- 항목(원본 courses/ch1s/forms_bank_ch1s.json).
+     응시 → 채점 → 게이트 → 재시, 성적표(혼자 · 화학Ⅰ 행과 함께)가 다른 과목처럼 도는지 본다.
+     ══════════════════════════════════════════════════════════════ */
+  {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const RD = n => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_ch1s_' + String(n).padStart(2, '0') + '.json'), 'utf8'));
+    const R1 = RD(1), R5 = RD(5);
+    const BANK = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'forms_bank.json'), 'utf8'));
+    const SRC = JSON.parse(fs.readFileSync(path.join(ROOT, 'courses', 'ch1s', 'forms_bank_ch1s.json'), 'utf8'));
+    const DEEPN = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'deep_notes.json'), 'utf8'));
+    const DEEPS = JSON.parse(fs.readFileSync(path.join(ROOT, 'courses', 'ch1s', 'deep_ch1s.json'), 'utf8'));
+    const flip = a => (a === 'O' ? 'X' : 'O');
+    const nrm = x => CE.norm(x);
+
+    await test('ch1s · 자료 자리: 목록·은행·자료 화면이 다른 과목과 같은 곳을 본다', async () => {
+      const M = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'app_manifest.json'), 'utf8'));
+      const ms = M.rounds.filter(r => r.course === 'ch1s');
+      assert(ms.length === 10, '목록의 ch1s 회차가 ' + ms.length);
+      assert(M.rounds.map(r => r.course).filter((c, i, a) => a.indexOf(c) === i).join(',') === 'ch1,ch1s,ch2,gc', '과목 순서가 ch1 → ch1s → ch2 → gc 가 아니다');
+      ms.forEach(m => {
+        ['data', 'munje_pdf', 'haeseol_pdf'].forEach(k => {
+          const f = k === 'data' ? path.join(ROOT, 'appdata', m[k]) : path.join(ROOT, m[k]);
+          assert(fs.existsSync(f), m.round + '회 ' + k + ' 파일이 없다: ' + m[k]);
+        });
+      });
+      const codes = Object.keys(SRC);
+      assert(codes.length === 211 && codes.every(c => JSON.stringify(BANK[c]) === JSON.stringify(SRC[c])), '앱 은행의 CH1S- 항목이 원본과 다르다');
+      const MAT = JSON.parse(fs.readFileSync(path.join(ROOT, 'materials.json'), 'utf8'));
+      const mc = MAT.courses.filter(c => c.key === 'ch1s')[0];
+      assert(mc && mc.rounds.length === 10 && mc.rounds.every(r => r.files.munje && r.files.haeseol && r.files.truthbook), '자료 화면에 ch1s 문제지·해설지·선수노트가 다 안 걸렸다');
+    });
+
+    await test('ch1s · 응시(exam) 1회를 불러 채점하고 과목 ch1s 로 저장한다', async page => {
+      const posted = [];
+      await page.route('**/macros/s/**', route => {
+        const req = route.request();
+        if (req.method() === 'POST') { try { posted.push(JSON.parse(req.postData() || '{}')); } catch (e) {} }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, updated: false, reportLink: 'https://example.test/report.html?student=abc', rows: [] }) });
+      });
+      await page.goto(BASE + 'exam.html?c=ch1s&r=1'); await page.waitForTimeout(900);
+      const h1 = await page.$eval('h1', e => e.textContent);
+      assert(/화학1 심화.*1회/.test(h1), '회차 제목: ' + h1);
+      await page.fill('#nm', '심화테스트'); await page.fill('#sc', '테스트중');
+      await page.evaluate(() => startExam());
+      const key = R1.jeongsi.items.map(x => x.a);
+      const got = await page.evaluate(k => { A = k.map((a, i) => (i < 6 ? (a === 'O' ? 'X' : 'O') : a)); submitExam(); return { score: RESULT.g.score, pass: RESULT.g.pass, n: R.jeongsi.items.length, course: R.course }; }, key);
+      assert(got.n === 60 && got.course === 'ch1s', '회차 파일이 아니다: ' + JSON.stringify(got));
+      assert(got.score === 90 && got.pass === true, '6개 틀리면 90점 통과여야 한다: ' + JSON.stringify(got));
+      for (let i = 0; i < 50 && !posted.length; i++) await page.waitForTimeout(100);
+      const p = posted[0] || {};
+      assert(p.course === 'ch1s' && Number(p.round) === 1 && p.answers && p.answers.length === 60, '저장이 ch1s 1회가 아니다: ' + JSON.stringify([p.course, p.round]));
+      assert((p.wrongMis || []).length >= 1 && p.wrongMis.every(m => R1.jeongsi.items.some(x => x.mis === m)), '오개념 이름이 회차 파일과 다르다');
+    });
+
+    await test('ch1s · 앱 안 흐름: 채점 → 게이트 → 재시가 retakeC·은행에서 (정시 문장 재노출 0)', async page => {
+      await page.goto(BASE + 'index.html?test=1'); await page.waitForTimeout(900);
+      const tabs = await page.$$eval('.tabs button', bs => bs.map(b => b.textContent));
+      assert(tabs.join(',').indexOf('화학Ⅰ,화학Ⅰ 심화,화학Ⅱ,일반화학') === 0, '과목 탭 순서: ' + tabs.join(','));
+      await page.evaluate(() => { courseTab = 'ch1s'; render(); });
+      await page.click('.rchip');
+      await page.waitForFunction(() => typeof S !== 'undefined' && S.round && S.round.course === 'ch1s' && S.round.jeongsi, null, { timeout: 8000 });
+      await page.fill('#f_name', '심화테스트'); await page.fill('#f_school', '테스트중'); await page.fill('#f_grade', '2');
+      await page.click('.btnrow button:last-child'); await page.waitForTimeout(400);
+      await page.click('.btnrow button:last-child'); await page.waitForTimeout(300);
+      await page.evaluate(() => { S.answers = S.keyItems.map((x, i) => (i % 3 === 0 ? (x.a === 'O' ? 'X' : 'O') : x.a)); render(); });
+      await page.evaluate(() => doGrade());
+      await page.waitForFunction(() => typeof S !== 'undefined' && !!S.graded, null, { timeout: 10000 });
+      await page.evaluate(() => afterReport());
+      await page.waitForFunction(() => S.view === 'gate', null, { timeout: 10000 });
+      const gate = await page.evaluate(() => ({ score: S.graded.score, n: S.gate.gates.length,
+        checks: S.gate.gates.map(g => ({ c: g.c, ss: g.checks.map(x => x.s), fb: g.checks.every(x => !!x.fallback) })),
+        wrong: S.dx.wrongConcepts.map(w => w.c) }));
+      assert(gate.score < 80 && gate.n >= 1, '게이트가 안 섰다: ' + JSON.stringify([gate.score, gate.n]));
+      assert(gate.wrong.every(c => /^CH1S-\d{3}$/.test(c)), '틀린 개념 코드가 CH1S 가 아니다');
+      const fallback = gate.checks.filter(g => g.fb).length;
+      assert(fallback === 0, '은행 문장이 아닌 대체 확인 문제가 ' + fallback + '개');
+      gate.checks.forEach(g => g.ss.forEach(st => assert((BANK[g.c].forms || []).some(f => nrm(f.s) === nrm(st)), g.c + ' 확인 문장이 은행에 없다: ' + st)));
+      await page.evaluate(() => { S.gate.gates.forEach(g => { g._unlocked = true; }); startRetake(); });
+      const rt = await page.evaluate(() => ({ view: S.view, items: S.keyItems.map(x => ({ c: x.c, s: x.s, a: x.a })) }));
+      assert(rt.view === 'retake' && rt.items.length === 60, '재시 화면이 아니다: ' + rt.view + ' · ' + rt.items.length);
+      const js = {}; R1.jeongsi.items.forEach(x => { js[nrm(x.s)] = 1; });
+      const again = rt.items.filter(x => js[nrm(x.s)]);
+      assert(again.length === 0, '재시에 정시 문장이 다시 나왔다 ' + again.length + '개: ' + again.slice(0, 2).map(x => x.s).join(' / '));
+      const pool = {}; R1.retakeC.forEach(v => v.items.forEach(x => { pool[nrm(x.s)] = 1; }));
+      Object.keys(SRC).forEach(c => SRC[c].forms.forEach(f => { pool[nrm(f.s)] = 1; }));
+      const stray = rt.items.filter(x => !pool[nrm(x.s)]);
+      assert(stray.length === 0, 'retakeC·은행 밖 문장 ' + stray.length + '개');
+      assert(rt.items.every(x => /^CH1S-\d{3}$/.test(x.c)), '재시에 다른 과목 개념이 섞였다');
+      const asked = {}; rt.items.forEach(x => { asked[x.c] = 1; });
+      const miss = gate.wrong.filter(c => !asked[c]);
+      assert(miss.length === 0, '틀린 개념이 재시에서 빠졌다: ' + miss.join(','));
+      await assertNoOverflow(page, 'ch1s-retake');
+    }, { adminGate: true });
+
+    /* 성적표 픽스처 — 심화반 회차 행 */
+    const K = '가상중-심화반';
+    const row = (course, R, round, wrong, date) => {
+      const items = R.jeongsi.items;
+      const ans = items.map((it, i) => wrong.indexOf(i) >= 0 ? flip(it.a) : it.a).join('');
+      const units = {};
+      items.forEach((it, i) => { const u = units[it.u] || (units[it.u] = { u: it.u, t: 0, w: 0 }); u.t++; if (wrong.indexOf(i) >= 0) u.w++; });
+      const score = Math.round(10000 * (items.length - wrong.length) / items.length) / 100;
+      return { studentKey: K, name: '심화반', school: '가상중', year: '2026', course, round, attempt: '첫 응시',
+        score, pass: score >= 80, date, answers: ans, wrongMis: wrong.map(i => items[i].mis), wrongAxes: {},
+        units: Object.keys(units).map(k => units[k]), axes: [] };
+    };
+    const serveRows = async (page, rows) => {
+      const A = CE.cumulative(rows)[K];
+      await page.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: A, rank: null, cohort: null }) }));
+      await page.goto(BASE + 'report.html?student=x');
+      await page.waitForSelector('.ladder', { timeout: 20000 });
+      await page.waitForTimeout(600);
+    };
+    /* 5회: 격자 에너지(38) · 이온화 에너지 주기성(25) · 전기음성도(28) 는 화학Ⅰ DEEP 에도 같은 이름이 있다. */
+    const W5 = [38, 25, 28, 3, 12];
+
+    await test('ch1s · 성적표: 심화반 행만으로 그려지고 · 한 겹 더는 코드로 · 강의·도전 링크는 숨긴다', async page => {
+      await serveRows(page, [row('ch1s', R5, 5, W5, '2026-09-20')]);
+      const r = await page.evaluate(() => {
+        const card = [].slice.call(document.querySelectorAll('.card')).filter(e => /한 겹 더/.test((e.querySelector('h2') || {}).textContent || ''))[0];
+        return { text: document.body.innerText, lec: document.querySelectorAll('a.leclink').length,
+          cbtn: card ? card.querySelectorAll('a.cbtn').length : -1,
+          rx: card ? [].slice.call(card.querySelectorAll('.rx')).map(x => ({ nm: x.querySelector('.nm').textContent, ol: (x.querySelector('.ol') || {}).textContent || '' })) : null,
+          prereq: !!(typeof PREREQ !== 'undefined' && PREREQ.ch1s), eng: typeof ENGINE !== 'undefined' && !!ENGINE['CH1S-001'] };
+      });
+      assert(/화학 ?(I|Ⅰ) 심화/.test(r.text), '과목 이름표에 「화학Ⅰ 심화」 가 없다');
+      assert(r.lec === 0, 'ch1s 에 개념 강의 문이 ' + r.lec + '개 섰다(강의 연결은 8단계)');
+      assert(r.rx && r.rx.length >= 1, '통과했는데 「한 겹 더」 카드가 없다');
+      assert(r.cbtn === 0, 'ch1s 에 심화 도전 링크가 섰다(은행은 9단계)');
+      const byName = {}; Object.keys(SRC).forEach(c => { byName[SRC[c].m] = c; });
+      r.rx.forEach(x => {
+        const c = byName[x.nm];
+        assert(c, '「' + x.nm + '」 가 심화반 개념 이름이 아니다');
+        assert(x.ol.indexOf(DEEPS[c]) >= 0, '「' + x.nm + '」 의 한 겹 더가 ' + c + ' 글이 아니다');
+        if (DEEPN[x.nm]) assert(x.ol.indexOf(DEEPN[x.nm]) < 0, '「' + x.nm + '」 에 화학Ⅰ 글(이름 키)이 붙었다');
+      });
+      assert(r.rx.some(x => DEEPN[x.nm]), '픽스처가 화학Ⅰ 과 이름이 같은 개념을 재지 않는다');
+      assert(r.prereq && r.eng, '선수 단원(PREREQ.ch1s)·개념 그래프(ENGINE CH1S-)가 없다');
+      await assertNoOverflow(page, 'report-ch1s');
+    });
+
+    await test('ch1s · 성적표: 화학Ⅰ 행과 함께 있어도 깨지지 않는다', async page => {
+      const C1 = n => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_ch1_' + String(n).padStart(2, '0') + '.json'), 'utf8'));
+      const rows = [row('ch1', C1(1), 1, [1, 2, 3], '2026-03-01'), row('ch1', C1(2), 2, [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], '2026-03-08'),
+                    row('ch1s', R1, 1, [0, 1, 2, 3], '2026-09-06'), row('ch1s', R5, 5, W5, '2026-09-20')];
+      await serveRows(page, rows);
+      const txt = await page.evaluate(() => document.body.innerText);
+      assert(/화학 ?(I|Ⅰ) 심화/.test(txt), '심화반 이름표가 없다');
+      await assertNoOverflow(page, 'report-ch1-ch1s');
+    });
+
+    await test('ch1s · 심화 도전: 은행이 없는 과목은 «준비 중» 이라 말하고 과목 단추에도 안 세운다', async page => {
+      await page.goto(BASE + 'challenge.html?course=ch1s&round=3'); await page.waitForTimeout(500);
+      const t = await page.evaluate(() => ({ h1: document.querySelector('h1').textContent, start: !!document.querySelector('button.btn') }));
+      assert(/준비 중/.test(t.h1) && !t.start, '«준비 중» 이 아니다: ' + JSON.stringify(t));
+      await page.goto(BASE + 'challenge.html'); await page.waitForTimeout(500);
+      const picks = await page.$$eval('.rpick', bs => bs.map(b => b.textContent));
+      assert(picks.length === 3 && picks.indexOf('화학Ⅰ 심화') < 0, '과목 단추: ' + picks.join(','));
     });
   }
 

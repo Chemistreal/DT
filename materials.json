@@ -349,6 +349,182 @@
    ]
   },
   {
+   "key": "ch1s",
+   "name": "화학Ⅰ 심화",
+   "rounds": [
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round01.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round01.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round01.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round01_truthbook_bw.pdf"
+      }
+     },
+     "round": 1
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round02.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round02.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round02.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round02_truthbook_bw.pdf"
+      }
+     },
+     "round": 2
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round03.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round03.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round03.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round03_truthbook_bw.pdf"
+      }
+     },
+     "round": 3
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round04.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round04.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round04.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round04_truthbook_bw.pdf"
+      }
+     },
+     "round": 4
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round05.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round05.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round05.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round05_truthbook_bw.pdf"
+      }
+     },
+     "round": 5
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round06.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round06.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round06.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round06_truthbook_bw.pdf"
+      }
+     },
+     "round": 6
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round07.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round07.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round07.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round07_truthbook_bw.pdf"
+      }
+     },
+     "round": 7
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round08.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round08.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round08.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round08_truthbook_bw.pdf"
+      }
+     },
+     "round": 8
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round09.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round09.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round09.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round09_truthbook_bw.pdf"
+      }
+     },
+     "round": 9
+    },
+    {
+     "files": {
+      "haeseol": {
+       "pdf": "haeseol_ch1s_round10.pdf"
+      },
+      "munje": {
+       "pdf": "munje_ch1s_round10.pdf"
+      },
+      "omr": {
+       "pdf": "omr_ch1s_round10.pdf"
+      },
+      "truthbook": {
+       "pdf": "truthbooks/chem1s_round10_truthbook_bw.pdf"
+      }
+     },
+     "round": 10
+    }
+   ]
+  },
+  {
    "key": "ch2",
    "name": "화학Ⅱ",
    "rounds": [

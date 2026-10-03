@@ -73,7 +73,7 @@ def concept_ids(obj, out):
   일반화학 1회에 실려 있다는 이유로 «1회» 가 된다. 그러면 화학Ⅰ 1회 학생이
   4회 개념을 받는다 — 고치려던 병이 자 안으로 들어온 꼴이다.
   실제로 그렇게 만들었다가 스스로 검토하다 잡았다(2026-08-15, 17개 어긋남)."""
-PREFIX_COURSE = {'CH1': 'ch1', 'CH2': 'ch2', 'GC': 'gc'}
+PREFIX_COURSE = {'CH1': 'ch1', 'CH1S': 'ch1s', 'CH2': 'ch2', 'GC': 'gc'}
 
 
 def first_round():
@@ -160,7 +160,7 @@ def report():
     first, last = first_round(), last_round()
     src = open(PAGE, encoding='utf-8').read()
     b = bank(src)
-    pre = {'ch1': ['CH1'], 'ch2': ['CH2', 'CH1'], 'gc': ['GC', 'CH2', 'CH1']}
+    pre = {'ch1': ['CH1'], 'ch1s': ['CH1S'], 'ch2': ['CH2', 'CH1'], 'gc': ['GC', 'CH2', 'CH1']}
     print('심화 후보가 회차별로 얼마나 진도 밖인가 (막기 전 기준)\n')
     for course, prefixes in pre.items():
         pool = [c['c'] for p in prefixes for c in b.get(p, [])]

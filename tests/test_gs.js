@@ -1216,5 +1216,65 @@ console.log('[심화 기록] kind:challenge 는 「심화기록」 탭에 · ?st
   delete SHEETS['심화기록'];
 }
 
+console.log('[화학Ⅰ 심화] ch1s — 과목 인식 · 저장 · 읽기 · 화학Ⅰ 행과 함께');
+{
+  /* 「화학1 심화」 반 이름에는 '화학1' 이 들어 있다. 예전에는 courseOf_ 가 그것을 보고 ch1 로 잡았다. */
+  T('courseOf_: 「화학1 심화」 반은 ch1s', ctx.courseOf_('화학1 심화 토3-6') === 'ch1s' && ctx.courseOf_('화학Ⅰ 심화반') === 'ch1s');
+  T('courseOf_: 다른 반은 그대로', ctx.courseOf_('화학1 일6-10') === 'ch1' && ctx.courseOf_('화학2 토1:30') === 'ch2'
+    && ctx.courseOf_('일반화학 토10-2') === 'gc' && ctx.courseOf_('파이널') === '');
+  T('courseKo_ · 문자 과목 이름', ctx.courseKo_('ch1s') === '화학Ⅰ 심화' && ctx.SEND_COURSE_KO.ch1s === '화학Ⅰ 심화');
+  T('ROUND_MIS 에 ch1s 10회', !!ctx.ROUND_MIS.ch1s && Object.keys(ctx.ROUND_MIS.ch1s).length === 10 && ctx.ROUND_MIS.ch1s['1'].length > 0);
+
+  /* 옛 규칙으로 course:'ch1' 이 박힌 채 저장된 「화학1 심화」 반 — 읽을 때 바로잡는다. */
+  const rosterBefore = SHEETS['_roster']._rows[0][0];
+  SHEETS['_roster']._rows[0][0] = JSON.stringify({ classes: [
+    { label: '화학1 심화 토3-6', course: 'ch1', students: ['심화일'], round: null },
+    { label: '화학1 일6-10', course: 'ch1', students: ['홍길동'], round: null } ] });
+  let rr = J(ctx.doGet({ parameter: { action: 'roster' } }));
+  T('옛 명단의 「화학1 심화」 반도 ch1s 로 읽는다 · 화학1 반은 ch1', rr.ok === true && rr.classes[0].course === 'ch1s' && rr.classes[1].course === 'ch1');
+  rr = J(ctx.doPost({ postData: { contents: JSON.stringify({ action: 'roster', classes: [{ label: '화학Ⅰ 심화 일2-5', students: ['심화이'] }] }) } }));
+  T('명단 저장: 이름으로 ch1s 를 붙인다', rr.ok === true && rr.classes[0].course === 'ch1s');
+  SHEETS['_roster']._rows[0][0] = rosterBefore;
+
+  /* 저장 → 읽기. 같은 학생이 화학Ⅰ 도 들었다(학생키는 과목과 무관하게 하나). */
+  const res = SHEETS['결과'], before = res._rows.length;
+  const post = d => J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
+  const KEY = '가상중-심화학생';
+  const base = { name: '심화학생', school: '가상중', year: '2', attempt: '첫 응시', wrongAxes: {}, units: [], axes: [] };
+  let p1 = post(Object.assign({}, base, { course: 'ch1', round: 3, score: 85, pass: true, correctCount: 51, wrongCount: 9,
+    wrongMis: ['몰질량'], answers: 'O'.repeat(60) }));
+  let p2 = post(Object.assign({}, base, { course: 'ch1s', round: 1, score: 70, pass: false, correctCount: 42, wrongCount: 18,
+    wrongMis: ['구성 입자 질량·전하', '동위원소 정의'], answers: 'OX'.repeat(30) }));
+  T('ch1s 첫 응시 저장 ok', p1.ok === true && p2.ok === true && res._rows.length === before + 2, JSON.stringify(p2));
+  const last = res._rows[res._rows.length - 1];
+  T('ch1s 행: I열 과목 ch1s · J열 회차 1', last[8] === 'ch1s' && last[9] === 1 && last[5] === KEY && last[18] === 'OX'.repeat(30));
+  let p3 = post(Object.assign({}, base, { course: 'ch1s', round: 1, attempt: '재시', score: 90, pass: true, correctCount: 54, wrongCount: 6,
+    wrongMis: [], answers: 'O'.repeat(60) }));
+  T('ch1s 재시 저장 ok (같은 회차 · 다른 시도는 새 줄)', p3.ok === true && res._rows.length === before + 3);
+  const g = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY) } }));
+  const crs = (g.rows || []).map(x => x.course + '#' + x.round).sort().join(',');
+  T('읽기: 화학Ⅰ·심화 행이 함께 온다', g.ok === true && crs === 'ch1#3,ch1s#1,ch1s#1', crs);
+  const tr = ((g.cumulative || {}).trend || []).map(t => t.course + '#' + t.round).sort().join(',');
+  T('누적 추이에 두 과목이 따로 선다', tr === 'ch1#3,ch1s#1', tr);
+  const t1s = ((g.cumulative || {}).trend || []).filter(t => t.course === 'ch1s')[0] || {};
+  T('ch1s 회차는 재시 통과로 통과', t1s.passed === true, JSON.stringify(t1s));
+
+  /* 열 배열 마이그레이션도 ch1s 를 과목으로 안다(옛 V1 배열의 ch1s 행) */
+  const v1 = ['옛심화', 'L', new Date('2026-05-01T01:00:00Z'), '중앙중-옛심화', '중앙중', '3', 'ch1s', 2, '정시', 88.3, '통과', 53, 7, '', '{}', '', '[]', '[]', 'O'.repeat(60)];
+  res._rows.push(v1.slice());
+  ctx.reorderColumnsToNew();
+  const mv = res._rows[res._rows.length - 1];
+  T('reorderColumnsToNew: ch1s V1 행도 새 순서로', mv[3] === 88.3 && mv[5] === '중앙중-옛심화' && mv[8] === 'ch1s' && mv[9] === 2, JSON.stringify(mv.slice(0, 11)));
+
+  /* 심화 도전 기록 — 은행은 아직 없지만 서버는 과목 코드를 받는다(은행이 생기는 날 서버를 다시 배포하지 않게). */
+  const ch = post({ kind: 'challenge', stu: ctx.pubId_(KEY), course: 'ch1s', round: 1, n: 3, ok: 2, weakN: 0, weakOk: 0, linkN: 0, linkOk: 0,
+    concepts: ['CH1S-001', 'CH1S-002', 'CH1S-003'], isTest: false });
+  T('심화기록: ch1s 과목 · CH1S- 개념 코드를 받는다', ch.ok === true && SHEETS['심화기록'] &&
+    SHEETS['심화기록']._rows[SHEETS['심화기록']._rows.length - 1][2] === 'ch1s'
+    && SHEETS['심화기록']._rows[SHEETS['심화기록']._rows.length - 1][10] === 'CH1S-001,CH1S-002,CH1S-003', JSON.stringify(ch));
+  res._rows.length = before;
+  delete SHEETS['심화기록'];
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

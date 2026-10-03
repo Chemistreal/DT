@@ -20,8 +20,8 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
     z.write(os.path.join(DT, 'volumes', 'chem1s_volume_rounds1to10.pdf'), root + '[화학1심화]선수노트_1-10회.pdf')
     for r in range(1, 11):
         t = re.sub(r'\s+', '', dz['rounds'][r - 1]['title'])
-        z.write(os.path.join(HERE, 'haeseol_ch1s_round%02d.pdf' % r), root + '%d차시_%s_답.pdf' % (r, t))
-        z.write(os.path.join(HERE, 'munje_ch1s_round%02d.pdf' % r), root + '%d차시_%s_문제.pdf' % (r, t))
+        z.write(os.path.join(DT, 'haeseol_ch1s_round%02d.pdf' % r), root + '%d차시_%s_답.pdf' % (r, t))
+        z.write(os.path.join(DT, 'munje_ch1s_round%02d.pdf' % r), root + '%d차시_%s_문제.pdf' % (r, t))
 z = zipfile.ZipFile(out)
 for name in z.namelist():
     d = pymupdf.open(stream=z.read(name), filetype='pdf')

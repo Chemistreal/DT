@@ -5,9 +5,11 @@
   python3 courses/ch1s/build_rounds.py --check   # 설계표·재출제 원문·은행·재시를 대조
 
 원본(손으로 고치는 곳)
-  · round_ch1s_NN.json 의 신규·복습-새 칸 문장
-  · forms_bank_ch1s.json 의 확인 문장(n 이 없는 것)
+  · appdata/round_ch1s_NN.json 의 신규·복습-새 칸 문장 (앱이 읽는 자리가 곧 원본이다)
+  · courses/ch1s/forms_bank_ch1s.json 의 확인 문장(n 이 없는 것)
 파생(--write 가 다시 만든다 — 손으로 고치지 않는다)
+  · report.html·index.html 의 ENGINE CH1S- 항목(가족 f · 선수 pre), report.html 의 PREREQ["ch1s"](단원 선수): design.json 에서
+  · appdata/forms_bank.json 의 CH1S- 항목: forms_bank_ch1s.json 을 글자 그대로 (앱은 이 한 파일만 읽는다)
   · 복습-재출제 칸: design.json blueprint 의 from_round 회 from_n 번 문장을 글자 그대로
   · 은행의 정시 문장(n 이 붙은 form): 회차 파일 문장 그대로
   · 재시 3판(retakeC): 칸마다 그 개념의 은행 문장 가운데 정시보다 쉽거나 같은 것
@@ -33,6 +35,9 @@ STAGE = os.path.join(DT, 'tools', '_stage', 'ch1s')
 BANK = os.path.join(HERE, 'forms_bank_ch1s.json')
 LINK = os.path.join(HERE, 'link_ch1.json')
 DEEP = os.path.join(HERE, 'deep_ch1s.json')
+APPDATA = os.path.join(DT, 'appdata')
+APP_BANK = os.path.join(APPDATA, 'forms_bank.json')
+PREFIX = 'CH1S-'
 READ_LIM = {'core': (40, 180), 'kill': (60, 220), 'oneline': (20, 110)}
 KEYS = ('n', 'u', 'mis', 'a', 's', 'f', 'w', 'lvl', 'c')
 RKEYS = ('c', 'u', 'a', 's', 'f', 'w', 'lvl')
@@ -56,7 +61,7 @@ def norm(s):
 
 
 def round_path(r):
-    return os.path.join(HERE, 'round_ch1s_%02d.json' % r)
+    return os.path.join(APPDATA, 'round_ch1s_%02d.json' % r)
 
 
 def design():
@@ -64,7 +69,103 @@ def design():
 
 
 def ch1_bank():
-    return load(os.path.join(DT, 'appdata', 'forms_bank.json'))
+    return load(APP_BANK)
+
+
+def merged_app_bank(bank):
+    """앱 은행(appdata/forms_bank.json)에 심화 은행을 넣은 모양 — 다른 과목 항목은 순서까지 그대로,
+    CH1S- 항목은 뒤에 은행 순서대로. 앱 은행은 indent=1 · 끝 줄바꿈 없음."""
+    app = load(APP_BANK)
+    out = {k: v for k, v in app.items() if not k.startswith(PREFIX)}
+    for k, v in bank.items():
+        out[k] = v
+    return out
+
+
+def write_app_bank(bank):
+    merged = merged_app_bank(bank)          # 읽은 뒤에 연다 — 'w' 로 먼저 열면 읽을 것이 비어 있다
+    with open(APP_BANK, 'w', encoding='utf-8') as f:
+        json.dump(merged, f, ensure_ascii=False, indent=1)
+
+
+# ───────── 화면 안 개념 그래프: report.html·index.html 의 ENGINE(개념 → 가족 f · 선수 pre),
+#           report.html 의 PREREQ['ch1s'](단원 → 선수 단원) — design.json 에서 만든다 ─────────
+PAGES_ENGINE = (('report.html', None), ('index.html', (',', ':')))     # (파일, 그 줄의 json 구분자)
+
+
+def graph(dz):
+    order, unit = [], {}
+    for c in dz['concepts']:
+        unit[c['c']] = c['u']
+        if c['u'] not in order:
+            order.append(c['u'])
+    eng = {}
+    for c in dz['concepts']:
+        eng[c['c']] = {'f': c['f'], 'pre': list(c['pre'])} if c['pre'] else {'f': c['f']}
+    pq = {u: [] for u in order}
+    for c in dz['concepts']:
+        u = c['u']
+        for p in c['pre']:
+            v = unit[p]
+            # 앞 단원만 선수로 둔다 — 같은 회차 안에서 서로 걸린 것(Ⅰ-1↔Ⅰ-2)을 그대로 두면 고리가 생기고,
+            # 성적표의 unitDepth 는 고리를 만나면 끝나지 않는다.
+            if order.index(v) < order.index(u) and v not in pq[u]:
+                pq[u].append(v)
+    for u in pq:
+        pq[u].sort(key=order.index)
+    return eng, pq
+
+
+def _line(src, name):
+    m = re.search(r'^const %s=(\{.*\});$' % name, src, re.M)
+    if not m:
+        raise SystemExit('화면에서 const %s= 줄을 못 찾았다' % name)
+    return m
+
+
+def page_graph(dz):
+    """{파일: 새 글} — 다른 과목 항목은 순서·글자 그대로."""
+    eng, pq = graph(dz)
+    out = {}
+    for fn, sep in PAGES_ENGINE:
+        path = os.path.join(DT, fn)
+        src = open(path, encoding='utf-8').read()
+        m = _line(src, 'ENGINE')
+        cur = json.loads(m.group(1))
+        if json.dumps(cur, ensure_ascii=False, separators=sep) != m.group(1):
+            raise SystemExit('%s ENGINE 줄을 글자 그대로 다시 쓸 수 없다(구분자가 다르다)' % fn)
+        new = {k: v for k, v in cur.items() if not k.startswith(PREFIX)}
+        new.update(eng)
+        src = src[:m.start(1)] + json.dumps(new, ensure_ascii=False, separators=sep) + src[m.end(1):]
+        if fn == 'report.html':
+            m = _line(src, 'PREREQ')
+            cur = json.loads(m.group(1))
+            if json.dumps(cur, ensure_ascii=False) != m.group(1):
+                raise SystemExit('report.html PREREQ 줄을 글자 그대로 다시 쓸 수 없다')
+            cur['ch1s'] = pq
+            src = src[:m.start(1)] + json.dumps(cur, ensure_ascii=False) + src[m.end(1):]
+        out[path] = src
+    return out
+
+
+def write_page_graph(dz):
+    for path, src in page_graph(dz).items():
+        if open(path, encoding='utf-8').read() != src:
+            open(path, 'w', encoding='utf-8').write(src)
+
+
+def page_graph_errs(dz):
+    return ['%s 의 ENGINE/PREREQ 심화 항목이 design.json 과 다름 (--write)' % os.path.basename(p)
+            for p, src in page_graph(dz).items() if open(p, encoding='utf-8').read() != src]
+
+
+def app_bank_errs(bank):
+    app = load(APP_BANK)
+    got = {k: v for k, v in app.items() if k.startswith(PREFIX)}
+    if got == bank and list(got) == list(bank):
+        return []
+    diff = sorted(set(got) ^ set(bank)) or [k for k in bank if got.get(k) != bank[k]]
+    return ['appdata/forms_bank.json 의 CH1S- 항목이 forms_bank_ch1s.json 과 다름 (--write) — %s' % ', '.join(diff[:5])]
 
 
 def ch1_corpus():
@@ -257,7 +358,9 @@ def write_all(rounds, bank):
     for r, doc in rounds.items():
         dump(round_path(r), doc)
     dump(BANK, bank)
+    write_app_bank(bank)
     dump(LINK, build_link(design()))
+    write_page_graph(design())
 
 
 # ───────── 검사 ─────────
@@ -315,6 +418,7 @@ def check():
             seen[k] = tag
             if k in old:
                 errs.append('%s 기존 화학1 문장과 같음' % tag)
+    errs += page_graph_errs(dz)
     if not os.path.exists(LINK) or load(LINK) != build_link(dz):
         errs.append('link_ch1.json 이 design.json 대응과 다름 (--write)')
     if not os.path.exists(BANK):
@@ -322,6 +426,7 @@ def check():
     # 은행
     bank = load(BANK)
     ch1 = ch1_bank()
+    errs += app_bank_errs(bank)
     if sorted(bank) != sorted(cm):
         errs.append('은행 개념 목록이 설계와 다름')
     by_n = {it['n']: it for r in rounds for it in rounds[r]['jeongsi']['items']}
@@ -360,9 +465,14 @@ def check():
                 if not src or any(src[q] != fm[q] for q in ('a', 's', 'f', 'w', 'lvl')):
                     errs.append('%s 정시 %s 와 다름 (--write)' % (tag, fm['n']))
             elif 'from' in fm:
+                # 문장(s)·정답(a)·옳은 문장(f)은 화학1 원문 그대로여야 한다(«이미 본 문장» 기록이 s 로 맞물린다).
+                # 해설(w)은 심화반이 보강할 수 있다 — 화학1 은행의 「확장옥텟 분자의 입체 구조.」 처럼 이름만
+                # 던지는 해설 6개를 심화 은행에서만 풀어 썼다(2026-10-03 · tests/run.js 「해설이 이름만 던지지 않는다」).
                 orig = [x for x in ch1.get(fm['from'], {}).get('forms', []) if x['s'] == fm['s']]
-                if not orig or any(orig[0][q] != fm[q] for q in ('a', 'f', 'w')):
+                if not orig or any(orig[0][q] != fm[q] for q in ('a', 'f')):
                     errs.append('%s 화학1 %s 원문과 글자가 다름' % (tag, fm['from']))
+                elif not fm['w'].strip():
+                    errs.append('%s 해설 없음' % tag)
                 if fm['from'] not in cm.get(code, {}).get('ch1_equiv', []):
                     errs.append('%s from %s 가 ch1_equiv 밖' % (tag, fm['from']))
             else:

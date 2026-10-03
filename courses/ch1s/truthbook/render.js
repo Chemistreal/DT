@@ -7,7 +7,7 @@
  * 짜임은 화학1 선수노트와 같다: 표지 · 머리말 · 걸음(낚시 · 옳은 문장 · 그림 · 한 수 위 · 이어진다)
  * · 옳은 문장집 · 낚시 문장집 · 심화 확장.
  * 글(머리말·걸음)은 courses/ch1s/truthbook/round_NN.json 에서, 심화 확장(그 회차 정시 60문항의 옳은 문장
- * 전부와 함정 바로잡기)은 회차 파일 courses/ch1s/round_ch1s_NN.json 에서 그대로 가져온다 — 시험 정답과
+ * 전부와 함정 바로잡기)은 회차 파일 appdata/round_ch1s_NN.json 에서 그대로 가져온다 — 시험 정답과
  * 글자가 어긋날 일이 없다.
  * 걸음 한 쪽에 글이 넘치면 멈춘다(쪽이 잘려 나가는 일을 막는다).
  */
@@ -183,7 +183,7 @@ function flowBlocks(R, D, items, bp) {
 
 function html(R) {
   const D = JSON.parse(fs.readFileSync(path.join(HERE, 'round_' + pad(R) + '.json'), 'utf8'));
-  const RF = JSON.parse(fs.readFileSync(path.join(CH, 'round_ch1s_' + pad(R) + '.json'), 'utf8'));
+  const RF = JSON.parse(fs.readFileSync(path.join(CH, '..', '..', 'appdata', 'round_ch1s_' + pad(R) + '.json'), 'utf8'));
   const design = JSON.parse(fs.readFileSync(path.join(CH, 'design.json'), 'utf8'));
   const bp = design.blueprint[String(R)];
   const blocks = flowBlocks(R, D, RF.jeongsi.items, bp);

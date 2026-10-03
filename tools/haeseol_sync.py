@@ -290,7 +290,7 @@ def make(course, rnd, template, bands):
     m = re.match(r'haeseol_([a-z0-9]+)_round(\d+)\.html$', template)
     tr = int(m.group(2))
     items = json.load(open(os.path.join(ROOT, 'appdata', 'round_%s_%02d.json' % (course, rnd)), encoding='utf-8'))['jeongsi']['items']
-    label = {'ch1': '화학1', 'ch2': '화학2', 'gc': '일반화학'}[course]
+    label = {'ch1': '화학1', 'ch1s': '화학1 심화', 'ch2': '화학2', 'gc': '일반화학'}[course]
     out = tsrc.replace('누적 OX %s %d회' % (label, tr), '누적 OX %s %d회' % (label, rnd))
     out = re.sub(r'(<span class="sec">누적 1–30</span>)[^<]*', lambda mm: mm.group(1) + html.escape(bands[0], quote=False), out, count=1)
     out = re.sub(r'(<span class="sec">신규 31–60</span>)[^<]*', lambda mm: mm.group(1) + html.escape(bands[1], quote=False), out, count=1)

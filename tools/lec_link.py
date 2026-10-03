@@ -113,11 +113,23 @@ def save(doc):
         json.dumps(doc, ensure_ascii=False, indent=1) + '\n')
 
 
+# 강의 표를 아직 안 이은 과목. 화학Ⅰ 심화(ch1s)는 개념 강의 연결이 설계 8단계라 그때까지 이 자가 안 센다 —
+# 성적표(report.html lecFor)도 그 과목에는 강의 문을 안 단다. 이을 때 여기서 빼고 표를 채운다.
+NOT_YET = {'ch1s'}
+
+
+def round_files():
+    for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
+        if os.path.basename(f).split('_')[1] in NOT_YET:
+            continue
+        yield f
+
+
 def rounds():
     """회차 자료의 오개념 → 문항 수, 그리고 어느 「과목/단원」에 나오는지."""
     n = collections.Counter()
     unit = collections.defaultdict(collections.Counter)
-    for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
+    for f in round_files():
         course = os.path.basename(f).split('_')[1]
         d = load(f)
         for it in ((d.get('jeongsi') or {}).get('items') or []):
@@ -455,7 +467,7 @@ def chunks(per=45):
     n, unit = rounds()
     # 문항에 붙은 문장·해설을 오개념별로 두 개까지 모은다
     ex = collections.defaultdict(list)
-    for f in sorted(glob.glob(os.path.join(ROOT, 'appdata', 'round_*.json'))):
+    for f in round_files():
         for it in ((load(f).get('jeongsi') or {}).get('items') or []):
             m = str(it.get('mis') or '').strip()
             if not m or len(ex[m]) >= 2:

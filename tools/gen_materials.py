@@ -28,6 +28,7 @@ OUT = os.path.join(ROOT, 'materials.json')
 # 셸이 보여 줄 이름. 키는 앱스크립트·DT 가 쓰는 과목 코드 그대로다.
 COURSES = [
     ('ch1', '화학Ⅰ'),
+    ('ch1s', '화학Ⅰ 심화'),
     ('ch2', '화학Ⅱ'),
     ('gc',  '일반화학'),
 ]
@@ -47,7 +48,7 @@ EXTRA = [
 ]
 # 회차별 오답노트(진실책). 파일 이름 규칙이 달라 따로 본다.
 TRUTH_DIR = 'truthbooks'
-TRUTH_COURSE = {'ch1': 'chem1', 'ch2': 'chem2', 'gc': None}
+TRUTH_COURSE = {'ch1': 'chem1', 'ch1s': 'chem1s', 'ch2': 'chem2', 'gc': None}
 
 
 def have(rel):

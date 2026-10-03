@@ -114,7 +114,7 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
 
   <div class="card">
     <h2><span class="dot"></span>반 명단 관리</h2>
-    <p class="note">반 이름에 <b>화학1 · 화학2 · 일반화학</b>이 들어가면 과목이 자동 인식됩니다. DT 를 안 보는 반(1년에 한 번 여는 <b>파이널 반</b> 같은 것)은 갈래를 <b>'파이널'</b> 로 두세요 — 미응시·재시 알림에서 빠집니다. 다 쓰면 <b>이 반 삭제</b>로 지우면 됩니다. "이번주 회차"는 비워두면 자동(최근 8일 내 최신 회차)으로 잡습니다. 학생 추가칸에 여러 명을 줄바꿈/쉼표로 붙여넣으면 한 번에 들어갑니다.</p>
+    <p class="note">반 이름에 <b>화학1 · 화학1 심화 · 화학2 · 일반화학</b>이 들어가면 과목이 자동 인식됩니다. DT 를 안 보는 반(1년에 한 번 여는 <b>파이널 반</b> 같은 것)은 갈래를 <b>'파이널'</b> 로 두세요 — 미응시·재시 알림에서 빠집니다. 다 쓰면 <b>이 반 삭제</b>로 지우면 됩니다. "이번주 회차"는 비워두면 자동(최근 8일 내 최신 회차)으로 잡습니다. 학생 추가칸에 여러 명을 줄바꿈/쉼표로 붙여넣으면 한 번에 들어갑니다.</p>
     <div id="classes"></div>
     <button class="ghost" id="addC" style="margin-top:8px">+ 반 추가</button>
   </div>
@@ -150,7 +150,7 @@ function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
    옛 사본을 보여 주는 것보다 낫다. */
 var DEFAULT_ROSTER=[];
 
-var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+var COURSE_KO={ch1:'화학Ⅰ',ch1s:'화학Ⅰ 심화',ch2:'화학Ⅱ',gc:'일반화학'};
 /* 이 반이 어느 앱의 반인가. 안 적힌 옛 명단은 예전처럼 DT 로 본다. */
 /* 명단 한 칸은 이름 글자열이거나 {n:이름, s:학교} 다. 학교는 **가르는 데만**
    쓴다 — 문자는 예전 그대로 '홍길동 학생' 이다. */
@@ -183,6 +183,7 @@ function courseOf(label){
   var s=String(label||'');
   if(s.indexOf('일반화학')>=0) return 'gc';
   if(s.indexOf('화학2')>=0||s.indexOf('화학Ⅱ')>=0) return 'ch2';
+  if(s.indexOf('심화')>=0) return 'ch1s';          // 「화학1 심화」 반 — 서버 courseOf_ 와 같은 규칙
   if(s.indexOf('화학1')>=0||s.indexOf('화학Ⅰ')>=0) return 'ch1';
   return '';
 }
@@ -270,7 +271,7 @@ function renderAbsentees(A){
     h+='<div class="abcls">';
     h+='<div class="abhead"><span class="nm">'+esc(c.label)+'</span>';
     if(c.note){ h+='<span class="badge warn">'+esc(c.note)+'</span></div>';
-      h+='<p class="note" style="margin:6px 0 0">반 이름에 화학1/화학2/일반화학을 넣어 과목을 인식시키세요.</p></div>'; return; }
+      h+='<p class="note" style="margin:6px 0 0">반 이름에 화학1/화학1 심화/화학2/일반화학을 넣어 과목을 인식시키세요.</p></div>'; return; }
     if(c.noExam){ h+='<span class="badge">'+(COURSE_KO[c.course]||c.course)+'</span></div>';
       h+='<p class="note" style="margin:6px 0 0">최근 8일 내 채점된 시험이 없습니다.</p></div>'; return; }
     h+='<span class="badge">'+(COURSE_KO[c.course]||c.course)+' '+c.round+'회</span>';

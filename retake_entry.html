@@ -151,7 +151,7 @@ async function boot(){
   try{ MAN=await DTRetake.loadManifest(''); }catch(e){}
   var rdSel=document.getElementById('rd');
   var rounds=(MAN&&MAN.rounds)||[];
-  var COURSE_KO={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+  var COURSE_KO={ch1:'화학Ⅰ',ch1s:'화학Ⅰ 심화',ch2:'화학Ⅱ',gc:'일반화학'};
   rdSel.innerHTML=rounds.map(function(m){return '<option value="'+m.course+'|'+m.round+'">'+(COURSE_KO[m.course]||m.course)+' '+m.round+'회</option>';}).join('');
   if(rounds.length){ var f=rounds[0]; CUR.round=f.round; CUR.course=f.course; }
   loadNames();

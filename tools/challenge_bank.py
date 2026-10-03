@@ -86,8 +86,11 @@ LEND = '/* /CHALLENGE_LINK */'
 MBEGIN = '/* CHALLENGE_MIS: 자동 생성 — tools/challenge_bank.py */'
 MEND = '/* /CHALLENGE_MIS */'
 # 과목 → 낼 수 있는 개념 접두(첫 자리가 그 과목, 나머지는 선수). challenge.html 의 PRECOURSE 와 같다.
-PRECOURSE = {'ch1': ['CH1'], 'ch2': ['CH2', 'CH1'], 'gc': ['GC', 'CH2', 'CH1']}
-PREFIX_COURSE = {'CH1': 'ch1', 'CH2': 'ch2', 'GC': 'gc'}
+# 화학Ⅰ 심화(ch1s)는 선수 과목을 두지 않는다 — 화학Ⅰ을 안 듣고 바로 오는 학생도 있다.
+PRECOURSE = {'ch1': ['CH1'], 'ch1s': ['CH1S'], 'ch2': ['CH2', 'CH1'], 'gc': ['GC', 'CH2', 'CH1']}
+PREFIX_COURSE = {'CH1': 'ch1', 'CH1S': 'ch1s', 'CH2': 'ch2', 'GC': 'gc'}
+# 은행에 싣는 접두. CH1S 는 아직 뺀다 — 심화반의 심화 도전 은행은 따로 고른다(설계 9단계).
+# 그때까지 challenge.html 은 ch1s 에 «준비 중» 이라고 말하고, 성적표는 도전 링크를 안 단다.
 PREFIXES = ('CH1', 'CH2', 'GC')
 LVL = 3
 

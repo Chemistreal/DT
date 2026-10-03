@@ -10,7 +10,7 @@
 (function () {
   var JS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
   var H2C_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-  var COURSE_KO = { ch1: '화학Ⅰ', ch2: '화학Ⅱ', gc: '일반화학' };
+  var COURSE_KO = { ch1: '화학Ⅰ', ch1s: '화학Ⅰ 심화', ch2: '화학Ⅱ', gc: '일반화학' };
   var _loading = null;
 
   function loadScript(src) {

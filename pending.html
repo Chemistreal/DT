@@ -193,7 +193,7 @@ var STATUS_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTt
 function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){} return (t||'').trim(); }   /* 전체 공개 모드: 관리자 코드 입력 없이 동작 */
 function admReset(){ try{ localStorage.removeItem('dt_admtok'); }catch(e){} }
 
-var COURSE={ch1:'화학Ⅰ',ch2:'화학Ⅱ',gc:'일반화학'};
+var COURSE={ch1:'화학Ⅰ',ch1s:'화학Ⅰ 심화',ch2:'화학Ⅱ',gc:'일반화학'};
 var Q=new URLSearchParams(location.search);
 
 function urgency(days){ return days>=7?'urgent':days>=4?'warn':'ok'; }
@@ -599,7 +599,7 @@ function absentClassHTML(c){
   if(c.note){
     return '<div class="abx-cls"><div class="abx-head" id="'+clsAnchor(c.label)+'"><span class="abx-nm">'+esc(c.label)+'</span>'
       +'<span class="abx-badge">'+esc(c.note)+'</span></div>'
-      +'<div class="muted-note" style="margin:8px 0 0">반 이름에 화학1·화학2·일반화학이 들어가야 과목을 인식합니다 — roster.html에서 반 이름을 고쳐 주세요.</div></div>';
+      +'<div class="muted-note" style="margin:8px 0 0">반 이름에 화학1·화학1 심화·화학2·일반화학이 들어가야 과목을 인식합니다 — roster.html에서 반 이름을 고쳐 주세요.</div></div>';
   }
   var el=examLink(c.course, c.round);
   var ovv=absOv()[c.label], ovOn=(ovv!=null);

@@ -5,13 +5,13 @@
   python3 courses/ch1s/print/make_print.py 3 4      # 몇 회만
 
 틀은 화학1 12회(munje/haeseol/omr_ch1_round12.html)의 머리(글꼴·색)를 그대로 쓰고, 몸은 회차 파일
-courses/ch1s/round_ch1s_NN.json 에서 새로 짠다 — 시험 문장·정답·해설이 앱과 글자까지 같다.
+appdata/round_ch1s_NN.json 에서 새로 짠다 — 시험 문장·정답·해설이 앱과 글자까지 같다.
 문제지 표지와 주기율표 쪽은 원본 HTML 이 저장소에 없어 munje_ch1_round12.pdf 의 1·2쪽을 가져와
 표지의 「제 N 회」와 주제 줄만 바꿔 쓴다.
 
-결과: courses/ch1s/print/munje_ch1s_roundNN.pdf · haeseol_ch1s_roundNN.pdf · omr_ch1s_roundNN.pdf
-(HTML 은 tools/_stage/ch1s/print/ 에 남긴다 — 저장소 루트에 두면 화학1·2 전용 검사 도구들이 이 과목의
-회차 파일을 appdata 에서 찾다가 멈춘다. 앱에 거는 일은 7단계.)
+결과: 저장소 루트의 munje_ch1s_roundNN.pdf · haeseol_ch1s_roundNN.pdf · omr_ch1s_roundNN.pdf
+(앱·자료 화면이 다른 과목처럼 루트 PDF 를 읽는다. HTML 은 tools/_stage/ch1s/print/ 에 남긴다 —
+루트의 munje_/haeseol_ HTML 은 화학1·2·일반화학 원본이라 해설 대조 도구가 그것만 본다.)
 """
 import html
 import json
@@ -172,7 +172,7 @@ def main():
     os.makedirs(STAGE, exist_ok=True)
     made = []
     for r in rounds:
-        items = json.load(open(os.path.join(CH, 'round_ch1s_%02d.json' % r), encoding='utf-8'))['jeongsi']['items']
+        items = json.load(open(os.path.join(DT, 'appdata', 'round_ch1s_%02d.json' % r), encoding='utf-8'))['jeongsi']['items']
         for name, txt in (('munje', munje_html(r, items, dz)), ('haeseol', haeseol_html(r, items, dz)), ('omr', omr_html(r))):
             p = os.path.join(STAGE, '%s_ch1s_round%02d.html' % (name, r))
             with open(p, 'w', encoding='utf-8') as f:
@@ -185,9 +185,9 @@ def main():
         doc.insert_pdf(g('munje'))
         doc.insert_pdf(g('omr'))
         doc.subset_fonts()        # 표지에 넣은 한글 글꼴을 쓴 글자만 남긴다(통째로 넣으면 권마다 6.5MB 가 붙는다)
-        doc.save(os.path.join(HERE, 'munje_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
-        g('haeseol').save(os.path.join(HERE, 'haeseol_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
-        g('omr').save(os.path.join(HERE, 'omr_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
+        doc.save(os.path.join(DT, 'munje_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
+        g('haeseol').save(os.path.join(DT, 'haeseol_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
+        g('omr').save(os.path.join(DT, 'omr_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
         print('%d회 문제지 %d쪽 · 해설지 %d쪽' % (r, doc.page_count, g('haeseol').page_count))
 
 

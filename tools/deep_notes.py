@@ -21,8 +21,21 @@
 ⚠ 손으로 고치지 않는다. 글을 고치려면 deep_notes.json 을 고치고 --write 로 다시 넣는다.
 
     python3 tools/deep_notes.py            # 글 수만 보여 준다
-    python3 tools/deep_notes.py --write    # report.html 의 DEEP 을 다시 만든다
+    python3 tools/deep_notes.py --write    # report.html 의 DEEP · CH1S_NOTE 를 다시 만든다
     python3 tools/deep_notes.py --check    # json 과 어긋났으면 빨간불 (CI)
+
+화학Ⅰ 심화(ch1s)는 개념 코드로 찾는다 (2026-10-03)
+--------------------------------------------------
+심화반 개념 이름 211개 가운데 13개가 화학Ⅰ 오개념 이름과 같다. 이름으로 찾으면 심화반 학생에게
+화학Ⅰ 글이 붙는다. 그래서 심화반 글은 따로 코드 키 표로 넣는다:
+
+    /* CH1S-BEGIN … */
+    const CH1S_NOTE={"CH1S-001":{"m":이름,"o":한 줄 정리,"c":핵심,"d":한 겹 더}, …};
+    /* CH1S-END */
+
+원본: courses/ch1s/deep_ch1s.json(한 겹 더) · courses/ch1s/forms_bank_ch1s.json 의 reading
+(oneline·core). 성적표는 과목이 ch1s 면 이름을 이 표의 m 으로 코드에 맞대어 d 를 찾고(DEEP 은 안 본다),
+ONELINE·CORE 에 없는 심화반 이름에는 o·c 를 채운다(이미 있는 이름은 그대로 — 같은 이름은 같은 뜻이다).
 """
 import argparse
 import json
@@ -38,6 +51,12 @@ ENGINE = os.path.join(ROOT, 'chemengine.js')
 BEGIN = ('/* DEEP-BEGIN — 「한 겹 더」 글(오개념 이름 → 글). tools/deep_notes.py --write 가 '
          'appdata/deep_notes.json 에서 만든다. 손으로 고치지 않는다. */')
 END = '/* DEEP-END */'
+
+CH1S_DEEP = os.path.join(ROOT, 'courses', 'ch1s', 'deep_ch1s.json')
+CH1S_BANK = os.path.join(ROOT, 'courses', 'ch1s', 'forms_bank_ch1s.json')
+CBEGIN = ('/* CH1S-BEGIN — 화학Ⅰ 심화 개념 글(개념 코드 → 이름 m · 한 줄 o · 핵심 c · 한 겹 더 d). '
+          'tools/deep_notes.py --write 가 courses/ch1s/deep_ch1s.json · forms_bank_ch1s.json 에서 만든다. 손으로 고치지 않는다. */')
+CEND = '/* CH1S-END */'
 
 CORE_LINE = re.compile(r'^const CORE=(\{.*\});$', re.M)
 CANON_LINE = re.compile(r'^ {0,2}var MIS_CANON = (\{.*\});$', re.M)
@@ -59,17 +78,51 @@ def block(notes):
     return BEGIN + '\nconst DEEP=' + body + ';\n' + END
 
 
-def span(src):
-    nb, ne = src.count(BEGIN), src.count(END)
+def span(src, begin=BEGIN, end=END, tag='DEEP'):
+    nb, ne = src.count(begin), src.count(end)
     if nb == 0 and ne == 0:
         return None
     if nb != 1 or ne != 1:
-        raise SystemExit('DEEP 마커가 하나씩이 아니다 (BEGIN %d · END %d)' % (nb, ne))
-    a = src.find(BEGIN)
-    b = src.find(END, a)
+        raise SystemExit('%s 마커가 하나씩이 아니다 (BEGIN %d · END %d)' % (tag, nb, ne))
+    a = src.find(begin)
+    b = src.find(end, a)
     if b < a:
-        raise SystemExit('DEEP-END 가 DEEP-BEGIN 앞에 있다')
-    return a, b + len(END)
+        raise SystemExit('%s-END 가 %s-BEGIN 앞에 있다' % (tag, tag))
+    return a, b + len(end)
+
+
+def ch1s_notes():
+    """개념 코드 → {m, o, c, d}. 은행 순서(CH1S-001 …)."""
+    if not (os.path.exists(CH1S_DEEP) and os.path.exists(CH1S_BANK)):
+        return None
+    deep = json.load(open(CH1S_DEEP, encoding='utf-8'))
+    bank = json.load(open(CH1S_BANK, encoding='utf-8'))
+    out = {}
+    for code, e in bank.items():
+        rd = e.get('reading') or {}
+        out[code] = {'m': e.get('m', ''), 'o': rd.get('oneline', ''), 'c': rd.get('core', ''), 'd': deep.get(code, '')}
+    return out
+
+
+def ch1s_block(notes):
+    return CBEGIN + '\nconst CH1S_NOTE=' + json.dumps(notes, ensure_ascii=False, separators=(',', ':')) + ';\n' + CEND
+
+
+def ch1s_lint(notes):
+    bad = []
+    names = {}
+    for code, v in notes.items():
+        if not re.match(r'^CH1S-\d{3}$', code):
+            bad.append('심화 「%s」: 개념 코드 꼴이 아니다' % code)
+        for k in ('m', 'o', 'c', 'd'):
+            if not isinstance(v.get(k), str) or len(v[k].strip()) < (2 if k == 'm' else 10):
+                bad.append('심화 %s: %s 가 비었거나 너무 짧다' % (code, k))
+            elif '℃' in v[k]:
+                bad.append('심화 %s: %s 에 ℃ 대신 °C' % (code, k))
+        if v.get('m') in names:
+            bad.append('심화 %s: 이름 「%s」 이 %s 와 겹친다(이름 → 코드가 하나로 안 정해진다)' % (code, v['m'], names[v['m']]))
+        names[v.get('m')] = code
+    return bad
 
 
 def lint(notes, src):
@@ -99,6 +152,10 @@ def main():
     want = block(notes)
     src = read(REPORT)
     bad = lint(notes, src)
+    cnotes = ch1s_notes()
+    cwant = ch1s_block(cnotes) if cnotes is not None else None
+    if cnotes is not None:
+        bad += ch1s_lint(cnotes)
     if a.write:
         if bad:
             print('\n'.join(bad))
@@ -112,9 +169,16 @@ def main():
             new = src[:at] + want + '\n' + src[at:]
         else:
             new = src[:sp[0]] + want + src[sp[1]:]
+        if cwant is not None:
+            cs = span(new, CBEGIN, CEND, 'CH1S')
+            if cs is None:                      # 처음 넣는 자리는 DEEP-END 다음
+                at = span(new)[1] + 1
+                new = new[:at] + cwant + '\n' + new[at:]
+            else:
+                new = new[:cs[0]] + cwant + new[cs[1]:]
         if new != src:
             open(REPORT, 'w', encoding='utf-8').write(new)
-            print('report.html 에 DEEP %d 개를 썼다.' % len(notes))
+            print('report.html 에 DEEP %d 개%s를 썼다.' % (len(notes), (' · 심화 %d 개' % len(cnotes)) if cnotes else ''))
         else:
             print('report.html 의 DEEP 이 이미 같다 (%d 개).' % len(notes))
         return 0
@@ -128,10 +192,20 @@ def main():
             bad.append('report.html 에 DEEP 마커가 없다 (--write 로 넣는다)')
         elif sp and src[sp[0]:sp[1]] != want:
             bad.append('report.html 의 DEEP 이 appdata/deep_notes.json 과 다르다 (--write 로 맞춘다)')
+        if cwant is not None:
+            try:
+                cs = span(src, CBEGIN, CEND, 'CH1S')
+            except SystemExit as e:
+                bad.append(str(e))
+                cs = False
+            if cs is None:
+                bad.append('report.html 에 CH1S 마커가 없다 (--write 로 넣는다)')
+            elif cs and src[cs[0]:cs[1]] != cwant:
+                bad.append('report.html 의 CH1S_NOTE 가 courses/ch1s/deep_ch1s.json·forms_bank_ch1s.json 과 다르다 (--write 로 맞춘다)')
         if bad:
             print('\n'.join(bad))
             return 1
-        print('DEEP %d 개 · report.html 과 같다.' % len(notes))
+        print('DEEP %d 개%s · report.html 과 같다.' % (len(notes), (' · 심화 %d 개' % len(cnotes)) if cnotes else ''))
         return 0
     print('deep_notes.json 글 %d 개%s' % (len(notes), (' · 문제 %d' % len(bad)) if bad else ''))
     for b in bad:
