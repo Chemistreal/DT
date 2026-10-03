@@ -1,0 +1,169 @@
+{
+ "round": 2,
+ "title": "반응식과 양적 관계",
+ "headline": [
+  "반응식의 계수는,",
+  "몰의 비율이다."
+ ],
+ "intro": [
+  "2회차는 **화학 반응식과 양적 관계**다. 반응이 일어나도 원자는 새로 생기거나 사라지지 않고 다시 짜일 뿐이다. 그래서 반응식은 계수로만 맞추고, 그 계수가 몰의 비를 알려 준다.",
+  "줄기 하나만 잡아라. **주어진 양을 몰로 바꾸고, 계수비로 옮기고, 원하는 단위로 되돌린다.** 한계 반응물도, 연소 분석도, 압력 변화도 이 세 걸음 위에 서 있다. 그냥 끝까지 읽어라."
+ ],
+ "steps": [
+  {
+   "unit": "Ⅰ-3",
+   "tag": "계수맞추기",
+   "title": "계수만 바꾼다",
+   "trap": {
+    "q": "물이 생기는 반응식은 H₂ + O₂ → H₂O₂로 써서 맞춘다.",
+    "a": "아래 첨자를 바꾸면 **다른 물질**(과산화 수소)이 된다. 첨자는 그대로 두고 **계수로** 맞춘 2H₂ + O₂ → 2H₂O가 옳다.",
+    "fix": "2H₂ + O₂ → 2H₂O로 계수만 맞춘다."
+   },
+   "truths": [
+    "반응식은 **반응 전후 원자의 종류와 수가 같도록** 맞추며, 바꿀 수 있는 것은 **화학식 앞의 계수뿐**이다.",
+    "계수는 **가장 간단한 정수비**로 쓰고 1은 생략한다. 계수 합을 셀 때는 1도 넣어 2CO + O₂ → 2CO₂는 5이다.",
+    "계수 2는 **분자 2개**, 첨자 2는 **분자 속 원자 2개**를 뜻한다. 원자 수가 보존되므로 질량도 보존된다."
+   ],
+   "fig": {
+    "title": "원자는 다시 짜일 뿐",
+    "svg": "<svg viewBox='0 0 600 190' width='600' height='190'><circle cx='64' cy='60' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='76' cy='60' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='64' cy='105' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='76' cy='105' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='70' y='150' text-anchor='middle' font-size='15' fill='#222'>2H₂</text><text x='130' y='88' text-anchor='middle' font-size='15' fill='#222'>+</text><circle cx='176' cy='82' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='194' cy='82' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><text x='185' y='150' text-anchor='middle' font-size='15' fill='#222'>O₂</text><line x1='245' y1='82' x2='315.2' y2='82' stroke='#222' stroke-width='1.5'/><polygon points='320,82 312.7,85.4 312.7,78.6' fill='#222' stroke='none'/><text x='282' y='72' text-anchor='middle' font-size='12' fill='#555'>다시 짜임</text><circle cx='391' cy='78.6' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='369' cy='78.6' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='380' cy='70' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='461' cy='100.6' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='439' cy='100.6' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='450' cy='92' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><text x='415' y='150' text-anchor='middle' font-size='15' fill='#222'>2H₂O</text><text x='130' y='180' text-anchor='middle' font-size='13' fill='#555'>H 4개 · O 2개</text><text x='415' y='180' text-anchor='middle' font-size='13' fill='#555'>H 4개 · O 2개</text><circle cx='520' cy='30' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='532' y='35' text-anchor='start' font-size='13' fill='#222'>H</text><circle cx='560' cy='30' r='9' fill='#999' stroke='#222' stroke-width='1.2'/><text x='573' y='35' text-anchor='start' font-size='13' fill='#222'>O</text></svg>",
+    "cap": "반응 전후 H 4개 · O 2개 — 원자의 종류와 수가 같다"
+   },
+   "deep": "이온이 든 반응식은 **전하도** 맞아야 한다. Al + 2H⁺ → Al³⁺ + H₂는 원자 수는 맞지만 전하가 +2와 +3으로 달라 2Al + 6H⁺ → 2Al³⁺ + 3H₂로 쓴다.",
+   "next": "계수 맞추기는 다음 걸음, 연소 반응과 미정계수법으로 이어진다."
+  },
+  {
+   "unit": "Ⅰ-3",
+   "tag": "계수맞추기",
+   "title": "연소 반응과 미정계수법",
+   "trap": {
+    "q": "C₄H₁₀ 1 mol을 완전 연소시키려면 O₂ 13 mol이 필요하다.",
+    "a": "13은 2C₄H₁₀ + 13O₂ → 8CO₂ + 10H₂O에서 **C₄H₁₀ 2 mol 기준** 계수다. 1 mol이면 4 + 10/4 = **6.5 mol**이다.",
+    "fix": "O₂ 6.5 mol이 필요하다."
+   },
+   "truths": [
+    "탄화수소 1 mol의 완전 연소에 드는 O₂는 **(C 수 + H 수 ÷ 4) mol**이다. C₂H₄는 2 + 1 = 3 mol이라 O₂의 계수가 3이다.",
+    "분자 속에 O가 있으면 그만큼 O₂가 덜 든다. C₂H₅OH 1 mol은 C₂H₆ 1 mol보다 **O₂가 0.5 mol 적게** 든다.",
+    "**미정계수법**은 원소마다 원자 수 방정식을 세워 푼다. aNH₃ + bO₂ → cNO + dH₂O는 4, 5, 4, 6으로 합이 19이다."
+   ],
+   "fig": {
+    "title": "원소마다 같은 수",
+    "svg": "<svg viewBox='0 0 600 190' width='600' height='190'><text x='300' y='20' text-anchor='middle' font-size='15' fill='#222'>4NH₃ + 5O₂ → 4NO + 6H₂O</text><line x1='60' y1='165' x2='540' y2='165' stroke='#222' stroke-width='1.2'/><rect x='94' y='135' width='40' height='30' fill='#222' stroke='#222' stroke-width='1.2'/><rect x='146' y='135' width='40' height='30' fill='#ccc' stroke='#222' stroke-width='1.2'/><text x='114' y='113' text-anchor='middle' font-size='12' fill='#555'>4 × 1</text><text x='114' y='128' text-anchor='middle' font-size='13' fill='#222'>4</text><text x='166' y='113' text-anchor='middle' font-size='12' fill='#555'>4 × 1</text><text x='166' y='128' text-anchor='middle' font-size='13' fill='#222'>4</text><text x='140' y='183' text-anchor='middle' font-size='13' fill='#222'>N 원자</text><rect x='254' y='75' width='40' height='90' fill='#222' stroke='#222' stroke-width='1.2'/><rect x='306' y='75' width='40' height='90' fill='#ccc' stroke='#222' stroke-width='1.2'/><text x='274' y='53' text-anchor='middle' font-size='12' fill='#555'>4 × 3</text><text x='274' y='68' text-anchor='middle' font-size='13' fill='#222'>12</text><text x='326' y='53' text-anchor='middle' font-size='12' fill='#555'>6 × 2</text><text x='326' y='68' text-anchor='middle' font-size='13' fill='#222'>12</text><text x='300' y='183' text-anchor='middle' font-size='13' fill='#222'>H 원자</text><rect x='414' y='90' width='40' height='75' fill='#222' stroke='#222' stroke-width='1.2'/><rect x='466' y='90' width='40' height='75' fill='#ccc' stroke='#222' stroke-width='1.2'/><text x='434' y='68' text-anchor='middle' font-size='12' fill='#555'>5 × 2</text><text x='434' y='83' text-anchor='middle' font-size='13' fill='#222'>10</text><text x='486' y='68' text-anchor='middle' font-size='12' fill='#555'>4 + 6</text><text x='486' y='83' text-anchor='middle' font-size='13' fill='#222'>10</text><text x='460' y='183' text-anchor='middle' font-size='13' fill='#222'>O 원자</text><rect x='40' y='40' width='12' height='12' fill='#222' stroke='#222' stroke-width='1.2'/><text x='58' y='51' text-anchor='start' font-size='12' fill='#222'>반응물</text><rect x='40' y='60' width='12' height='12' fill='#ccc' stroke='#222' stroke-width='1.2'/><text x='58' y='71' text-anchor='start' font-size='12' fill='#222'>생성물</text></svg>",
+    "cap": "N·H·O 원자 수가 양쪽에서 같아지도록 a, b, c, d를 정한다"
+   },
+   "deep": "보통은 미지수가 방정식보다 하나 많아 계수의 비가 정해진다. C + O₂ → CO + CO₂는 원소 2개에 미지수 4개라, 두 반응이 섞인 셈이어서 계수 조합이 무수히 많다.",
+   "next": "수용액 속 반응은 다음 걸음, 알짜 이온 반응식으로 쓴다."
+  },
+  {
+   "unit": "Ⅰ-3",
+   "tag": "계수맞추기",
+   "title": "알짜 이온 반응식",
+   "trap": {
+    "q": "CaCO₃와 묽은 염산의 알짜 이온 반응식에는 CO₃²⁻을 쓴다.",
+    "a": "CaCO₃는 물에 거의 녹지 않는 고체라 **화학식 그대로** 쓴다. 알짜는 CaCO₃ + 2H⁺ → Ca²⁺ + H₂O + CO₂이다.",
+    "fix": "CaCO₃를 화학식 그대로 쓴다."
+   },
+   "truths": [
+    "**알짜 이온 반응식**은 녹아 있는 물질을 이온으로 풀어 쓴 뒤 반응 전후 그대로인 **구경꾼 이온을 지운** 식이다.",
+    "NaCl 수용액과 AgNO₃ 수용액을 섞으면 Na⁺와 NO₃⁻는 구경꾼이고 알짜는 **Ag⁺ + Cl⁻ → AgCl**이다.",
+    "이온으로 나누는 것은 물에 잘 녹는 강전해질뿐이다. **앙금·기체·물은 화학식 그대로** 쓰고, 원자 수와 전하를 함께 맞춘다."
+   ],
+   "fig": {
+    "title": "구경꾼 이온",
+    "svg": "<svg viewBox='0 0 600 205' width='600' height='205'><path d='M30 30 L30 172 L250 172 L250 30' fill='none' stroke='#222' stroke-width='1.8'/><line x1='32' y1='52' x2='248' y2='52' stroke='#999' stroke-width='1' stroke-dasharray='4 3'/><path d='M350 30 L350 172 L570 172 L570 30' fill='none' stroke='#222' stroke-width='1.8'/><line x1='352' y1='52' x2='568' y2='52' stroke='#999' stroke-width='1' stroke-dasharray='4 3'/><text x='140' y='20' text-anchor='middle' font-size='13' fill='#222'>섞은 직후 · 이온 4종</text><text x='460' y='20' text-anchor='middle' font-size='13' fill='#222'>반응 뒤</text><circle cx='70' cy='85' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='70' y='89' text-anchor='middle' font-size='12' fill='#222'>Na⁺</text><circle cx='125' cy='130' r='17' fill='#eee' stroke='#222' stroke-width='1.2'/><text x='125' y='134' text-anchor='middle' font-size='12' fill='#222'>Cl⁻</text><circle cx='185' cy='80' r='17' fill='#eee' stroke='#222' stroke-width='1.2'/><text x='185' y='84' text-anchor='middle' font-size='12' fill='#222'>Ag⁺</text><circle cx='215' cy='140' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='215' y='144' text-anchor='middle' font-size='12' fill='#222'>NO₃⁻</text><circle cx='120' cy='75' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='120' y='79' text-anchor='middle' font-size='12' fill='#222'>NO₃⁻</text><circle cx='70' cy='140' r='17' fill='#eee' stroke='#222' stroke-width='1.2'/><text x='70' y='144' text-anchor='middle' font-size='12' fill='#222'>Ag⁺</text><circle cx='175' cy='118' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='175' y='122' text-anchor='middle' font-size='12' fill='#222'>Na⁺</text><circle cx='225' cy='100' r='17' fill='#eee' stroke='#222' stroke-width='1.2'/><text x='225' y='104' text-anchor='middle' font-size='12' fill='#222'>Cl⁻</text><line x1='262' y1='100' x2='333.2' y2='100' stroke='#222' stroke-width='1.5'/><polygon points='338,100 330.7,103.4 330.7,96.6' fill='#222' stroke='none'/><text x='300' y='90' text-anchor='middle' font-size='12' fill='#555'>섞으면</text><circle cx='395' cy='80' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='395' y='84' text-anchor='middle' font-size='12' fill='#222'>Na⁺</text><circle cx='460' cy='75' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='460' y='79' text-anchor='middle' font-size='12' fill='#222'>NO₃⁻</text><circle cx='525' cy='90' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='525' y='94' text-anchor='middle' font-size='12' fill='#222'>Na⁺</text><circle cx='430' cy='120' r='17' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='430' y='124' text-anchor='middle' font-size='12' fill='#222'>NO₃⁻</text><text x='500' y='128' text-anchor='start' font-size='12' fill='#555'>구경꾼 이온</text><rect x='380' y='148' width='44' height='22' fill='#555' stroke='#222' stroke-width='1'/><text x='402' y='163' text-anchor='middle' font-size='12' fill='#fff'>AgCl</text><rect x='426' y='148' width='44' height='22' fill='#555' stroke='#222' stroke-width='1'/><text x='448' y='163' text-anchor='middle' font-size='12' fill='#fff'>AgCl</text><text x='482' y='164' text-anchor='start' font-size='13' fill='#222'>앙금</text><text x='460' y='196' text-anchor='middle' font-size='14' fill='#222'>Ag⁺ + Cl⁻ → AgCl</text><text x='140' y='196' text-anchor='middle' font-size='13' fill='#555'>NaCl(aq) + AgNO₃(aq)</text></svg>",
+    "cap": "반응에 참여한 이온만 남긴 식이 알짜 이온 반응식이다"
+   },
+   "deep": "알짜 이온 반응식 하나가 여러 반응을 대표한다. AgNO₃ 수용액에 KCl을 넣든 HCl을 넣든 실제로 일어나는 일은 Ag⁺ + Cl⁻ → AgCl 하나뿐이다.",
+   "next": "계수의 뜻은 다음 걸음, 계수비 = 몰비로 이어진다."
+  },
+  {
+   "unit": "Ⅰ-3",
+   "tag": "양적관계",
+   "title": "계수비 = 몰비 = 부피비",
+   "trap": {
+    "q": "2H₂ + O₂ → 2H₂O에서 반응하는 H₂와 O₂의 질량비는 2 : 1이다.",
+    "a": "계수비는 **몰비**이지 질량비가 아니다. 질량비는 (2 × 2) : (1 × 32) = **1 : 8**이다.",
+    "fix": "질량비는 1 : 8이다."
+   },
+   "truths": [
+    "반응식의 **계수비 = 몰비 = 입자 수 비**이다. N₂ + 3H₂ → 2NH₃에서 반응하는 N₂와 H₂의 분자 수 비는 1 : 3이다.",
+    "같은 온도·압력의 **기체끼리는 계수비 = 부피비**이다. N₂ 1 L와 H₂ 3 L가 모두 반응하면 NH₃ 2 L가 생긴다.",
+    "**질량비 = 계수 × 몰 질량의 비**이다. 2CO + O₂ → 2CO₂에서 반응하는 CO와 O₂의 질량비는 56 : 32 = 7 : 4이다."
+   ],
+   "fig": {
+    "title": "같은 반응, 세 가지 비",
+    "svg": "<svg viewBox='0 0 600 198' width='600' height='198'><text x='260' y='20' text-anchor='middle' font-size='15' fill='#222'>N₂ + 3H₂ → 2NH₃</text><rect x='30' y='38' width='56' height='70' fill='#555' stroke='#222' stroke-width='1.2'/><text x='58' y='70' text-anchor='middle' font-size='13' fill='#fff'>N₂</text><text x='58' y='90' text-anchor='middle' font-size='13' fill='#fff'>1 L</text><text x='103' y='78' text-anchor='middle' font-size='15' fill='#222'>+</text><rect x='120' y='38' width='168' height='70' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='204' y='70' text-anchor='middle' font-size='13' fill='#222'>H₂</text><text x='204' y='90' text-anchor='middle' font-size='13' fill='#222'>3 L</text><line x1='300' y1='73' x2='347.2' y2='73' stroke='#222' stroke-width='1.5'/><polygon points='352,73 344.7,76.4 344.7,69.6' fill='#222' stroke='none'/><rect x='362' y='38' width='112' height='70' fill='#ccc' stroke='#222' stroke-width='1.2'/><text x='418' y='70' text-anchor='middle' font-size='13' fill='#222'>NH₃</text><text x='418' y='90' text-anchor='middle' font-size='13' fill='#222'>2 L</text><text x='58' y='135' text-anchor='middle' font-size='13' fill='#222'>1 mol</text><text x='204' y='135' text-anchor='middle' font-size='13' fill='#222'>3 mol</text><text x='418' y='135' text-anchor='middle' font-size='13' fill='#222'>2 mol</text><text x='490' y='135' text-anchor='start' font-size='13' fill='#555'>몰수 비 1 : 3 : 2</text><text x='58' y='161' text-anchor='middle' font-size='13' fill='#222'>28 g</text><text x='204' y='161' text-anchor='middle' font-size='13' fill='#222'>6 g</text><text x='418' y='161' text-anchor='middle' font-size='13' fill='#222'>34 g</text><text x='490' y='161' text-anchor='start' font-size='13' fill='#555'>질량 28 + 6 = 34</text><text x='490' y='78' text-anchor='start' font-size='13' fill='#555'>부피 비 1 : 3 : 2</text><text x='260' y='188' text-anchor='middle' font-size='13' fill='#555'>4 L → 2 L · 부피(몰수)는 줄어도 질량은 보존</text></svg>",
+    "cap": "같은 온도·압력의 기체 — 부피 비 = 몰수 비 = 계수 비"
+   },
+   "deep": "양적 관계는 **몰로 바꾸기 → 계수비 → 되돌리기**의 세 걸음이다. CH₄ 8 g(0.5 mol)이 완전 연소하면 CO₂도 0.5 mol, 곧 22 g이 생긴다.",
+   "next": "반응물이 계수비와 다르게 섞이면 다음 걸음, 한계 반응물이 나온다."
+  },
+  {
+   "unit": "Ⅰ-3",
+   "tag": "양적관계",
+   "title": "한계 반응물과 수득률",
+   "trap": {
+    "q": "N₂ 2 mol과 H₂ 3 mol을 반응시키면 몰수가 적은 N₂가 먼저 바닥난다.",
+    "a": "몰수를 **자기 계수로 나눠** 비교한다. N₂는 2 ÷ 1 = 2, H₂는 3 ÷ 3 = 1이라 **H₂가 한계 반응물**이다.",
+    "fix": "H₂가 한계 반응물이다."
+   },
+   "truths": [
+    "**한계 반응물**은 먼저 바닥나 생성량을 정하는 반응물이다. **몰수 ÷ 계수**가 작은 쪽이 한계 반응물이다.",
+    "**최대 생성량은 한계 반응물로** 계산한다. N₂ 28 g과 H₂ 9 g을 N₂ + 3H₂ → 2NH₃로 반응시키면 NH₃는 최대 34 g이다.",
+    "**수득률 = 실제 수득량 ÷ 이론 수득량 × 100**이다. 이론량 20 g에서 15 g을 얻으면 75 %이고, 100 %를 넘을 수 없다."
+   ],
+   "fig": {
+    "title": "먼저 바닥나는 쪽",
+    "svg": "<svg viewBox='0 0 600 202' width='600' height='202'><rect x='15' y='32' width='175' height='128' fill='#fff' stroke='#555' stroke-width='1'/><rect x='245' y='32' width='175' height='128' fill='#fff' stroke='#555' stroke-width='1'/><text x='102' y='22' text-anchor='middle' font-size='13' fill='#222'>처음 · H₂ 4, O₂ 3</text><text x='332' y='22' text-anchor='middle' font-size='13' fill='#222'>나중 · H₂O 4, O₂ 1</text><line x1='196' y1='96' x2='234.2' y2='96' stroke='#222' stroke-width='1.5'/><polygon points='239,96 231.7,99.4 231.7,92.6' fill='#222' stroke='none'/><circle cx='39' cy='60' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='51' cy='60' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='94' cy='55' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='106' cy='55' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='39' cy='130' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='51' cy='130' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='89' cy='128' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='101' cy='128' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='146' cy='60' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='164' cy='60' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='141' cy='100' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='159' cy='100' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='143' cy='140' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='161' cy='140' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='291' cy='73.6' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='269' cy='73.6' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='280' cy='65' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='352.4' cy='71.9' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='331.7' cy='64.3' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='345' cy='60' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='297.4' cy='131.6' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='275.6' cy='135.4' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='285' cy='125' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='353.4' cy='136.2' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='332.1' cy='130.5' r='7' fill='#fff' stroke='#222' stroke-width='1.2'/><circle cx='345' cy='125' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='381' cy='95' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><circle cx='399' cy='95' r='11' fill='#999' stroke='#222' stroke-width='1.2'/><text x='390' y='122' text-anchor='middle' font-size='12' fill='#555'>남은 O₂</text><text x='500' y='50' text-anchor='middle' font-size='13' fill='#222'>H₂</text><text x='540' y='50' text-anchor='middle' font-size='13' fill='#222'>O₂</text><text x='582' y='50' text-anchor='middle' font-size='13' fill='#222'>H₂O</text><line x1='432' y1='58' x2='598' y2='58' stroke='#222' stroke-width='1'/><text x='450' y='80' text-anchor='middle' font-size='13' fill='#555'>처음</text><text x='500' y='80' text-anchor='middle' font-size='13' fill='#222'>4</text><text x='540' y='80' text-anchor='middle' font-size='13' fill='#222'>3</text><text x='582' y='80' text-anchor='middle' font-size='13' fill='#222'>0</text><text x='450' y='108' text-anchor='middle' font-size='13' fill='#555'>변화</text><text x='500' y='108' text-anchor='middle' font-size='13' fill='#222'>−4</text><text x='540' y='108' text-anchor='middle' font-size='13' fill='#222'>−2</text><text x='582' y='108' text-anchor='middle' font-size='13' fill='#222'>+4</text><text x='450' y='136' text-anchor='middle' font-size='13' fill='#555'>나중</text><text x='500' y='136' text-anchor='middle' font-size='13' fill='#222'>0</text><text x='540' y='136' text-anchor='middle' font-size='13' fill='#222'>1</text><text x='582' y='136' text-anchor='middle' font-size='13' fill='#222'>4</text><line x1='432' y1='116' x2='598' y2='116' stroke='#999' stroke-width='1'/><text x='300' y='192' text-anchor='middle' font-size='13' fill='#222'>몰수 ÷ 계수 : H₂ 4 ÷ 2 = 2  &lt;  O₂ 3 ÷ 1 = 3  →  H₂가 한계 반응물</text></svg>",
+    "cap": "변화 줄은 계수비(2 : 1 : 2), 나중 줄에서 한계 반응물이 0"
+   },
+   "deep": "시료가 순수하지 않으면 순물질만 반응에 넣는다. 순도 80 %인 석회석 50 g에 든 CaCO₃(화학식량 100)는 40 g, 곧 0.4 mol이다.",
+   "next": "생성물에서 거꾸로 원소를 찾는 것이 다음 걸음, 연소 분석이다."
+  },
+  {
+   "unit": "Ⅰ-3",
+   "tag": "양적관계",
+   "title": "연소 분석",
+   "trap": {
+    "q": "연소 분석에서 시료 속 O의 질량은 생긴 CO₂와 H₂O에서 바로 구한다.",
+    "a": "연소에 O₂를 넣어 주므로 생성물 속 O의 출처를 가릴 수 없다. **O 질량 = 시료 − C − H**로 뺀다.",
+    "fix": "O는 시료에서 C·H를 빼서 구한다."
+   },
+   "truths": [
+    "**C 질량 = CO₂ 질량 × 12/44, H 질량 = H₂O 질량 × 2/18**이다. 시료의 C는 모두 CO₂로, H는 모두 H₂O로 간다.",
+    "C, H로만 된 물질을 태워 CO₂ 8.8 g, H₂O 5.4 g을 얻으면 C 0.2 mol, H 0.6 mol로 **실험식은 CH₃**이다.",
+    "C, H, O로 된 물질 3.2 g에서 CO₂ 4.4 g, H₂O 3.6 g을 얻으면 남은 1.6 g이 O라 **실험식은 CH₄O**이다."
+   ],
+   "fig": {
+    "title": "시료를 C·H·O로",
+    "svg": "<svg viewBox='0 0 600 206' width='600' height='206'><text x='150' y='24' text-anchor='middle' font-size='14' fill='#222'>CO₂ 4.4 g</text><line x1='150' y1='32' x2='150' y2='87.2' stroke='#222' stroke-width='1.5'/><polygon points='150,92 146.6,84.7 153.4,84.7' fill='#222' stroke='none'/><text x='158' y='66' text-anchor='start' font-size='13' fill='#555'>× 12/44</text><text x='290' y='24' text-anchor='middle' font-size='14' fill='#222'>H₂O 3.6 g</text><line x1='290' y1='32' x2='271.5' y2='87.4' stroke='#222' stroke-width='1.5'/><polygon points='270,92 269.1,84.1 275.5,86.2' fill='#222' stroke='none'/><text x='296' y='66' text-anchor='start' font-size='13' fill='#555'>× 2/18</text><text x='450' y='46' text-anchor='middle' font-size='14' fill='#222'>O = 시료 − C − H</text><text x='450' y='66' text-anchor='middle' font-size='12' fill='#555'>(빼기로 구한다)</text><text x='62' y='88' text-anchor='start' font-size='13' fill='#222'>시료 3.2 g</text><rect x='60' y='96' width='180' height='34' fill='#555' stroke='#222' stroke-width='1.2'/><text x='150' y='118' text-anchor='middle' font-size='13' fill='#fff'>C 1.2 g</text><rect x='240' y='96' width='60' height='34' fill='#ccc' stroke='#222' stroke-width='1.2'/><text x='270' y='118' text-anchor='middle' font-size='12' fill='#222'>H 0.4 g</text><rect x='300' y='96' width='240' height='34' fill='#eee' stroke='#222' stroke-width='1.2'/><text x='420' y='118' text-anchor='middle' font-size='13' fill='#222'>O 1.6 g</text><text x='150' y='150' text-anchor='middle' font-size='12' fill='#555'>÷ 12</text><text x='270' y='150' text-anchor='middle' font-size='12' fill='#555'>÷ 1</text><text x='420' y='150' text-anchor='middle' font-size='12' fill='#555'>÷ 16</text><text x='150' y='170' text-anchor='middle' font-size='13' fill='#222'>0.1 mol</text><text x='270' y='170' text-anchor='middle' font-size='13' fill='#222'>0.4 mol</text><text x='420' y='170' text-anchor='middle' font-size='13' fill='#222'>0.1 mol</text><text x='300' y='198' text-anchor='middle' font-size='14' fill='#222'>C : H : O = 1 : 4 : 1  →  실험식 CH₄O</text></svg>",
+    "cap": "C는 CO₂에서, H는 H₂O에서, O는 빼기로"
+   },
+   "deep": "장치에서는 **물을 먼저**, CO₂를 나중에 흡수시킨다. CO₂ 흡수제(NaOH)가 물도 함께 빨아들여 순서를 바꾸면 CO₂ 질량이 부풀기 때문이다.",
+   "next": "기체끼리의 반응은 다음 걸음, 압력 변화로 읽는다."
+  },
+  {
+   "unit": "Ⅰ-3",
+   "tag": "양적관계",
+   "title": "기체 반응과 압력",
+   "trap": {
+    "q": "부피와 온도가 일정하면 기체 반응이 일어나도 전체 압력은 그대로다.",
+    "a": "V·T가 일정하면 **압력은 기체 몰수에 비례**한다. N₂ + 3H₂ → 2NH₃는 기체 4 mol이 2 mol로 줄어 **압력이 작아진다**.",
+    "fix": "기체 몰수가 줄면 압력도 준다."
+   },
+   "truths": [
+    "부피·온도가 일정하면 **전체 압력은 전체 기체 몰수에 비례**한다. CH₄ + 2O₂ → CO₂ + 2H₂O(g)는 3 → 3이라 그대로다.",
+    "V·T가 일정하면 **부분 압력을 몰수처럼** 계수비에 넣어 한계 반응물과 남는 양을 구한다.",
+    "H₂ 2 atm, O₂ 2 atm이 2H₂ + O₂ → 2H₂O(g)로 완결되면 H₂O 2 atm, O₂ 1 atm이 남아 **전체 3 atm**이다."
+   ],
+   "fig": {
+    "title": "부분 압력 막대",
+    "svg": "<svg viewBox='0 0 600 198' width='600' height='198'><line x1='30' y1='172' x2='270' y2='172' stroke='#222' stroke-width='1.2'/><line x1='330' y1='172' x2='570' y2='172' stroke='#222' stroke-width='1.2'/><text x='150' y='20' text-anchor='middle' font-size='14' fill='#222'>2H₂ + O₂ → 2H₂O(g)</text><text x='450' y='20' text-anchor='middle' font-size='14' fill='#222'>N₂ + 3H₂ → 2NH₃</text><rect x='60' y='112' width='64' height='60' fill='#fff' stroke='#222' stroke-width='1'/><text x='92' y='146.5' text-anchor='middle' font-size='12' fill='#222'>H₂ 2</text><rect x='60' y='52' width='64' height='60' fill='#ccc' stroke='#222' stroke-width='1'/><text x='92' y='86.5' text-anchor='middle' font-size='12' fill='#222'>O₂ 2</text><text x='92' y='45' text-anchor='middle' font-size='13' fill='#222'>4 atm</text><rect x='176' y='112' width='64' height='60' fill='#555' stroke='#222' stroke-width='1'/><text x='208' y='146.5' text-anchor='middle' font-size='12' fill='#fff'>H₂O 2</text><rect x='176' y='82' width='64' height='30' fill='#ccc' stroke='#222' stroke-width='1'/><text x='208' y='101.5' text-anchor='middle' font-size='12' fill='#222'>O₂ 1</text><text x='208' y='75' text-anchor='middle' font-size='13' fill='#222'>3 atm</text><rect x='360' y='127' width='64' height='45' fill='#fff' stroke='#222' stroke-width='1'/><text x='392' y='154' text-anchor='middle' font-size='12' fill='#222'>H₂ 1.5</text><rect x='360' y='97' width='64' height='30' fill='#eee' stroke='#222' stroke-width='1'/><text x='392' y='116.5' text-anchor='middle' font-size='12' fill='#222'>N₂ 1</text><text x='392' y='90' text-anchor='middle' font-size='13' fill='#222'>2.5 atm</text><rect x='476' y='142' width='64' height='30' fill='#222' stroke='#222' stroke-width='1'/><text x='508' y='161.5' text-anchor='middle' font-size='12' fill='#fff'>NH₃ 1</text><rect x='476' y='127' width='64' height='15' fill='#eee' stroke='#222' stroke-width='1'/><text x='508' y='139' text-anchor='middle' font-size='12' fill='#222'>N₂ 0.5</text><text x='508' y='120' text-anchor='middle' font-size='13' fill='#222'>1.5 atm</text><line x1='130' y1='120' x2='165.8' y2='120' stroke='#222' stroke-width='1.5'/><polygon points='170,120 163.7,123 163.7,117' fill='#222' stroke='none'/><line x1='430' y1='135' x2='465.8' y2='135' stroke='#222' stroke-width='1.5'/><polygon points='470,135 463.7,138 463.7,132' fill='#222' stroke='none'/><text x='92' y='190' text-anchor='middle' font-size='12' fill='#555'>반응 전</text><text x='392' y='190' text-anchor='middle' font-size='12' fill='#555'>반응 전</text><text x='208' y='190' text-anchor='middle' font-size='12' fill='#555'>반응 뒤</text><text x='508' y='190' text-anchor='middle' font-size='12' fill='#555'>반응 뒤</text></svg>",
+    "cap": "부피·온도 일정 · 막대 높이 = 부분 압력의 합",
+    "cap2": "N₂ + 3H₂ 반응 뒤 NH₃의 몰분율은 1 ÷ 1.5 = 2/3이다."
+   },
+   "deep": "부분 압력을 몰수처럼 쓸 수 있는 것은 P = n × (RT/V)에서 괄호가 모든 성분에 같기 때문이다. 온도가 바뀌면 처음 온도로 되돌린 뒤 비교한다.",
+   "next": "3회차는 원자 속으로 — 핵의 변화와 원자 모형으로 간다."
+  }
+ ]
+}

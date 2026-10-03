@@ -1,0 +1,173 @@
+{
+ "round": 8,
+ "title": "열화학",
+ "headline": [
+  "열이 드나든 만큼,",
+  "계를 기준으로 적는다."
+ ],
+ "intro": [
+  "8회차는 **열화학**이다. 반응과 상태 변화에는 언제나 열이 드나든다. 그 열을 **엔탈피 변화 ΔH**라는 하나의 장부에 적고, 결합 에너지·헤스 법칙·열량계로 그 값을 구한다.",
+  "줄기 하나만 잡아라. **ΔH는 계를 기준으로 한 상태 함수다.** 주위가 따뜻해지면 ΔH < 0이고, 처음과 나중이 같으면 어느 경로로 가도 ΔH는 같다. 그냥 끝까지 읽어라."
+ ],
+ "steps": [
+  {
+   "unit": "Ⅳ-1",
+   "tag": "엔탈피",
+   "title": "엔탈피와 ΔH의 부호",
+   "trap": {
+    "q": "반응 중 용기 속 온도계 눈금이 올라가면 그 반응의 ΔH는 양수다.",
+    "a": "온도계가 재는 것은 **주위**(물·용액)의 온도다. 주위가 따뜻해졌다면 계가 열을 내놓았으므로 **ΔH < 0**이다.",
+    "fix": "발열이므로 ΔH < 0이다."
+   },
+   "truths": [
+    "ΔH는 **계(반응하는 물질)를 기준으로** 한 값이다. 계가 열을 잃으면(발열) **ΔH < 0**, 얻으면(흡열) ΔH > 0이다.",
+    "흡열 과정은 주위에서 열을 빼앗아 **주위 온도가 내려간다**. 질산 암모늄이 물에 녹는 냉찜질팩이 그 예다.",
+    "엔탈피는 처음과 나중 상태로만 정해지는 **상태 함수**이고, **압력이 일정할 때** 계에 출입한 열은 ΔH와 같다."
+   ],
+   "fig": {
+    "title": "발열과 흡열",
+    "svg": "<svg viewBox='0 0 600 198' width='600' height='198'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='30.0' y1='20.0' x2='30.0' y2='150.0' stroke='#222' stroke-width='1.5'/><line x1='30.0' y1='150.0' x2='280.0' y2='150.0' stroke='#222' stroke-width='1.5'/><text x='22.0' y='18.0' text-anchor='middle' font-size='13' fill='#222'>H</text><line x1='50.0' y1='45.0' x2='130.0' y2='45.0' stroke='#222' stroke-width='3'/><text x='90.0' y='38.0' text-anchor='middle' font-size='13' fill='#222'>반응물</text><line x1='180.0' y1='125.0' x2='260.0' y2='125.0' stroke='#222' stroke-width='3'/><text x='220.0' y='118.0' text-anchor='middle' font-size='13' fill='#222'>생성물</text><line x1='155.0' y1='45.0' x2='155.0' y2='128.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='162.0' y='90.0' text-anchor='start' font-size='14' fill='#222' font-weight='bold'>ΔH < 0</text><text x='155.0' y='172.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>발열 반응</text><text x='155.0' y='191.0' text-anchor='middle' font-size='12' fill='#555'>계가 열을 잃음 · 주위 온도 상승</text><line x1='300.0' y1='15.0' x2='300.0' y2='192.0' stroke='#ccc' stroke-width='1'/><line x1='330.0' y1='20.0' x2='330.0' y2='150.0' stroke='#222' stroke-width='1.5'/><line x1='330.0' y1='150.0' x2='580.0' y2='150.0' stroke='#222' stroke-width='1.5'/><text x='322.0' y='18.0' text-anchor='middle' font-size='13' fill='#222'>H</text><line x1='350.0' y1='125.0' x2='430.0' y2='125.0' stroke='#222' stroke-width='3'/><text x='390.0' y='118.0' text-anchor='middle' font-size='13' fill='#222'>반응물</text><line x1='480.0' y1='45.0' x2='560.0' y2='45.0' stroke='#222' stroke-width='3'/><text x='520.0' y='38.0' text-anchor='middle' font-size='13' fill='#222'>생성물</text><line x1='455.0' y1='125.0' x2='455.0' y2='42.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='462.0' y='90.0' text-anchor='start' font-size='14' fill='#222' font-weight='bold'>ΔH > 0</text><text x='455.0' y='172.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>흡열 반응</text><text x='455.0' y='191.0' text-anchor='middle' font-size='12' fill='#555'>계가 열을 얻음 · 주위 온도 하강</text></svg>",
+    "cap": "ΔH = (생성물의 엔탈피 합) − (반응물의 엔탈피 합)"
+   },
+   "deep": "부호 약속은 「계가 얻으면 +」 하나뿐이다. 그래서 열량계에서 물(주위)이 얻은 열과 반응의 ΔH는 언제나 부호가 반대다.",
+   "next": "상태가 바뀌면 엔탈피도 바뀐다 · 열화학 반응식으로."
+  },
+  {
+   "unit": "Ⅳ-1",
+   "tag": "열화학 반응식",
+   "title": "상태를 적는 열화학 반응식",
+   "trap": {
+    "q": "H₂O(l)이 생기든 H₂O(g)이 생기든 수소 연소의 ΔH는 같다.",
+    "a": "기체 물은 액체 물보다 엔탈피가 **44 kJ/mol 높다**. 물 1 mol이 생길 때 H₂O(l)은 −286 kJ, H₂O(g)는 **−242 kJ**이다.",
+    "fix": "생성물의 상태에 따라 ΔH가 다르다."
+   },
+   "truths": [
+    "같은 물질도 상태에 따라 엔탈피가 다르므로 열화학 반응식에는 **(s), (l), (g), (aq)** 같은 상태를 적는다.",
+    "열화학 반응식의 계수는 몰수를 뜻한다. **계수를 k배 하면 ΔH도 k배**이고, 반응식을 뒤집으면 **부호가 반대**다.",
+    "2SO₂(g) + O₂(g) → 2SO₃(g)의 ΔH가 −198 kJ이면 **SO₂ 1 mol이 반응할 때의 ΔH는 −99 kJ**이다."
+   ],
+   "fig": {
+    "title": "생성물 상태와 ΔH",
+    "svg": "<svg viewBox='0 0 600 190' width='600' height='190'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='60.0' y1='15.0' x2='60.0' y2='188.0' stroke='#222' stroke-width='1.5'/><text x='52.0' y='14.0' text-anchor='middle' font-size='13' fill='#222'>H</text><line x1='80.0' y1='32.0' x2='260.0' y2='32.0' stroke='#222' stroke-width='3'/><text x='170.0' y='24.0' text-anchor='middle' font-size='13' fill='#222'>H₂(g) + ½O₂(g)</text><line x1='330.0' y1='153.0' x2='470.0' y2='153.0' stroke='#222' stroke-width='3'/><text x='478.0' y='158.0' text-anchor='start' font-size='13' fill='#222'>H₂O(g)</text><line x1='330.0' y1='175.0' x2='470.0' y2='175.0' stroke='#222' stroke-width='3'/><text x='478.0' y='180.0' text-anchor='start' font-size='13' fill='#222'>H₂O(l)</text><line x1='260.0' y1='32.0' x2='330.0' y2='153.0' stroke='#999' stroke-width='1' stroke-dasharray='4 3'/><line x1='260.0' y1='32.0' x2='330.0' y2='175.0' stroke='#999' stroke-width='1' stroke-dasharray='4 3'/><line x1='360.0' y1='34.0' x2='360.0' y2='150.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='366.0' y='92.5' text-anchor='start' font-size='13' fill='#222'>−242 kJ</text><line x1='440.0' y1='34.0' x2='440.0' y2='172.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='446.0' y='114.5' text-anchor='start' font-size='13' fill='#222'>−286 kJ</text><line x1='540.0' y1='153.0' x2='540.0' y2='175.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)' marker-start='url(#ah)'/><text x='548.0' y='169.0' text-anchor='start' font-size='13' fill='#222' font-weight='bold'>44</text></svg>",
+    "cap": "H₂O(g)가 H₂O(l)보다 엔탈피가 44 kJ/mol 높다",
+    "cap2": "기체가 생기는 쪽이 덜 발열이다."
+   },
+   "deep": "표에 실린 ΔH는 보통 25 °C, 1기압 기준이다. 기준 조건을 정해 두어야 서로 다른 반응의 값을 더하고 빼는 계산이 가능하다.",
+   "next": "44 kJ의 정체는 증발열 · 상태 변화의 열로 이어진다."
+  },
+  {
+   "unit": "Ⅳ-1",
+   "tag": "상태 변화",
+   "title": "상태 변화의 열과 분자 운동",
+   "trap": {
+    "q": "0 °C에서 물이 얼 때의 ΔH는 얼음이 녹을 때의 ΔH와 같다.",
+    "a": "방향이 반대면 **부호가 반대**다. 얼음의 융해는 ΔH = +6.0 kJ/mol, 물의 응고는 **−6.0 kJ/mol**이다.",
+    "fix": "크기는 같고 부호가 반대다."
+   },
+   "truths": [
+    "같은 온도에서 고체 1 mol이 액체로 될 때 흡수하는 열이 **융해열**, 액체 1 mol이 기체로 될 때 흡수하는 열이 **증발열**이다.",
+    "인력을 끊는 **융해·증발·고체의 승화는 흡열**, 인력이 생기는 **응고·응축은 발열**이다. 유리창에 물방울이 맺히는 응축도 발열이다.",
+    "**고체** 분자는 제자리에서 진동만 하고, **액체** 분자는 붙은 채 자리를 옮기며, **기체** 분자는 거의 자유롭게 날아다닌다."
+   ],
+   "fig": {
+    "title": "세 상태와 열 출입",
+    "svg": "<svg viewBox='0 0 600 192' width='600' height='192'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><rect x='40.0' y='45.0' width='120.0' height='80.0' fill='#fff' stroke='#222' stroke-width='1' rx='0'/><circle cx='60.0' cy='63.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='60.0' cy='85.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='60.0' cy='107.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='80.0' cy='63.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='80.0' cy='85.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='80.0' cy='107.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='100.0' cy='63.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='100.0' cy='85.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='100.0' cy='107.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='120.0' cy='63.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='120.0' cy='85.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='120.0' cy='107.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='140.0' cy='63.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='140.0' cy='85.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='140.0' cy='107.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><text x='100.0' y='143.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>고체</text><text x='100.0' y='160.0' text-anchor='middle' font-size='12' fill='#555'>제자리 진동</text><rect x='240.0' y='45.0' width='120.0' height='80.0' fill='#fff' stroke='#222' stroke-width='1' rx='0'/><circle cx='256.0' cy='91.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='274.0' cy='101.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='292.0' cy='93.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='310.0' cy='103.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='328.0' cy='93.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='344.0' cy='104.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='264.0' cy='114.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='283.0' cy='117.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='301.0' cy='115.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='320.0' cy='117.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='339.0' cy='113.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='302.0' cy='77.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><text x='300.0' y='143.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>액체</text><text x='300.0' y='160.0' text-anchor='middle' font-size='12' fill='#555'>자리 이동</text><rect x='440.0' y='45.0' width='120.0' height='80.0' fill='#fff' stroke='#222' stroke-width='1' rx='0'/><circle cx='465.0' cy='62.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='532.0' cy='60.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='498.0' cy='88.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='540.0' cy='108.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><circle cx='468.0' cy='110.0' r='8' fill='#999' stroke='#222' stroke-width='1'/><text x='500.0' y='143.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>기체</text><text x='500.0' y='160.0' text-anchor='middle' font-size='12' fill='#555'>자유 운동</text><line x1='170.0' y1='65.0' x2='230.0' y2='65.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='200.0' y='57.0' text-anchor='middle' font-size='13' fill='#222'>융해</text><line x1='230.0' y1='108.0' x2='170.0' y2='108.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='200.0' y='124.0' text-anchor='middle' font-size='13' fill='#222'>응고</text><line x1='370.0' y1='65.0' x2='430.0' y2='65.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='400.0' y='57.0' text-anchor='middle' font-size='13' fill='#222'>증발</text><line x1='430.0' y1='108.0' x2='370.0' y2='108.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='400.0' y='124.0' text-anchor='middle' font-size='13' fill='#222'>응축</text><path d='M100,42 Q300,-8 500,42' fill='none' stroke='#555' stroke-width='1.5' marker-end='url(#ah)'/><text x='300.0' y='13.0' text-anchor='middle' font-size='12' fill='#555'>승화(고체 → 기체)</text><text x='300.0' y='186.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>→ 방향(인력 끊기) = 흡열 · ← 방향(인력 생김) = 발열</text></svg>",
+    "cap": "같은 온도에서 승화열 = 융해열 + 증발열",
+    "cap2": "반응에서는 연소·중화가 발열, 광합성이 흡열이다."
+   },
+   "deep": "증발열이 융해열보다 훨씬 크다. 녹을 때는 인력의 일부만 느슨해지지만 기화할 때는 거의 다 끊어야 해서, 물은 6.0 대 40.7 kJ/mol로 약 7배다.",
+   "next": "인력을 끊는 열을 화학 결합으로 넓히면 결합 에너지다."
+  },
+  {
+   "unit": "Ⅳ-1",
+   "tag": "결합 에너지",
+   "title": "결합 끊기와 만들기로 ΔH",
+   "trap": {
+    "q": "연료가 탈 때 열이 나는 것은 결합이 끊어지면서 에너지가 나오기 때문이다.",
+    "a": "결합 끊기는 언제나 **흡열**이다. 새로 생기는 CO₂·H₂O의 결합이 더 강해 **만들 때 더 많이 내놓아** 전체가 발열이다.",
+    "fix": "새 결합이 생기며 더 많이 내놓는다."
+   },
+   "truths": [
+    "H₂(g) → 2H(g)처럼 기체 분자의 **결합을 끊는 과정은 흡열**이고, 결합이 생기는 과정은 같은 크기의 **발열**이다.",
+    "결합 에너지로 어림한 ΔH는 **(끊어지는 결합 에너지의 합) − (생기는 결합 에너지의 합)**이다.",
+    "H−H 436, O=O 498, O−H 463 kJ/mol이면 2H₂ + O₂ → 2H₂O(g)의 ΔH는 **1370 − 4×463 = −482 kJ**이다."
+   ],
+   "fig": {
+    "title": "결합 에너지 계단",
+    "svg": "<svg viewBox='0 0 600 208' width='600' height='208'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='50.0' y1='15.0' x2='50.0' y2='200.0' stroke='#222' stroke-width='1.5'/><text x='42.0' y='14.0' text-anchor='middle' font-size='13' fill='#222'>H</text><line x1='240.0' y1='30.0' x2='420.0' y2='30.0' stroke='#222' stroke-width='3'/><text x='330.0' y='22.0' text-anchor='middle' font-size='13' fill='#222'>4H(g) + 2O(g)</text><line x1='80.0' y1='132.8' x2='220.0' y2='132.8' stroke='#222' stroke-width='3'/><text x='150.0' y='124.8' text-anchor='middle' font-size='13' fill='#222'>2H₂(g) + O₂(g)</text><line x1='440.0' y1='168.9' x2='580.0' y2='168.9' stroke='#222' stroke-width='3'/><text x='510.0' y='186.9' text-anchor='middle' font-size='13' fill='#222'>2H₂O(g)</text><line x1='250.0' y1='132.8' x2='250.0' y2='33.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='258.0' y='77.4' text-anchor='start' font-size='13' fill='#222'>끊기 +1370</text><text x='258.0' y='94.4' text-anchor='start' font-size='12' fill='#555'>(2×436 + 498)</text><line x1='410.0' y1='30.0' x2='410.0' y2='165.9' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='402.0' y='129.4' text-anchor='end' font-size='13' fill='#222'>만들기 −1852</text><text x='402.0' y='146.4' text-anchor='end' font-size='12' fill='#555'>(4×463)</text><line x1='220.0' y1='132.8' x2='530.0' y2='132.8' stroke='#999' stroke-width='1' stroke-dasharray='4 3'/><line x1='520.0' y1='132.8' x2='520.0' y2='165.9' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='528.0' y='155.8' text-anchor='start' font-size='13' fill='#222' font-weight='bold'>−482</text></svg>",
+    "cap": "끊는 데 1370 kJ, 만들 때 1852 kJ → 알짜 482 kJ 방출",
+    "cap2": "H₂O 한 분자에 O−H는 2개 · 2H₂O면 4개다."
+   },
+   "deep": "결합 에너지는 여러 분자에서 평균한 값이라 이 계산은 어림값이다. 생성 엔탈피로 구하면 같은 반응이 −484 kJ로 조금 다르다.",
+   "next": "반응식을 더하고 빼는 셈 · 헤스 법칙으로 이어진다."
+  },
+  {
+   "unit": "Ⅳ-1",
+   "tag": "헤스 법칙",
+   "title": "헤스 법칙과 생성 엔탈피",
+   "trap": {
+    "q": "O₃도 홑원소 물질이므로 표준 생성 엔탈피가 0 kJ/mol이다.",
+    "a": "0으로 약속하는 것은 **가장 안정한 홑원소 물질**(산소는 O₂)뿐이다. O₃는 약 **+143 kJ/mol**이다.",
+    "fix": "가장 안정한 O₂만 0이다."
+   },
+   "truths": [
+    "반응열은 처음과 나중 상태로 정해지므로 **반응식을 더하고 빼면 ΔH도 똑같이 더하고 뺀다**(헤스 법칙).",
+    "C와 CO의 연소 엔탈피가 −394, −283 kJ/mol이면 C(s) + ½O₂(g) → CO(g)의 ΔH는 **(−394) − (−283) = −111 kJ**이다.",
+    "ΔH = **(생성물의 생성 엔탈피 합) − (반응물의 생성 엔탈피 합)**이다. C₂H₄(+52) + H₂ → C₂H₆(−85)은 −137 kJ이다."
+   ],
+   "fig": {
+    "title": "두 경로, 같은 ΔH",
+    "svg": "<svg viewBox='0 0 600 198' width='600' height='198'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='40.0' y1='15.0' x2='40.0' y2='182.0' stroke='#222' stroke-width='1.5'/><text x='32.0' y='14.0' text-anchor='middle' font-size='13' fill='#222'>H</text><line x1='60.0' y1='32.0' x2='230.0' y2='32.0' stroke='#222' stroke-width='3'/><text x='145.0' y='24.0' text-anchor='middle' font-size='13' fill='#222'>C(s) + O₂(g)</text><line x1='300.0' y1='72.0' x2='470.0' y2='72.0' stroke='#222' stroke-width='3'/><text x='400.0' y='64.0' text-anchor='middle' font-size='13' fill='#222'>CO(g) + ½O₂(g)</text><line x1='60.0' y1='173.8' x2='560.0' y2='173.8' stroke='#222' stroke-width='3'/><text x='310.0' y='191.8' text-anchor='middle' font-size='13' fill='#222'>CO₂(g)</text><line x1='230.0' y1='32.0' x2='320.0' y2='32.0' stroke='#999' stroke-width='1' stroke-dasharray='3 3'/><line x1='110.0' y1='34.0' x2='110.0' y2='170.8' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='118.0' y='107.9' text-anchor='start' font-size='13' fill='#222'>−394 kJ (한 번에)</text><line x1='320.0' y1='34.0' x2='320.0' y2='69.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='312.0' y='57.0' text-anchor='end' font-size='13' fill='#222' font-weight='bold'>−111</text><line x1='450.0' y1='74.0' x2='450.0' y2='170.8' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='458.0' y='127.9' text-anchor='start' font-size='13' fill='#222'>−283</text><text x='300.0' y='130.0' text-anchor='middle' font-size='13' fill='#555'>(−111) + (−283) = −394</text></svg>",
+    "cap": "직접 재기 어려운 C → CO의 ΔH를 두 연소열로 구한다"
+   },
+   "deep": "헤스 법칙은 에너지 보존의 한 표현이다. 두 경로의 ΔH가 다르다면 한쪽으로 갔다가 다른 쪽으로 돌아오기만 해도 에너지가 공짜로 생긴다.",
+   "next": "반응열을 실제로 재려면 · 비열과 Q = cmΔT."
+  },
+  {
+   "unit": "Ⅳ-1",
+   "tag": "비열",
+   "title": "비열·열용량과 Q = cmΔT",
+   "trap": {
+    "q": "같은 물질로 된 물체라면 질량이 달라도 열용량은 같다.",
+    "a": "질량과 관계없는 것은 **비열**이다. **열용량 = 비열 × 질량**이라 물 500 g의 열용량은 100 g의 5배다.",
+    "fix": "같은 것은 비열이다."
+   },
+   "truths": [
+    "**비열**은 물질 1 g의 온도를 1 °C 높이는 열량으로 물질의 고유한 값이고, **열용량**은 비열 × 질량이다.",
+    "**Q = cmΔT**(ΔT = 나중 − 처음)이다. 물 100 g을 10 °C 높이려면 4.18 × 100 × 10 = 4180 J, **약 4.18 kJ**이 든다.",
+    "반응열은 **Q = n × ΔH**다. 용해 엔탈피 +25.6 kJ/mol인 NH₄NO₃(80 g/mol) 8.0 g은 0.10 mol이라 2.56 kJ을 흡수한다."
+   ],
+   "fig": {
+    "title": "눈금 변환과 비열",
+    "svg": "<svg viewBox='0 0 600 192' width='600' height='192'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='90.0' y1='25.0' x2='90.0' y2='165.0' stroke='#222' stroke-width='1.5'/><line x1='200.0' y1='25.0' x2='200.0' y2='165.0' stroke='#222' stroke-width='1.5'/><text x='90.0' y='16.0' text-anchor='middle' font-size='13' fill='#222'>°C</text><text x='200.0' y='16.0' text-anchor='middle' font-size='13' fill='#222'>°W</text><line x1='90.0' y1='30.0' x2='200.0' y2='30.0' stroke='#222' stroke-width='1'/><text x='82.0' y='35.0' text-anchor='end' font-size='13' fill='#222'>100</text><text x='208.0' y='35.0' text-anchor='start' font-size='13' fill='#222'>220</text><text x='242.0' y='35.0' text-anchor='start' font-size='12' fill='#555'>끓는점</text><line x1='90.0' y1='121.0' x2='200.0' y2='121.0' stroke='#555' stroke-width='1' stroke-dasharray='4 3'/><text x='82.0' y='126.0' text-anchor='end' font-size='13' fill='#222'>30</text><text x='208.0' y='126.0' text-anchor='start' font-size='13' fill='#222'>80</text><line x1='90.0' y1='160.0' x2='200.0' y2='160.0' stroke='#222' stroke-width='1'/><text x='82.0' y='165.0' text-anchor='end' font-size='13' fill='#222'>0</text><text x='208.0' y='165.0' text-anchor='start' font-size='13' fill='#222'>20</text><text x='242.0' y='165.0' text-anchor='start' font-size='12' fill='#555'>어는점</text><text x='145.0' y='186.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>W = 2t + 20</text><line x1='330.0' y1='10.0' x2='330.0' y2='190.0' stroke='#ccc' stroke-width='1'/><text x='465.0' y='16.0' text-anchor='middle' font-size='13' fill='#222'>같은 열 418 J, 각 100 g</text><rect x='385.0' y='139.0' width='50.0' height='11.0' fill='#ccc' stroke='#222' stroke-width='1' rx='0'/><rect x='495.0' y='47.7' width='50.0' height='102.3' fill='#555' stroke='#222' stroke-width='1' rx='0'/><line x1='370.0' y1='150.0' x2='560.0' y2='150.0' stroke='#222' stroke-width='1.5'/><text x='410.0' y='133.0' text-anchor='middle' font-size='13' fill='#222'>+1.0 °C</text><text x='520.0' y='41.7' text-anchor='middle' font-size='13' fill='#222'>+9.3 °C</text><text x='410.0' y='168.0' text-anchor='middle' font-size='13' fill='#222'>물 (4.18)</text><text x='520.0' y='168.0' text-anchor='middle' font-size='13' fill='#222'>철 (0.45)</text><text x='465.0' y='186.0' text-anchor='middle' font-size='12' fill='#555'>비열이 작을수록 더 많이 오른다</text></svg>",
+    "cap": "온도 값은 절편까지, 온도 차는 기울기만 곱한다",
+    "cap2": "1 °C와 1 K는 간격이 같아 ΔT는 어느 쪽으로 써도 같다."
+   },
+   "deep": "온도 눈금은 두 기준점을 잇는 직선이다. 물이 20 °W에서 얼고 220 °W에서 끓으면 W = 2t + 20이라 30 °C는 60 °W가 아니라 80 °W다.",
+   "next": "Q = cmΔT를 반응의 ΔH로 바꾸는 장치 · 열량계."
+  },
+  {
+   "unit": "Ⅳ-1",
+   "tag": "열량계",
+   "title": "열량계와 가열 곡선",
+   "trap": {
+    "q": "얼음을 일정하게 가열한 곡선에서 액체 물 구간은 얼음 구간보다 가파르다.",
+    "a": "물의 비열(4.18)이 얼음(약 2.1 J/(g·°C))의 **약 2배**라 같은 열에 덜 오른다. **물 구간이 더 완만하다**.",
+    "fix": "물 구간이 더 완만하다."
+   },
+   "truths": [
+    "열량계에서는 물이 얻은 열 Q = cmΔT를 구한 뒤 **ΔH = −Q ÷ n**으로 바꾼다. 수온이 내려갔다면 Q < 0이고 **ΔH > 0**이다.",
+    "간이 열량계로 잰 발열 반응의 ΔH는 용기·온도계가 흡수한 열 때문에 **참값보다 0에 가깝게** 나온다.",
+    "가열 곡선의 **수평 구간에서는 온도가 일정**하다. 들어간 열이 분자 사이 인력을 끊는 데 쓰이고, 구간 길이는 상태 변화 열에 비례한다."
+   ],
+   "fig": {
+    "title": "물의 가열 곡선",
+    "svg": "<svg viewBox='0 0 600 206' width='600' height='206'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='60.0' y1='186.0' x2='590.0' y2='186.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><line x1='60.0' y1='186.0' x2='60.0' y2='12.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='588.0' y='202.0' text-anchor='end' font-size='12' fill='#222'>가한 열</text><text x='68.0' y='16.0' text-anchor='start' font-size='12' fill='#222'>온도(°C)</text><line x1='55.0' y1='140.0' x2='60.0' y2='140.0' stroke='#222' stroke-width='1.5'/><text x='52.0' y='145.0' text-anchor='end' font-size='12' fill='#222'>0</text><line x1='55.0' y1='45.0' x2='60.0' y2='45.0' stroke='#222' stroke-width='1.5'/><text x='52.0' y='50.0' text-anchor='end' font-size='12' fill='#222'>100</text><polyline points='75.0,178.0 97.1,140.0 185.0,140.0 295.0,45.0 389.0,45.0' fill='none' stroke='#222' stroke-width='3'/><polyline points='401.0,45.0 495.0,45.0 505.5,26.0' fill='none' stroke='#222' stroke-width='3'/><line x1='385.0' y1='53.0' x2='391.0' y2='37.0' stroke='#222' stroke-width='1.5'/><line x1='399.0' y1='53.0' x2='405.0' y2='37.0' stroke='#222' stroke-width='1.5'/><text x='93.0' y='180.0' text-anchor='start' font-size='12' fill='#222'>얼음</text><text x='141.1' y='158.0' text-anchor='middle' font-size='12' fill='#222'>녹음 (334 J/g)</text><text x='252.0' y='104.5' text-anchor='start' font-size='12' fill='#222'>물</text><text x='395.0' y='65.0' text-anchor='middle' font-size='12' fill='#222'>끓음 (2260 J/g) · 녹는 구간의 약 7배</text><text x='509.5' y='30.0' text-anchor='start' font-size='12' fill='#222'>수증기</text></svg>",
+    "cap": "물의 비열이 얼음의 약 2배라 물 구간이 더 완만하다",
+    "cap2": "끓는 구간은 가운데를 줄여 그렸다."
+   },
+   "deep": "단열 용기에서는 잃은 열 = 얻은 열이다. 20 °C 물 100 g에 비열이 1/9인 90 °C 금속 100 g을 넣으면 9(t − 20) = 90 − t에서 t = 27 °C다.",
+   "next": "중화도 발열 반응 · 9회차 중화열로 이어진다."
+  }
+ ]
+}

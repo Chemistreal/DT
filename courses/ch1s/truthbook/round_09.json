@@ -1,0 +1,172 @@
+{
+ "round": 9,
+ "title": "산·염기와 중화 반응",
+ "headline": [
+  "누가 주고 누가 받나,",
+  "산과 염기는 역할이다."
+ ],
+ "intro": [
+  "9회차는 **산과 염기, 그리고 중화 반응**이다. 산·염기의 정의는 아레니우스에서 브뢴스테드-로리, 루이스로 넓어졌고, 강산과 강염기의 중화는 **H⁺ + OH⁻ → H₂O** 한 줄로 요약된다.",
+  "줄기 하나만 잡아라. **산과 염기는 물질의 이름표가 아니라 그 반응에서 맡은 역할이다.** H⁺(루이스에서는 전자쌍)이 어디서 어디로 가는지만 따라가면 정의·짝·세기·중화가 한 줄로 꿰어진다. 그냥 끝까지 읽어라."
+ ],
+ "steps": [
+  {
+   "unit": "Ⅳ-2",
+   "tag": "산염기 정의",
+   "title": "아레니우스와 브뢴스테드-로리",
+   "trap": {
+    "q": "HCl + H₂O → H₃O⁺ + Cl⁻에서 H₂O는 H⁺을 내놓는 산이다.",
+    "a": "H₂O는 H⁺을 **받아** H₃O⁺이 되었으니 **염기**다. H⁺을 내준 HCl이 산이다.",
+    "fix": "H₂O는 H⁺을 받는 염기다."
+   },
+   "truths": [
+    "아레니우스 정의에서 **산은 물에 녹아 H⁺을, 염기는 OH⁻을 내놓는 물질**이다(NaOH는 염기). 이 정의는 **수용액에서만** 쓴다.",
+    "브뢴스테드-로리 정의에서 **H⁺을 주는 물질이 산, 받는 물질이 염기**다. 물이 없는 HCl(g) + NH₃(g) 반응도 이것으로 설명한다.",
+    "HCO₃⁻ + H₂O ⇌ H₂CO₃ + OH⁻에서 H₂O는 H⁺을 내주므로 **브뢴스테드-로리 산**으로 작용한다."
+   ],
+   "fig": {
+    "title": "H⁺이 가는 길",
+    "svg": "<svg viewBox='0 0 600 190' width='600' height='190'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><text x='80.0' y='62.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>HCl</text><text x='210.0' y='62.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>H₂O</text><text x='390.0' y='62.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>H₃O⁺</text><text x='520.0' y='62.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>Cl⁻</text><text x='145.0' y='62.0' text-anchor='middle' font-size='15' fill='#222'>+</text><text x='455.0' y='62.0' text-anchor='middle' font-size='15' fill='#222'>+</text><text x='300.0' y='62.0' text-anchor='middle' font-size='18' fill='#222'>→</text><text x='80.0' y='84.0' text-anchor='middle' font-size='12' fill='#555'>산</text><text x='210.0' y='84.0' text-anchor='middle' font-size='12' fill='#555'>염기</text><text x='390.0' y='84.0' text-anchor='middle' font-size='12' fill='#555'></text><text x='520.0' y='84.0' text-anchor='middle' font-size='12' fill='#555'></text><path d='M80,42 Q145.0,16 210,40' fill='none' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='145.0' y='24.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>H⁺</text><text x='80.0' y='160.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>NH₃</text><text x='210.0' y='160.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>H₂O</text><text x='390.0' y='160.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>NH₄⁺</text><text x='520.0' y='160.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>OH⁻</text><text x='145.0' y='160.0' text-anchor='middle' font-size='15' fill='#222'>+</text><text x='455.0' y='160.0' text-anchor='middle' font-size='15' fill='#222'>+</text><text x='300.0' y='160.0' text-anchor='middle' font-size='18' fill='#222'>⇌</text><text x='80.0' y='182.0' text-anchor='middle' font-size='12' fill='#555'>염기</text><text x='210.0' y='182.0' text-anchor='middle' font-size='12' fill='#555'>산</text><text x='390.0' y='182.0' text-anchor='middle' font-size='12' fill='#555'></text><text x='520.0' y='182.0' text-anchor='middle' font-size='12' fill='#555'></text><path d='M210,140 Q145.0,114 80,138' fill='none' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='145.0' y='122.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>H⁺</text><text x='455.0' y='112.0' text-anchor='middle' font-size='12' fill='#555'>같은 H₂O가 상대에 따라</text><text x='455.0' y='128.0' text-anchor='middle' font-size='12' fill='#555'>염기도 되고 산도 된다</text></svg>",
+    "cap": "H⁺을 준 쪽이 산, 받은 쪽이 염기",
+    "cap2": "화살표 뒤에서 H가 하나 줄었으면 산, 늘었으면 염기다."
+   },
+   "deep": "수용액 속 H⁺은 맨 양성자로 떠다니지 않고 물 분자에 붙어 **H₃O⁺**(하이드로늄 이온)로 있다. HCl의 이온화도 엄밀히는 물에 H⁺을 넘기는 반응이다.",
+   "next": "H⁺ 하나 차이로 맺어진 쌍 · 짝산과 짝염기로."
+  },
+  {
+   "unit": "Ⅳ-2",
+   "tag": "짝산·짝염기",
+   "title": "양쪽성 물질과 짝산·짝염기",
+   "trap": {
+    "q": "CH₃COOH가 물과 반응할 때 CH₃COOH와 H₂O는 짝산-짝염기 관계이다.",
+    "a": "둘은 화살표 같은 쪽의 **반응 상대**다. 짝은 H⁺ 하나 차이로 화살표 양쪽에 걸친다: **CH₃COOH/CH₃COO⁻**, H₃O⁺/H₂O.",
+    "fix": "짝은 CH₃COOH와 CH₃COO⁻이다."
+   },
+   "truths": [
+    "H₂O는 반응 상대에 따라 H⁺을 주기도 하고 받기도 하는 **양쪽성 물질**이다. HCO₃⁻, H₂PO₄⁻도 양쪽성 물질이다.",
+    "**H⁺ 하나만큼만 다른 두 화학종**이 짝산-짝염기 쌍이다. NH₃가 H⁺을 받아 생기는 **NH₄⁺는 NH₃의 짝산**이다.",
+    "브뢴스테드-로리 반응에는 짝 쌍이 **두 개** 있다. 짝은 화살표 같은 쪽이 아니라 **양쪽에 걸쳐** 맺어진다."
+   ],
+   "fig": {
+    "title": "짝은 화살표를 건넌다",
+    "svg": "<svg viewBox='0 0 600 200' width='600' height='200'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><text x='90.0' y='95.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>CH₃COOH</text><text x='230.0' y='95.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>H₂O</text><text x='380.0' y='95.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>CH₃COO⁻</text><text x='520.0' y='95.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>H₃O⁺</text><text x='160.0' y='95.0' text-anchor='middle' font-size='15' fill='#222'>+</text><text x='305.0' y='95.0' text-anchor='middle' font-size='18' fill='#222'>⇌</text><text x='450.0' y='95.0' text-anchor='middle' font-size='15' fill='#222'>+</text><text x='90.0' y='117.0' text-anchor='middle' font-size='12' fill='#555'>산</text><text x='230.0' y='117.0' text-anchor='middle' font-size='12' fill='#555'>염기</text><text x='380.0' y='117.0' text-anchor='middle' font-size='12' fill='#555'>짝염기</text><text x='520.0' y='117.0' text-anchor='middle' font-size='12' fill='#555'>짝산</text><path d='M90,73 L90,45 L380,45 L380,73' fill='none' stroke='#222' stroke-width='1.5'/><text x='235.0' y='38.0' text-anchor='middle' font-size='13' fill='#222'>짝 ① · H⁺ 하나 차이</text><path d='M230,125 L230,150 L520,150 L520,125' fill='none' stroke='#222' stroke-width='1.5'/><text x='375.0' y='169.0' text-anchor='middle' font-size='13' fill='#222'>짝 ② · H⁺ 하나 차이</text><text x='300.0' y='192.0' text-anchor='middle' font-size='12' fill='#555'>같은 쪽의 CH₃COOH와 H₂O는 짝이 아니라 반응 상대다</text></svg>",
+    "cap": "H⁺이 하나 많은 쪽이 짝산, 적은 쪽이 짝염기"
+   },
+   "deep": "양쪽성이 되려면 내놓을 H⁺과 H⁺을 받을 비공유 전자쌍이 모두 있어야 한다. CH₄는 H가 있어도 H⁺을 내놓지 않고, PO₄³⁻은 줄 H가 없어 염기로만 작용한다.",
+   "next": "H⁺ 대신 전자쌍을 보면 · 루이스 정의로 넓어진다."
+  },
+  {
+   "unit": "Ⅳ-2",
+   "tag": "루이스",
+   "title": "루이스 산·염기 · 전자쌍",
+   "trap": {
+    "q": "Zn²⁺ + 4OH⁻ → [Zn(OH)₄]²⁻에서 OH⁻는 H⁺을 받는 염기다.",
+    "a": "이 반응에서는 H⁺이 오가지 않는다. OH⁻는 비공유 전자쌍을 Zn²⁺에 **내주는 루이스 염기**다.",
+    "fix": "전자쌍을 내주는 루이스 염기다."
+   },
+   "truths": [
+    "루이스 정의에서 **비공유 전자쌍을 받는 물질이 산, 내주는 물질이 염기**이며, 둘은 **배위 결합**을 만든다.",
+    "BF₃ + NH₃ → F₃B−NH₃에서 옥텟이 부족한 **BF₃는 루이스 산**, 비공유 전자쌍을 가진 **NH₃는 루이스 염기**다.",
+    "브뢴스테드-로리 염기는 모두 루이스 염기이지만, **루이스 산이 모두 브뢴스테드-로리 산인 것은 아니다**."
+   ],
+   "fig": {
+    "title": "전자쌍이 가는 길",
+    "svg": "<svg viewBox='0 0 600 188' width='600' height='188'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><text x='110.0' y='90.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>B</text><line x1='100.0' y1='85.0' x2='82.6' y2='85.0' stroke='#222' stroke-width='1.5'/><text x='72.0' y='90.0' text-anchor='middle' font-size='14' fill='#222'>F</text><line x1='115.0' y1='76.3' x2='123.7' y2='61.2' stroke='#222' stroke-width='1.5'/><text x='129.0' y='57.0' text-anchor='middle' font-size='14' fill='#222'>F</text><line x1='115.0' y1='93.7' x2='123.7' y2='108.8' stroke='#222' stroke-width='1.5'/><text x='129.0' y='123.0' text-anchor='middle' font-size='14' fill='#222'>F</text><text x='175.0' y='90.0' text-anchor='middle' font-size='16' fill='#222'>+</text><text x='240.0' y='90.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>N</text><line x1='249.0' y1='78.4' x2='261.6' y2='69.2' stroke='#222' stroke-width='1.5'/><text x='270.0' y='68.0' text-anchor='middle' font-size='14' fill='#222'>H</text><line x1='249.0' y1='91.6' x2='261.6' y2='100.8' stroke='#222' stroke-width='1.5'/><text x='270.0' y='112.0' text-anchor='middle' font-size='14' fill='#222'>H</text><line x1='240.0' y1='95.8' x2='240.0' y2='110.9' stroke='#222' stroke-width='1.5'/><text x='240.0' y='126.0' text-anchor='middle' font-size='14' fill='#222'>H</text><circle cx='226.0' cy='83.0' r='2.2' fill='#222' stroke='#222' stroke-width='1'/><circle cx='226.0' cy='91.0' r='2.2' fill='#222' stroke='#222' stroke-width='1'/><path d='M222,71 Q170,33 122,75' fill='none' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='170.0' y='39.0' text-anchor='middle' font-size='12' fill='#555'>전자쌍</text><text x='330.0' y='90.0' text-anchor='middle' font-size='18' fill='#222'>→</text><text x='420.0' y='90.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>B</text><line x1='410.0' y1='85.0' x2='392.6' y2='85.0' stroke='#222' stroke-width='1.5'/><text x='382.0' y='90.0' text-anchor='middle' font-size='14' fill='#222'>F</text><line x1='425.0' y1='76.3' x2='433.7' y2='61.2' stroke='#222' stroke-width='1.5'/><text x='439.0' y='57.0' text-anchor='middle' font-size='14' fill='#222'>F</text><line x1='425.0' y1='93.7' x2='433.7' y2='108.8' stroke='#222' stroke-width='1.5'/><text x='439.0' y='123.0' text-anchor='middle' font-size='14' fill='#222'>F</text><line x1='430.0' y1='85.0' x2='486.0' y2='85.0' stroke='#222' stroke-width='2.5'/><text x='498.0' y='90.0' text-anchor='middle' font-size='15' fill='#222' font-weight='bold'>N</text><line x1='507.0' y1='78.4' x2='519.6' y2='69.2' stroke='#222' stroke-width='1.5'/><text x='528.0' y='68.0' text-anchor='middle' font-size='14' fill='#222'>H</text><line x1='507.0' y1='91.6' x2='519.6' y2='100.8' stroke='#222' stroke-width='1.5'/><text x='528.0' y='112.0' text-anchor='middle' font-size='14' fill='#222'>H</text><line x1='498.0' y1='95.8' x2='498.0' y2='110.9' stroke='#222' stroke-width='1.5'/><text x='498.0' y='126.0' text-anchor='middle' font-size='14' fill='#222'>H</text><line x1='458.0' y1='89.0' x2='458.0' y2='129.0' stroke='#999' stroke-width='1'/><text x='458.0' y='143.0' text-anchor='middle' font-size='12' fill='#555'>배위 결합</text><text x='110.0' y='160.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>BF₃ · 루이스 산</text><text x='110.0' y='177.0' text-anchor='middle' font-size='12' fill='#555'>전자쌍을 받음</text><text x='250.0' y='160.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>NH₃ · 루이스 염기</text><text x='250.0' y='177.0' text-anchor='middle' font-size='12' fill='#555'>전자쌍을 내줌</text><text x='480.0' y='172.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>F₃B−NH₃</text></svg>",
+    "cap": "N의 비공유 전자쌍이 B의 빈자리로 들어가 배위 결합을 만든다",
+    "cap2": "결합 뒤 B도 옥텟을 채운다."
+   },
+   "deep": "브뢴스테드-로리 염기는 H⁺에 비공유 전자쌍을 내주어 결합하므로 모두 루이스 염기다. 루이스 산은 BF₃, 금속 양이온처럼 H가 없는 것까지 품는다.",
+   "next": "산마다 H⁺을 내놓는 정도가 다르다 · 산의 세기로."
+  },
+  {
+   "unit": "Ⅳ-2",
+   "tag": "산의 세기",
+   "title": "Ka·pKa와 산의 세기",
+   "trap": {
+    "q": "진한 산은 강산이고, 묽은 산은 약산이다.",
+    "a": "세기는 **이온화하는 비율**, 농도는 녹아 있는 양이다. 아주 묽은 염산도 강산이고 진한 아세트산도 **약산**이다.",
+    "fix": "세기와 농도는 별개다."
+   },
+   "truths": [
+    "같은 온도에서 **Ka가 큰 산일수록 pKa는 작고** 더 강한 산이다. pKa가 1 작으면 Ka는 10배 크다.",
+    "HCl은 강산이므로 그 짝염기 Cl⁻은 H⁺을 도로 받으려는 경향이 매우 약하다. **강한 산의 짝염기는 약한 염기**다.",
+    "같은 족 HX는 **H−X 결합이 약할수록** 강한 산이라 HF가 HI보다 약하고, 중심 원자가 같은 산소산은 **O가 많을수록** 강해 HClO < HClO₄다."
+   ],
+   "fig": {
+    "title": "pKa 눈금과 짝염기",
+    "svg": "<svg viewBox='0 0 600 190' width='600' height='190'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='60.0' y1='95.0' x2='560.0' y2='95.0' stroke='#222' stroke-width='2'/><line x1='136.9' y1='91.0' x2='136.9' y2='99.0' stroke='#222' stroke-width='1.5'/><text x='136.9' y='115.0' text-anchor='middle' font-size='12' fill='#555'>0</text><line x1='213.8' y1='91.0' x2='213.8' y2='99.0' stroke='#222' stroke-width='1.5'/><text x='213.8' y='115.0' text-anchor='middle' font-size='12' fill='#555'>2</text><line x1='290.8' y1='91.0' x2='290.8' y2='99.0' stroke='#222' stroke-width='1.5'/><text x='290.8' y='115.0' text-anchor='middle' font-size='12' fill='#555'>4</text><line x1='367.7' y1='91.0' x2='367.7' y2='99.0' stroke='#222' stroke-width='1.5'/><text x='367.7' y='115.0' text-anchor='middle' font-size='12' fill='#555'>6</text><line x1='444.6' y1='91.0' x2='444.6' y2='99.0' stroke='#222' stroke-width='1.5'/><text x='444.6' y='115.0' text-anchor='middle' font-size='12' fill='#555'>8</text><line x1='521.5' y1='91.0' x2='521.5' y2='99.0' stroke='#222' stroke-width='1.5'/><text x='521.5' y='115.0' text-anchor='middle' font-size='12' fill='#555'>10</text><text x='568.0' y='115.0' text-anchor='start' font-size='12' fill='#555'>pKa</text><circle cx='83.1' cy='95.0' r='5' fill='#222' stroke='#222' stroke-width='1'/><text x='83.1' y='55.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>HCl</text><line x1='83.1' y1='61.0' x2='83.1' y2='87.0' stroke='#999' stroke-width='1'/><text x='83.1' y='147.0' text-anchor='middle' font-size='14' fill='#222'>Cl⁻</text><line x1='83.1' y1='131.0' x2='83.1' y2='103.0' stroke='#999' stroke-width='1' stroke-dasharray='3 3'/><circle cx='260.0' cy='95.0' r='5' fill='#222' stroke='#222' stroke-width='1'/><text x='260.0' y='55.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>HF</text><line x1='260.0' y1='61.0' x2='260.0' y2='87.0' stroke='#999' stroke-width='1'/><text x='260.0' y='147.0' text-anchor='middle' font-size='14' fill='#222'>F⁻</text><line x1='260.0' y1='131.0' x2='260.0' y2='103.0' stroke='#999' stroke-width='1' stroke-dasharray='3 3'/><circle cx='321.5' cy='95.0' r='5' fill='#222' stroke='#222' stroke-width='1'/><text x='321.5' y='55.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>CH₃COOH</text><line x1='321.5' y1='61.0' x2='321.5' y2='87.0' stroke='#999' stroke-width='1'/><text x='321.5' y='147.0' text-anchor='middle' font-size='14' fill='#222'>CH₃COO⁻</text><line x1='321.5' y1='131.0' x2='321.5' y2='103.0' stroke='#999' stroke-width='1' stroke-dasharray='3 3'/><circle cx='490.8' cy='95.0' r='5' fill='#222' stroke='#222' stroke-width='1'/><text x='490.8' y='55.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>NH₄⁺</text><line x1='490.8' y1='61.0' x2='490.8' y2='87.0' stroke='#999' stroke-width='1'/><text x='490.8' y='147.0' text-anchor='middle' font-size='14' fill='#222'>NH₃</text><line x1='490.8' y1='131.0' x2='490.8' y2='103.0' stroke='#999' stroke-width='1' stroke-dasharray='3 3'/><text x='83.1' y='37.0' text-anchor='middle' font-size='12' fill='#555'>(pKa < 0)</text><line x1='330.0' y1='20.0' x2='120.0' y2='20.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='345.0' y='25.0' text-anchor='start' font-size='13' fill='#222'>산이 강하다 (Ka 큼)</text><line x1='330.0' y1='175.0' x2='540.0' y2='175.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='315.0' y='180.0' text-anchor='end' font-size='13' fill='#222'>짝염기가 강하다</text><text x='30.0' y='59.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>산</text><text x='30.0' y='151.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>짝염기</text></svg>",
+    "cap": "왼쪽일수록 강한 산, 그 짝염기는 오른쪽일수록 강하다",
+    "cap2": "F의 전기음성도가 커도 H−F 결합이 강해 HF는 약산이다."
+   },
+   "deep": "전기음성도가 통하는 곳은 같은 주기다. CH₄ < NH₃ < H₂O < HF 순으로 산이 강해지는데, 크기가 비슷한 원자끼리는 결합 전자가 X 쪽으로 더 쏠리기 때문이다.",
+   "next": "산과 염기는 원소의 산화물에서도 갈린다."
+  },
+  {
+   "unit": "Ⅳ-2",
+   "tag": "산화물",
+   "title": "산화물의 액성",
+   "trap": {
+    "q": "SiO₂는 물에 거의 녹지 않으므로 산성 산화물이 아니다.",
+    "a": "기준은 무엇과 반응해 염을 만드는지다. SiO₂는 NaOH와 반응해 **Na₂SiO₃**를 만드는 **산성 산화물**이다.",
+    "fix": "염기와 반응하는 산성 산화물이다."
+   },
+   "truths": [
+    "**금속 산화물은 대체로 염기성 산화물**로 산과 반응해 염을 만든다. Na₂O, CaO는 물에 녹아 염기성을 띤다.",
+    "**비금속 산화물은 대체로 산성 산화물**로 염기와 반응해 염을 만든다. CO₂, SO₃는 물에 녹아 산성을 띤다.",
+    "Al₂O₃와 ZnO는 산과도 염기와도 반응하는 **양쪽성 산화물**이고, CO와 NO는 **중성 산화물**이다."
+   ],
+   "fig": {
+    "title": "3주기 산화물",
+    "svg": "<svg viewBox='0 0 600 196' width='600' height='196'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><text x='300.0' y='22.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>3주기 원소의 산화물 (왼쪽 → 오른쪽)</text><rect x='36.0' y='40.0' width='70.0' height='50.0' fill='#555' stroke='#222' stroke-width='1' rx='3'/><text x='71.0' y='71.0' text-anchor='middle' font-size='14' fill='#fff' font-weight='bold'>Na₂O</text><rect x='112.0' y='40.0' width='70.0' height='50.0' fill='#555' stroke='#222' stroke-width='1' rx='3'/><text x='147.0' y='71.0' text-anchor='middle' font-size='14' fill='#fff' font-weight='bold'>MgO</text><rect x='188.0' y='40.0' width='70.0' height='50.0' fill='#fff' stroke='#222' stroke-width='1' rx='3'/><text x='223.0' y='71.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>Al₂O₃</text><rect x='264.0' y='40.0' width='70.0' height='50.0' fill='#ccc' stroke='#222' stroke-width='1' rx='3'/><text x='299.0' y='71.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>SiO₂</text><rect x='340.0' y='40.0' width='70.0' height='50.0' fill='#ccc' stroke='#222' stroke-width='1' rx='3'/><text x='375.0' y='71.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>P₄O₁₀</text><rect x='416.0' y='40.0' width='70.0' height='50.0' fill='#ccc' stroke='#222' stroke-width='1' rx='3'/><text x='451.0' y='71.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>SO₃</text><rect x='492.0' y='40.0' width='70.0' height='50.0' fill='#ccc' stroke='#222' stroke-width='1' rx='3'/><text x='527.0' y='71.0' text-anchor='middle' font-size='14' fill='#222' font-weight='bold'>Cl₂O₇</text><path d='M36,100 L36,108 L182,108 L182,100' fill='none' stroke='#222' stroke-width='1.5'/><text x='109.0' y='128.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>염기성</text><text x='109.0' y='145.0' text-anchor='middle' font-size='12' fill='#555'>산과 반응</text><path d='M188,100 L188,108 L258,108 L258,100' fill='none' stroke='#222' stroke-width='1.5'/><text x='223.0' y='128.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>양쪽성</text><text x='223.0' y='145.0' text-anchor='middle' font-size='12' fill='#555'>산·염기 모두</text><path d='M264,100 L264,108 L562,108 L562,100' fill='none' stroke='#222' stroke-width='1.5'/><text x='413.0' y='128.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>산성</text><text x='413.0' y='145.0' text-anchor='middle' font-size='12' fill='#555'>염기와 반응 · SiO₂도 NaOH와 반응</text><line x1='60.0' y1='172.0' x2='540.0' y2='172.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='300.0' y='190.0' text-anchor='middle' font-size='12' fill='#555'>금속 → 비금속: 염기성 → 양쪽성 → 산성</text></svg>",
+    "cap": "같은 주기에서 오른쪽으로 갈수록 염기성 → 양쪽성 → 산성"
+   },
+   "deep": "Na₂O는 O²⁻을 가진 이온 결합 물질이라 O²⁻이 물과 반응해 OH⁻ 2개가 되고, SO₃는 공유 결합 분자라 물과 결합해 산소산 H₂SO₄가 된다.",
+   "next": "산과 염기가 만나면 · 중화 반응으로."
+  },
+  {
+   "unit": "Ⅳ-2",
+   "tag": "중화 반응",
+   "title": "알짜 이온 반응식과 염",
+   "trap": {
+    "q": "아세트산과 NaOH 수용액의 알짜 이온 반응식도 H⁺ + OH⁻ → H₂O이다.",
+    "a": "약산은 대부분 **분자 상태**로 있어 분자 그대로 쓴다: **CH₃COOH + OH⁻ → CH₃COO⁻ + H₂O**.",
+    "fix": "약산은 분자 그대로 쓴다."
+   },
+   "truths": [
+    "묽은 염산과 KOH 수용액의 중화에서 알짜 이온 반응식은 **H⁺ + OH⁻ → H₂O**이고, K⁺과 Cl⁻은 그대로 남는다.",
+    "반응하지 않고 남는 이온이 **구경꾼 이온**이다. 묽은 황산과 NaOH의 중화에서는 Na⁺과 SO₄²⁻이고 **염은 Na₂SO₄**다.",
+    "CH₃COOH와 NaOH가 꼭 맞게 중화된 용액은 **염기성**이다. 약산에서 온 CH₃COO⁻이 물에서 H⁺을 빼앗기 때문이다."
+   ],
+   "fig": {
+    "title": "중화의 입자 모형",
+    "svg": "<svg viewBox='0 0 600 196' width='600' height='196'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><path d='M20,30 L20,150 L160,150 L160,30' fill='none' stroke='#222' stroke-width='2'/><path d='M225,30 L225,150 L365,150 L365,30' fill='none' stroke='#222' stroke-width='2'/><path d='M440,30 L440,150 L580,150 L580,30' fill='none' stroke='#222' stroke-width='2'/><circle cx='55.0' cy='70.0' r='15' fill='#ccc' stroke='#222' stroke-width='1'/><text x='55.0' y='74.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>H⁺</text><circle cx='120.0' cy='60.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='120.0' y='64.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Cl⁻</text><circle cx='65.0' cy='120.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='65.0' y='124.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Cl⁻</text><circle cx='125.0' cy='115.0' r='15' fill='#ccc' stroke='#222' stroke-width='1'/><text x='125.0' y='119.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>H⁺</text><circle cx='260.0' cy='70.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='260.0' y='74.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Na⁺</text><circle cx='325.0' cy='60.0' r='15' fill='#555' stroke='#222' stroke-width='1'/><text x='325.0' y='64.0' text-anchor='middle' font-size='12' fill='#fff' font-weight='bold'>OH⁻</text><circle cx='270.0' cy='120.0' r='15' fill='#555' stroke='#222' stroke-width='1'/><text x='270.0' y='124.0' text-anchor='middle' font-size='12' fill='#fff' font-weight='bold'>OH⁻</text><circle cx='330.0' cy='115.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='330.0' y='119.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Na⁺</text><text x='195.0' y='95.0' text-anchor='middle' font-size='20' fill='#222'>+</text><text x='405.0' y='95.0' text-anchor='middle' font-size='20' fill='#222'>→</text><circle cx='470.0' cy='65.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='470.0' y='69.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Na⁺</text><circle cx='540.0' cy='60.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='540.0' y='64.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Cl⁻</text><circle cx='480.0' cy='120.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='480.0' y='124.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Cl⁻</text><circle cx='550.0' cy='118.0' r='15' fill='#fff' stroke='#222' stroke-width='1'/><text x='550.0' y='122.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>Na⁺</text><ellipse cx='512' cy='92' rx='22' ry='13' fill='#eee' stroke='#222'/><text x='512.0' y='96.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>H₂O</text><ellipse cx='510' cy='130' rx='22' ry='13' fill='#eee' stroke='#222'/><text x='510.0' y='134.0' text-anchor='middle' font-size='12' fill='#222' font-weight='bold'>H₂O</text><text x='90.0' y='172.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>HCl(aq)</text><text x='295.0' y='172.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>NaOH(aq)</text><text x='510.0' y='172.0' text-anchor='middle' font-size='13' fill='#222' font-weight='bold'>섞은 뒤</text><text x='510.0' y='190.0' text-anchor='middle' font-size='12' fill='#555'>Na⁺·Cl⁻ = 구경꾼 이온</text></svg>",
+    "cap": "H⁺과 OH⁻만 물이 되고, Na⁺과 Cl⁻은 그대로 남는다"
+   },
+   "deep": "이온이 물과 반응해 액성을 바꾸는 것이 **염의 가수 분해**다. 강산+강염기의 염 KNO₃는 중성, 약산+강염기의 Na₂CO₃는 염기성, 강산+약염기의 NH₄NO₃는 산성이다.",
+   "next": "몇 mL가 필요한가 · 중화의 양적 관계로."
+  },
+  {
+   "unit": "Ⅳ-2",
+   "tag": "양적 관계",
+   "title": "중화의 양적 관계와 이온 수",
+   "trap": {
+    "q": "HCl 수용액에 NaOH 수용액을 넣으면 중화점까지 전체 이온 수가 줄어든다.",
+    "a": "H⁺ 하나가 물이 되어 사라질 때마다 Na⁺ 하나가 들어온다. 그래서 중화점까지 **전체 이온 수는 일정**하다.",
+    "fix": "중화점까지 전체 이온 수는 일정하다."
+   },
+   "truths": [
+    "완전 중화는 **H⁺ 몰수 = OH⁻ 몰수**일 때다(**nMV = n′M′V′**). 0.2 M NaOH 30 mL는 0.1 M H₂SO₄ 30 mL로 중화된다.",
+    "같은 몰 농도·같은 부피의 H₂SO₄와 NaOH를 섞으면 H⁺이 OH⁻의 2배라 **산성**이다. 남은 이온이 액성을 정한다.",
+    "앙금이 생기지 않는 강산-강염기의 **중화열은 물 1 mol당 약 56 kJ**로, 산과 염기의 종류가 달라도 거의 같다."
+   ],
+   "fig": {
+    "title": "이온 수의 변화",
+    "svg": "<svg viewBox='0 0 600 196' width='600' height='196'><defs><marker id='ah' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#222'/></marker></defs><line x1='70.0' y1='170.0' x2='490.0' y2='170.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><line x1='70.0' y1='170.0' x2='70.0' y2='15.0' stroke='#222' stroke-width='1.5' marker-end='url(#ah)'/><text x='490.0' y='188.0' text-anchor='end' font-size='12' fill='#222'>NaOH 부피</text><text x='64.0' y='26.0' text-anchor='end' font-size='12' fill='#222'>이온 수</text><line x1='270.0' y1='170.0' x2='270.0' y2='30.0' stroke='#999' stroke-width='1' stroke-dasharray='4 3'/><text x='270.0' y='188.0' text-anchor='middle' font-size='12' fill='#222'>중화점</text><path d='M70.0,100.0 L270.0,100.0 L470.0,30.0' fill='none' stroke='#222' stroke-width='3.5'/><path d='M70.0,135.0 L270.0,170.0' fill='none' stroke='#555' stroke-width='2' stroke-dasharray='6 3'/><path d='M70.0,136.5 L470.0,136.5' fill='none' stroke='#999' stroke-width='2'/><path d='M70.0,170.0 L470.0,100.0' fill='none' stroke='#555' stroke-width='2'/><path d='M270.0,168.5 L470.0,133.5' fill='none' stroke='#222' stroke-width='1.5' stroke-dasharray='2 3'/><text x='476.0' y='35.0' text-anchor='start' font-size='13' fill='#222' font-weight='bold'>전체</text><text x='476.0' y='105.0' text-anchor='start' font-size='13' fill='#222'>Na⁺</text><text x='476.0' y='131.0' text-anchor='start' font-size='13' fill='#555'>Cl⁻</text><text x='476.0' y='149.0' text-anchor='start' font-size='13' fill='#222'>OH⁻</text><text x='78.0' y='157.0' text-anchor='start' font-size='13' fill='#555'>H⁺</text><text x='170.0' y='92.0' text-anchor='middle' font-size='12' fill='#555'>일정</text></svg>",
+    "cap": "HCl 수용액에 NaOH 수용액을 넣을 때 각 이온의 수",
+    "cap2": "중화점 뒤에는 Na⁺과 OH⁻이 함께 늘어 전체가 커진다."
+   },
+   "deep": "전기 전도도는 **중화점에서 가장 작다**. 이온 수는 같아도 빠른 H⁺이 느린 Na⁺으로 바뀌고, 부피가 늘어 이온 농도도 묽어지기 때문이다.",
+   "next": "중화로 농도를 잰다 · 10회차 중화 적정으로."
+  }
+ ]
+}

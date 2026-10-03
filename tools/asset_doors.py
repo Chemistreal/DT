@@ -48,6 +48,19 @@ KNOWN = {
     'volumes/chem2_volume2_rounds10to18.pdf',
     'supplements/chem_hwaol_simhwa_prestudy.pdf',
     'supplements/chem_hwaol_truthlist.pdf',
+    # 화학1 심화반 선수노트(2026-10-03). 과목이 아직 앱에 없어 걸 화면이 없다 — 7단계(앱에 과목 추가)에서
+    # materials 에 걸고 여기서 지운다. 그때까지는 ZIP 으로 직접 건넨다.
+    'truthbooks/chem1s_round01_truthbook_bw.pdf',
+    'truthbooks/chem1s_round02_truthbook_bw.pdf',
+    'truthbooks/chem1s_round03_truthbook_bw.pdf',
+    'truthbooks/chem1s_round04_truthbook_bw.pdf',
+    'truthbooks/chem1s_round05_truthbook_bw.pdf',
+    'truthbooks/chem1s_round06_truthbook_bw.pdf',
+    'truthbooks/chem1s_round07_truthbook_bw.pdf',
+    'truthbooks/chem1s_round08_truthbook_bw.pdf',
+    'truthbooks/chem1s_round09_truthbook_bw.pdf',
+    'truthbooks/chem1s_round10_truthbook_bw.pdf',
+    'volumes/chem1s_volume_rounds1to10.pdf',
 }
 
 

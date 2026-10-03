@@ -380,6 +380,20 @@ def check():
         for c, v in dp.items():
             if not (90 <= len(v) <= 200) or '℃' in v:
                 errs.append('%s 한 겹 더 길이 %d · ℃' % (c, len(v)))
+    # 선수노트 글(truthbook/round_NN.json) — 렌더는 truthbook/render.js 가 한다(브라우저가 필요해 CI 밖)
+    for r in range(1, 11):
+        tp = os.path.join(HERE, 'truthbook', 'round_%02d.json' % r)
+        if not os.path.exists(tp):
+            continue
+        tb = load(tp)
+        if tb.get('round') != r or not (6 <= len(tb.get('steps', [])) <= 7):
+            errs.append('선수노트 %d회 머리·걸음 수' % r)
+        for i, s in enumerate(tb.get('steps', []), 1):
+            if len(s.get('truths', [])) != 3 or not all(s['trap'].get(k) for k in ('q', 'a', 'fix')) \
+                    or '<svg' not in s.get('fig', {}).get('svg', ''):
+                errs.append('선수노트 %d-%d 칸이 빠졌다' % (r, i))
+            if '℃' in json.dumps(s, ensure_ascii=False):
+                errs.append('선수노트 %d-%d ℃ 대신 °C' % (r, i))
     # 재시
     for r in range(1, 11):
         rc = rounds[r].get('retakeC', [])
