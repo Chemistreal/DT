@@ -269,7 +269,7 @@
             { color: MUT, size: 18, after: 110 }));
       ch.slice(0, 8).forEach(function (m, i) {
         body.push(P([run((i + 1) + '.  ', { bold: true, color: GOLD, size: 21 }),
-                     run(m.mis, { bold: true, color: INK, size: 21 }),
+                     run(typeof window.misLabel === 'function' ? window.misLabel(m.mis, latest.course) : m.mis, { bold: true, color: INK, size: 21 }),   // 화면과 같은 이름(심화반은 심화반 이름)
                      run(m.rounds ? ('    ' + m.rounds + '개 회차') : '', { color: MUT, size: 18 })],
                     { after: 60 }));
       });

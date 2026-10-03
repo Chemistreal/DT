@@ -2013,7 +2013,7 @@ async function assertNoOverflow(page, label) {
          여기서는 문이 붙는 **자리**만 보고, 어느 강의로 가는지는 lec_link.py 가 지킨다. */
       let lecCalls = 0;
       const ctx = new Function('rEsc', 'segNo', 'CORE', 'ONELINE', 'md', 'lecLinkHTML',
-        grab('segClinicSec') + '\nreturn { segClinicSec: segClinicSec };'
+        grab('oneOf') + '\n' + grab('coreOf') + '\n' + grab('segClinicSec') + '\nreturn { segClinicSec: segClinicSec };'   // 한 줄 정리·핵심은 과목을 보는 oneOf·coreOf 로 찾는다(7단계 2차)
       )(x => String(x), n => String(n), CORE, {}, x => String(x),
         () => { lecCalls++; return '<a class="leclink">▶ 개념 강의 보기 ↗</a>'; });
 
@@ -2094,7 +2094,7 @@ async function assertNoOverflow(page, label) {
       { n: '1-06', u: '단원', c: 'C', mis: '개념C', a: 'X', s: 'C2', f: 'C2고침', lvl: 2 },
     ];
     const mk = () => new Function('loadRoundItems', 'rptEstRates', 'seedSliceFor', 'rEsc', 'segNo', 'CORE', 'ONELINE', 'md', 'lecLinkHTML',
-      grabFn('segJoin') + '\n' + grabFn('segClinicSec') + '\n' + grabFn('segTableSec')
+      grabFn('segJoin') + '\n' + grabFn('oneOf') + '\n' + grabFn('coreOf') + '\n' + grabFn('segClinicSec') + '\n' + grabFn('segTableSec')
       + '\nreturn { segJoin: segJoin, segClinicSec: segClinicSec, segTableSec: segTableSec };'
     )(async () => ITEMS.map(x => Object.assign({}, x)), () => [], () => null,
       x => String(x), n => String(n), {}, {}, x => String(x), () => '');
@@ -3763,6 +3763,289 @@ async function assertNoOverflow(page, label) {
       await page.goto(BASE + 'challenge.html'); await page.waitForTimeout(500);
       const picks = await page.$$eval('.rpick', bs => bs.map(b => b.textContent));
       assert(picks.length === 3 && picks.indexOf('화학Ⅰ 심화') < 0, '과목 단추: ' + picks.join(','));
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     7단계(2차) — 화학1 기록을 심화반에 잇고, 과목이 섞이는 곳을 고쳤다 (2026-10-03)
+     학생은 과목과 무관하게 «학교-이름» 키 하나라 성적표·재시는 그 학생의 모든 과목 행을 함께 받는다.
+       (i)   ch1+ch1s 학생 성적표에 「화학1에서 이어 온 기록」이 맞는 심화 개념으로 뜬다
+       (ii)  ch1s 재시가 화학1에서 본 문장을 피하고 틀린 문장을 안 낸다 — 같은 입력이면 같은 재시
+       (iii) 한 과목 학생(ch1 · ch2)의 성적표·재시는 고치기 전과 글자까지 같다(tests/fixtures/single_course_snapshot.json)
+       (iv)  ch1+ch2 학생은 보고 있는 과목 하나로 정리된다 — 복습 시점·이번 회차·단원 누적이 과목별로 갈린다
+     ══════════════════════════════════════════════════════════════ */
+  {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const LINK = JSON.parse(fs.readFileSync(path.join(ROOT, 'courses', 'ch1s', 'link_ch1.json'), 'utf8'));
+    const BANK = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'forms_bank.json'), 'utf8'));
+    const RF = (c, n) => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_' + c + '_' + String(n).padStart(2, '0') + '.json'), 'utf8'));
+    const flip = a => (a === 'O' ? 'X' : 'O');
+    const SNAP = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'single_course_snapshot.json'), 'utf8'));
+    const mk = (K, course, round, attempt, wrong, date, extra) => {
+      const items = RF(course, round).jeongsi.items;
+      const ans = items.map((it, i) => wrong.indexOf(i) >= 0 ? flip(it.a) : it.a).join('');
+      const units = {};
+      items.forEach((it, i) => { const u = units[it.u] || (units[it.u] = { u: it.u, t: 0, w: 0 }); u.t++; if (wrong.indexOf(i) >= 0) u.w++; });
+      const score = Math.round(10000 * (items.length - wrong.length) / items.length) / 100;
+      return Object.assign({ studentKey: K, name: '이음', school: '가상고', year: '2', course, round, attempt, score, pass: score >= 80, date,
+        answers: ans, wrongMis: wrong.map(i => items[i].mis), wrongAxes: {}, units: Object.keys(units).map(k => units[k]), axes: [], isTest: false }, extra || {});
+    };
+    /* 성적표 창구 흉내 — 서버처럼 ?c= 를 받아 그 과목으로 정리한다(cumulative 는 저장소 엔진). 받은 주소를 모은다. */
+    const serve = async (page, rows, K, opts) => {
+      opts = opts || {};
+      const got = [];
+      page.on('request', rq => { const u = rq.url(); if (u.startsWith(BASE)) got.push(u.slice(BASE.length).split('?')[0]); });
+      await page.route('**/macros/s/**', route => {
+        const u = new URL(route.request().url()), c = u.searchParams.get('c') || '';
+        const A = opts.oldServer ? CE.cumulative(rows.map(r => Object.assign({}, r, { course: r.course })))[K] : CE.cumulative(rows, c)[K];
+        if (opts.oldServer) { delete A.course; delete A.courses; }
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: A, rank: opts.rank || null, cohort: null }) });
+      });
+      await page.goto(BASE + 'report.html?student=x' + (opts.c ? '&c=' + opts.c : ''));
+      await page.waitForSelector('.ladder', { timeout: 20000 });
+      await page.waitForLoadState('networkidle'); await page.waitForTimeout(400);
+      return got;
+    };
+
+    /* ── (i) 화학1 → 심화 · 성적표 ── */
+    const K1 = '가상고-이음';
+    const C1T = ['CH1S-012', 'CH1S-108', 'CH1S-027'];       // 동위원소 정의 · 루이스 구조·전자쌍 · 몰 질량
+    const wrongTo = (course, round, set, also) => RF(course, round).jeongsi.items.map((x, i) => i).filter(i => {
+      const x = RF(course, round).jeongsi.items[i]; return set.indexOf(course === 'ch1' ? LINK.map[x.c] : x.c) >= 0 || (also && also(i));
+    });
+    const molCh1 = RF('ch1', 6).jeongsi.items.filter(x => LINK.map[x.c] === 'CH1S-027').map(x => x.c);
+    const ROWS1 = [];
+    for (let r = 1; r <= 6; r++) ROWS1.push(mk(K1, 'ch1', r, '첫 응시', wrongTo('ch1', r, C1T, i => i % 9 === 4), '2026-03-0' + r + 'T01:00:00Z'));
+    /* 6회 재시: 몰 질량 자리(화학1 코드)를 다 맞혔다 — 재시 서명(retakeCids · retakeKeys)으로 «재시에서 고침» */
+    ROWS1.push(Object.assign(mk(K1, 'ch1', 6, '재시', [], '2026-03-07T01:00:00Z'),
+      { answers: molCh1.map(() => 'O').join(''), retakeCids: molCh1.join(','), retakeKeys: molCh1.map(() => 'O').join(''), wrongMis: [] }));
+    ROWS1.push(mk(K1, 'ch1s', 1, '첫 응시', wrongTo('ch1s', 1, ['CH1S-012'], i => i % 7 === 3), '2026-09-07T01:00:00Z'));
+    ROWS1.push(mk(K1, 'ch1s', 2, '첫 응시', wrongTo('ch1s', 2, [], i => i % 6 === 1), '2026-09-14T01:00:00Z'));
+
+    await test('7단계 2차 (i) · ch1+ch1s 학생 성적표에 「화학1에서 이어 온 기록」 — 맞는 심화 개념 · 심화반에서 다시 물었는지', async page => {
+      const got = await serve(page, ROWS1, K1);
+      const its = {}; for (let r = 1; r <= 6; r++) its['ch1#' + r] = RF('ch1', r).jeongsi.items;
+      const co = CE.carryOver(ROWS1, its, LINK), cv = CE.carryView(ROWS1, co, 'ch1s');
+      const r = await page.evaluate(() => ({
+        text: document.getElementById('app').innerText,
+        cv: typeof CARRYV !== 'undefined' ? CARRYV : null, latest: latest.course + '#' + latest.round,
+        tabs: [].slice.call(document.querySelectorAll('nav.crstabs a')).map(a => (a.getAttribute('aria-current') ? '*' : '') + a.textContent),
+        c1rx: [].slice.call(document.querySelectorAll('.rx.c1')).map(x => ({ nm: x.querySelector('.nm').textContent, tag: (x.querySelector('.c1tag') || {}).textContent, line: (x.querySelector('.c1line') || {}).textContent, ol: (x.querySelector('.ol') || {}).textContent || '' })),
+      }));
+      assert(r.latest === 'ch1s#2', '이번 회차가 심화반 2회가 아니다: ' + r.latest);
+      assert(r.tabs.join(',') === '화학 I,*화학 I 심화', '과목 고르기: ' + r.tabs.join(','));
+      assert(r.text.indexOf('화학1에서 이어 온 기록') >= 0, '「화학1에서 이어 온 기록」 이 없다');
+      assert(JSON.stringify(r.cv) === JSON.stringify(cv), '화면의 이어 온 기록이 엔진(carryOver·carryView)과 다르다');
+      const nm = c => LINK.names[c];
+      const byNm = {}; r.c1rx.forEach(x => { byNm[x.nm] = x; });
+      C1T.forEach(c => assert(byNm[nm(c)], '「' + nm(c) + '」(' + c + ') 이 화학1 기록 합산 고질로 안 섰다: ' + Object.keys(byNm).join(',')));
+      r.c1rx.forEach(x => assert(x.tag === '화학1 기록 합산', x.nm + ' 꼬리표: ' + x.tag));
+      assert(/심화반에서는 아직 안 물음/.test(byNm[nm('CH1S-108')].line), '루이스 구조: 심화반에서 안 물은 것을 말하지 않는다: ' + byNm[nm('CH1S-108')].line);
+      assert(/심화반 1회에서 다시 물어 또 틀림/.test(byNm[nm('CH1S-012')].line), '동위원소 정의: 심화반에서 또 틀린 것을 말하지 않는다: ' + byNm[nm('CH1S-012')].line);
+      assert(/재시에서 고침/.test(byNm[nm('CH1S-027')].line) && /다시 물어 맞힘/.test(byNm[nm('CH1S-027')].line), '몰 질량: 화학1 재시에서 고침 · 심화반에서 맞힘: ' + byNm[nm('CH1S-027')].line);
+      /* 핵심 글은 심화반 글(코드로 찾는다) — 이름이 같은 화학1 글이 아니다 */
+      const SRCN = JSON.parse(fs.readFileSync(path.join(ROOT, 'courses', 'ch1s', 'forms_bank_ch1s.json'), 'utf8'));
+      const ol12 = (SRCN['CH1S-012'].reading || {}).oneline || '';
+      if (ol12) assert(byNm[nm('CH1S-012')].ol.indexOf(ol12.replace(/\*\*/g, '').slice(0, 12)) >= 0, '동위원소 정의 핵심이 심화반 글이 아니다: ' + byNm[nm('CH1S-012')].ol);
+      /* 필요한 것만 받았다: 대응표 하나 + 답안 있는 화학1 회차 6개 */
+      assert(got.filter(u => u === 'courses/ch1s/link_ch1.json').length === 1, '대응표를 안 받았다(또는 여러 번): ' + got.filter(u => /link_/.test(u)).length);
+      const r1 = got.filter(u => /^appdata\/round_ch1_\d\d\.json$/.test(u)).filter((u, i, a) => a.indexOf(u) === i).sort();
+      assert(r1.join(',') === [1, 2, 3, 4, 5, 6].map(n => 'appdata/round_ch1_0' + n + '.json').join(','), '화학1 회차 파일: ' + r1.join(','));
+      await assertNoOverflow(page, 'report-carry');
+    });
+
+    await test('7단계 2차 (i) · 심화반에서 세 번 이상 물으면 심화반 기록이 우선 · 화학1 행이 없으면 아무것도 안 받는다', async page => {
+      /* 엔진: 같은 개념을 심화반 3회에서 물어 다 맞혔으면 이어 온 고질이 판단에서 빠진다(own3) */
+      const t = 'CH1S-001', name = LINK.names[t];
+      const carry = { from: 'ch1', rounds: [1, 2, 3], concepts: {}, chronic: [t], weak: [t] };
+      carry.concepts[t] = { c: t, m: name, asked: 3, wrong: 3, rounds: [1, 2, 3], wrongRounds: [1, 2, 3], fixed: false };
+      const askR = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(r => CE.roundMisOf('ch1s', r).indexOf(CE.misCanon(name)) >= 0);
+      assert(askR.length >= 3, name + ' 을 묻는 심화반 회차가 셋이 안 된다');
+      const own = n => askR.slice(0, n).map(r => ({ course: 'ch1s', round: r, attempt: '첫 응시', wrongMis: [] }));
+      const v2 = CE.carryView(own(2), carry, 'ch1s').list[0], v3 = CE.carryView(own(3), carry, 'ch1s').list[0];
+      assert(v2.chronic && !v2.own3 && v2.own.asked === 2 && v2.own.last === 'ok', '두 번 물어 맞혔으면 아직 합산(3/5 → 고질): ' + JSON.stringify(v2));
+      assert(!v3.chronic && v3.own3, '세 번 물으면 심화반 기록만(이어 온 고질은 빠진다): ' + JSON.stringify(v3));
+      /* 화면: 심화반 행만 있는 학생은 대응표·화학1 회차를 하나도 안 받는다 */
+      const only = ROWS1.filter(x => x.course === 'ch1s');
+      const got = await serve(page, only, K1);
+      assert(!got.some(u => /link_ch1|round_ch1_/.test(u)), '화학1 행이 없는데 받았다: ' + got.filter(u => /link_ch1|round_ch1_/.test(u)).join(','));
+      const txt = await page.evaluate(() => document.getElementById('app').innerText);
+      assert(txt.indexOf('화학1에서 이어 온 기록') < 0 && !(await page.$('nav.crstabs')), '한 과목인데 이어 온 기록·과목 고르기가 섰다');
+    });
+
+    /* ── (ii) 재시 · 게이트가 화학1에서 본 문장을 피한다 ── */
+    const K2 = '가상고-재시이음';
+    const ROWS2 = [];
+    for (let r = 1; r <= 6; r++) ROWS2.push(mk(K2, 'ch1', r, '첫 응시', RF('ch1', r).jeongsi.items.map((x, i) => i).filter(i => i % 5 === 0), '2026-03-0' + r + 'T01:00:00Z'));
+    const S1 = RF('ch1s', 1);
+    ROWS2.push(mk(K2, 'ch1s', 1, '첫 응시', S1.jeongsi.items.map((x, i) => i).filter(i => i % 3 === 0), '2026-09-07T01:00:00Z'));
+    const its2 = {}; for (let r = 1; r <= 6; r++) its2['ch1#' + r] = RF('ch1', r).jeongsi.items;
+    const CO2 = CE.carryOver(ROWS2, its2, LINK);
+    const engineRetake = withCarry => {
+      const items = S1.jeongsi.items, first = ROWS2[ROWS2.length - 1];
+      const g = CE.gradeAttempt(first.answers.split(''), items, S1.scoring), dx = CE.diagnose(g, BANK), seen = {}, ws = {};
+      items.forEach(x => { seen[CE.norm(x.s)] = 1; }); g.perItem.forEach((p, i) => { if (!p.ok) ws[CE.norm(items[i].s)] = 1; });
+      if (withCarry) { Object.keys(CO2.seen).forEach(k => { seen[k] = 1; }); Object.keys(CO2.wrongStmts).forEach(k => { ws[k] = 1; }); }
+      const gate = CE.buildGate(dx.wrongConcepts, BANK, seen);
+      const rt = CE.buildRetake(2, S1.retakeC, dx.wrongConcepts.map(w => w.c).filter(Boolean), BANK, seen, ws, CE.lvlOn('ch1s', 1) ? items : false);
+      return { gate: gate.gates.map(x => x.checks.map(c => c.s)), retake: rt.items.map(x => (x.c || '') + '|' + x.s + '=' + x.a) };
+    };
+    const hits = st => ({ seen: st.filter(s => CO2.seen[CE.norm(s)]).length, wrong: st.filter(s => CO2.wrongStmts[CE.norm(s)]).length });
+    const stmts = o => [].concat.apply([], o.gate).concat(o.retake.map(x => x.split('|')[1].replace(/=[OX]$/, '')));
+    /* 게이트는 화면이 뿌리 차례로 다시 늘어놓는다(applyRootOrder) — 확인 문장 묶음을 차례 없이 맞대고, 재시는 차례까지 맞댄다. */
+    const same = (x, y) => JSON.stringify(x.retake) === JSON.stringify(y.retake)
+      && JSON.stringify(x.gate.map(g => g.join('|')).sort()) === JSON.stringify(y.gate.map(g => g.join('|')).sort());
+
+    await test('7단계 2차 (ii) · ch1s 재시·게이트가 화학1에서 본 문장을 피하고 틀린 문장을 안 낸다 · 같은 입력이면 같은 재시', async page => {
+      const noC = engineRetake(false), wC = engineRetake(true);
+      const h0 = hits(stmts(noC)), h1 = hits(stmts(wC));
+      assert(h0.seen + h0.wrong > 0, '픽스처가 화학1 문장을 재지 않는다(이을 것이 없어도 같은 재시): ' + JSON.stringify(h0));
+      assert(h1.seen === 0 && h1.wrong === 0, '화학1에서 본 문장이 남았다: ' + JSON.stringify(h1));
+      const mock = p => p.route('**/script.google.com/**', route => {
+        const u = route.request().url();
+        if (u.includes('student=')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, student: K2, rows: ROWS2, excluded: [], cumulative: null, rank: null, cohort: null }) });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, updated: false, reportLink: 'https://example.test/r' }) });
+      });
+      await mock(page);
+      const one = async () => {
+        await page.goto(BASE + 'index.html?retake=abcdef0123456&c=ch1s&r=1');
+        await page.waitForFunction(() => typeof S !== 'undefined' && S && S.view === 'gate', null, { timeout: 20000 });
+        return page.evaluate(() => { const gate = S.gate.gates.map(g => g.checks.map(c => c.s)); startRetake(); return { gate, retake: S.keyItems.map(x => (x.c || '') + '|' + x.s + '=' + x.a) }; });
+      };
+      const a = await one(), b = await one();
+      assert(JSON.stringify(a) === JSON.stringify(b), '같은 입력에 다른 게이트·재시가 나왔다');
+      assert(same(a, wC) && !same(a, noC), '재시 링크의 게이트·재시가 엔진(화학1 문장 더함)과 다르다');
+      /* 종이 재시(retakegen.js)도 같은 규칙 — 화학1에서 본·틀린 문장 0, 두 번 만들어도 같다 */
+      await page.goto(BASE + 'retake_entry.html');
+      await page.waitForFunction(() => !!window.DTRetake, null, { timeout: 20000 });
+      const paper = await page.evaluate(async rows => {
+        const x = await DTRetake.items({ key: 'k', course: 'ch1s', round: 1, attemptNo: 2, rows }), y = await DTRetake.items({ key: 'k', course: 'ch1s', round: 1, attemptNo: 2, rows });
+        return { a: x.items.map(i => i.s), same: JSON.stringify(x.items) === JSON.stringify(y.items), carried: x.carried };
+      }, ROWS2);
+      assert(paper.same && paper.carried === 6, '종이 재시: 같은 입력 같은 결과 · 화학1 6개 회차: ' + JSON.stringify([paper.same, paper.carried]));
+      const hp = hits(paper.a);
+      assert(hp.seen === 0 && hp.wrong === 0, '종이 재시에 화학1에서 본 문장: ' + JSON.stringify(hp));
+    });
+
+    await test('7단계 2차 (ii) · 앱 안 흐름(채점 → 게이트)도 같은 재시 · 학생 기록을 못 받으면 지금처럼', async page => {
+      let fail = false;
+      await page.route('**/script.google.com/**', route => {
+        const u = route.request().url();
+        if (u.includes('student=')) { if (fail) return route.abort(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, rows: ROWS2 }) }); }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, updated: false, reportLink: 'https://example.test/r' }) });
+      });
+      const inApp = async () => {
+        await page.goto(BASE + 'index.html?test=1'); await page.waitForTimeout(600);
+        await page.evaluate(async ans => {
+          const m = MANIFEST.rounds.find(x => x.course === 'ch1s' && x.round === 1);
+          S = blank(); S.name = '재시이음'; S.school = '가상고'; S.grade = '2'; S.round = await loadRound(m.data); S.roundId = m.data;
+          S.keyItems = S.round.jeongsi.items; S.answers = ans.split(''); S.attemptNo = 1;
+          await doGrade(); await afterReport();
+        }, ROWS2[ROWS2.length - 1].answers);
+        await page.waitForFunction(() => S.view === 'gate', null, { timeout: 15000 });
+        return page.evaluate(() => { const gate = S.gate.gates.map(g => g.checks.map(c => c.s)); startRetake(); return { gate, retake: S.keyItems.map(x => (x.c || '') + '|' + x.s + '=' + x.a) }; });
+      };
+      const a = await inApp();
+      assert(same(a, engineRetake(true)), '앱 안 흐름의 게이트·재시가 재시 링크(화학1 문장 더함)와 다르다');
+      fail = true;
+      const b = await inApp();
+      assert(same(b, engineRetake(false)), '학생 기록을 못 받았는데 지금과 다른 재시가 나왔다');
+    }, { adminGate: true });
+
+    /* ── (iii) 한 과목 학생은 글자까지 그대로 ── */
+    for (const id of Object.keys(SNAP.students)) {
+      await test('7단계 2차 (iii) · ' + id + ' 만 듣는 학생 — 성적표 글·재시·종이 재시·누적이 고치기 전과 같다', async page => {
+        const S0 = SNAP.students[id], rows = S0.rows, key = rows[0].studentKey;
+        const A = CE.cumulative(rows)[key];
+        assert(JSON.stringify(A) === JSON.stringify(S0.A), '엔진 누적이 달라졌다');
+        await page.route('**/script.google.com/**', route => {
+          const u = route.request().url();
+          const body = u.includes('student=') ? { ok: true, student: key, rows, excluded: [], cumulative: A, rank: S0.rank, ranks: [], cohort: null, challenges: [] } : { ok: true };
+          return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+        });
+        await page.goto(BASE + 'report.html?student=x');
+        await page.waitForSelector('.card.sols', { timeout: 30000 });
+        await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
+        const rep = await page.evaluate(() => document.getElementById('app').innerText);
+        if (rep !== S0.report) {
+          const a = rep.split('\n'), b = S0.report.split('\n'); let i = 0; while (i < a.length && a[i] === b[i]) i++;
+          throw new Error('성적표 글이 달라졌다 — ' + (i + 1) + '번째 줄: «' + (a[i] || '') + '» ≠ «' + (b[i] || '') + '»');
+        }
+        await page.goto(BASE + 'index.html?retake=abcdef0123456&c=' + rows[0].course + '&r=4');
+        await page.waitForFunction(() => typeof S !== 'undefined' && S && S.view === 'gate', null, { timeout: 30000 });
+        const gate = await page.evaluate(() => S.gate.gates.map(g => (g.c || g.mis || '') + '|' + g.checks.map(c => c.s + '=' + c.a).join(' / ')));
+        const retake = await page.evaluate(() => { startRetake(); return S.keyItems.map(x => (x.c || '') + '|' + x.s + '=' + x.a); });
+        assert(JSON.stringify(gate) === JSON.stringify(S0.gate), '재시 링크 게이트가 달라졌다');
+        assert(JSON.stringify(retake) === JSON.stringify(S0.retake), '재시 문항이 달라졌다');
+        await page.goto(BASE + 'retake_entry.html');
+        await page.waitForFunction(() => !!window.DTRetake, null, { timeout: 30000 });
+        const paper = await page.evaluate(async a => { const r = await DTRetake.items({ key: a.key, course: a.course, round: 4, attemptNo: 2, rows: a.rows }); return r.items.map(x => (x.c || '') + '|' + x.s + '=' + x.a); }, { key, course: rows[0].course, rows });
+        assert(JSON.stringify(paper) === JSON.stringify(S0.paper), '종이 재시가 달라졌다');
+      });
+    }
+
+    /* ── (iv) ch1+ch2 학생 — 과목별로 갈린다 ── */
+    const K4 = '가상고-두과목';
+    const ROWS4 = [];
+    [1, 2, 3].forEach(r => ROWS4.push(mk(K4, 'ch1', r, '첫 응시', RF('ch1', r).jeongsi.items.map((x, i) => i).filter(i => i % 4 === 0), '2026-03-0' + r + 'T01:00:00Z')));
+    [1, 2, 3].forEach(r => ROWS4.push(mk(K4, 'ch2', r, '첫 응시', RF('ch2', r).jeongsi.items.map((x, i) => i).filter(i => i % 5 === 1), '2026-09-0' + r + 'T01:00:00Z')));
+    const unitsOf = c => { const u = {}; [1, 2, 3].forEach(r => RF(c, r).jeongsi.items.forEach(x => { u[x.u] = 1; })); return u; };
+
+    await test('7단계 2차 (iv) · ch1+ch2 학생 — 엔진: spacedReview·latest·고질이 과목별로 갈린다', async () => {
+      /* 예전: spacedReview 가 회차 번호만으로 묶어 ch1 3회와 ch2 3회를 한 회차로 섞었다 */
+      const sr = CE.spacedReview(ROWS4, 3), sr1 = CE.spacedReview(ROWS4, 3, 'ch1'), sr2 = CE.spacedReview(ROWS4, 3, 'ch2');
+      const misOf = c => { const m = {}; ROWS4.filter(r => r.course === c).forEach(r => r.wrongMis.forEach(x => { m[CE.misCanon(x)] = 1; })); return m; };
+      const m1 = misOf('ch1'), m2 = misOf('ch2');
+      assert(sr.length && sr.every(x => m2[x.mis]), '과목을 안 주면 가장 최근 과목(ch2)만: ' + sr.map(x => x.mis).join(','));
+      assert(JSON.stringify(sr) === JSON.stringify(sr2), '과목을 안 주면 ch2 를 준 것과 같아야 한다');
+      assert(sr1.length && sr1.every(x => m1[x.mis]), 'ch1 을 주면 ch1 개념만: ' + sr1.map(x => x.mis).join(','));
+      const one = CE.spacedReview(ROWS4.filter(r => r.course === 'ch2'), 3);
+      assert(JSON.stringify(one) === JSON.stringify(sr2), '한 과목 행만 줬을 때와 같아야 한다');
+      const A = CE.cumulative(ROWS4)[K4], A1 = CE.cumulative(ROWS4, 'ch1')[K4];
+      assert(A.course === 'ch2' && A.trend.every(t => t.course === 'ch2') && A.trend.length === 3 && A.coverageRound === 3, 'latest 가 가장 최근 과목(ch2)이 아니다');
+      assert(A1.course === 'ch1' && A1.trend.every(t => t.course === 'ch1'), '?c=ch1 이 화학1로 정리되지 않았다');
+      assert(JSON.stringify(A.courses) === '["ch1","ch2"]', '과목 목록: ' + JSON.stringify(A.courses));
+      /* 날짜가 없으면 예전 순서(글자순 마지막) */
+      const nd = ROWS4.map(r => Object.assign({}, r, { date: '' }));
+      assert(CE.cumulative(nd)[K4].course === 'ch2' && CE.focusCourse(nd.slice().reverse()).course === 'ch2', '날짜가 없을 때 예전 순서가 아니다');
+      /* 화학1 을 나중에 봤으면 화학1 */
+      const late1 = ROWS4.map(r => Object.assign({}, r, { date: r.course === 'ch1' ? '2026-10-0' + r.round : r.date }));
+      assert(CE.cumulative(late1)[K4].course === 'ch1', '가장 최근 날짜의 과목이 아니다');
+    });
+
+    await test('7단계 2차 (iv) · ch1+ch2 학생 성적표 — 이번 회차·복습 시점·단원 누적이 보고 있는 과목만 · 과목 고르기', async page => {
+      await serve(page, ROWS4, K4);
+      const read = () => page.evaluate(() => ({
+        latest: latest.course + '#' + latest.round, who: (document.querySelector('.hero .who') || {}).textContent || '',
+        units: [].slice.call(document.querySelectorAll('.heatrow')).map(e => e.textContent),
+        aggUnits: aggFromRows().units.map(u => u.u),
+        rv: [].slice.call(document.querySelectorAll('.rvrow .rvm')).map(e => e.textContent),
+        trendN: A.trend.length, rows: allRows.map(r => r.course).filter((c, i, a) => a.indexOf(c) === i),
+        tabs: [].slice.call(document.querySelectorAll('nav.crstabs a')).map(a => (a.getAttribute('aria-current') ? '*' : '') + a.getAttribute('href')),
+      }));
+      const u1 = unitsOf('ch1'), u2 = unitsOf('ch2');
+      let r = await read();
+      assert(r.latest === 'ch2#3' && /화학 II/.test(r.who), '이번 회차가 화학Ⅱ 3회가 아니다: ' + r.latest + ' ' + r.who);
+      assert(r.trendN === 3 && r.rows.join(',') === 'ch2', '누적·행이 화학Ⅱ 만이 아니다: ' + r.trendN + ' ' + r.rows);
+      assert(r.aggUnits.length && r.aggUnits.every(u => u2[u] && !u1[u]), '단원 누적에 화학Ⅰ 단원이 섞였다: ' + r.aggUnits.join(','));
+      const m2 = {}; ROWS4.filter(x => x.course === 'ch2').forEach(x => x.wrongMis.forEach(m => { m2[CE.misCanon(m)] = 1; }));
+      assert(r.rv.every(m => m2[m]), '복습 시점에 다른 과목 개념: ' + r.rv.join(','));
+      assert(r.tabs.length === 2 && /c=ch1/.test(r.tabs[0]) && /^\*.*c=ch2/.test(r.tabs[1]), '과목 고르기: ' + r.tabs.join(' | '));
+      /* 화학Ⅰ 단추 → 화학Ⅰ 로 정리(서버가 ?c= 를 받는다) */
+      await page.goto(BASE + 'report.html?student=x&c=ch1'); await page.waitForSelector('.ladder', { timeout: 20000 }); await page.waitForTimeout(500);
+      r = await read();
+      assert(r.latest === 'ch1#3' && /화학 I /.test(r.who + ' ') && r.rows.join(',') === 'ch1', '?c=ch1 이 화학Ⅰ 이 아니다: ' + r.latest + ' ' + r.rows);
+      assert(r.aggUnits.every(u => u1[u] && !u2[u]), '화학Ⅰ 단원 누적에 화학Ⅱ 단원: ' + r.aggUnits.join(','));
+      assert(/^\*.*c=ch1/.test(r.tabs[0]), '화학Ⅰ 단추가 눌린 상태가 아니다');
+      await assertNoOverflow(page, 'report-two-courses');
+    });
+
+    await test('7단계 2차 (iv) · 옛 서버(과목을 안 고른 누적)를 받아도 화면이 보고 있는 과목으로 다시 센다', async page => {
+      await serve(page, ROWS4, K4, { oldServer: true, rank: { round: 3, avg: 70, score: 80, per100: 30, n: 9, sd: 8, dist: [0, 0, 0, 0, 0, 1, 3, 3, 2, 0] } });
+      const r = await page.evaluate(() => ({ latest: latest.course + '#' + latest.round, trend: A.trend.map(t => t.course).join(','), rank: !!document.querySelector('.rankcard') }));
+      assert(r.latest === 'ch2#3' && r.trend === 'ch2,ch2,ch2', '옛 서버 누적을 다시 세지 않았다: ' + JSON.stringify(r));
+      assert(!r.rank, '어느 과목 것인지 모르는 석차를 실었다');
     });
   }
 

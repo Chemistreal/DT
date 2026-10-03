@@ -37,6 +37,29 @@
     var j = await r.json(); return (j && j.rows) || [];
   }
 
+  /* 앞 과목에서 본 문장 (7단계 2차) — index.html carryOf 와 같은 규칙. 화학Ⅰ 심화 은행에는 화학Ⅰ 문장을
+     글자 그대로 가져온 자리가 있어, 그 학생이 화학Ⅰ 정시에서 본 문장은 피하고 틀린 문장은 다시 내지 않는다.
+     앞 과목 행이 없거나 대응표·회차 파일 하나라도 못 받으면 null — 지금처럼 만든다. */
+  async function carryOf(rows, course, base) {
+    var CE = window.ChemEngine, from = (CE.COURSE_LINK || {})[course];
+    if (!from || !Array.isArray(rows)) return null;
+    var hasReal = rows.some(function (r) { return r && !r.isTest; });
+    var rs = rows.filter(function (r) { return r && String(r.course) === from && !(hasReal && r.isTest); });
+    if (!rs.length) return null;
+    var link = null;
+    try { var res = await fetch((base || '') + 'courses/' + course + '/link_' + from + '.json', { cache: 'no-store' }); if (res.ok) link = await res.json(); } catch (e) { link = null; }
+    if (!link || !link.map || link.from !== from) return null;
+    var need = {}; rs.forEach(function (r) { if (CE.attemptOrder(r.attempt) === 0 && r.answers) need[Number(r.round)] = 1; });
+    var its = {}, miss = false;
+    await Promise.all(Object.keys(need).map(function (rd) {
+      return loadRound(from, Number(rd), base).then(function (j) { if (j && j.jeongsi && j.jeongsi.items) its[from + '#' + rd] = j.jeongsi.items; else miss = true; })
+        .catch(function () { miss = true; });
+    }));
+    if (miss) return null;
+    var co = CE.carryOver(rs, its, link);
+    return co.rounds.length ? co : null;
+  }
+
   // 학생의 이 회차 재시/재재시/재재재시… 문항 재생성 (다음 재시는 직전 재시에서 틀린 것 기준, 앞 시도 문장 재노출 방지 · 재시는 통과할 때까지 끝이 없다)
   function clone_(o) { var c = {}; for (var k in o) if (o.hasOwnProperty(k)) c[k] = o[k]; return c; }
   function parseOX_(s, n) { var a = String(s || '').split('').map(function (ch) { return ch === 'O' ? 'O' : ch === 'X' ? 'X' : ''; }); while (a.length < n) a.push(''); return a; }
@@ -64,6 +87,11 @@
     var curWrongCids = {}, curWrongStmts = {}, seen = {};
     gFirst.perItem.forEach(function (p, i) { if (!p.ok && keyItems[i]) { curWrongCids[keyItems[i].c] = 1; curWrongStmts[CE.norm(keyItems[i].s)] = 1; } });
     keyItems.forEach(function (it) { seen[CE.norm(it.s)] = 1; });
+    var co = null; try { co = await carryOf(rows, course, base); } catch (e) { co = null; }
+    if (co) {
+      Object.keys(co.seen).forEach(function (k) { seen[k] = 1; });
+      Object.keys(co.wrongStmts).forEach(function (k) { curWrongStmts[k] = 1; });
+    }
 
     // 재시 레벨 2..attemptNo 를 순서대로 연쇄 재생성 (각 단계는 결정적)
     var curItems = null;
@@ -84,11 +112,11 @@
       curWrongCids = nextWrongCids; curWrongStmts = nextWrongStmts;
       // seen 은 buildRetake 가 이미 이 레벨 문장까지 누적함
     }
-    return { items: curItems, first: first, wrongCids: Object.keys(curWrongCids), scoring: rd.scoring, attemptNo: attemptNo };
+    return { items: curItems, first: first, wrongCids: Object.keys(curWrongCids), scoring: rd.scoring, attemptNo: attemptNo, carried: co ? co.rounds.length : 0 };
   }
 
   function keyString(its) { return (its || []).map(function (it) { return it.a === 'O' ? 'O' : 'X'; }).join(''); }
 
-  window.DTRetake = { items: items, keyString: keyString, tokWith: tokWith, tokenFor: tokenFor,
+  window.DTRetake = { items: items, carryOf: carryOf, keyString: keyString, tokWith: tokWith, tokenFor: tokenFor,
     loadManifest: loadManifest, loadRound: loadRound, fetchRows: fetchRows, forms: loadForms, SAVE_URL: SAVE_URL };
 })();

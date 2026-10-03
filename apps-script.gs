@@ -635,11 +635,14 @@ function doGet(e) {
   data.shift(); // 헤더 제거
   var all = data.map(mapRow_);
   var rows = valid ? all.filter(function (r) { return r.studentKey === key; }) : [];
+  /* 여러 과목을 듣는 학생은 성적표가 과목 하나를 골라 본다(?c= · 없으면 가장 최근 과목 · focusCourse_).
+     누적·석차·반 응답이 같은 과목을 말해야 해서 셋에 같은 값을 넘긴다. 과목이 하나인 학생은 c 를 안 본다. */
+  var want = String((e.parameter && e.parameter.c) || '').trim();
   return json_({ ok: true, student: key, rows: rows, excluded: getExcluded_(),
-    cumulative: valid ? cumulative_(rows) : null,
-    rank: valid ? rank_(all, key, getExcluded_()) : null,
+    cumulative: valid ? cumulative_(rows, want) : null,
+    rank: valid ? rank_(all, key, getExcluded_(), want) : null,
     ranks: valid ? ranksAll_(all, key, getExcluded_()) : [],
-    cohort: valid ? cohortItems_(all, key, getExcluded_()) : null,
+    cohort: valid ? cohortItems_(all, key, getExcluded_(), want) : null,
     challenges: valid ? challengesOf_(key) : [] });
 }
 /* 성적표 주소의 ?student= 값 → 학생키. 없거나 안 맞으면 null.
@@ -852,10 +855,42 @@ function rankOne_(all, key, excluded, course, round) {
            per100: per100, n: scores.length, sd: sd, dist: dist };
 }
 
+/* 보고 있는 과목 — chemengine.js focusCourse 와 같은 규칙(7단계 2차 · 2026-10-03).
+   과목이 둘 이상이면 ① want(성적표 ?c=)가 본 과목이면 그것 ② 가장 최근 날짜의 행이 있는 과목(같은 시각이면 ③의 뒤)
+   ③ 날짜가 없으면 과목 글자순 마지막(예전 순서). 숙제(jm1)는 세지 않는다. 과목이 하나면 multi:false — 예전 그대로. */
+var COURSE_ORDER = ['ch1', 'ch1s', 'ch2', 'gc'];
+function rowMs_(r) { var t = r && r.date ? new Date(r.date).getTime() : NaN; return isFinite(t) ? t : 0; }
+function focusCourse_(rows, want) {
+  var last = {}, list = [];
+  (rows || []).forEach(function (r) {
+    if (!r || r.course == null || r.course === '' || String(r.course) === 'jm1') return;
+    var c = String(r.course), t = rowMs_(r);
+    if (!(c in last)) { last[c] = t; list.push(c); } else if (t > last[c]) last[c] = t;
+  });
+  list.sort(function (a, b) {
+    var ia = COURSE_ORDER.indexOf(a), ib = COURSE_ORDER.indexOf(b);
+    if (ia < 0) ia = 99; if (ib < 0) ib = 99;
+    return ia - ib || (a < b ? -1 : a > b ? 1 : 0);
+  });
+  if (list.length < 2) return { course: list[0] || null, courses: list, multi: false };
+  want = want == null ? '' : String(want);
+  var pick = null;
+  if (want && want in last) pick = want;
+  else list.forEach(function (c) {
+    if (pick == null || last[c] > last[pick] || (last[c] === last[pick] && c > pick)) pick = c;
+  });
+  return { course: pick, courses: list, multi: true };
+}
+/* 석차·반 응답은 보고 있는 과목의 마지막 회차로. 예전에는 «과목 글자순 마지막» 이라 ch1+ch1s 학생은 늘 ch1s 였다. */
+function mineFocus_(mine, want) {
+  var fc = focusCourse_(mine, want);
+  return fc.multi ? mine.filter(function (r) { return String(r.course) === fc.course; }) : mine;
+}
+
 // 최근 회차 반 전체 첫 응시 점수 → 평균·석차(100명 환산)
-function rank_(all, key, excluded) {
+function rank_(all, key, excluded, want) {
   excluded = excluded || [];
-  var mine = all.filter(function (r) { return r.studentKey === key && !r.isTest; });
+  var mine = mineFocus_(all.filter(function (r) { return r.studentKey === key && !r.isTest; }), want);
   if (!mine.length) return null;
   mine.sort(function (a, b) { return a.course < b.course ? -1 : a.course > b.course ? 1 : a.round - b.round; });
   var last = mine[mine.length - 1], course = last.course, round = last.round;
@@ -885,9 +920,9 @@ function rank_(all, key, excluded) {
 /* 학생 최근 회차의 문항별 코호트 응답 집계 (O/X 개수만, 개별 행 노출 없음) ----
    admin cleanCohort과 동일하게 단일응답(전부 O/X 85%+) + 수동 제외를 거른다.
    문항 정답률은 키가 있는 리포트 측(report.html)에서 계산한다. */
-function cohortItems_(all, key, excluded) {
+function cohortItems_(all, key, excluded, want) {
   excluded = excluded || [];
-  var mine = all.filter(function (r) { return r.studentKey === key && !r.isTest; });
+  var mine = mineFocus_(all.filter(function (r) { return r.studentKey === key && !r.isTest; }), want);
   if (!mine.length) return null;
   mine.sort(function (a, b) { return a.course < b.course ? -1 : a.course > b.course ? 1 : a.round - b.round; });
   var last = mine[mine.length - 1], course = last.course, round = last.round;
@@ -910,9 +945,12 @@ function cohortItems_(all, key, excluded) {
   rows.forEach(function (r) { for (var i = 0; i < r.answers.length; i++) { var c = r.answers.charAt(i); if (c === 'O') items[i].o++; else if (c === 'X') items[i].x++; } });
   return { course: course, round: round, n: rows.length, items: items };
 }
-function cumulative_(rows) {
+function cumulative_(rows, want) {
   var hasReal = rows.some(function (r) { return !r.isTest; });
   var use = rows.filter(function (r) { return !(hasReal && r.isTest); }); // 실전 기록 있으면 테스트 제외, 전부 테스트면 미리보기로 포함
+  /* 여러 과목이면 보고 있는 과목 행만으로 — 회차·고질·범위가 과목을 넘어 섞이지 않게(chemengine.js cumulative 와 같다). */
+  var fc = focusCourse_(use, want);
+  if (fc.multi) use = use.filter(function (r) { return String(r.course) === fc.course; });
   var rounds = {};
   use.forEach(function (r) {
     var k = r.course + '#' + r.round;
@@ -957,11 +995,13 @@ function cumulative_(rows) {
   var axisWeak = Object.keys(ax).map(function (k) { return { key: k, wrong: ax[k] }; })
     .sort(function (a, b) { return b.wrong - a.wrong; });
 
-  return {
+  var out = {
     trend: trend, chronicMis: chronic, axisWeak: axisWeak,
     passedRounds: trend.filter(function (t) { return t.passed; }).length,
     coverageRound: trend.length ? trend[trend.length - 1].round : 0
   };
+  if (fc.multi) { out.course = fc.course; out.courses = fc.courses; }   // 과목이 하나면 안 싣는다(예전 모양 그대로)
+  return out;
 }
 
 /* ============================================================

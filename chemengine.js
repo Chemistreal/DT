@@ -489,7 +489,41 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
   //   {studentKey, name, school, year, course, round, attempt('첫 응시'|'정시'|'재시'|'재재시'|'재재재시'…),
   //    score, pass(bool), date, wrongMis:[..], wrongAxes:{key:count}, isTest(bool)}
   // 반환: {studentKey: {info, trend[], chronicMis[], axisWeak[], roundsTaken[], coverageRound, attemptsTotal}}
-  function cumulative(rows) {
+  /* ---------- 보고 있는 과목 (7단계 2차 · 2026-10-03) ----------
+     학생은 과목과 무관하게 «학교-이름» 키 하나라, 화학1을 듣고 심화반에 온 학생·화학1과 화학2를 같이
+     듣는 학생은 행이 섞여 온다. 예전에는 회차를 «과목 글자순 → 회차» 로 늘어놓고 마지막을 최근으로 봐서
+     ch1+ch1s 학생은 ch1s, ch2 도 들으면 ch2 가 «이번 회차» 가 됐고, 고질·단원 누적은 과목을 넘어 합쳐졌다.
+     그래서 과목이 둘 이상이면 **하나를 골라 그 과목 행만으로** 정리한다:
+       ① want(성적표 주소의 c)가 그 학생이 본 과목이면 그것
+       ② 아니면 가장 최근 날짜의 행이 있는 과목(같은 시각이면 아래 ③의 순서로 뒤)
+       ③ 날짜가 없으면 지금 순서 — 과목 글자순 마지막
+     숙제(jm1)는 과목 수에 안 센다(성적표가 따로 다룬다). 과목이 하나면 multi:false — 부르는 쪽은 아무것도
+     안 바꾼다(한 과목 학생의 화면은 글자까지 그대로다). 서버 focusCourse_ 와 같은 규칙. */
+  var COURSE_ORDER = ['ch1', 'ch1s', 'ch2', 'gc'];
+  function rowMs(r) { var t = r && r.date ? new Date(r.date).getTime() : NaN; return isFinite(t) ? t : 0; }
+  function focusCourse(rows, want) {
+    var last = {}, list = [];
+    (rows || []).forEach(function (r) {
+      if (!r || r.course == null || r.course === '' || String(r.course) === 'jm1') return;
+      var c = String(r.course), t = rowMs(r);
+      if (!(c in last)) { last[c] = t; list.push(c); } else if (t > last[c]) last[c] = t;
+    });
+    list.sort(function (a, b) {
+      var ia = COURSE_ORDER.indexOf(a), ib = COURSE_ORDER.indexOf(b);
+      if (ia < 0) ia = 99; if (ib < 0) ib = 99;
+      return ia - ib || (a < b ? -1 : a > b ? 1 : 0);
+    });
+    if (list.length < 2) return { course: list[0] || null, courses: list, multi: false };
+    want = want == null ? '' : String(want);
+    var pick = null;
+    if (want && want in last) pick = want;
+    else list.forEach(function (c) {
+      if (pick == null || last[c] > last[pick] || (last[c] === last[pick] && c > pick)) pick = c;
+    });
+    return { course: pick, courses: list, multi: true };
+  }
+
+  function cumulative(rows, want) {
     rows = rows || [];
     var byStu = {};
     rows.forEach(function (r) {
@@ -499,7 +533,8 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
 
     var out = {};
     Object.keys(byStu).forEach(function (k) {
-      var rs = byStu[k];
+      var rsAll = byStu[k], fc = focusCourse(rsAll, want);
+      var rs = fc.multi ? rsAll.filter(function (r) { return String(r.course) === fc.course; }) : rsAll;
       // 회차별 묶기 (course+round)
       var rounds = {};
       rs.forEach(function (r) {
@@ -573,7 +608,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
       var roundsTaken = trend.map(function (t) { return t.course + t.round; });
       var coverageRound = trend.length ? trend[trend.length - 1].round : 0;  // 최근 응시 회차 = 누적 범위
       var attemptsTotal = rs.length;
-      var info = { name: rs[0].name, school: rs[0].school, yearLatest: latestYear(rs) };
+      var info = { name: rsAll[0].name, school: rsAll[0].school, yearLatest: latestYear(rsAll) };
 
       out[k] = {
         info: info, trend: trend, chronicMis: chronic, axisWeak: axisWeak,
@@ -581,6 +616,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
         coverageRound: coverageRound, attemptsTotal: attemptsTotal,
         passedRounds: trend.filter(function (t) { return t.passed; }).length
       };
+      if (fc.multi) { out[k].course = fc.course; out[k].courses = fc.courses; }   // 과목이 하나면 안 싣는다(예전 모양 그대로)
     });
     return out;
   }
@@ -615,10 +651,15 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
      (물었는지까지 보려면 회차 자료를 학생 앱이 들고 있어야 한다.) */
   var SPACED_DUE = [1, 4, 11];        // 1 → +3 → +7 (누적)
 
-  function spacedReview(rows, currentRound) {
+  function spacedReview(rows, currentRound, course) {
     /* 시도 순서는 order()('재' 글자 수) — cumulative·서버 attOrd_ 와 같은 규칙. 옛 라벨 표는 재재재시 이상을 첫 응시로 오인했다. */
+    /* 회차 번호는 과목마다 따로다 — 묶기 전에 한 과목만 남긴다(화학1 3회와 화학2 3회가 한 회차로 섞였다).
+       course 를 주면 그 과목, 안 주면 focusCourse 가 고른 과목. 과목이 하나뿐이면 예전 그대로다. */
+    rows = rows || [];
+    var only = course != null && course !== '' ? String(course) : (focusCourse(rows).multi ? focusCourse(rows).course : null);
+    if (only != null) rows = rows.filter(function (r) { return r && String(r.course) === only; });
     var byRound = {};
-    (rows || []).forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
+    rows.forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
     var byConcept = {};
     Object.keys(byRound).forEach(function (rd) {
       var rs = byRound[rd].slice().sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
@@ -730,9 +771,68 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     return out;
   }
 
+  /* ══════════════════════════════════════════════════════════
+     이어 온 기록을 심화반 기록과 맞대기 (7단계 2차 · 성적표 「화학1에서 이어 온 기록」)
+
+     carry: carryOver 의 결과 · rows: 그 학생의 행(어느 과목이 섞여도 된다) · to: 'ch1s'
+     심화반 쪽 기록은 cumulative 의 고질과 같은 셈 — 회차마다 첫 응시만, «물었다» = ROUND_MIS 에 그 이름,
+     틀렸다 = 첫 응시 wrongMis(대표 이름으로 맞댄다).
+
+     판단(선생님 결정 2026-10-03 «화학1 기록을 이어서 쓰되, 심화반 기록이 쌓이면 심화반이 우선»):
+       · 심화반에서 그 개념을 CHRONIC_MIN_ASKED 번 이상 물었으면 심화반 기록만 본다 — 이어 온 기록은 판단에서 빠진다.
+       · 그 전까지는 화학1 과 심화반을 합쳐(물은 회차·틀린 회차) 고질 문턱(3회 · 절반)을 잰다.
+     돌려주는 것: list — 화학1에서 한 번이라도 틀린 개념마다
+       {c, m, from:{asked, wrong, rounds, wrongRounds, fixed}, own:{asked, wrong, last:'ok'|'wrong'|null, lastRound},
+        own3(심화반이 판단을 넘겨받음), chronic(합산 고질), open(화학1 재시에서 못 고침)}
+       차례: 합산 고질 → 화학1 고질 → 나머지, 같은 칸 안은 carry.weak 차례(틀린 비율·최근). */
+  function carryView(rows, carry, to) {
+    carry = carry || {}; to = String(to || '');
+    var C = carry.concepts || {}, byName = {};
+    Object.keys(C).forEach(function (t) { var m = C[t].m; if (m) byName[misCanon(m)] = t; });
+    var own = {}, rounds = {};
+    (rows || []).forEach(function (r) {
+      if (!r || String(r.course) !== to || r.round == null) return;
+      (rounds[Number(r.round)] || (rounds[Number(r.round)] = [])).push(r);
+    });
+    Object.keys(rounds).map(Number).sort(function (a, b) { return a - b; }).forEach(function (rd) {
+      var first = null;
+      rounds[rd].forEach(function (a) { if (!first || order(a.attempt) < order(first.attempt)) first = a; });
+      if (!first) return;
+      var wr = {}, ak = {};
+      (first.wrongMis || []).forEach(function (m) { var t = byName[misCanon(m)]; if (t) { wr[t] = 1; ak[t] = 1; } });
+      (roundMisOf(to, rd) || []).forEach(function (m) { var t = byName[misCanon(m)]; if (t) ak[t] = 1; });
+      Object.keys(ak).forEach(function (t) {
+        var o = own[t] || (own[t] = { asked: 0, wrong: 0, last: null, lastRound: null });
+        o.asked++; if (wr[t]) o.wrong++;
+        o.last = wr[t] ? 'wrong' : 'ok'; o.lastRound = rd;
+      });
+    });
+    var rank = {}; (carry.weak || []).forEach(function (t, i) { rank[t] = i; });
+    var chr = {}; (carry.chronic || []).forEach(function (t) { chr[t] = 1; });
+    var list = Object.keys(C).filter(function (t) { return C[t].wrong > 0; }).map(function (t) {
+      var f = C[t], o = own[t] || { asked: 0, wrong: 0, last: null, lastRound: null };
+      var own3 = o.asked >= CHRONIC_MIN_ASKED;
+      var asked = f.asked + o.asked, wrong = f.wrong + o.wrong;
+      return {
+        c: t, m: f.m,
+        from: { asked: f.asked, wrong: f.wrong, rounds: f.rounds.slice(), wrongRounds: f.wrongRounds.slice(), fixed: f.fixed, chronic: !!chr[t] },
+        own: { asked: o.asked, wrong: o.wrong, last: o.last, lastRound: o.lastRound },
+        own3: own3,
+        chronic: !own3 && asked >= CHRONIC_MIN_ASKED && wrong / asked >= CHRONIC_MIN_RATE,
+        open: f.fixed !== true
+      };
+    });
+    list.sort(function (a, b) {
+      var ka = a.chronic ? 0 : a.from.chronic ? 1 : 2, kb = b.chronic ? 0 : b.from.chronic ? 1 : 2;
+      return ka - kb || (rank[a.c] != null ? rank[a.c] : 1e9) - (rank[b.c] != null ? rank[b.c] : 1e9);
+    });
+    return { from: carry.from || null, to: to, rounds: (carry.rounds || []).slice(), list: list };
+  }
+
   // ---------- export (Node + 브라우저) ----------
   var api = {
-    carryOver: carryOver, COURSE_LINK: COURSE_LINK,
+    carryOver: carryOver, COURSE_LINK: COURSE_LINK, carryView: carryView,
+    focusCourse: focusCourse, COURSE_ORDER: COURSE_ORDER,
     norm: norm, studentKey: studentKey, axisOf: axisOf, axisName: axisName, AXES: AXES,
     gradeAttempt: gradeAttempt, notCorrectConcepts: notCorrectConcepts,
     misCanon: misCanon, MIS_CANON: MIS_CANON,

@@ -96,6 +96,16 @@ svg{width:100%;height:auto;display:block;overflow:visible}
 .qpu .freq{margin-left:6px;padding:1px 7px;background:#fff;border:1px solid #EFD8D3}
 .rx .ol{font-size:12.5px;color:#33414e;margin-top:7px;background:var(--brass-soft);border-radius:8px;padding:9px 11px}
 .rx .ol b{color:var(--ink)}
+/* 화학1에서 이어 온 기록(7단계 2차) — 심화반 기록과 한눈에 갈리게 옥색 띠와 꼬리표를 단다. */
+.rx.c1{border-left-color:var(--teal)}
+.c1tag{display:inline-block;font-size:11.5px;font-weight:700;line-height:1.5;padding:0 8px;border-radius:20px;white-space:nowrap;color:var(--teal-d);background:var(--teal-soft);border:1px solid var(--teal-line)}
+.c1line{font-size:12.5px;color:var(--sub);margin-top:6px;line-height:1.55}
+.c1grp{font-size:12.5px;font-weight:700;color:var(--ink);margin:12px 0 2px}
+.rvrow.c1r{display:block}.rvrow.c1r .rvg{display:block;margin-top:2px;font-family:inherit;font-size:12px;color:var(--sub);line-height:1.5}
+/* 과목 고르기 — 두 과목 이상을 들은 학생에게만 선다 */
+.crstabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.crstabs a{font-size:13px;font-weight:700;padding:6px 13px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none}
+.crstabs a[aria-current="page"]{background:var(--teal);border-color:var(--teal);color:#fff}
 /* mastery / 성실도 */
 .kv{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:9px 0;border-bottom:1px solid var(--line2)}.kv:last-child{border-bottom:0}.kv .r{color:var(--sub);font-size:12px}
 .dots{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
@@ -1045,7 +1055,41 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
   //   {studentKey, name, school, year, course, round, attempt('첫 응시'|'정시'|'재시'|'재재시'|'재재재시'…),
   //    score, pass(bool), date, wrongMis:[..], wrongAxes:{key:count}, isTest(bool)}
   // 반환: {studentKey: {info, trend[], chronicMis[], axisWeak[], roundsTaken[], coverageRound, attemptsTotal}}
-  function cumulative(rows) {
+  /* ---------- 보고 있는 과목 (7단계 2차 · 2026-10-03) ----------
+     학생은 과목과 무관하게 «학교-이름» 키 하나라, 화학1을 듣고 심화반에 온 학생·화학1과 화학2를 같이
+     듣는 학생은 행이 섞여 온다. 예전에는 회차를 «과목 글자순 → 회차» 로 늘어놓고 마지막을 최근으로 봐서
+     ch1+ch1s 학생은 ch1s, ch2 도 들으면 ch2 가 «이번 회차» 가 됐고, 고질·단원 누적은 과목을 넘어 합쳐졌다.
+     그래서 과목이 둘 이상이면 **하나를 골라 그 과목 행만으로** 정리한다:
+       ① want(성적표 주소의 c)가 그 학생이 본 과목이면 그것
+       ② 아니면 가장 최근 날짜의 행이 있는 과목(같은 시각이면 아래 ③의 순서로 뒤)
+       ③ 날짜가 없으면 지금 순서 — 과목 글자순 마지막
+     숙제(jm1)는 과목 수에 안 센다(성적표가 따로 다룬다). 과목이 하나면 multi:false — 부르는 쪽은 아무것도
+     안 바꾼다(한 과목 학생의 화면은 글자까지 그대로다). 서버 focusCourse_ 와 같은 규칙. */
+  var COURSE_ORDER = ['ch1', 'ch1s', 'ch2', 'gc'];
+  function rowMs(r) { var t = r && r.date ? new Date(r.date).getTime() : NaN; return isFinite(t) ? t : 0; }
+  function focusCourse(rows, want) {
+    var last = {}, list = [];
+    (rows || []).forEach(function (r) {
+      if (!r || r.course == null || r.course === '' || String(r.course) === 'jm1') return;
+      var c = String(r.course), t = rowMs(r);
+      if (!(c in last)) { last[c] = t; list.push(c); } else if (t > last[c]) last[c] = t;
+    });
+    list.sort(function (a, b) {
+      var ia = COURSE_ORDER.indexOf(a), ib = COURSE_ORDER.indexOf(b);
+      if (ia < 0) ia = 99; if (ib < 0) ib = 99;
+      return ia - ib || (a < b ? -1 : a > b ? 1 : 0);
+    });
+    if (list.length < 2) return { course: list[0] || null, courses: list, multi: false };
+    want = want == null ? '' : String(want);
+    var pick = null;
+    if (want && want in last) pick = want;
+    else list.forEach(function (c) {
+      if (pick == null || last[c] > last[pick] || (last[c] === last[pick] && c > pick)) pick = c;
+    });
+    return { course: pick, courses: list, multi: true };
+  }
+
+  function cumulative(rows, want) {
     rows = rows || [];
     var byStu = {};
     rows.forEach(function (r) {
@@ -1055,7 +1099,8 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
 
     var out = {};
     Object.keys(byStu).forEach(function (k) {
-      var rs = byStu[k];
+      var rsAll = byStu[k], fc = focusCourse(rsAll, want);
+      var rs = fc.multi ? rsAll.filter(function (r) { return String(r.course) === fc.course; }) : rsAll;
       // 회차별 묶기 (course+round)
       var rounds = {};
       rs.forEach(function (r) {
@@ -1129,7 +1174,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
       var roundsTaken = trend.map(function (t) { return t.course + t.round; });
       var coverageRound = trend.length ? trend[trend.length - 1].round : 0;  // 최근 응시 회차 = 누적 범위
       var attemptsTotal = rs.length;
-      var info = { name: rs[0].name, school: rs[0].school, yearLatest: latestYear(rs) };
+      var info = { name: rsAll[0].name, school: rsAll[0].school, yearLatest: latestYear(rsAll) };
 
       out[k] = {
         info: info, trend: trend, chronicMis: chronic, axisWeak: axisWeak,
@@ -1137,6 +1182,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
         coverageRound: coverageRound, attemptsTotal: attemptsTotal,
         passedRounds: trend.filter(function (t) { return t.passed; }).length
       };
+      if (fc.multi) { out[k].course = fc.course; out[k].courses = fc.courses; }   // 과목이 하나면 안 싣는다(예전 모양 그대로)
     });
     return out;
   }
@@ -1171,10 +1217,15 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
      (물었는지까지 보려면 회차 자료를 학생 앱이 들고 있어야 한다.) */
   var SPACED_DUE = [1, 4, 11];        // 1 → +3 → +7 (누적)
 
-  function spacedReview(rows, currentRound) {
+  function spacedReview(rows, currentRound, course) {
     /* 시도 순서는 order()('재' 글자 수) — cumulative·서버 attOrd_ 와 같은 규칙. 옛 라벨 표는 재재재시 이상을 첫 응시로 오인했다. */
+    /* 회차 번호는 과목마다 따로다 — 묶기 전에 한 과목만 남긴다(화학1 3회와 화학2 3회가 한 회차로 섞였다).
+       course 를 주면 그 과목, 안 주면 focusCourse 가 고른 과목. 과목이 하나뿐이면 예전 그대로다. */
+    rows = rows || [];
+    var only = course != null && course !== '' ? String(course) : (focusCourse(rows).multi ? focusCourse(rows).course : null);
+    if (only != null) rows = rows.filter(function (r) { return r && String(r.course) === only; });
     var byRound = {};
-    (rows || []).forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
+    rows.forEach(function (r) { (byRound[r.round] || (byRound[r.round] = [])).push(r); });
     var byConcept = {};
     Object.keys(byRound).forEach(function (rd) {
       var rs = byRound[rd].slice().sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
@@ -1286,9 +1337,68 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     return out;
   }
 
+  /* ══════════════════════════════════════════════════════════
+     이어 온 기록을 심화반 기록과 맞대기 (7단계 2차 · 성적표 「화학1에서 이어 온 기록」)
+
+     carry: carryOver 의 결과 · rows: 그 학생의 행(어느 과목이 섞여도 된다) · to: 'ch1s'
+     심화반 쪽 기록은 cumulative 의 고질과 같은 셈 — 회차마다 첫 응시만, «물었다» = ROUND_MIS 에 그 이름,
+     틀렸다 = 첫 응시 wrongMis(대표 이름으로 맞댄다).
+
+     판단(선생님 결정 2026-10-03 «화학1 기록을 이어서 쓰되, 심화반 기록이 쌓이면 심화반이 우선»):
+       · 심화반에서 그 개념을 CHRONIC_MIN_ASKED 번 이상 물었으면 심화반 기록만 본다 — 이어 온 기록은 판단에서 빠진다.
+       · 그 전까지는 화학1 과 심화반을 합쳐(물은 회차·틀린 회차) 고질 문턱(3회 · 절반)을 잰다.
+     돌려주는 것: list — 화학1에서 한 번이라도 틀린 개념마다
+       {c, m, from:{asked, wrong, rounds, wrongRounds, fixed}, own:{asked, wrong, last:'ok'|'wrong'|null, lastRound},
+        own3(심화반이 판단을 넘겨받음), chronic(합산 고질), open(화학1 재시에서 못 고침)}
+       차례: 합산 고질 → 화학1 고질 → 나머지, 같은 칸 안은 carry.weak 차례(틀린 비율·최근). */
+  function carryView(rows, carry, to) {
+    carry = carry || {}; to = String(to || '');
+    var C = carry.concepts || {}, byName = {};
+    Object.keys(C).forEach(function (t) { var m = C[t].m; if (m) byName[misCanon(m)] = t; });
+    var own = {}, rounds = {};
+    (rows || []).forEach(function (r) {
+      if (!r || String(r.course) !== to || r.round == null) return;
+      (rounds[Number(r.round)] || (rounds[Number(r.round)] = [])).push(r);
+    });
+    Object.keys(rounds).map(Number).sort(function (a, b) { return a - b; }).forEach(function (rd) {
+      var first = null;
+      rounds[rd].forEach(function (a) { if (!first || order(a.attempt) < order(first.attempt)) first = a; });
+      if (!first) return;
+      var wr = {}, ak = {};
+      (first.wrongMis || []).forEach(function (m) { var t = byName[misCanon(m)]; if (t) { wr[t] = 1; ak[t] = 1; } });
+      (roundMisOf(to, rd) || []).forEach(function (m) { var t = byName[misCanon(m)]; if (t) ak[t] = 1; });
+      Object.keys(ak).forEach(function (t) {
+        var o = own[t] || (own[t] = { asked: 0, wrong: 0, last: null, lastRound: null });
+        o.asked++; if (wr[t]) o.wrong++;
+        o.last = wr[t] ? 'wrong' : 'ok'; o.lastRound = rd;
+      });
+    });
+    var rank = {}; (carry.weak || []).forEach(function (t, i) { rank[t] = i; });
+    var chr = {}; (carry.chronic || []).forEach(function (t) { chr[t] = 1; });
+    var list = Object.keys(C).filter(function (t) { return C[t].wrong > 0; }).map(function (t) {
+      var f = C[t], o = own[t] || { asked: 0, wrong: 0, last: null, lastRound: null };
+      var own3 = o.asked >= CHRONIC_MIN_ASKED;
+      var asked = f.asked + o.asked, wrong = f.wrong + o.wrong;
+      return {
+        c: t, m: f.m,
+        from: { asked: f.asked, wrong: f.wrong, rounds: f.rounds.slice(), wrongRounds: f.wrongRounds.slice(), fixed: f.fixed, chronic: !!chr[t] },
+        own: { asked: o.asked, wrong: o.wrong, last: o.last, lastRound: o.lastRound },
+        own3: own3,
+        chronic: !own3 && asked >= CHRONIC_MIN_ASKED && wrong / asked >= CHRONIC_MIN_RATE,
+        open: f.fixed !== true
+      };
+    });
+    list.sort(function (a, b) {
+      var ka = a.chronic ? 0 : a.from.chronic ? 1 : 2, kb = b.chronic ? 0 : b.from.chronic ? 1 : 2;
+      return ka - kb || (rank[a.c] != null ? rank[a.c] : 1e9) - (rank[b.c] != null ? rank[b.c] : 1e9);
+    });
+    return { from: carry.from || null, to: to, rounds: (carry.rounds || []).slice(), list: list };
+  }
+
   // ---------- export (Node + 브라우저) ----------
   var api = {
-    carryOver: carryOver, COURSE_LINK: COURSE_LINK,
+    carryOver: carryOver, COURSE_LINK: COURSE_LINK, carryView: carryView,
+    focusCourse: focusCourse, COURSE_ORDER: COURSE_ORDER,
     norm: norm, studentKey: studentKey, axisOf: axisOf, axisName: axisName, AXES: AXES,
     gradeAttempt: gradeAttempt, notCorrectConcepts: notCorrectConcepts,
     misCanon: misCanon, MIS_CANON: MIS_CANON,
@@ -1318,6 +1428,28 @@ const CH1S_NOTE={"CH1S-001":{"m":"구성 입자 질량·전하","o":"**양성자
 const CH1S_BYNAME={};
 (function(){ for(var c in CH1S_NOTE){ var v=CH1S_NOTE[c]; if(!v||!v.m) continue; CH1S_BYNAME[v.m]=c;
   if(v.o&&ONELINE[v.m]==null) ONELINE[v.m]=v.o; if(v.c&&CORE[v.m]==null) CORE[v.m]=v.c; } })();
+/* 심화반 이름 → 개념 코드. 집계(고질·복습)는 대표 이름(misCanon)으로 오므로 «동위원소 정의» 가 «동위원소» 로
+   올 수 있다 — 이름 그대로 없으면 대표 이름이 같은 심화반 이름을 찾는다(deepNoteFor 와 같은 길). */
+function ch1sCode(m){
+  if(m==null) return null; if(CH1S_BYNAME[m]) return CH1S_BYNAME[m];
+  var cf=(typeof ChemEngine!=='undefined'&&ChemEngine.misCanon)?ChemEngine.misCanon:null; if(!cf) return null;
+  var mk=cf(m); for(var nm in CH1S_BYNAME){ if(cf(nm)===mk) return CH1S_BYNAME[nm]; } return null;
+}
+/* 한 줄 정리(ONELINE)·핵심(CORE) — 이름 키라 심화반 개념 19개가 화학Ⅰ·Ⅱ·일반화학의 같은 이름 글을 보였다.
+   심화반(course 'ch1s')은 개념 코드로 CH1S_NOTE 의 o·c 를 찾는다. 다른 과목은 예전 그대로 이름으로 찾는다. */
+/* 집계가 준 대표 이름을 화면 이름으로 — 심화반은 그 개념의 심화반 이름(«동위원소» → «동위원소 정의»), 다른 과목은 그대로. */
+function misLabel(m, course){
+  if(course==='ch1s'){ var k=ch1sCode(m); if(k&&CH1S_NOTE[k]&&CH1S_NOTE[k].m) return CH1S_NOTE[k].m; }
+  return m;
+}
+function oneOf(m, course){
+  if(course==='ch1s'){ var k=ch1sCode(m); if(k&&CH1S_NOTE[k]&&CH1S_NOTE[k].o) return CH1S_NOTE[k].o; }
+  return ONELINE[m]||'';
+}
+function coreOf(m, course){
+  if(course==='ch1s'){ var k=ch1sCode(m); if(k&&CH1S_NOTE[k]&&CH1S_NOTE[k].c) return CH1S_NOTE[k].c; }
+  return CORE[m]||'';
+}
 const CUM_UNITS=[{"u": "분자간힘", "t": 18, "w": 7}, {"u": "총괄성", "t": 15, "w": 6}, {"u": "농도", "t": 12, "w": 4}, {"u": "액체", "t": 14, "w": 3}, {"u": "이상기체", "t": 16, "w": 2}, {"u": "실제기체", "t": 10, "w": 1}, {"u": "분압", "t": 11, "w": 1}, {"u": "고체", "t": 8, "w": 0}];
 const CUM_AXES={"A1": {"t": 0, "w": 0}, "A2": {"t": 28, "w": 5}, "A3": {"t": 12, "w": 2}, "A4": {"t": 60, "w": 18}, "A5": {"t": 0, "w": 0}};
 const SYN_HARD=[{"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 1, "attempt": "정시", "score": 58, "pass": false, "date": "2025-03-04", "wrongMis": ["총괄성 크기", "반트호프 인자"], "wrongAxes": {"A4": 2}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 1, "attempt": "재시", "score": 70, "pass": false, "date": "2025-03-05", "wrongMis": ["총괄성 크기"], "wrongAxes": {"A4": 1}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 1, "attempt": "재재시", "score": 80, "pass": true, "date": "2025-03-06", "wrongMis": [], "wrongAxes": {}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 2, "attempt": "정시", "score": 62, "pass": false, "date": "2025-04-01", "wrongMis": ["총괄성 크기", "분산력 보편성"], "wrongAxes": {"A4": 1, "A2": 1}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 2, "attempt": "재시", "score": 74, "pass": false, "date": "2025-04-02", "wrongMis": ["분산력 보편성"], "wrongAxes": {"A2": 1}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 2, "attempt": "재재시", "score": 81, "pass": true, "date": "2025-04-03", "wrongMis": [], "wrongAxes": {}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 3, "attempt": "정시", "score": 55, "pass": false, "date": "2025-05-06", "wrongMis": ["총괄성 크기", "반트호프 인자", "몰농도 온도"], "wrongAxes": {"A4": 3}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 3, "attempt": "재시", "score": 68, "pass": false, "date": "2025-05-07", "wrongMis": ["반트호프 인자", "몰농도 온도"], "wrongAxes": {"A4": 2}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 3, "attempt": "재재시", "score": 80, "pass": true, "date": "2025-05-08", "wrongMis": [], "wrongAxes": {}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 4, "attempt": "정시", "score": 60, "pass": false, "date": "2025-06-03", "wrongMis": ["총괄성 크기", "반트호프 인자"], "wrongAxes": {"A4": 2}, "isTest": false}, {"studentKey": "한별중-성춘향", "name": "조준모T테스트예시자료(이문구가뜨면 조준모T에게 알려주세요)", "school": "휘문중", "year": "2", "course": "ch2", "round": 4, "attempt": "재시", "score": 72, "pass": false, "date": "2025-06-04", "wrongMis": ["반트호프 인자"], "wrongAxes": {"A4": 1}, "isTest": false}];
@@ -2201,8 +2333,10 @@ function dxDeepHTML(name,dx){
   }
   /* 수렴 그림·캡션은 「소수의 원인으로 수렴한다」 는 주장이라 기준선을 넘었을 때만 그린다. 막대는 사실(하류 오답 수)이라 둔다. */
   const conv=strong?('<div class="dxconv">'+_convSVG(Math.min(10,DD.W.length),nRoot)+'<span class="dxcap">표면의 여러 오답이 소수의 원인으로 수렴합니다. 보강 지점이 분명하고 그 수가 적습니다.</span></div>'):'';
+  /* 화학1 에서 틀린 채 넘어온 선행(이어 온 학생만 · 없으면 '') — 보강 순서 앞에 선다. */
+  const c1=(typeof carryRootsHTML==='function')?carryRootsHTML(DD.W):'';
   return '<div class="dxroot"><div class="dxeyebrow">근본 원인 진단'+(span?' · 최근 '+span+'회차 합산':'')+'</div><p class="dxthesis">'+lead+'</p>'
-    +conv+bars+arcHTML+'</div>';
+    +conv+c1+bars+arcHTML+'</div>';
 }
 
 
@@ -2272,7 +2406,7 @@ async function buildSolutions(course,round){
      f 가 있고 s 와 다를 때만 돌려준다 — 구간 보고서 클리닉(segClinicSec)과 같은 규칙. */
   function solFix(it){ return (it.a==='X'&&it.f&&it.f!==it.s)?String(it.f):''; }
   /* 개념 설명은 CORE, 없으면 ONELINE. 굵게 표시(**)를 뺀 맨글도 같이 둔다(Word 용). */
-  function coreMd(m){ return CORE[m]||ONELINE[m]||''; }
+  function coreMd(m){ return coreOf(m,course)||oneOf(m,course)||''; }
   function corePlain(m){ return coreMd(m).replace(/\*\*/g,''); }
   function detail(it){
     var cor=it.a, mine=it.__mine, fixT=solFix(it);
@@ -2408,6 +2542,119 @@ function roundCardsHTML(){
    옛 판정의 N 은 재시 기록까지 센 것이라 M 보다 클 수 있다 — 그때도 원래 문구를 둔다.
    회차 시점 상세·구간 보고서는 A 를 갈아 끼우므로 응시 회차 서명(sig)이 맞을 때만 쓴다. */
 var _CHRONIC_DENOM=null;
+/* ══ 여러 과목 · 화학1에서 이어 온 기록 (7단계 2차 · 2026-10-03) ══════════════════════════
+   학생은 과목과 무관하게 «학교-이름» 키 하나라 서버는 그 학생의 모든 과목 행을 함께 준다.
+   · 과목이 둘 이상이면 하나를 골라(주소의 ?c= → 가장 최근 날짜의 과목 → 예전 순서, ChemEngine.focusCourse ·
+     서버 focusCourse_ 와 같은 규칙) 이 장 전체를 그 과목으로 정리한다. allRows 는 그 과목 행(+숙제)만 남기고,
+     원래 행은 ALLROWS_ALL 에 둔다. 과목 고르기 단추를 맨 위에 세운다.
+   · 과목이 하나면 아무것도 안 바꾼다 — 한 과목 학생의 성적표는 글자까지 그대로다(tests/run.js 스냅숏).
+   · 보고 있는 과목이 앞 과목 기록을 잇는 과목이면(ChemEngine.COURSE_LINK · 화학1 심화 ← 화학1) 그 학생에게
+     앞 과목 행이 있을 때만 대응표와 앞 과목 회차 파일을 받아 carryOver 로 심화 개념에 옮긴다(CARRY), 그리고
+     심화반 기록과 맞댄다(carryView → CARRYV). 앞 과목 행이 없으면 아무것도 안 받는다. */
+var ALLROWS_ALL=null, VIEW=null, CARRY=null, CARRYV=null;
+function _realRows(rs){ rs=rs||[]; var hasReal=rs.some(function(r){ return r&&!r.isTest; }); return rs.filter(function(r){ return r&&!(hasReal&&r.isTest); }); }
+function viewCourse(want){
+  var rs=_realRows(ALLROWS_ALL);
+  var fc=ChemEngine.focusCourse(rs, want);
+  if(!fc.multi) return;
+  VIEW=fc;
+  allRows=(ALLROWS_ALL||[]).filter(function(r){ return String(r.course)===fc.course||r.course==='jm1'; });
+  if(!A||A.course!==fc.course){
+    /* 옛 서버(과목을 고르지 않은 누적)면 고른 과목 행만으로 여기서 다시 센다. 그 석차·반 응답은 어느 과목 것인지
+       알 수 없어 싣지 않는다(다른 과목 석차를 이 과목 카드에 실으면 거짓말이 된다). */
+    var c=ChemEngine.cumulative(rs.filter(function(r){ return String(r.course)===fc.course; })), k=Object.keys(c)[0];
+    if(k){ var info=A&&A.info; A=c[k]; if(info) A.info=info; A.course=fc.course; A.courses=fc.courses; }
+    RANK=null; if(COHORT&&COHORT.course!==fc.course) COHORT=null;
+  }
+}
+function crsTabsHTML(){
+  if(!VIEW||!VIEW.multi||_EMBED||(typeof _VR!=='undefined'&&_VR)) return '';
+  var sp=new URLSearchParams(location.search); sp.delete('seg');
+  return '<nav class="crstabs" aria-label="과목 고르기">'+VIEW.courses.map(function(c){ sp.set('c',c);
+    return '<a href="?'+_esc(sp.toString())+'"'+(c===VIEW.course?' aria-current="page"':'')+'>'+_esc(CRSLBL[c]||c)+'</a>'; }).join('')+'</nav>';
+}
+async function loadCarry(){
+  CARRY=null; CARRYV=null;
+  var to=latest&&latest.course, from=(ChemEngine.COURSE_LINK||{})[to];
+  if(!from||_EMBED) return;
+  var rs=_realRows(ALLROWS_ALL).filter(function(r){ return String(r.course)===from; });
+  if(!rs.length) return;                                   /* 앞 과목 행이 없으면 아무것도 안 받는다 */
+  var link=null;
+  try{ var res=await fetch('courses/'+to+'/link_'+from+'.json',{cache:'no-store'}); if(res.ok) link=await res.json(); }catch(e){ link=null; }
+  if(!link||!link.map||link.from!==from) return;
+  var need={}; rs.forEach(function(r){ if(ChemEngine.attemptOrder(r.attempt)===0&&r.answers) need[Number(r.round)]=1; });
+  var its={};
+  await Promise.all(Object.keys(need).map(function(rd){
+    return loadRoundItems(from, Number(rd)).then(function(x){ if(x&&x.length) its[from+'#'+rd]=x; }).catch(function(){});
+  }));
+  var co=ChemEngine.carryOver(rs, its, link);
+  if(!co.rounds.length) return;
+  CARRY=co; CARRYV=ChemEngine.carryView(allRows, co, to);
+}
+function _c1Rounds(a){ return (a||[]).join('·'); }
+/* 한 개념의 이어 온 기록 한 줄 — 화학1 에서 어땠는지 · 재시에서 고쳤는지 · 심화반에서 다시 물었는지. */
+function carryLine(x, short, noFix){
+  var FL=CRSLBL[CARRYV.from]||'화학 I', o=x.own, f=x.from, t=[];
+  t.push(short?(FL+' '+_c1Rounds(f.wrongRounds)+'회 틀림'):(FL+' '+_c1Rounds(f.wrongRounds)+'회에서 틀림(출제 '+f.asked+'회 중 '+f.wrong+'회)'));
+  if(!noFix) t.push(f.fixed===true?'재시에서 고침':'재시에서 아직 못 고침');
+  if(!o.asked) t.push(short?'심화반: 아직 안 물음':'심화반에서는 아직 안 물음');
+  else t.push((short?'심화반: ':'심화반 ')+o.lastRound+'회에서 다시 물어 '+(o.last==='ok'?'맞힘':'또 틀림')+(o.asked>1?' ('+o.asked+'회 중 '+o.wrong+'회 틀림)':''));
+  if(x.own3) t.push('이제 심화반 기록으로 판단');
+  return t.join(' · ');
+}
+/* 심화반 고질(반복해서 막히는 곳)에 함께 서는 «화학1 기록 합산» 개념 — 심화반에서 아직 세 번 안 물었고,
+   화학1 과 합쳐 고질 문턱(출제 3회 이상 · 절반 이상 틀림)을 넘은 것. */
+function carryChronicList(){
+  if(!CARRYV) return [];
+  return CARRYV.list.filter(function(x){ return x.chronic&&!(A.chronicMis||[]).some(function(m){ return misSame(m.mis,x.m); }); });
+}
+function carryChronicRx(x){
+  var ol=oneOf(x.m,CARRYV.to);
+  return '<div class="rx c1"><div class="top"><span class="nm">'+_esc(x.m)+'</span><span class="freq">출제 '+(x.from.asked+x.own.asked)+'회 중 '+(x.from.wrong+x.own.wrong)+'회 틀림</span></div>'
+    +'<div class="c1line"><span class="c1tag">화학1 기록 합산</span> '+carryLine(x)+'</div>'+(ol?'<div class="ol"><b>핵심:</b> '+md(ol)+'</div>':'')+'</div>';
+}
+/* 심화반 고질 개념 가운데 화학1 에서도 틀렸던 것 — 한 줄 덧붙인다. */
+function carryAlsoHTML(mis){
+  if(!CARRYV) return '';
+  var x=CARRYV.list.filter(function(y){ return misSame(y.m,mis); })[0];
+  if(!x) return '';
+  return '<div class="c1line"><span class="c1tag">화학1 기록</span> '+_esc(CRSLBL[CARRYV.from]||'화학 I')+'에서도 출제 '+x.from.asked+'회 중 '+x.from.wrong+'회 틀림</div>';
+}
+function carrySecHTML(){
+  if(!CARRYV||!CARRYV.list.length) return '';
+  var L=CARRYV.list, FL=CRSLBL[CARRYV.from]||'화학 I';
+  var inChr=carryChronicList().length;
+  var g1=L.filter(function(x){ return !x.chronic&&x.from.chronic; });
+  var g2=L.filter(function(x){ return !x.chronic&&!x.from.chronic&&x.open; });
+  var rest=L.length-L.filter(function(x){ return x.chronic; }).length-g1.length-g2.length;
+  function rows(a, cap, noFix){ var h=a.slice(0,cap).map(function(x){ return '<div class="rvrow c1r"><span class="rvm">'+_esc(x.m)+'</span><span class="rvg">'+carryLine(x,true,noFix)+'</span></div>'; }).join('');
+    return h+(a.length>cap?'<p class="c1line">그 밖에 '+(a.length-cap)+'개</p>':''); }
+  return '<div class="subhead" style="margin-top:16px">화학1에서 이어 온 기록</div>'
+    +'<p class="note" style="margin:2px 0 6px">'+FL+' 수업 때 본 '+CARRYV.rounds.length+'개 회차의 첫 응시를 심화반 개념에 맞춰 옮겨 왔습니다. 심화반에서 같은 개념을 세 번 이상 물으면 그때부터는 <b>심화반 기록으로만</b> 판단합니다.'
+    +(inChr?' 화학1 기록을 합쳐 반복해서 막히는 개념으로 본 '+inChr+'개는 위 목록에 <span class="c1tag">화학1 기록 합산</span>으로 함께 적었습니다.':'')+'</p>'
+    +(g1.length?'<div class="c1grp">'+FL+'에서 반복해서 막혔던 개념</div>'+rows(g1,6):'')
+    +(g2.length?'<div class="c1grp">'+FL+'에서 틀렸고 재시에서 아직 못 고친 개념</div>'+rows(g2,8,true):'')
+    +(rest>0?'<p class="c1line">'+FL+' 재시에서 바로잡은 개념 '+rest+'개는 따로 적지 않았습니다.</p>':'');
+}
+/* 근본 원인 진단에 얹는 화학1 기록 — 화학1 에서 틀린 채(재시에서 못 고침) 넘어왔고 심화반에서 아직 맞힌 적이
+   없는 개념 가운데, 이번 오답(W)이 그 개념이거나 그 개념 위에 서 있는 것(ENGINE 선수 그래프의 하류). 하류 오답이
+   많은 것부터 셋까지. 진단 문장·우연 기준선(W)은 건드리지 않는다 — 보강 순서 앞에 «먼저 다질 선행» 으로 세운다. */
+function carryRootsHTML(W){
+  if(!CARRYV||_EMBED||!W||!W.length) return '';
+  var Wset=new Set(W), out=[];
+  CARRYV.list.forEach(function(x){
+    if(!x.open||x.own3||x.own.last==='ok'||!ENGINE[x.c]) return;
+    var dn=_reachDown(x.c), n=Wset.has(x.c)?1:0;
+    W.forEach(function(w){ if(dn.has(w)) n++; });
+    if(n>0) out.push({x:x,n:n});
+  });
+  out.sort(function(a,b){ return b.n-a.n; }); out=out.slice(0,3);
+  if(!out.length) return '';
+  var mx=out[0].n, FL=CRSLBL[CARRYV.from]||'화학 I';
+  return '<div class="dxsub">화학1 기록 · 먼저 다질 선행</div><div class="dxbars">'+out.map(function(o){
+      return '<div class="dxbar"><span class="dxbn">'+_esc(o.x.m)+'<i class="rt">화학1</i></span><span class="dxbt"><i style="width:'+Math.max(8,o.n/mx*100)+'%"></i></span><span class="dxbv">+'+o.n+'</span></div>'; }).join('')
+    +'</div><p class="dxnote">'+FL+'에서 틀린 뒤 재시에서 못 고친 채 넘어온 개념입니다. 막대는 이번 오답 가운데 이 개념이거나 이 개념 위에 서 있는 것의 수입니다 — 심화반 오답을 보강하기 전에 이것부터 다지면 좋습니다.</p>';
+}
 function trendSig(){ return (A&&A.trend?A.trend:[]).map(function(t){return t.course+'#'+t.round;}).join(','); }
 function chronicFreqText(m){
   if(m&&m.asked!=null&&m.asked>=m.rounds) return '출제 '+m.asked+'회 중 '+m.rounds+'회 틀림';
@@ -2444,6 +2691,7 @@ function render(commit){
     ccum += fixedListOf(rr).length;
     corr.push({round:t.round, cum:ccum});
   });
+  h+=crsTabsHTML();
   if(typeof _VR!=='undefined'&&_VR){h+='<div class="backbar"><button onclick="backToFull()">← 전체 리포트로</button><span class="bb-t">'+(CRSLBL[_VR.course]||'화학')+' '+_VR.round+'회 시점 리포트</span></div>';}
   h+=(RANK && showRank(RANK))?rankCard(RANK):qualCard();
   h+=rxNarrCard();
@@ -2571,7 +2819,7 @@ function render(commit){
 
   // 이번 주 확인할 개념: 실제 문장 앵커 질문 → 막히면 설명 → 함께 읽기
   /* 어떤 개념인지는 render 머리의 weekTarget() — 통과 전이면 재시가 다시 묻는 개념, 통과했으면 고질(없으면 이번 회차 오답). */
-  if(todoMis){ var todoOl=ONELINE[todoMis]||''; var todoCore=CORE[todoMis]||todoOl;
+  if(todoMis){ var todoOl=oneOf(todoMis, latest&&latest.course); var todoCore=coreOf(todoMis, latest&&latest.course)||todoOl;
     var _anchors=(window._deepWrong||[]).filter(function(x){return misSame(x.mis,todoMis)&&(x.f||x.s);});
     var _a0=_anchors[0]||null;
     var _corePlain=(todoCore||'').replace(/\*\*/g,'');
@@ -2627,7 +2875,7 @@ function render(commit){
       : '최근 '+_lvGate.rounds+'회차 첫 응시에서 기본·표준 문항을 <b>'+Math.round(_lvGate.rate*100)+'%</b> 맞혔습니다. 기본기가 서 있어 한 걸음 더 들어가도 좋은 단계입니다.';
     h+=`<div class="card" style="border-left:4px solid var(--teal)"><h2>다음 단계 · 한 겹 더</h2>
       <p style="font-size:13.5px;margin:0 0 12px">${_lead} 아래는 <b>아이가 더 도전하고 싶을 때</b> 한 걸음 더 들어갈 심화 내용과 문항입니다. 필수는 아닙니다.</p>
-      ${deepItems.map(function(x){return '<div class="rx"><div class="top"><span class="nm">'+_esc(x.c)+'</span><span class="freq">심화</span></div>'+lecLinkHTML(x.c, latest&&latest.course, '', latest&&latest.round)+(x.deep?'<div class="ol"><b>한 겹 더:</b> '+_esc(x.deep)+'</div>':'')+'</div>';}).join('')}
+      ${deepItems.map(function(x){return '<div class="rx"><div class="top"><span class="nm">'+_esc(misLabel(x.c, latest&&latest.course))+'</span><span class="freq">심화</span></div>'+lecLinkHTML(x.c, latest&&latest.course, '', latest&&latest.round)+(x.deep?'<div class="ol"><b>한 겹 더:</b> '+_esc(x.deep)+'</div>':'')+'</div>';}).join('')}
       <!-- 회차를 같이 넘긴다. 안 넘기면 심화가 **안 배운 단원까지** 낸다
            (화학Ⅰ 1회 학생에게 후보의 81%가 진도 밖이었다 · 2026-08-15). -->
       ${CHALLENGE_READY[latest.course]?`<a class="cbtn" href="challenge.html?course=${latest.course}&amp;round=${latest.round}${_chQ}"><span>심화 문항으로 새로운 난이도에 도전</span><span class="cgo">도전하기 →</span></a>`:''}
@@ -2655,7 +2903,8 @@ function render(commit){
     }).join('')+'</div>';
   }
   var chronicSet={}; A.chronicMis.forEach(function(m){chronicSet[m.mis]=1;});
-  var review=ChemEngine.spacedReview(allRows, latest.round).filter(function(x){return !misKeyIn(chronicSet,x.mis);}).slice(0,4);
+  carryChronicList().forEach(function(x){ chronicSet[x.m]=1; });   /* 화학1 기록 합산 고질도 위에 섰으니 복습 시점에 또 세우지 않는다(이어 온 학생만) */
+  var review=ChemEngine.spacedReview(allRows, latest.round, latest.course).filter(function(x){return !misKeyIn(chronicSet,x.mis);}).slice(0,4);
   /* 복습 시점의 개념이 이번 회차 첫 응시 문항에 실제로 나왔는지 — boot 가 회차 파일에서 받아 둔
      window._roundMis 로 가른다. 못 받았으면(null) 아무 말도 안 한다. 시트 기록만으로는 «물었는지» 를
      알 수 없어 지금까지 이 줄이 없었다. */
@@ -2664,18 +2913,20 @@ function render(commit){
   /* 개념마다 뱃지(확인됨·바로잡음·미확인) — 그 개념을 마지막으로 틀린 회차의 재시가 다시 물었나(misBadgeFor).
      뜻풀이 한 줄은 첫 뱃지 가까이에 한 번만. */
   var _chB={}; A.chronicMis.forEach(function(m){ _chB[m.mis]=misBadgeFor(m.mis); });
+  var _c1chr=carryChronicList();   /* 화학1 기록을 합쳐 고질로 본 심화 개념(이어 온 학생만 · 없으면 []) */
   var _rvB=review.map(function(x){ return misBadgeFor(x.mis); });
   var _chHasB=A.chronicMis.some(function(m){ return !!_chB[m.mis]; }), _rvHasB=_rvB.some(function(b){ return !!b; });
   h+=`<div class="card"><h2>다시 볼 개념</h2>
     <div class="subhead">반복해서 막히는 곳</div>
     <p class="note" style="margin:2px 0 12px">여러 번 같은 지점에서 멈췄던 개념입니다. 반복해서 드러났다는 건 <b>정확히 어디를 도우면 되는지 보인다</b>는 뜻이고, 지금 집중해서 잡고 있는 지점입니다.</p>
     ${_chHasB?misLegendHTML():''}
-    ${A.chronicMis.length?A.chronicMis.map(m=>`<div class="rx"><div class="top"><span class="nm">${m.mis}</span>${_chB[m.mis]}<span class="freq" data-mis="${_esc(m.mis).replace(/"/g,'&quot;')}">${chronicFreqText(m)}</span></div>${lecLinkHTML(m.mis, latest&&latest.course, '', latest&&latest.round)}${ONELINE[m.mis]?`<div class="ol"><b>핵심:</b> ${md(ONELINE[m.mis])}</div>`:''}${chronicQs(m.mis)}</div>`).join('')
+    ${(A.chronicMis.length||_c1chr.length)?A.chronicMis.map(m=>`<div class="rx"><div class="top"><span class="nm">${misLabel(m.mis, latest&&latest.course)}</span>${_chB[m.mis]}<span class="freq" data-mis="${_esc(m.mis).replace(/"/g,'&quot;')}">${chronicFreqText(m)}</span></div>${lecLinkHTML(m.mis, latest&&latest.course, '', latest&&latest.round)}${carryAlsoHTML(m.mis)}${oneOf(m.mis, latest&&latest.course)?`<div class="ol"><b>핵심:</b> ${md(oneOf(m.mis, latest&&latest.course))}</div>`:''}${chronicQs(m.mis)}</div>`).join('')+_c1chr.map(carryChronicRx).join('')
       :'<p class="muted">반복해서 막히는 개념 없음. 안정적입니다.</p>'}
+    ${carrySecHTML()}
     ${review.length?`<div class="subhead" style="margin-top:16px">한 번씩 놓친 곳, 복습 시점</div>
     <p class="note" style="margin:2px 0 10px">이전 회차에 놓쳤던 개념 중 <b>지금이 다시 볼 때</b>인 것만 골랐습니다(1 → 3 → 7회차 간격). 지금 가볍게 점검하면 오래 갑니다.</p>
     ${(_rvHasB&&!_chHasB)?misLegendHTML():''}
-    ${review.map(function(x,i){return '<div class="rvrow"><span><span class="rvm">'+x.mis+'</span>'+(_rvB[i]?' '+_rvB[i]:'')+'</span><span class="rvg">'+x.last+'회에서 · '+(x.stage===0?'첫 점검':x.stage===1?'두 번째 점검':'마지막 점검')+reviewSeen(x.mis)+'</span></div>';}).join('')}`:''}</div>`;
+    ${review.map(function(x,i){return '<div class="rvrow"><span><span class="rvm">'+misLabel(x.mis, latest&&latest.course)+'</span>'+(_rvB[i]?' '+_rvB[i]:'')+'</span><span class="rvg">'+x.last+'회에서 · '+(x.stage===0?'첫 점검':x.stage===1?'두 번째 점검':'마지막 점검')+reviewSeen(x.mis)+'</span></div>';}).join('')}`:''}</div>`;
 
   // 지금까지의 여정 (바로잡은 개념 누적 + 끝까지 해낸 기록 통합)
   h+=`<div class="card"><h2>지금까지의 여정</h2>
@@ -2730,10 +2981,12 @@ function render(commit){
 var LOAD_FAIL=false;
 /* 서버가 함께 주는 심화 도전 기록(최근 것 먼저, 최대 20판)과 최근 3회차 문항(boot 가 채운다). */
 var CHALLENGES=[], RECENTJ=null;
+/* 성적표 주소의 ?c= (보고 싶은 과목) — 서버가 누적·석차·반 응답을 그 과목으로 정리한다. 없으면 붙이지 않는다(예전 주소 그대로). */
+function wantCourseQ(){ var c=(new URLSearchParams(location.search).get('c')||'').trim(); return /^[a-z0-9]{1,8}$/.test(c)?'&c='+c:''; }
 async function askReport(student, tries){
   for(var i=0;i<(tries||3);i++){
     try{
-      var r=await fetch(REPORT_URL+'?student='+encodeURIComponent(student)+'&t='+Date.now(), {cache:'no-store'});
+      var r=await fetch(REPORT_URL+'?student='+encodeURIComponent(student)+wantCourseQ()+'&t='+Date.now(), {cache:'no-store'});
       var j=await r.json();
       if(j && typeof j==='object') return j;
     }catch(e){}
@@ -3005,7 +3258,7 @@ function segClinicSec(J, course){
     take.forEach(function(q){ var k=q.mis||'(개념 미상)';
       if(!byM[k]){ byM[k]=[]; order.push(k); } byM[k].push(q); });
     order.forEach(function(k){
-      var g=byM[k], core=CORE[k]||'', one=ONELINE[k]||'';
+      var g=byM[k], core=coreOf(k,course), one=oneOf(k,course);
       var rounds=g.map(function(q){return q.round;}).filter(function(v,i,a){return a.indexOf(v)===i;});
       var fixedAll=g.every(function(q){return q.fixed;});
       /* 재시 행이 「묻지 못했다」(retakeUnasked)고 적은 개념 — 「고침」 도 「아직」 도 아니다. */
@@ -3222,6 +3475,7 @@ function segMatsSec(states, course){
 
 /* 다음 구간 처방 — 약한 단원 + 되풀이 개념을 «무엇을 어떻게» 로 바꿔 적는다. */
 function segRxSec(units, chronic, J){
+  var _crs=(SEG&&SEG.course)||(latest&&latest.course)||null;
   var weak=(units||[]).filter(function(u){ return u.t>=4 && (u.t-u.w)/u.t < 0.8; })
     .sort(function(a,b){ return (a.t-a.w)/a.t-(b.t-b.w)/b.t; }).slice(0,4);
   var chr=(chronic||[]).slice(0,4);
@@ -3242,7 +3496,7 @@ function segRxSec(units, chronic, J){
     h+='<div class="segboxh" style="margin-top:14px">되풀이되는 개념</div>';
     chr.forEach(function(m){
       h+='<div class="segrx"><div class="segrxh">'+rEsc(m.mis)+'<span class="segrxp">'+(m.asked!=null?('출제 '+m.asked+'회 중 '+m.rounds+'회 틀림'):(m.rounds+'개 회차 반복'))+'</span></div>'
-        +(ONELINE[m.mis]?'<div class="segrxd"><b>핵심</b> '+md(ONELINE[m.mis])+'</div>':'')+'</div>';
+        +(oneOf(m.mis,_crs)?'<div class="segrxd"><b>핵심</b> '+md(oneOf(m.mis,_crs))+'</div>':'')+'</div>';
     });
   }
   return h+'</div>';
@@ -3517,6 +3771,8 @@ async function boot(){
     if(demoHard){ CU=CUM_UNITS_HARD; CX=CUM_AXES_HARD; } }
   if(isDemo && !demoHard) RANK=DEMO_RANK;  // 데모(SYN)일 때만 데모 석차; 실제 학생은 실제 석차(없으면 석차 카드 숨김→qualCard)
   A.info = A.info || { name:(allRows[0]||{}).name||'학생', school:(allRows[0]||{}).school||'' };
+  ALLROWS_ALL=(allRows||[]).slice(); VIEW=null; CARRY=null; CARRYV=null;
+  if(!isDemo) viewCourse(sp.get('c'));
   HWROWS=(allRows||[]).filter(function(r){return r.course==='jm1';});
   var _oxTrend=(A&&A.trend?A.trend:[]).filter(function(t){return t.course!=='jm1';});
   if(HWROWS.length && !_oxTrend.length){ renderHwOnly(); return; }
@@ -3545,6 +3801,7 @@ async function boot(){
   RECENTJ=null; window._dxRecent=null;
   try{ RECENTJ=await recentJoin(DEEP_LVL12_ROUNDS); window._dxRecent=dxRecentFrom(RECENTJ); }catch(e){ RECENTJ=null; window._dxRecent=null; }
   try{ await preloadRetakeItems(); }catch(e){}
+  try{ await loadCarry(); }catch(e){ CARRY=null; CARRYV=null; }
   await computeQuad(isDemo);
   render();
   try{ await fillMainSolutions(); }catch(e){}

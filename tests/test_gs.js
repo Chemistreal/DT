@@ -997,18 +997,28 @@ console.log('[오개념 대표 이름] 서버 cumulative_ 가 chemengine.js 와 
   T('MIS_CANON 표가 chemengine.js 와 같다', JSON.stringify(ctx.MIS_CANON) === JSON.stringify(CE.MIS_CANON));
   T("misCanon('불활성 기체') → '비활성 기체' (대표 이름은 그대로)",
     ctx.misCanon('불활성 기체') === '비활성 기체' && ctx.misCanon('비활성 기체') === '비활성 기체');
-  /* 비활성 기체는 화학Ⅰ 7·13회와 일반화학 5회 정시에서 묻는다(ROUND_MIS). 세 회차를 보고 둘에서
-     (한 번은 옛 표기로) 틀렸으면 고질이다 — 출제 3 · 틀림 2. 이름이 갈리면 1·1 로 쪼개져 안 뜬다. */
+  /* 비활성 기체는 화학Ⅰ 7·13회 정시에서 묻는다(ROUND_MIS). 7회(옛 표기)·13회에서 틀리고, 묻지 않는 14회에서도
+     틀렸으면(표에 없어도 틀렸으면 물은 것) 출제 3 · 틀림 3 — 고질이다. 이름이 갈리면 2·1 로 쪼개져 안 뜬다.
+     ⚠ 예전에는 일반화학 5회(같은 이름을 묻는다)를 붙여 «출제 3» 을 채웠다 — 과목을 넘어 합친 것이라 7단계 2차에서
+       고쳤다. 아래에서 그 행으로 과목이 갈리는지도 본다. */
   const rows = [
     { course: 'ch1', round: 7, attempt: '첫 응시', score: 70, pass: false, isTest: false, wrongMis: ['불활성 기체'], wrongAxes: {} },
     { course: 'ch1', round: 13, attempt: '첫 응시', score: 75, pass: false, isTest: false, wrongMis: ['비활성 기체'], wrongAxes: {} },
-    { course: 'gc', round: 5, attempt: '첫 응시', score: 90, pass: true, isTest: false, wrongMis: [], wrongAxes: {} },
+    { course: 'ch1', round: 14, attempt: '첫 응시', score: 80, pass: true, isTest: false, wrongMis: ['불활성 기체'], wrongAxes: {} },
   ];
   const c = ctx.cumulative_(rows);
-  T('불활성 기체(7회) + 비활성 기체(13회) · 출제 3회 → 고질 하나 · 비활성 기체 · 2회 틀림 · 출제 3',
-    c.chronicMis.length === 1 && c.chronicMis[0].mis === '비활성 기체' && c.chronicMis[0].rounds === 2 && c.chronicMis[0].asked === 3, JSON.stringify(c.chronicMis));
+  T('불활성 기체(7·14회) + 비활성 기체(13회) · 출제 3회 → 고질 하나 · 비활성 기체 · 3회 틀림 · 출제 3',
+    c.chronicMis.length === 1 && c.chronicMis[0].mis === '비활성 기체' && c.chronicMis[0].rounds === 3 && c.chronicMis[0].asked === 3, JSON.stringify(c.chronicMis));
   const e = CE.cumulative(rows.map(r => Object.assign({ studentKey: 'k' }, r)))['k'];
   T('chemengine.js cumulative 와 같은 고질', JSON.stringify(e.chronicMis) === JSON.stringify(c.chronicMis), JSON.stringify([e.chronicMis, c.chronicMis]));
+  /* 과목을 넘어 합치지 않는다: 화학Ⅰ 7·13회 + 일반화학 5회(같은 이름) — 어느 과목으로 봐도 출제 2회 이하라 고질이 아니다. */
+  const mixed = [rows[0], rows[1], { course: 'gc', round: 5, attempt: '첫 응시', score: 60, pass: false, isTest: false, wrongMis: ['비활성 기체'], wrongAxes: {} }];
+  const mc = ctx.cumulative_(mixed), mc1 = ctx.cumulative_(mixed, 'ch1');
+  const me = CE.cumulative(mixed.map(r => Object.assign({ studentKey: 'k' }, r)))['k'], me1 = CE.cumulative(mixed.map(r => Object.assign({ studentKey: 'k' }, r)), 'ch1')['k'];
+  T('화학Ⅰ+일반화학 학생: 고질 분자가 과목을 넘어 합쳐지지 않는다(서버·엔진, 두 과목 어느 쪽으로 봐도)',
+    mc.chronicMis.length === 0 && mc1.chronicMis.length === 0 && me.chronicMis.length === 0 && me1.chronicMis.length === 0
+    && mc.course === 'gc' && mc1.course === 'ch1' && me.course === 'gc' && me1.course === 'ch1',
+    JSON.stringify([mc.chronicMis, mc1.chronicMis, mc.course, mc1.course]));
   const sr = CE.spacedReview(rows.slice(0, 2).map(r => Object.assign({}, r, { round: r.round === 7 ? 1 : 2 })), 3);
   T('chemengine.js spacedReview 도 대표 이름 하나로 센다(2회 틀림)', sr.length === 1 && sr[0].mis === '비활성 기체' && sr[0].times === 2, JSON.stringify(sr));
   /* 대표 시도(finalScore)도 서버·엔진이 같은 규칙 — 처음 통과한 시도, 없으면 마지막 */
@@ -1254,8 +1264,14 @@ console.log('[화학Ⅰ 심화] ch1s — 과목 인식 · 저장 · 읽기 · �
   const g = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY) } }));
   const crs = (g.rows || []).map(x => x.course + '#' + x.round).sort().join(',');
   T('읽기: 화학Ⅰ·심화 행이 함께 온다', g.ok === true && crs === 'ch1#3,ch1s#1,ch1s#1', crs);
+  /* 두 과목을 들으면 성적표는 하나를 골라 본다(7단계 2차) — 같은 시각에 저장됐으면 예전 순서(글자순 뒤 = ch1s),
+     ?c=ch1 이면 화학Ⅰ. 누적 추이에는 고른 과목만, 과목 목록(courses)에는 둘 다. */
   const tr = ((g.cumulative || {}).trend || []).map(t => t.course + '#' + t.round).sort().join(',');
-  T('누적 추이에 두 과목이 따로 선다', tr === 'ch1#3,ch1s#1', tr);
+  T('누적 추이는 보고 있는 과목(ch1s)만 · 과목 목록에 둘 다', tr === 'ch1s#1' && g.cumulative.course === 'ch1s'
+    && JSON.stringify(g.cumulative.courses) === '["ch1","ch1s"]', tr + ' ' + JSON.stringify(g.cumulative.courses));
+  const g1 = J(ctx.doGet({ parameter: { student: ctx.pubId_(KEY), c: 'ch1' } }));
+  const tr1 = ((g1.cumulative || {}).trend || []).map(t => t.course + '#' + t.round).join(',');
+  T('?c=ch1 이면 화학Ⅰ 쪽으로 정리한다', tr1 === 'ch1#3' && g1.cumulative.course === 'ch1' && g1.rows.length === g.rows.length, tr1);
   const t1s = ((g.cumulative || {}).trend || []).filter(t => t.course === 'ch1s')[0] || {};
   T('ch1s 회차는 재시 통과로 통과', t1s.passed === true, JSON.stringify(t1s));
 
@@ -1274,6 +1290,54 @@ console.log('[화학Ⅰ 심화] ch1s — 과목 인식 · 저장 · 읽기 · �
     && SHEETS['심화기록']._rows[SHEETS['심화기록']._rows.length - 1][10] === 'CH1S-001,CH1S-002,CH1S-003', JSON.stringify(ch));
   res._rows.length = before;
   delete SHEETS['심화기록'];
+}
+
+/* ── 7단계 2차 · 과목이 섞이는 곳 (2026-10-03) ─────────────────────────────
+   학생은 과목과 무관하게 키 하나라, 여러 과목을 들은 학생의 누적·석차·반 응답이 «과목 글자순 마지막» 을
+   최근으로 보고 과목을 넘어 합쳐졌다. 서버도 chemengine.js focusCourse 와 같은 규칙(?c= → 가장 최근 날짜의
+   과목 → 예전 순서)으로 과목 하나를 골라 정리한다. 한 과목 학생은 고치기 전(7a121d7)과 같은 값이다. */
+console.log('[7단계 2차] 한 과목 학생은 그대로 · 여러 과목 학생은 보고 있는 과목으로');
+{
+  const CE = require('../chemengine.js');
+  const SNAP = JSON.parse(fs.readFileSync('tests/fixtures/single_course_snapshot.json', 'utf8'));
+  Object.keys(SNAP.students).forEach(id => {
+    const S0 = SNAP.students[id], rows = S0.rows, key = rows[0].studentKey, all = rows.concat(S0.others);
+    const got = { cumulative: ctx.cumulative_(rows), rank: ctx.rank_(all, key, []), cohort: ctx.cohortItems_(all, key, []), ranks: ctx.ranksAll_(all, key, []) };
+    ['cumulative', 'rank', 'cohort', 'ranks'].forEach(k =>
+      T(id + ' 만 듣는 학생: 서버 ' + k + ' 가 고치기 전과 같다', JSON.stringify(got[k]) === JSON.stringify(S0.server[k]), JSON.stringify(got[k]).slice(0, 160)));
+    T(id + ' 만 듣는 학생: ?c= 를 줘도(다른 과목이어도) 같다', JSON.stringify(ctx.cumulative_(rows, 'gc')) === JSON.stringify(S0.server.cumulative)
+      && JSON.stringify(ctx.rank_(all, key, [], 'gc')) === JSON.stringify(S0.server.rank));
+  });
+  /* 화학Ⅰ(3월)+화학Ⅱ(9월) 학생 — 같은 회차 번호(1~3)를 둘 다 봤다. 다른 학생 다섯이 두 과목 3회를 봤다. */
+  const K = '가상고-두과목', mkr = (k, course, round, score, day, wrong) => ({ studentKey: k, name: 'n', school: '가상고', course, round, attempt: '첫 응시',
+    score, pass: score >= 80, date: new Date('2026-' + day + 'T01:00:00Z'), answers: 'OX'.repeat(30), wrongMis: wrong || [], wrongAxes: {}, isTest: false });
+  const mine = [1, 2, 3].map(r => mkr(K, 'ch1', r, 60 + r, '03-0' + r, ['루이스 전자점식'])).concat([1, 2, 3].map(r => mkr(K, 'ch2', r, 90 - r, '09-0' + r)));
+  const others = [];
+  for (let i = 0; i < 5; i++) ['ch1', 'ch2'].forEach(c => others.push(mkr('가상고-다른' + i, c, 3, 50 + i * 10, '09-10')));
+  const all = mine.concat(others);
+  const c0 = ctx.cumulative_(mine), c1 = ctx.cumulative_(mine, 'ch1'), e0 = CE.cumulative(mine)[K];
+  T('누적: 가장 최근 날짜의 과목(ch2)만 · 범위 1~3 · 서버와 엔진이 같다', c0.course === 'ch2' && c0.trend.every(t => t.course === 'ch2') && c0.coverageRound === 3
+    && JSON.stringify(c0.trend) === JSON.stringify(e0.trend.map(t => { const o = Object.assign({}, t); delete o.date; return o; })) && e0.course === 'ch2', JSON.stringify(c0.trend));
+  T('누적 ?c=ch1: 화학Ⅰ 만 · 고질(루이스 전자점식 3/3)도 화학Ⅰ 쪽에만', c1.course === 'ch1' && c1.trend.every(t => t.course === 'ch1')
+    && c1.chronicMis.length === 1 && c1.chronicMis[0].mis === '루이스 전자점식' && c0.chronicMis.length === 0, JSON.stringify([c1.chronicMis, c0.chronicMis]));
+  const r0 = ctx.rank_(all, K, []), r1 = ctx.rank_(all, K, [], 'ch1');
+  T('석차: 보고 있는 과목의 마지막 회차(ch2 3회 87점 · ch1 3회 63점)', r0 && r0.score === 87 && r0.round === 3 && r1 && r1.score === 63, JSON.stringify([r0 && r0.score, r1 && r1.score]));
+  const h0 = ctx.cohortItems_(all, K, []), h1 = ctx.cohortItems_(all, K, [], 'ch1');
+  T('반 응답: 보고 있는 과목(ch2 · ?c=ch1 이면 ch1)', h0 && h0.course === 'ch2' && h1 && h1.course === 'ch1', JSON.stringify([h0 && h0.course, h1 && h1.course]));
+  /* 날짜가 없으면 예전 순서(글자순 마지막) — 예전 값과 같다 */
+  const nd = mine.map(r => Object.assign({}, r, { date: '' }));
+  T('날짜가 없으면 예전 순서(ch2) · 엔진도 같다', ctx.focusCourse_(nd).course === 'ch2' && CE.focusCourse(nd).course === 'ch2');
+  /* 같은 규칙인지 — 여러 모양의 행에서 서버 focusCourse_ 와 엔진 focusCourse 가 같은 답 */
+  const shapes = [mine, nd, mine.slice(0, 3), mine.concat([mkr(K, 'jm1', 1, 90, '12-01')]), mine.map(r => Object.assign({}, r, { date: '2026-05-05' }))];
+  T('서버 focusCourse_ = 엔진 focusCourse (모양 다섯 · ?c= 셋)', shapes.every(rs => ['', 'ch1', 'zz'].every(w => JSON.stringify(ctx.focusCourse_(rs, w)) === JSON.stringify(CE.focusCourse(rs, w)))));
+  /* 성적표 창구 — ?c= 를 받아 누적·석차·반 응답을 같은 과목으로 */
+  const sh = SHEETS['결과'], n0 = sh._rows.length;
+  mine.forEach(r => sh._rows.push(['n', 'L', r.date, r.score, r.pass ? '통과' : '미달', K, '가상고', '2', r.course, r.round, '첫 응시', 0, 0, (r.wrongMis || []).join(' / '), '{}', '', '[]', '[]', r.answers]));
+  const pid = ctx.pubId_(K);
+  const g0 = J(ctx.doGet({ parameter: { student: pid } })), g1 = J(ctx.doGet({ parameter: { student: pid, c: 'ch1' } }));
+  T('창구: ?c= 없으면 ch2 · ?c=ch1 이면 ch1 · 행은 둘 다 모든 과목', g0.cumulative.course === 'ch2' && g1.cumulative.course === 'ch1' && g0.rows.length === 6 && g1.rows.length === 6,
+    JSON.stringify([g0.cumulative.course, g1.cumulative.course, g0.rows.length]));
+  sh._rows.length = n0;
 }
 
 console.log(`\n결과: pass=${pass} fail=${fail}`);
