@@ -57,7 +57,7 @@ def form(d):
     return ('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>%s 설문지</title><style>%s</style></head><body>'
             '<div class="kick">설 문 지 · 100 문 항</div><h1>%s</h1><div class="lead">%s</div>'
             '<div class="who"><div>학교</div><div>이름</div><div>학년</div></div>'
-            '<div class="legend">각 문장에 대해 지금 나와 가장 가까운 번호에 ○ 하세요. &nbsp;%s</div>'
+            '<div class="legend">각 문장을 읽고 지금 나와 가장 가까운 번호를 <b>&nbsp;맨 뒤 응답지(OMR)</b>에 칠하세요. &nbsp;%s</div>'
             '<table>%s</table><div class="foot">수고했어요. 고른 답은 나의 공부를 돕는 데만 쓰여요.</div></body></html>'
             % (d['title'], CSS, html.escape(d['title']), html.escape(d['intro']), legend, rows))
 
@@ -93,6 +93,14 @@ def main():
     for p in files:
         shutil.copy(p[:-5] + '.pdf', os.path.join(DT, os.path.basename(p)[:-5] + '.pdf'))
         print('→', os.path.basename(p)[:-5] + '.pdf')
+    # 학생 인쇄용: DT 시험지처럼 설문지 끝에 OMR 응답지 한 장을 붙인다(선생님 결정 2026-10-04)
+    import pymupdf
+    form_pdf = os.path.join(DT, 'survey_ch1_form.pdf')
+    doc = pymupdf.open(form_pdf)
+    doc.insert_pdf(pymupdf.open(os.path.join(DT, 'survey_ch1_omr.pdf')))
+    doc.save(form_pdf + '.tmp', garbage=4, deflate=True)
+    os.replace(form_pdf + '.tmp', form_pdf)
+    print('→ survey_ch1_form.pdf 끝에 OMR 응답지를 붙였다(%d쪽)' % doc.page_count)
 
 
 
