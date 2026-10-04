@@ -51,8 +51,9 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
 </head><body>
 <div class="pv-bar"><div class="pv-in">
   <h1><small>화학 · 다원교육 · 조준모 · 선생님 화면</small>화학1 돌아보기 진단 보고서 — 반 전체 일괄 인쇄</h1>
-  <button class="pv-btn ghost" id="pvMake" type="button" onclick="makeAll()" disabled>선택한 학생 보고서 만들기</button>
-  <button class="pv-btn" id="pvPrint" type="button" onclick="window.print()" disabled>인쇄</button>
+  <button class="pv-btn" id="pvDocxAll" type="button" onclick="docxAll()" disabled>반 전체 Word 저장</button>
+  <button class="pv-btn ghost" id="pvMake" type="button" onclick="makeAll()" disabled>선택한 학생 화면으로 그리기</button>
+  <button class="pv-btn ghost" id="pvPrint" type="button" onclick="window.print()" disabled>인쇄</button>
 </div></div>
 <div class="pv-wrap">
   <div class="pv-card" id="pvSrc"><h2>세 곳의 기록</h2>불러오는 중…</div>
@@ -62,6 +63,7 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
 <script src="survey_analysis.js"></script>
 <script src="survey_sources.js"></script>
 <script src="survey_render.js"></script>
+<script src="survey_docx.js"></script>
 <script>
 /* 반 전체 일괄 인쇄 — 선생님 화면(관리자 문은 admin.html 과 같은 방식: localStorage dt_admtok · 지금은 전체 공개 모드).
    선생님 결정(2026-10-04): 세 곳(DT · exam · KMChC)은 **이 화면에서만** 합친다.
@@ -143,10 +145,10 @@ function pair(){
         '<td><b>'+esc(s.name)+'</b><br><span class="pv-dim">'+esc(s.school||'')+' '+esc(s.year||'')+(s.row.isTest?' · 테스트':'')+'</span></td>'+
         '<td>'+stChip(EX.status==='ok'?m.exam.status:EX.status)+'<br>'+(EX.status==='ok'?exSel:'')+'</td>'+
         '<td>'+stChip(KM.status==='ok'?m.km.status:KM.status)+'<br>'+(KM.status==='ok'?kmSel:'')+'</td>'+
-        '<td>'+(s.code?'<a href="survey_print.html?student='+encodeURIComponent(s.code)+'&amp;admin=1" target="_blank" rel="noopener">한 명 열기</a>':'—')+'</td></tr>';
+        '<td>'+(s.code?'<a href="survey_print.html?student='+encodeURIComponent(s.code)+'&amp;admin=1" target="_blank" rel="noopener">한 명 열기</a><br>':'')+'<button class="pv-btn ghost pv-one-docx" type="button" style="padding:4px 10px;font-size:12px;margin-top:4px" onclick="docxOne(\''+k+'\',this)">Word 저장</button></td></tr>';
     }).join('')+'</tbody></table>';
   $('#pvPairs').innerHTML=h;
-  $('#pvMake').disabled=!ss.length;
+  $('#pvMake').disabled=!ss.length; $('#pvDocxAll').disabled=!ss.length;
 }
 function setPick(key,f,v){
   const p=PICK[key]; if(!p) return;
@@ -172,8 +174,29 @@ async function makeAll(){
     await new Promise(z=>setTimeout(z,0));
   }
   SurveyRender.fitScreen(document);
-  $('#pvMake').textContent='선택한 학생 보고서 만들기'; $('#pvMake').disabled=false; $('#pvPrint').disabled=!pages;
+  $('#pvMake').textContent='선택한 학생 화면으로 그리기'; $('#pvMake').disabled=false; $('#pvPrint').disabled=!pages;
   window.__SP_PAGES=pages; window.__SP_N=ss.length; window.__SP_READY=true;
+}
+/* ── Word ── 학생마다 화면 보고서와 같은 계산(SurveyAnalysis.analyzeAll — render 가 부르는 것과 같은 인자)을 해서 넘긴다.
+   «반 전체»는 학생마다 Word 구역을 나눈 한 파일(쪽 번호는 학생마다 1부터), 줄마다 «Word 저장»은 그 학생 한 명. */
+async function studentInfo(s){
+  const rows=ALL.filter(r=>r.studentKey===s.studentKey);
+  const rounds=await SurveyRender.loadRounds(rows);
+  const external=await SurveySources.externalFor({exam:PICK[s.key].exam, km:PICK[s.key].km}, EX, KM);
+  const A=SurveyAnalysis.analyzeAll({ doc:C.doc, ans:s.row.ans, rows:rows, roundsByCourse:rounds, ms:s.row.ms, link:C.link, external:external });
+  return { A:A, name:s.name, school:s.school, year:s.year, surveyDate:s.row.date, bank:C.bank };
+}
+async function docxOne(key,btn){
+  const s=students().filter(x=>x.key===key)[0]; if(!s) return;
+  await SurveyDocx.download(btn, [await studentInfo(s)]).catch(()=>{});
+}
+async function docxAll(){
+  const ss=students().filter(s=>PICK[s.key]&&PICK[s.key].on), btn=$('#pvDocxAll');
+  if(!ss.length) return;
+  const list=[];
+  for(const s of ss){ btn.textContent='계산 중 '+(list.length+1)+' / '+ss.length; list.push(await studentInfo(s)); }
+  btn.textContent='반 전체 Word 저장';
+  await SurveyDocx.download(btn, list, { name: school||'반 전체' }).catch(()=>{});
 }
 window.addEventListener('resize',()=>SurveyRender.fitScreen(document));
 window.addEventListener('beforeprint',()=>{ document.querySelectorAll('.sp-sheets').forEach(s=>s.style.zoom=''); });

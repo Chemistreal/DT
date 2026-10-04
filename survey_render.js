@@ -308,7 +308,9 @@
   }
 
   /* ══════════════════ SVG 그래프 ══════════════════ */
-  var FONT = 'font-family="DejaVu Sans, WenQuanYi Zen Hei, sans-serif"';
+  /* 그래프 글꼴 — 학부모 PC(윈도 맑은 고딕 · 맥 Apple SD Gothic Neo)에서 Word 용 PNG 를 구울 때도 한글이 나오게
+     그 둘을 앞세운다. 이 컨테이너·리눅스에서는 WenQuanYi Zen Hei 로 떨어진다(화면 그림도 같은 글꼴). */
+  var FONT = 'font-family="\'Malgun Gothic\', \'Apple SD Gothic Neo\', \'Noto Sans KR\', \'WenQuanYi Zen Hei\', \'DejaVu Sans\', sans-serif"';
 
   /* 2. 18주 여정: 첫 시도 정답률(선) · 지난 단원 문항(점선) · 재시 횟수(막대) · 단원 띠 · 고질 해소(◆) */
   function journeySVG(A) {
@@ -1409,7 +1411,8 @@
        categories(counts)  1절 여섯 갈래 개수(A.counts)                                                   viewBox 680×92
        hbars(items, opt)   가로 막대 묶음 [{label, value, min?, max, color?, text?}]                       viewBox (opt.width||680)×(24n+6)
        kmCompare(KC)   13절 그때 → 지금(A.kmCompare)
-       글꼴은 font-family 속성(DejaVu Sans · WenQuanYi Zen Hei)으로 박혀 있다 — PNG 로 그릴 때 그 글꼴이 있어야 한글이 나온다. */
+       글꼴은 font-family 속성(맑은 고딕 · Apple SD Gothic Neo · Noto Sans KR · WenQuanYi Zen Hei)으로 박혀 있다 —
+       PNG 로 그릴 때 그 가운데 하나가 있어야 한글이 나온다. */
   /* 따로 떼어 PNG 로 그릴 수 있게 xmlns · width · height(viewBox 크기)를 붙인다. 화면 안 그림은 원래 함수를 그대로 쓴다. */
   function standalone(svg) {
     return String(svg).replace(/^<svg ([^>]*?)viewBox="0 0 ([\d.]+) ([\d.]+)"/, function (m, pre, w, h) {
@@ -1419,6 +1422,13 @@
   function wrap(f) { return function () { var r = f.apply(null, arguments); if (r && typeof r === 'object' && r.svg) { r.svg = standalone(r.svg); return r; } return standalone(r); }; }
   var charts = { journey: wrap(journeySVG), scatter: wrap(scatterSVG), bias: wrap(biasSVG), radar: wrap(radarSVG), cycle: wrap(cycleSVG), timeline: wrap(timelineSVG), spark: wrap(spark),
     categories: wrap(categoriesSVG), hbars: wrap(hbarsSVG), kmCompare: wrap(kmCompareSVG) };
-  root.SurveyRender = { render: render, fitScreen: fitScreen, loadRounds: loadRounds, loadCommon: loadCommon, getJSON: getJSON, charts: charts, BRAND: BRAND, TITLE: TITLE, CAT: CAT, CAT_ORDER: CAT_ORDER, esc: esc };
+  /* 글 — 화면과 Word(survey_docx.js)가 같은 문장을 쓰도록 문장 만드는 함수를 그대로 내놓는다.
+     돌려주는 것은 HTML 조각(<b>·<span class="sp-dim">·<br>)이다 — Word 쪽이 굵게·흐리게·줄바꿈으로 옮긴다. */
+  var words = { summaryLines: summaryLines, adviceOf: adviceOf, labelOf: labelOf, readingOf: readingOf, checkForms: checkForms,
+    biasText: biasText, gammaText: gammaText, hceText: hceText, unitText: unitText, habitPairs: habitPairs, habitText: habitText,
+    crossText: crossText, priorityAct: priorityAct, praise: praise, questions: questions, kmText: kmText, depthWord: depthWord,
+    qualityText: qualityText, extMsg: extMsg, md: md, pct: pct, fx: fx, sgn: sgn, ymd: ymd, josa: josa, short: short,
+    WHY: WHY, CURE: CURE, REFS: REFS };
+  root.SurveyRender = { render: render, fitScreen: fitScreen, loadRounds: loadRounds, loadCommon: loadCommon, getJSON: getJSON, charts: charts, words: words, BRAND: BRAND, TITLE: TITLE, CAT: CAT, CAT_ORDER: CAT_ORDER, esc: esc };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.SurveyRender;
 })(typeof self !== 'undefined' ? self : this);
