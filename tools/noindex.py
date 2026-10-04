@@ -50,7 +50,8 @@ PERSONAL = {
     'dt': ['report.html', 'parent_report.html', 'OX_grader.html',
            'OX_grader_prescription.html', 'hw_grader.html',
            'roster.html', 'pending.html', 'admin.html',
-           'survey_admin.html', 'survey_report.html'],
+           'survey_admin.html', 'survey_report.html',
+           'survey_print.html', 'survey_print_batch.html'],
     'kmchc': ['report.html', 'answers.html',
               '리포트_고급_미리보기.html', '리포트링크생성기.html'],
 }

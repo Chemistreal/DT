@@ -235,6 +235,10 @@ jobs:
       # 다시 본다. 재시인 학생에게 안내가 뜨는지도 같이 본다.
       - name: 제출하면 리포트로 데려간다 (저장이 확인된 뒤에)
         run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/handoff.js
+      # 「화학1 돌아보기」 진단 보고서 — 판정·짝짓기·쪽 나눔·금지 낱말(상·등수)을
+      #   가상 학생 넷으로 실제 브라우저에서 그려 본다.
+      - name: 돌아보기 진단 보고서가 그려진다 (실제 브라우저)
+        run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/survey_print.js
       - name: Run regression suite
         run: NODE_PATH=tests/node_modules node tests/run.js
       - name: Upload failure screenshots

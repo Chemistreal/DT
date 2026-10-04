@@ -137,7 +137,7 @@ function render(){
   let h='<div class="card"><h1>'+esc(DOC.title)+' · 결과</h1><p class="lede">설문 느낌(자신감·생각)을 학생의 실제 화학1 기록과 맞댄 판정입니다. 학생 화면에는 판정이 보이지 않습니다.</p>'+
     '<div class="tabs"><button class="'+(tab==='class'?'sel':'')+'" onclick="setTab(\'class\')">반 요약</button><button class="'+(tab==='students'?'sel':'')+'" onclick="setTab(\'students\')">학생별</button><button id="tabEntry" class="'+(tab==='entry'?'sel':'')+'" onclick="setTab(\'entry\')">종이 응답 입력</button></div>'+
     '<div class="row"><label><input type="checkbox" id="tt" aria-label="테스트 행 포함" '+(showTest?'checked':'')+' onchange="showTest=this.checked;render()"> 테스트 행 포함</label>'+
-    '<button class="ghost sm" onclick="csvAll()">CSV 내려받기</button><button class="ghost sm" onclick="csvLinks()">링크 목록 CSV</button><button class="ghost sm" onclick="SROWS=null;render();loadServer()">새로 읽기</button></div>'+
+    '<button class="ghost sm" onclick="csvAll()">CSV 내려받기</button><button class="ghost sm" onclick="csvLinks()">링크 목록 CSV</button><button class="ghost sm" onclick="SROWS=null;render();loadServer()">새로 읽기</button><a class="btn sm" href="survey_print_batch.html">진단 보고서 일괄 인쇄 →</a></div>'+
     '<div class="row" id="pdfs" style="margin-top:6px">'+pdfHTML()+'</div></div>';
   if(tab==='entry') h+=entryView();
   else if(loadErr) h+='<div class="card"><p class="bad">'+esc(loadErr)+'</p><button onclick="loadServer()">다시 읽기</button></div>';
