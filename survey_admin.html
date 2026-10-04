@@ -39,6 +39,14 @@ td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .det{background:var(--paper);border-radius:10px;padding:10px;margin:6px 0}
 .det li{margin:3px 0;font-size:13px}
 /* 종이 응답 입력 — 키보드로 차례로 친다. 아래 표는 인쇄 OMR 과 같은 4열 × 25행 */
+#enNameBox{position:relative;flex:2 1 160px;min-width:0}
+#enNameBox input{width:100%}
+.sug{position:absolute;left:0;right:0;top:100%;z-index:5;margin-top:3px;background:var(--surface);border:1.5px solid var(--teal-line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden}
+.sug:empty{display:none}
+.sug button{display:block;width:100%;text-align:left;font:inherit;font-size:14.5px;padding:8px 11px;border:0;border-radius:0;background:transparent;color:var(--ink);cursor:pointer}
+.sug button .m{color:var(--sub);font-size:13px;margin-left:6px}
+.sug button.on{background:var(--teal-soft);box-shadow:inset 3px 0 0 var(--teal)}
+.kbd-hint{font-size:12.5px;color:var(--sub);margin:6px 0 0}
 #enKeys{width:100%;font-size:18px;font-family:ui-monospace,monospace;letter-spacing:.08em;border:2px solid var(--teal);background:var(--teal-soft)}
 #enKeys:focus{outline:none;box-shadow:0 0 0 3px var(--teal-line)}
 .omr{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
@@ -115,7 +123,7 @@ async function loadServer(){
     }catch(e){ loadErr='서버에 닿지 못했습니다.'; if(i<2) await new Promise(z=>setTimeout(z,700*(i+1))); }
   }
   if(SROWS){ loadErr=''; await loadRounds(); }
-  if(tab==='entry'){ const s=$('#enStuList'); if(s) s.innerHTML=stuOptions(); }   // 입력 중에는 화면을 다시 그리지 않는다(입력 칸 초점 유지)
+  if(tab==='entry') enSugPaint();   // 입력 중에는 화면을 다시 그리지 않는다(입력 칸 초점 유지) — 이름 제안만 새 명단으로
   else render();
 }
 async function loadRounds(){
@@ -224,7 +232,53 @@ function enSave(){ try{ localStorage.setItem('dt_survey_entry',JSON.stringify(EN
 function knownStudents(){ const m={}; (ALL||[]).forEach(r=>{ if(r.isTest||!r.studentKey||String(r.course)!=='ch1') return; m[r.studentKey]={name:r.name,school:r.school,year:r.year}; });
   (SROWS||[]).forEach(r=>{ if(!r.isTest) m[r.studentKey]={name:r.name,school:r.school,year:r.year}; });
   return Object.keys(m).map(k=>m[k]).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko')); }
-function stuOptions(){ return knownStudents().map(s=>'<option value="'+esc(s.name)+' · '+esc(s.school)+(s.year?' · '+esc(s.year):'')+'"></option>').join(''); }
+/* 이름은 손으로 친다(누르지 않는다). 치는 동안 명단에서 맞는 학생을 아래에 띄우고,
+   Enter = 맨 위(또는 ↑↓ 로 고른) 학생 → 학교·학년이 채워지고 바로 답 칸으로 간다.
+   명단에 없는 학생이면 Enter 로 학교 → 학년 → 답 칸 차례로 넘어간다. */
+let SUG=[], SUGI=0;
+function nameKey(v){ return String(v||'').replace(/\s+/g,'').toLowerCase(); }
+function enSugList(v){
+  const q=nameKey(v); if(!q) return [];
+  const all=knownStudents();
+  const head=all.filter(s=>nameKey(s.name).startsWith(q)), mid=all.filter(s=>!nameKey(s.name).startsWith(q)&&nameKey(s.name).includes(q));
+  return head.concat(mid).slice(0,6);
+}
+function enSugPaint(){
+  const box=$('#enSug'), inp=$('#enName'); if(!box||!inp) return;
+  SUG=(document.activeElement===inp)?enSugList(inp.value):[]; if(SUGI>=SUG.length) SUGI=0;
+  box.innerHTML=SUG.map((s,i)=>'<button type="button" tabindex="-1" class="'+(i===SUGI?'on':'')+'" onmousedown="event.preventDefault();enPick('+i+')">'+esc(s.name)+'<span class="m">'+esc(s.school)+(s.year?' · '+esc(s.year):'')+'</span></button>').join('');
+}
+function enPick(i){
+  const s=SUG[i]; if(!s) return;
+  EN.name=s.name; EN.school=s.school||''; EN.grade=s.year?String(s.year):EN.grade;
+  const a=$('#enName'),b=$('#enSchool'),c=$('#enGrade'); if(a) a.value=EN.name; if(b) b.value=EN.school; if(c) c.value=EN.grade;
+  SUG=[]; SUGI=0; const box=$('#enSug'); if(box) box.innerHTML='';
+  enSave(); enFocusNext();
+}
+/* 이름·학교가 다 있으면 답 칸, 아니면 비어 있는 첫 칸으로. */
+function enFocusNext(){
+  const el=!EN.name.trim()?$('#enName'):!EN.school.trim()?$('#enSchool'):$('#enKeys');
+  if(el) el.focus();
+}
+/* 한글은 마지막 글자가 «조합 중»이라 Enter 가 글자 확정에 먹힌다(두 번 쳐야 넘어간다).
+   조합 중 Enter 는 확정이 끝난 직후 한 번만 처리한다 — 맥에서 Enter 가 두 번 오는 경우도 한 번만. */
+let EN_PEND=null;
+function enEnterSoon(el,fn){ EN_PEND=fn; setTimeout(function(){ const f=EN_PEND; EN_PEND=null; if(f&&document.activeElement===el) f(); },40); }
+function enNameEnter(){ if(SUG.length) enPick(SUGI); else { const b=$('#enSchool'); if(b) b.focus(); } }
+function enNameKey(e){
+  if(e.key==='Enter'&&(e.isComposing||e.keyCode===229)){ enEnterSoon(e.target,enNameEnter); return; }
+  if(e.isComposing||e.keyCode===229) return;
+  if(e.key==='ArrowDown'&&SUG.length){ e.preventDefault(); SUGI=(SUGI+1)%SUG.length; enSugPaint(); }
+  else if(e.key==='ArrowUp'&&SUG.length){ e.preventDefault(); SUGI=(SUGI-1+SUG.length)%SUG.length; enSugPaint(); }
+  else if(e.key==='Escape'){ SUG=[]; const box=$('#enSug'); if(box) box.innerHTML=''; }
+  else if(e.key==='Enter'){ e.preventDefault(); EN_PEND=null; enNameEnter(); }
+}
+function enFieldKey(e,next){
+  const go=function(){ const el=$(next); if(el) el.focus(); };
+  if(e.key==='Enter'&&(e.isComposing||e.keyCode===229)){ enEnterSoon(e.target,go); return; }
+  if(e.isComposing||e.keyCode===229) return;
+  if(e.key==='Enter'){ e.preventDefault(); EN_PEND=null; go(); }
+}
 function entryView(){
   if(!EN) EN=enLoad()||enBlank();
   const n=DOC.items.length;
@@ -243,12 +297,13 @@ function entryView(){
     cols+='<div class="col">'+rows+'</div>';
   }
   return '<div class="card"><h2>학생</h2>'+
-    '<div class="row"><input id="enName" aria-label="이름" placeholder="이름 (명단에서 고르면 학교·학년이 채워집니다)" list="enStuList" value="'+esc(EN.name)+'" oninput="enName(this.value)" style="flex:2 1 160px">'+
-    '<datalist id="enStuList">'+stuOptions()+'</datalist>'+
-    '<input id="enSchool" aria-label="학교" placeholder="학교" value="'+esc(EN.school)+'" oninput="EN.school=this.value;enSave()" style="flex:1 1 110px">'+
-    '<input id="enGrade" aria-label="학년" placeholder="학년" value="'+esc(EN.grade)+'" oninput="EN.grade=this.value;enSave()" style="flex:0 1 70px"></div></div>'+
+    '<div class="row"><div id="enNameBox"><input id="enName" aria-label="이름" placeholder="학생 이름을 치세요" autocomplete="off" value="'+esc(EN.name)+'" oninput="enName(this.value)" onkeydown="enNameKey(event)" onfocus="enSugPaint()" onblur="setTimeout(enSugPaint,0)">'+
+    '<div class="sug" id="enSug" role="listbox" aria-label="명단에서 맞는 학생"></div></div>'+
+    '<input id="enSchool" aria-label="학교" placeholder="학교" autocomplete="off" value="'+esc(EN.school)+'" oninput="EN.school=this.value;enSave()" onkeydown="enFieldKey(event,\'#enGrade\')" style="flex:1 1 110px">'+
+    '<input id="enGrade" aria-label="학년" placeholder="학년" autocomplete="off" value="'+esc(EN.grade)+'" oninput="EN.grade=this.value;enSave()" onkeydown="enFieldKey(event,\'#enKeys\')" style="flex:0 1 70px"></div>'+
+    '<p class="kbd-hint">이름을 치고 <b>Enter</b> → 명단의 학생이면 학교·학년이 채워지고 바로 답 칸으로 갑니다(같은 이름이 여럿이면 ↑↓). 명단에 없으면 Enter 로 학교 → 학년 → 답 칸.</p></div>'+
     '<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">답 <span id="enCnt"></span></h2><span class="muted">1~5 를 차례로 · 백스페이스 = 한 칸 뒤로 · 다른 키는 무시</span></div>'+
-    '<input id="enKeys" aria-label="답 입력 — 숫자 1~5 를 1번부터 차례로" autocomplete="off" inputmode="numeric" placeholder="여기를 누르고 1번부터 숫자를 치세요">'+
+    '<input id="enKeys" aria-label="답 입력 — 숫자 1~5 를 1번부터 차례로" autocomplete="off" inputmode="numeric" placeholder="숫자 1~5 를 1번부터 차례로 치세요">'+
     '<div class="row" style="margin-top:8px"><input id="enPaste" aria-label="100자리 답 붙여 넣기" placeholder="100자리 붙여 넣기 (1~5)" style="flex:1 1 220px"><button class="ghost sm" onclick="enPaste()">붙여 넣기</button><button class="ghost sm" onclick="enClear()">모두 지우기</button></div>'+
     '<p id="enMsg" class="bad">'+(EN.msg||'')+'</p>'+
     '<div class="omr" id="omr">'+cols+'</div>'+
@@ -264,13 +319,15 @@ function enPaint(){
   const m=$('#enMsg'); if(m) m.innerHTML=EN.msg||'';
 }
 function entryAfter(){
+  if(EN&&EN.step==='confirm'){ const b=$('#enSave'); if(b) b.focus(); return; }   // Enter = 저장
+  if(EN&&EN.step==='saved'){ const b=$('#enNext'); if(b) b.focus(); return; }     // Enter = 다음 학생
   if(!EN||EN.step!=='keys') return;
   enPaint();
   const k=$('#enKeys'); if(!k) return;
   k.addEventListener('keydown',enKey);
   k.addEventListener('paste',function(e){ e.preventDefault(); const t=(e.clipboardData&&e.clipboardData.getData('text'))||''; enFill(t); });
   k.addEventListener('beforeinput',function(e){ e.preventDefault(); });   // 칸의 글자는 이 화면이 쓴다 — 자판이 직접 넣는 것은 막는다
-  if(EN.name&&EN.school) k.focus();
+  enFocusNext();
 }
 function enKey(e){
   if(e.ctrlKey||e.metaKey||e.altKey) return;            // 붙여 넣기(Ctrl+V) 등은 그대로
@@ -290,12 +347,7 @@ function enKey(e){
 }
 function scrollCur(){ const el=$('#o'+EN.cur); if(el&&el.scrollIntoView) el.scrollIntoView({block:'nearest'}); }
 function enGo(i){ EN.cur=i; enSave(); enPaint(); const k=$('#enKeys'); if(k) k.focus(); }
-function enName(v){
-  EN.name=v;
-  const m=/^(.+?) · (.+?)(?: · (.+))?$/.exec(v);       // 명단에서 고른 «이름 · 학교 · 학년»
-  if(m){ EN.name=m[1]; EN.school=m[2]; EN.grade=m[3]||EN.grade; const a=$('#enName'),b=$('#enSchool'),c=$('#enGrade'); if(a) a.value=EN.name; if(b) b.value=EN.school; if(c) c.value=EN.grade; const k=$('#enKeys'); if(k) k.focus(); }
-  enSave();
-}
+function enName(v){ EN.name=v; SUGI=0; enSugPaint(); enSave(); }
 function enFill(raw){
   raw=String(raw||'').replace(/[\s,]/g,'');
   const n=DOC.items.length;

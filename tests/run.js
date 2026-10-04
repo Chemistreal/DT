@@ -4388,6 +4388,39 @@ async function assertNoOverflow(page, label) {
       const left = await page.evaluate(() => JSON.parse(localStorage.getItem('dt_survey_entry')).ans.filter(Boolean).length);
       assert(left === 0, '저장한 뒤에도 답이 기기에 남았다');
     }, { adminGate: true });
+    /* 선생님 요청(2026-10-04): «학생 이름은 누르는 게 아니라 쳐서 넣게». 이름 → Enter →
+       (명단의 학생이면 학교·학년이 채워지고) 바로 답 칸 → 100칸 → Enter 저장 → Enter 다음 학생.
+       마우스를 한 번도 쓰지 않는다. */
+    await test('survey_admin 입력 · 이름을 쳐서 Enter 만으로 끝까지 (마우스 없이)', async page => {
+      const roster = [
+        { studentKey: '가상중-학생가', name: '학생가', school: '가상중', year: '2', course: 'ch1', round: 1, attempt: '정시', answers: '', isTest: false },
+        { studentKey: '가상고-학생가', name: '학생가', school: '가상고', year: '1', course: 'ch1', round: 1, attempt: '정시', answers: '', isTest: false },
+        { studentKey: '가상중-다른이', name: '다른이', school: '가상중', year: '3', course: 'ch1', round: 1, attempt: '정시', answers: '', isTest: false },
+      ];
+      let body = null;
+      await page.route('**/script.google.com/**', route => {
+        if (route.request().method() === 'POST') body = JSON.parse(route.request().postData() || '{}');
+        const u = route.request().url();
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(u.includes('all=1') ? { ok: true, rows: roster } : { ok: true, rows: [] }) });
+      });
+      await page.goto(BASE + 'survey_admin.html?entry=1&test=1'); await page.waitForSelector('#omr');
+      await page.waitForFunction(() => document.activeElement && document.activeElement.id === 'enName', null, { timeout: 5000 });
+      await page.keyboard.type('학생');
+      await page.waitForFunction(() => document.querySelectorAll('#enSug button').length === 2, null, { timeout: 5000 });
+      await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      const got = await page.evaluate(() => [document.querySelector('#enName').value, document.querySelector('#enSchool').value, document.querySelector('#enGrade').value, document.activeElement.id]);
+      assert(JSON.stringify(got) === JSON.stringify(['학생가', '가상고', '1', 'enKeys']), '이름 Enter 로 학교·학년이 안 채워지거나 답 칸으로 안 갔다: ' + JSON.stringify(got));
+      await page.keyboard.type('4'.repeat(100)); await page.waitForSelector('#confirm');
+      await page.keyboard.press('Enter'); await page.waitForSelector('#enNext');
+      assert(body && body.name === '학생가' && body.school === '가상고' && body.ans === '4'.repeat(100), '보낸 몸: ' + JSON.stringify(body));
+      await page.keyboard.press('Enter'); await page.waitForSelector('#enName');
+      await page.waitForFunction(() => document.activeElement && document.activeElement.id === 'enName', null, { timeout: 5000 });
+      await page.keyboard.type('새학생'); await page.keyboard.press('Enter');
+      await page.keyboard.type('새학교'); await page.keyboard.press('Enter');
+      await page.keyboard.type('2'); await page.keyboard.press('Enter');
+      const at = await page.evaluate(() => document.activeElement.id);
+      assert(at === 'enKeys', '명단에 없는 학생: 이름 → 학교 → 학년 → 답 칸 차례가 아니다: ' + at);
+    }, { adminGate: true });
     await test('survey · 보내기 실패하면 다시 보내기 단추 · 답은 남는다', async page => {
       let n = 0;
       await page.route('**/script.google.com/**', route => { n++; return n === 1 ? route.abort() : route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
