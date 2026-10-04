@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chemistreal · 화학1 돌아보기</title>
+<meta property="og:title" content="화학1 돌아보기 · Chemistreal">
+<meta property="og:description" content="18번의 수업을 돌아보는 설문 · 시험이 아니에요">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://chemistreal.github.io/DT/survey.html">
+<meta property="og:image" content="https://chemistreal.github.io/DT/og-exam.png">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"></noscript>
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --ink:#16202E; --sub:#5F6D7C; --faint:#626D7B;
+  --line:#E7E8E2; --line2:#EEF0EA;
+  --teal:#0B6E6E; --teal-d:#0A5A5A; --teal-soft:#E4F0EF; --teal-line:#BFE0DD;
+  --brass:#A9853C; --brass-soft:#F5EEDF;
+  --shadow:0 1px 2px rgba(16,32,46,.04), 0 6px 20px rgba(16,32,46,.04);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font-family:'Pretendard',system-ui,-apple-system,sans-serif; color:var(--ink); background:var(--paper);
+  line-height:1.55; -webkit-text-size-adjust:100%; -webkit-font-smoothing:antialiased}
+.wrap{max-width:640px; margin:0 auto; padding:0 0 calc(40px + env(safe-area-inset-bottom))}
+.hd{max-width:640px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:9px}
+.logo{width:24px;height:24px;border-radius:7px;background:linear-gradient(150deg,var(--teal),var(--teal-d));position:relative;flex:none}
+.logo:after{content:"";position:absolute;inset:6px 6px auto auto;width:6px;height:6px;border-radius:50%;background:var(--brass)}
+.brand{font-weight:800;font-size:14.5px}
+.brand small{display:block;font-weight:500;color:var(--sub);font-size:11.5px;margin-top:-2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin:14px;box-shadow:var(--shadow)}
+h1{font-size:20px;letter-spacing:-.02em;margin:.1em 0 .15em}
+h2{font-size:14px;color:var(--teal);font-weight:800;margin:1.2em 0 .5em}
+.lede{color:var(--sub);font-size:14px;margin:.4em 0 1em}
+label{display:block;font-size:12px;color:var(--sub);margin:13px 0 5px;font-weight:600}
+input{width:100%;padding:12px 13px;font-size:16px;border:1.5px solid var(--line);border-radius:11px;background:var(--surface);color:var(--ink);font-family:inherit}
+input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+.row2{display:flex;gap:10px}.row2>div{flex:1;min-width:0}
+button{font-family:inherit;cursor:pointer;border:0;border-radius:12px;font-size:15px;font-weight:700;padding:13px 16px;background:var(--teal);color:#fff}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line);font-weight:600}
+.btnrow{display:flex;gap:10px;margin-top:18px}.btnrow button{flex:1}
+.muted{color:var(--faint);font-size:12.5px}
+.top{position:sticky;top:0;z-index:10;background:var(--paper);display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.top .cnt{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.top .bar{flex:1;height:8px;background:var(--line2);border-radius:8px;overflow:hidden}
+.top .bar i{display:block;height:100%;background:var(--teal);transition:width .2s}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px;margin:12px 14px;box-shadow:var(--shadow)}
+.q.self{border-left:4px solid var(--brass)}
+.q .qn{font-size:12px;color:var(--teal);font-weight:700}
+.q.self .qn{color:var(--brass)}
+.q .qs{font-size:16.5px;line-height:1.55;margin:6px 0 12px;font-weight:500}
+.ch{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.ch button{background:var(--surface);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;padding:9px 2px;min-height:58px;
+  font-size:12px;font-weight:600;line-height:1.3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;word-break:keep-all}
+.ch button b{font-size:15px;font-weight:800}
+.ch button.sel{background:var(--teal);color:#fff;border-color:var(--teal)}
+.q.miss{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass-soft)}
+.nav{display:flex;gap:10px;margin:14px}.nav button{flex:1}
+.sv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line2);font-size:14px}
+.sv:first-child{border-top:0}
+.sv b{white-space:nowrap;color:var(--teal-d)}
+.warn{color:#8A6A38;font-weight:700}
+</style>
+<style id="ct-theme" data-v="4" data-fam="tool" data-seal="1">/* 이 조각은 tools/theme.py 가 넣습니다. 손으로 고치지 마세요 —
+   다음 실행에서 덮어써집니다. 색을 바꾸려면 그 파일을 고치세요. */
+:root{--ink:#16202E;--ink-soft:#5C5C66;--ink-faint:#706E66;--sub:#5F6D7C;--faint:#626D7B;--line:#E7E8E2;--line2:#EEF0EA;--line-strong:#D2C8B5;--paper:#FAFAF7;--card:#fff;--panel:#fff;--surface:#fff;--teal:#0B6E6E;--teal-d:#0A5A5A;--teal-soft:#E4F0EF;--teal-line:#BFE0DD;--brass:#A9853C;--brass-deep:#8A6A38;--brass-soft:#F5EEDF;/* 금색은 두 가지 일을 한다 — 글자색으로도 쓰고 흰 글씨를 얹는 단추      바탕으로도 쓴다. 원래 값(#9a7b27)은 양쪽 다 4.01:1 로 본문 기준(4.5)에      못 미쳤다. 한 단 낮춰 글자 4.77 · 단추 5.12 로 올린다. */--gold:#866A20;--o:#1B8A4C;--o-bg:#E7F5EC;--x:#C0392B;--x-bg:#FBEBE9;--bad:#b23b3b;--slate:#41595A}
+html{color-scheme:light;-webkit-text-size-adjust:100%}
+@media screen{
+  body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  ::selection{background:#0B6E6E26}
+  :focus-visible{outline:2px solid #0B6E6E;outline-offset:2px;border-radius:3px}
+  table{font-variant-numeric:tabular-nums}
+  hr{border:0;border-top:1px solid var(--line)}
+  @media (min-width:1080px){body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='560' viewBox='0 0 520 560'%3E%3Cg fill='none' stroke='%230B6E6E' stroke-width='9' stroke-linejoin='round' opacity='0.055'%3E%3Cpath d='M260 60 L433 160 L433 360 L260 460 L87 360 L87 160 Z'/%3E%3Cpath d='M260 120 L381 190 L381 330 L260 400 L139 330 L139 190 Z'/%3E%3Cpath d='M260 60 L260 0 M433 160 L485 130 M433 360 L485 390 M260 460 L260 520 M87 360 L35 390 M87 160 L35 130'/%3E%3C/g%3E%3Cg fill='%230B6E6E' opacity='0.05'%3E%3Ccircle cx='260' cy='60' r='17'/%3E%3Ccircle cx='433' cy='160' r='17'/%3E%3Ccircle cx='433' cy='360' r='17'/%3E%3Ccircle cx='260' cy='460' r='17'/%3E%3Ccircle cx='87' cy='360' r='17'/%3E%3Ccircle cx='87' cy='160' r='17'/%3E%3C/g%3E%3C/svg%3E");background-repeat:no-repeat;background-attachment:fixed;background-position:right -110px top 90px;background-size:520px 560px}}
+  header .logo{letter-spacing:.16em;font-weight:700}
+  header::after{content:'';display:block;height:3px;margin-top:16px;border-radius:2px;background:linear-gradient(90deg,#0B6E6E 0%,#0B6E6E66 34%,#0B6E6E00 76%)}
+}</style>
+</head><body>
+<div class="hd"><span class="logo"></span><span class="brand">Chemistreal<small>다원교육 영재관 · 화학1 돌아보기</small></span></div>
+<div class="wrap"><div id="app"><div class="card"><p class="muted">불러오는 중…</p></div></div></div>
+<script src="chemengine.js"></script>
+<script>
+/* 「화학1 돌아보기」 설문 — 시험이 아니다. 학생에게는 정답·점수·맞고 틀림을 절대 보이지 않는다.
+   문항 파일(appdata/survey_ch1.json)에서 문장(s)과 키(k)만 꺼내 쓰고, 나머지 칸은 화면에 올리지 않는다.
+   답은 이 기기에 임시로 둔다(새로고침해도 이어짐). 제출 → 서버 kind:'survey'. 실패하면 답은 그대로 두고 다시 보내기. */
+const SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+const DATA='appdata/survey_ch1.json';
+const PER=10;
+const IS_TEST=new URLSearchParams(location.search).get('test')==='1';
+let SV=null, ST=null, view='boot', sendState='';
+function $(s){ return document.querySelector(s); }
+function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function lsKey(){ return 'dt_survey_'+SV.id+(IS_TEST?'_test':''); }
+function load(){ try{ var v=JSON.parse(localStorage.getItem(lsKey())||'null'); if(v&&Array.isArray(v.ans)) return v; }catch(e){} return null; }
+function save(){ try{ localStorage.setItem(lsKey(),JSON.stringify(ST)); }catch(e){} }
+function skey(n,s){ try{ return ChemEngine.studentKey(n,s); }catch(e){ return String(s||'').replace(/\s+/g,'')+'-'+String(n||'').replace(/\s+/g,''); } }
+function nDone(){ return ST.ans.filter(Boolean).length; }
+function pages(){ return Math.ceil(SV.items.length/PER); }
+
+async function boot(){
+  try{
+    const r=await fetch(DATA,{cache:'no-store'}); if(!r.ok) throw new Error('load');
+    const d=await r.json();
+    /* 화면에 올릴 칸만 남긴다 — 옳은 문장·해설·정답은 여기서 버린다. */
+    SV={ id:d.id, title:d.title, intro:d.intro, scale:d.scale||[],
+      items:(d.items||[]).map(function(x){ return { type:x.type==='concept'||x.type==='belief'?x.type:'exp', s:x.s, k:x.k }; }) };
+  }catch(e){ $('#app').innerHTML='<div class="card"><h1>설문을 불러오지 못했어요</h1><p class="lede">인터넷 연결을 확인하고 새로고침해 주세요.</p><div class="btnrow"><button onclick="location.reload()">새로고침</button></div></div>'; return; }
+  ST=load()||{ name:'', school:'', grade:'', ans:SV.items.map(function(){ return ''; }), page:0, t0:0, sent:false };
+  if(ST.ans.length!==SV.items.length) ST.ans=SV.items.map(function(_,i){ return ST.ans[i]||''; });
+  view=ST.sent?'done':(ST.t0?'q':'id');
+  render();
+}
+function render(){
+  const app=$('#app');
+  if(view==='id') app.innerHTML=idView();
+  else if(view==='q') app.innerHTML=qView();
+  else if(view==='send') app.innerHTML=sendView();
+  else if(view==='done') app.innerHTML=doneView();
+}
+function idView(){
+  return '<div class="card"><h1>'+esc(SV.title)+(IS_TEST?' <span class="muted">(테스트)</span>':'')+'</h1>'+
+    '<p class="lede">'+esc(SV.intro)+'</p>'+
+    '<p class="muted">모두 '+SV.items.length+'문항 · 한 쪽에 '+PER+'문항씩 · 답은 이 기기에 임시로 저장돼요.</p>'+
+    '<label for="nm">이름</label><input id="nm" value="'+esc(ST.name)+'" placeholder="이름" autocomplete="off">'+
+    '<div class="row2"><div><label for="sc">학교</label><input id="sc" value="'+esc(ST.school)+'" placeholder="OO중학교" autocomplete="off"></div>'+
+    '<div><label for="gr">학년</label><input id="gr" value="'+esc(ST.grade)+'" placeholder="중2" autocomplete="off"></div></div>'+
+    '<div class="btnrow"><button id="start" onclick="start()">시작하기 →</button></div></div>';
+}
+function start(){
+  const nm=$('#nm').value.trim(), sc=$('#sc').value.trim(), gr=$('#gr').value.trim();
+  if(!nm||!sc){ alert('이름과 학교를 입력해 주세요.'); return; }
+  ST.name=nm; ST.school=sc; ST.grade=gr; if(!ST.t0) ST.t0=Date.now(); ST.page=0;
+  save(); view='q'; render(); window.scrollTo(0,0);
+}
+function qView(){
+  const p=ST.page, from=p*PER, to=Math.min(SV.items.length,from+PER), n=SV.items.length, done=nDone();
+  let h='<div class="top"><span class="cnt" id="cnt">'+done+'/'+n+'</span><div class="bar"><i style="width:'+(100*done/n)+'%"></i></div><span class="muted">'+(p+1)+'/'+pages()+'쪽</span></div>';
+  for(let i=from;i<to;i++){
+    const it=SV.items[i], sc=SV.scale, exp=it.type==='exp';
+    h+='<div class="q'+(exp?' self':'')+'" id="q'+i+'"><div class="qn">'+(i+1)+' · '+(it.type==='concept'?'수업 돌아보기':it.type==='belief'?'나의 생각':'나의 경험')+'</div>'+
+      '<div class="qs">'+esc(it.s)+'</div><div class="ch" role="group" aria-label="'+(i+1)+'번 답">'+
+      sc.map(function(lab,j){ const v=String(j+1); return '<button type="button" class="'+(ST.ans[i]===v?'sel':'')+'" aria-pressed="'+(ST.ans[i]===v)+'" onclick="pick('+i+',\''+v+'\')"><b>'+v+'</b>'+esc(lab)+'</button>'; }).join('')+
+      '</div></div>';
+  }
+  const last=p>=pages()-1;
+  h+='<div class="nav">'+(p>0?'<button class="ghost" onclick="go(-1)">← 앞쪽</button>':'<button class="ghost" onclick="view=\'id\';render()">← 처음</button>')+
+    '<button id="next" onclick="go(1)">'+(last?'제출하기':'다음 쪽 →')+'</button></div>'+
+    '<p class="muted" style="margin:0 16px" id="need"></p>';
+  return h;
+}
+function pick(i,v){
+  ST.ans[i]=v; save();
+  const q=$('#q'+i); if(q){ q.classList.remove('miss'); q.querySelectorAll('.ch button').forEach(function(b,j){ const on=String(j+1)===v; b.classList.toggle('sel',on); b.setAttribute('aria-pressed',String(on)); }); }
+  const done=nDone(), n=SV.items.length, c=$('#cnt'), bar=document.querySelector('.top .bar i');
+  if(c) c.textContent=done+'/'+n; if(bar) bar.style.width=(100*done/n)+'%';
+}
+function go(dir){
+  if(dir>0){
+    const from=ST.page*PER, to=Math.min(SV.items.length,from+PER); let first=-1;
+    for(let i=from;i<to;i++) if(!ST.ans[i]){ const q=$('#q'+i); if(q) q.classList.add('miss'); if(first<0) first=i; }
+    if(first>=0){ const nd=$('#need'); if(nd) nd.innerHTML='<span class="warn">이 쪽에 아직 고르지 않은 문항이 있어요.</span>'; const q=$('#q'+first); if(q&&q.scrollIntoView) q.scrollIntoView({block:'center'}); return; }
+    if(ST.page>=pages()-1){ submit(); return; }
+  }
+  ST.page=Math.max(0,Math.min(pages()-1,ST.page+dir)); save(); render(); window.scrollTo(0,0);
+}
+function payload(){
+  return { kind:'survey', studentKey:skey(ST.name,ST.school), name:ST.name, school:ST.school, year:ST.grade,
+    survey:SV.id, ans:ST.ans.join(''), ms:Math.max(0,Date.now()-(ST.t0||Date.now())), isTest:IS_TEST };
+}
+async function submit(){
+  if(nDone()<SV.items.length){ alert('아직 고르지 않은 문항이 있어요.'); return; }
+  view='send'; sendState='saving'; render();
+  let ok=false;
+  try{
+    const r=await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload())});
+    let j=null; try{ j=await r.json(); }catch(e){ j=null; }
+    ok=r.ok && !!(j&&j.ok);
+    if(j&&j.code) ST.code=j.code;
+  }catch(e){ ok=false; }
+  if(ok){ ST.sent=true; save(); view='done'; render(); window.scrollTo(0,0); }
+  else { sendState='fail'; render(); }
+}
+function sendView(){
+  if(sendState==='saving') return '<div class="card"><h1>보내는 중…</h1><p class="lede">잠깐만 기다려 주세요.</p></div>';
+  return '<div class="card"><h1>아직 보내지 못했어요</h1><p class="lede">인터넷 연결을 확인하고 다시 보내 주세요. 고른 답은 이 기기에 그대로 남아 있어요.</p>'+
+    '<div class="btnrow"><button class="ghost" onclick="view=\'q\';render()">← 답 다시 보기</button><button id="resend" onclick="submit()">다시 보내기</button></div></div>';
+}
+function doneView(){
+  return '<div class="card"><h1>고마워요!</h1><p class="lede">'+esc(ST.name)+' 학생의 답이 잘 전해졌어요. 솔직하게 답해 줘서 고마워요. 선생님이 하나하나 읽어 보고 다음 공부에 쓸게요.</p>'+
+    '<div class="btnrow"><button class="ghost" onclick="again()">처음 화면으로</button></div></div>';
+}
+function again(){ if(!confirm('이 기기에 남은 답을 지우고 처음 화면으로 갈까요? (이미 보낸 답은 선생님께 남아 있어요)')) return;
+  try{ localStorage.removeItem(lsKey()); }catch(e){} ST=null; boot(); }
+boot();
+</script>
+</body></html>

@@ -61,6 +61,7 @@ let BROWSER, BASE;
 
 async function test(name, fn, opts) {
   opts = opts || {};
+  if (process.env.ONLY && name.indexOf(process.env.ONLY) < 0) return;   // ONLY=survey 처럼 이름 조각으로 골라 돌린다
   const ctx = await BROWSER.newContext({
     viewport: opts.viewport || { width: 390, height: 844 },
     permissions: opts.clipboard ? ['clipboard-read', 'clipboard-write'] : [],
@@ -4218,6 +4219,67 @@ async function assertNoOverflow(page, label) {
       const r = await page.evaluate(() => ({ latest: latest.course + '#' + latest.round, trend: A.trend.map(t => t.course).join(','), rank: !!document.querySelector('.rankcard') }));
       assert(r.latest === 'ch2#3' && r.trend === 'ch2,ch2,ch2', '옛 서버 누적을 다시 세지 않았다: ' + JSON.stringify(r));
       assert(!r.rank, '어느 과목 것인지 모르는 석차를 실었다');
+    });
+  }
+
+  /* ── 설문 「화학1 돌아보기」(2026-10-04) ── 시험이 아니다: 정답·점수·맞고 틀림이 화면에 안 나온다 */
+  {
+    const SVD = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'survey_ch1.json'), 'utf8'));
+    const BAD = /정답|점수|채점|오답|맞았|틀렸|틀림|맞음|오개념|정답률|등수|석차|신호/;
+    /* 소개 글의 «정답도 점수도 없어요» 같은 안심 말은 뺀다(부정으로만 쓰였는지 따로 본다) */
+    /* 문항 글(선생님이 쓴 설문 문장, 예: «시험 점수보다 이해가…»)도 뺀다 — 여기서 잡는 것은 화면이 덧붙인 말이다 */
+    const scrub = t => [SVD.intro].concat(SVD.items.map(x => x.s)).reduce((acc, q) => acc.split(q).join(''), t);
+    await test('survey · 100문항 답하고 제출하면 보내는 몸이 맞고 화면에 정답·점수 낱말이 없다', async page => {
+      let body = null, posts = 0;
+      await page.route('**/script.google.com/**', route => {
+        if (route.request().method() === 'POST') { posts++; body = JSON.parse(route.request().postData() || '{}'); }
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, updated: false, code: 'abc123' }) });
+      });
+      await page.goto(BASE + 'survey.html'); await page.waitForSelector('#nm');
+      assert(!/정답|점수/.test(SVD.intro) || /없어요/.test(SVD.intro), '소개 글이 정답·점수를 «없다» 말고 다르게 쓴다');
+      await page.fill('#nm', '테스트학생'); await page.fill('#sc', '가상중학교'); await page.fill('#gr', '중2');
+      await page.click('#start');
+      const seen = [];
+      const want = [];
+      for (let p = 0; p < 10; p++) {
+        await page.waitForSelector('#q' + (p * 10));
+        /* 다 안 고르면 다음 쪽으로 못 간다 */
+        if (p === 0) { await page.click('#next'); assert(await page.$('#q0'), '빈 칸이 있는데 다음 쪽으로 넘어갔다'); }
+        for (let i = p * 10; i < p * 10 + 10; i++) {
+          const v = 1 + ((i * 7) % 5); want.push(String(v));
+          await page.click('#q' + i + ' .ch button:nth-child(' + v + ')');
+        }
+        seen.push(await page.evaluate(() => document.body.innerText));
+        if (p === 3) { await page.reload(); await page.waitForSelector('#q30'); const sel = await page.$$eval('#q30 .ch button.sel', b => b.length); assert(sel === 1, '새로고침하면 답이 사라진다'); }
+        await page.click('#next');
+      }
+      await page.waitForFunction(() => /고마워요/.test(document.body.innerText), null, { timeout: 5000 });
+      seen.push(await page.evaluate(() => document.body.innerText));
+      assert(posts === 1 && body, 'POST 가 한 번 나가지 않았다: ' + posts);
+      assert(body.kind === 'survey' && body.survey === SVD.id && body.name === '테스트학생' && body.school === '가상중학교' && body.year === '중2'
+        && body.studentKey === '가상중-테스트학생' && body.isTest === false, '보내는 몸: ' + JSON.stringify(Object.assign({}, body, { ans: undefined })));
+      assert(body.ans === want.join('') && /^[1-5]{100}$/.test(body.ans), '답 문자열이 고른 것과 다르다');
+      assert(typeof body.ms === 'number' && body.ms >= 0, '걸린 시간 없음');
+      seen.forEach((t, i) => { const m = scrub(t).match(BAD); assert(!m, (i + 1) + '번째 화면에 «' + (m && m[0]) + '»'); });
+      /* 문항 파일의 화면 밖 칸(개념 코드·오개념 이름)이 화면에 새지 않는다 */
+      const all = seen.join('\n');
+      const shown = SVD.items.map(x => x.s).join('\n') + SVD.title + SVD.intro + SVD.scale.join('');
+      SVD.items.forEach(x => (x.codes || []).concat(x.m || []).forEach(c => { if (c && shown.indexOf(c) < 0) assert(all.indexOf(c) < 0, '화면에 숨길 칸이 나왔다: ' + c); }));
+      assert(!/CH1-\d/.test(all), '화면에 개념 코드가 나왔다');
+      await assertNoOverflow(page, 'survey');
+    });
+    await test('survey · 보내기 실패하면 다시 보내기 단추 · 답은 남는다', async page => {
+      let n = 0;
+      await page.route('**/script.google.com/**', route => { n++; return n === 1 ? route.abort() : route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });
+      await page.addInitScript(id => { try { if (!sessionStorage.getItem('x')) { sessionStorage.setItem('x', '1');
+        localStorage.setItem('dt_survey_' + id, JSON.stringify({ name: '테스트학생', school: '가상중', grade: '2', ans: Array(100).fill('3'), page: 9, t0: Date.now() - 1000, sent: false })); } } catch (e) {} }, SVD.id);
+      await page.goto(BASE + 'survey.html'); await page.waitForSelector('#next');
+      await page.click('#next'); await page.waitForSelector('#resend');
+      const kept = await page.evaluate(id => JSON.parse(localStorage.getItem('dt_survey_' + id)).ans.join(''), SVD.id);
+      assert(kept === '3'.repeat(100), '실패했는데 답이 지워졌다');
+      await page.click('#resend');
+      await page.waitForFunction(() => /고마워요/.test(document.body.innerText), null, { timeout: 5000 });
+      assert(n === 2, '다시 보내기가 한 번 더 보내지 않았다: ' + n);
     });
   }
 

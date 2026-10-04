@@ -71,7 +71,9 @@ READER = [
     # 세 저장소를 따로 재면 "우리 성적표는 어떤 말을 하나" 를 세 번 물어야 한다.
     # 이름표는 저장소마다 다르지만 묻는 것은 하나라, 표만 넓힌다.
     (r'^(haeseol_|munje_|omr_)', '학생'),
-    (r'^(chemistreal_app|home|exam|retake_entry|challenge)', '학생'),
+    # 설문 「화학1 돌아보기」(2026-10-04): 응시·개인 결과는 학생(부모와 같이 읽는다), 결과 표는 선생님.
+    (r'^survey_admin', '선생님'),
+    (r'^(chemistreal_app|home|exam|retake_entry|challenge|survey)', '학생'),
     (r'^(OX_grader|OMR_|hw_grader|admin_console|roster|pending|letters|pdfs|'
      r'concept_map|dualcoding|diagnosis_app)', '선생님'),
     (r'^(answers|v2|english)', '학생'),

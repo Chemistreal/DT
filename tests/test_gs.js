@@ -1340,5 +1340,51 @@ console.log('[7단계 2차] 한 과목 학생은 그대로 · 여러 과목 학�
   sh._rows.length = n0;
 }
 
+console.log('[설문] kind:survey 는 「설문」 탭에 · 같은 학생·설문은 덮어쓰기 · 관리자 읽기 · 개인 코드 읽기');
+{
+  const post = d => J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
+  const get = p => J(ctx.doGet({ parameter: p }));
+  delete SHEETS['설문'];
+  const A1 = '1'.repeat(50) + '5'.repeat(50), A2 = '3'.repeat(100);
+  const g0 = get({ action: 'survey', survey: 'ch1-final-2026' });
+  T('탭이 없어도 읽기는 된다 · rows = [] · 탭을 만들지 않는다', g0.ok === true && Array.isArray(g0.rows) && g0.rows.length === 0 && !SHEETS['설문'], JSON.stringify(g0));
+  const base = { kind: 'survey', studentKey: '아무거나', name: '홍길동', school: '휘문중학교', year: '중2', survey: 'ch1-final-2026', ans: A1, ms: 600000 };
+  const r1 = post(base);
+  const sh = SHEETS['설문'];
+  T('저장: ok · 새 탭 머리', r1.ok === true && r1.updated === false && sh && sh._rows[0].join('|') === '시각|학생키|이름|학교|학년|설문|답|걸린시간|테스트|출처' && sh._rows[1][9] === 'web', JSON.stringify(r1));
+  T('저장: 학생키는 서버가 다시 만든다(canonicalKey_ · 보낸 값 무시) · 학교·학년 정리', sh._rows.length === 2 && sh._rows[1][1] === '휘문중-홍길동' && sh._rows[1][3] === '휘문중' && sh._rows[1][4] === '2', JSON.stringify(sh._rows[1]));
+  T('저장: 답은 글자로(앞자리 0·지수 표기 방지) · 걸린시간 · 테스트 빈칸', String(sh._rows[1][6]).replace(/^'/, '') === A1 && sh._rows[1][7] === 600000 && sh._rows[1][8] === '');
+  const r2 = post(Object.assign({}, base, { ans: A2, ms: 700000 }));
+  T('덮어쓰기: 같은 학생·같은 설문은 한 줄 · 마지막 제출', r2.ok === true && r2.updated === true && sh._rows.length === 2 && String(sh._rows[1][6]).replace(/^'/, '') === A2 && sh._rows[1][7] === 700000, JSON.stringify(sh._rows.length));
+  const r3 = post(Object.assign({}, base, { isTest: true }));
+  T('테스트 제출은 따로 한 줄(TEST) · 실제 행을 덮지 않는다', r3.ok === true && sh._rows.length === 3 && sh._rows[2][8] === 'TEST' && String(sh._rows[1][6]).replace(/^'/, '') === A2);
+  const r4 = post(Object.assign({}, base, { name: '김민준', school: '단대부중', ans: A1, src: 'paper', ms: 0 }));
+  T('다른 학생은 새 줄 · 종이 응답은 출처 paper', r4.ok === true && sh._rows.length === 4 && sh._rows[3][1] === '단대부중-김민준' && sh._rows[3][9] === 'paper');
+  const r5 = post(Object.assign({}, base, { survey: 'other-1' }));
+  T('다른 설문은 새 줄', r5.ok === true && sh._rows.length === 5);
+  T('받지 않는 꼴: 답이 비거나 1~5 밖 · 이름 없음 · 설문 이름 이상', post(Object.assign({}, base, { ans: '12' + '0'.repeat(98) })).ok === false
+    && post(Object.assign({}, base, { ans: '' })).ok === false && post(Object.assign({}, base, { name: '' })).ok === false
+    && post(Object.assign({}, base, { survey: '<x>' })).ok === false && sh._rows.length === 5);
+  const g1 = get({ action: 'survey', survey: 'ch1-final-2026' });
+  T('관리자 읽기: 이 설문 행만(테스트 포함 · isTest 표시) · 답 · 코드', g1.ok === true && g1.rows.length === 3 && g1.rows.filter(x => x.isTest).length === 1
+    && g1.rows.every(x => x.survey === 'ch1-final-2026' && /^[1-5]{100}$/.test(x.ans) && x.code === ctx.pubId_(x.studentKey)), JSON.stringify(g1.rows.map(x => [x.studentKey, x.isTest])));
+  /* 읽기 보호는 다른 관리자 읽기와 같은 adminOk_ 를 탄다 — 닫으면 같이 닫힌다 */
+  const keep = ctx.adminOk_;
+  ctx.adminOk_ = t => String(t || '') === 'sv-adm-1';
+  const gd = get({ action: 'survey', survey: 'ch1-final-2026' }), gk = get({ action: 'survey', survey: 'ch1-final-2026', token: 'sv-adm-1' });
+  ctx.adminOk_ = keep;
+  T('관리자 읽기는 adminOk_ 를 탄다(닫히면 auth · 토큰이면 열림)', gd.ok === false && gd.error === 'auth' && gk.ok === true && gk.rows.length === 3, JSON.stringify(gd));
+  const o1 = get({ action: 'surveyOne', student: ctx.pubId_('휘문중-홍길동'), survey: 'ch1-final-2026' });
+  T('개인 코드: 그 학생 것만 · 실제 기록이 있으면 TEST 는 뺀다', o1.ok === true && o1.rows.length === 1 && o1.rows[0].ans === A2 && !o1.rows[0].isTest && !('studentKey' in o1.rows[0]), JSON.stringify(o1));
+  const o2 = get({ action: 'surveyOne', student: ctx.pubId_('단대부중-김민준') });
+  T('개인 코드: 다른 학생 코드엔 그 학생 것만', o2.ok === true && o2.rows.length === 1 && o2.rows[0].name === '김민준');
+  post(Object.assign({}, base, { name: '설문만', school: '가상고' }));
+  const o3 = get({ action: 'surveyOne', student: ctx.pubId_('가상고-설문만') });
+  T('개인 코드: 결과 탭에 없고 설문만 한 학생도 찾는다', o3.ok === true && o3.rows.length === 1 && o3.rows[0].name === '설문만', JSON.stringify(o3));
+  const ob = get({ action: 'surveyOne', student: 'zzzzzzzzzzzzzz' }), oe = get({ action: 'surveyOne' });
+  T('개인 코드: 틀린 코드·빈 코드는 아무것도 안 준다', ob.ok === false && !ob.rows && oe.ok === false && !oe.rows);
+  delete SHEETS['설문'];
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

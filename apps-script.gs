@@ -454,6 +454,8 @@ function doPost(e) {
     }
     /* 심화 도전 한 판(challenge.html). 결과 탭이 아니라 「심화기록」 탭에 — 아래 정시·재시 저장과 섞지 않는다. */
     if (d.kind === 'challenge') return json_(saveChallenge_(d));
+    /* 설문 「화학1 돌아보기」 — 「설문」 탭에. 같은 학생·같은 설문은 마지막 제출로 덮어쓴다. */
+    if (d.kind === 'survey') return json_(saveSurvey_(d));
     var sh = sheet_();
     var _selfKey = keyOf_(d.name || '', d.school || '');
     var _key = canonicalKey_(d.name || '', d.school || '');   // 같은 학생이 학교명을 다르게 적어도 기존 키로 자동 연결
@@ -549,6 +551,11 @@ function readOne_(action, e, token) {
      쓰는 문은 doPost 의 'merge' 다(읽는 것은 조용해도 되고 쓰는 것은 안 된다). */
   if (action === 'mergeplan') { if (!adminOk_(token)) return deny;
     return { ok: true, plan: mergeScan_() }; }
+  /* 설문 행 전체(이름·답). 노출 폭은 pending·mistags 와 같다. */
+  if (action === 'survey') { if (!adminOk_(token)) return deny;
+    return { ok: true, rows: surveyAll_(e.parameter.survey) }; }
+  /* 학생·부모 개인 링크 — 성적표와 같은 코드로 그 학생 것만. */
+  if (action === 'surveyOne') { return surveyOne_(e.parameter.student, e.parameter.survey); }
   if (action === 'views') { if (!adminOk_(token)) return deny;
     return { ok: true, views: viewsList_() }; }
   /* 수입은 명단·점수와 다른 종류다. 이 창구만은 **진짜 토큰**을 받는다
@@ -733,6 +740,84 @@ function challengesOf_(key) {
         isTest: r[11] === 'TEST' };
     });
   } catch (e) { return []; }
+}
+
+/* ── 설문 「화학1 돌아보기」 (선생님 결정 2026-10-04) ─────────────────
+   시험이 아니다 — 학생은 문장마다 다섯 칸(1 당연히 맞는 말 ~ 5 틀린 말이다)으로 느낌을 고른다.
+   결과 탭(TAB)과는 **다른 탭** 「설문」에 적는다. 정시·재시 행의 열 번호와 집계는 안 건드린다.
+     보내는 꼴  {kind:'survey', studentKey, name, school, year, survey, ans:'1'~'5' 문자열, ms, isTest, src('paper' | 없으면 web)}
+     적는 열    시각 · 학생키 · 이름 · 학교 · 학년 · 설문 · 답 · 걸린시간 · 테스트 · 출처
+   학생키는 결과 탭 저장과 같이 서버가 다시 만든다(canonicalKey_) — 보낸 studentKey 는 믿지 않는다.
+   같은 학생 · 같은 설문 · 같은 테스트 여부면 마지막 제출로 그 행을 덮어쓴다.
+   읽기  ?action=survey&survey=<id>        관리자(adminOk_) — 행 목록 + 학생별 성적표 코드
+         ?action=surveyOne&student=<코드>   그 학생 것만(성적표 ?student= 와 같은 코드) */
+var SV_TAB = '설문';
+var SV_HEADERS = ['시각','학생키','이름','학교','학년','설문','답','걸린시간','테스트','출처'];
+function surveySheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(SV_TAB) || ss.insertSheet(SV_TAB);
+  var head = sh.getLastRow() > 0 ? String(sh.getRange(1, 1).getValue() || '') : '';
+  if (head === '' || head === SV_HEADERS[0]) sh.getRange(1, 1, 1, SV_HEADERS.length).setValues([SV_HEADERS]);
+  return sh;
+}
+function saveSurvey_(d) {
+  var name = cleanName_(d.name || ''), school = String(d.school || '').trim();
+  if (!name || !school) return { ok: false, error: 'bad', msg: '이름과 학교가 필요합니다.' };
+  var sid = String(d.survey || '').trim();
+  if (!/^[A-Za-z0-9_\-]{1,40}$/.test(sid)) return { ok: false, error: 'bad', msg: '설문 이름이 이상합니다.' };
+  var ans = String(d.ans || '');
+  if (!/^[1-5]{1,200}$/.test(ans)) return { ok: false, error: 'bad', msg: '답이 다 채워지지 않았습니다.' };
+  var ms = Math.max(0, Math.min(Math.round(Number(d.ms) || 0), 24 * 3600 * 1000));
+  var key = canonicalKey_(name, school);
+  var test = d.isTest ? 'TEST' : '';
+  var src = d.src === 'paper' ? 'paper' : 'web';            // 종이 설문을 선생님이 옮겨 적은 것은 paper
+  var row = [new Date(), key, name, normSchool_(school), normGrade_(d.year || ''), sid, "'" + ans, ms, test, src];
+  var lock = null;
+  try { if (typeof LockService !== 'undefined') { lock = LockService.getScriptLock(); lock.waitLock(10000); } } catch (eL) { lock = null; }
+  try {
+    var sh = surveySheet_(), data = sh.getDataRange().getValues(), at = 0;
+    for (var i = data.length - 1; i >= 1; i--) {
+      var r = data[i];
+      if (String(r[1] || '').trim() === key && String(r[5] || '') === sid && (String(r[8] || '') === 'TEST') === !!d.isTest) { at = i + 1; break; }
+    }
+    if (at > 0) sh.getRange(at, 1, 1, row.length).setValues([row]);
+    else sh.getRange(Math.max(1, data.length) + 1, 1, 1, row.length).setValues([row]);
+    return { ok: true, updated: at > 0, code: pubId_(key) };
+  } finally { if (lock) { try { lock.releaseLock(); } catch (eR) {} } }
+}
+function surveyRowOf_(r) {
+  return { date: r[0], studentKey: String(r[1] || '').trim(), name: String(r[2] || ''), school: String(r[3] || ''),
+    year: String(r[4] || ''), survey: String(r[5] || ''), ans: String(r[6] == null ? '' : r[6]).replace(/^'/, ''),
+    ms: Number(r[7]) || 0, isTest: String(r[8] || '') === 'TEST', src: String(r[9] || 'web') };
+}
+/* 읽기만 한다 — 탭이 없으면 만들지 않고 빈 목록. */
+function surveyRows_() {
+  try {
+    var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SV_TAB);
+    if (!sh || sh.getLastRow() < 2) return [];
+    return sh.getDataRange().getValues().slice(1).map(surveyRowOf_).filter(function (x) { return x.studentKey && x.survey; });
+  } catch (e) { return []; }
+}
+function surveyAll_(sid) {
+  sid = String(sid || '').trim();
+  return surveyRows_().filter(function (x) { return !sid || x.survey === sid; })
+    .map(function (x) { x.code = pubId_(x.studentKey); return x; });
+}
+/* 성적표 코드 → 학생키. 결과 탭에 기록이 없고 설문만 한 학생도 찾는다(설문 탭의 키를 같은 코드 규칙으로 맞춰 본다). */
+function surveyOne_(code, sid) {
+  code = String(code || '').trim();
+  if (!code) return { ok: false, error: 'student' };
+  var rows = surveyRows_();
+  var key = null;
+  try { key = studentOfCode_(code); } catch (e) { key = null; }
+  if (!key && /^[0-9a-z]+$/i.test(code)) {
+    for (var i = 0; i < rows.length && !key; i++) if (pubMatch_(rows[i].studentKey, code)) key = rows[i].studentKey;
+  }
+  if (!key) return { ok: false, error: 'student', msg: '링크를 확인해 주세요.' };
+  var mine = rows.filter(function (x) { return x.studentKey === key && (!sid || x.survey === String(sid)); });
+  var hasReal = mine.some(function (x) { return !x.isTest; });
+  if (hasReal) mine = mine.filter(function (x) { return !x.isTest; });
+  return { ok: true, rows: mine.map(function (x) { return { date: x.date, name: x.name, survey: x.survey, ans: x.ans, isTest: x.isTest }; }) };
 }
 
 /* 명단 조회(반 코드 또는 관리자 코드). exam 드롭다운, hw_grader 명단에 사용.
