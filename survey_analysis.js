@@ -231,6 +231,8 @@
       rec.rounds.push(info);
     });
     rec.rate = ratio(rec.total.ok, rec.total.n);
+    /* 그 학생이 실제로 본 회차 수 — 보고서의 «N회» 는 이것(18 로 박지 않는다) */
+    rec.taken = rec.rounds.length;                        // 서버 svTaken_ 와 같은 셈(서로 다른 회차 · TEST 아님)
     rec.retakeRate = ratio(rec.retake.fixedNext, rec.retake.withData);
     rec.retakeEver = ratio(rec.retake.fixedEver, rec.retake.withData);
     rec.reviewRate = ratio(rec.review.ok, rec.review.n);

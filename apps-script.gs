@@ -761,7 +761,20 @@ var SV_HEADERS = ['시각','학생키','이름','학교','학년','설문','답'
      이름 · 리포트링크(성적표 링크 그대로 — 링크 일괄 갱신과 맞물린다) · 시각 · 점수(빈칸) · 통과(«설문») ·
      학생키 · 학교 · 학년 · 과목(ch1sv) · 회차(19 — 화학1 18회 다음) · 시도(«설문») · 맞음/틀림(빈칸) ·
      오개념 칸 = 설문 이름 · 축 칸 = {"ms":걸린시간,"src":"web"|"paper"} · 테스트 · … · 답안 = 1~5 글자 */
-var SV_COURSE = 'ch1sv', SV_ROUND = 19, SV_ATTEMPT = '설문';
+var SV_COURSE = 'ch1sv', SV_ATTEMPT = '설문';
+/* 회차는 18 로 박지 않는다(선생님 2026-10-04 — «학생이 18회를 다 본 게 아니라 실제 응시한 회차만 센다»).
+   그 학생이 실제로 본 화학1 회차 수(TEST 아님 · 서로 다른 회차) = N 이면 설문 줄의 회차는 N+1 — 그 학생의
+   «마지막 회차 다음». 문자도 «N회 돌아보기» 라고 적는다. */
+function svTaken_(data, key) {
+  var seen = {}, n = 0;
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (String(r[5] || '').trim() !== key || String(r[8] || '') !== 'ch1' || String(r[15] || '') === 'TEST') continue;
+    var rd = Number(r[9]); if (!rd || seen[rd]) continue;
+    seen[rd] = 1; n++;
+  }
+  return n;
+}
 function isSvRaw_(r) { return !!r && String(r[8] || '') === SV_COURSE; }
 /* 결과 탭 원본(머리 포함)에서 설문 줄을 뺀다 — DT 시험 집계는 이것만 본다. */
 function dtRaw_(data) { return (data || []).filter(function (r, i) { return i === 0 || !isSvRaw_(r); }); }
@@ -773,19 +786,21 @@ function rowLinkOf_(key, course) { return String(course || '') === SV_COURSE ? s
 /* 예전 판이 설문 줄에 DT 성적표 링크를 적어 둔 것을 돌아보기 링크로 고친다. */
 function svFixLinks_(sh) {
   var last = sh.getLastRow(); if (last < 2) return 0;
-  var v = sh.getRange(2, 1, last - 1, 9).getValues(), n = 0;
+  var all = sh.getDataRange().getValues(), v = all.slice(1), n = 0;
   for (var i = 0; i < v.length; i++) {
     if (String(v[i][8] || '') !== SV_COURSE) continue;
     var k = String(v[i][5] || '').trim(); if (!k) continue;
     var want = svLinkOf_(k);
     if (String(v[i][1] || '') !== want) { sh.getRange(i + 2, 2).setValue(want); n++; }
+    var rd = svTaken_(all, k) + 1;                                   // 회차 = 그 학생이 실제로 본 회차 수 + 1
+    if (Number(v[i][9]) !== rd) { sh.getRange(i + 2, 10).setValue(rd); n++; }
   }
   return n;
 }
 function svMeta_(v) { try { var o = JSON.parse(String(v || '{}')); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; } }
-function svRowVals_(key, name, school, year, sid, ans, ms, test, src, when) {
+function svRowVals_(key, name, school, year, sid, ans, ms, test, src, when, round) {
   return [name, svLinkOf_(key), when || new Date(), '', SV_ATTEMPT, key, normSchool_(school), normGrade_(year || ''),
-    SV_COURSE, SV_ROUND, SV_ATTEMPT, '', '', sid, JSON.stringify({ ms: ms, src: src }), test,
+    SV_COURSE, round || 1, SV_ATTEMPT, '', '', sid, JSON.stringify({ ms: ms, src: src }), test,
     '[]', '[]', "'" + ans, '', '', ''];
 }
 /* 같은 학생 · 같은 설문 · 같은 테스트 여부의 줄(1부터 센 행 번호). 없으면 0. */
@@ -808,7 +823,7 @@ function svMigrate_(sh) {
     var key = String(r[1]).trim(), sid = String(r[5]), test = String(r[8] || '') === 'TEST';
     if (svFindRow_(data, key, sid, test)) return;
     add.push(svRowVals_(key, String(r[2] || ''), String(r[3] || ''), String(r[4] || ''), sid,
-      String(r[6] == null ? '' : r[6]).replace(/^'/, ''), Number(r[7]) || 0, test ? 'TEST' : '', String(r[9] || 'web'), r[0]));
+      String(r[6] == null ? '' : r[6]).replace(/^'/, ''), Number(r[7]) || 0, test ? 'TEST' : '', String(r[9] || 'web'), r[0], svTaken_(data, key) + 1));
   });
   if (add.length) { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, add.length, add[0].length).setValues(add); }
   SpreadsheetApp.flush();
@@ -835,8 +850,9 @@ function saveSurvey_(d) {
     var sh = sheet_();
     try { svMigrate_(sh); } catch (eM) {}
     try { svFixLinks_(sh); } catch (eF) {}
-    var row = svRowVals_(key, name, school, d.year || '', sid, ans, ms, test, src);
-    at = svFindRow_(sh.getDataRange().getValues(), key, sid, !!d.isTest);
+    var cur = sh.getDataRange().getValues();
+    var row = svRowVals_(key, name, school, d.year || '', sid, ans, ms, test, src, null, svTaken_(cur, key) + 1);
+    at = svFindRow_(cur, key, sid, !!d.isTest);
     if (at > 0) sh.getRange(at, 1, 1, row.length).setValues([row]);
     else { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, 1, row.length).setValues([row]); }
   } finally { if (lock) { try { lock.releaseLock(); } catch (eR) {} } }
@@ -1985,10 +2001,11 @@ function sendSummary_(rowsOfSC) {
 }
 
 /* 설문(화학1 돌아보기) 줄의 문자 — 점수·통과가 없다. 링크는 진단 보고서(Word 저장 단추가 있는 화면). */
-function sendSurveyMsg_(name, key) {
+function sendSurveyMsg_(name, key, taken) {
+  var nr = taken > 0 ? taken + '회 ' : '';
   return '[다원교육 영재관 · 화학 조준모]\n'
-    + name + ' 학생 화학Ⅰ 18회 돌아보기 진단 보고서입니다.\n'
-    + '\u00b7 18주 동안의 실제 기록과 마지막 시간 설문을 함께 분석했습니다(시험 점수가 아닙니다).\n'
+    + name + ' 학생 화학Ⅰ ' + nr + '돌아보기 진단 보고서입니다.\n'
+    + '\u00b7 ' + (taken > 0 ? '직접 응시한 ' + taken + '회의 실제 기록' : '수업 기록') + '과 마지막 시간 설문을 함께 분석했습니다(시험 점수가 아닙니다).\n'
     + '아래 링크에서 결과를 보고, 전체 진단 보고서(Word 저장)도 열 수 있습니다.\n'
     + svLinkOf_(key);
 }
@@ -2010,7 +2027,8 @@ function buildRowMessages_(data) {
     if (p.empty) return null;
     if (p.course === SV_COURSE) {
       if (p.isTest || !p.key) return { name: p.name, school: p.school, label: '화학Ⅰ 돌아보기', att: '설문', tRaw: p.tRaw, course: p.course, status: '', msg: '' };
-      return { name: p.name, school: p.school, label: '화학Ⅰ 돌아보기', att: '설문', tRaw: p.tRaw, course: p.course, status: '진단 보고서', msg: sendSurveyMsg_(p.name, p.key) };
+      var tk = svTaken_([null].concat(data), p.key);
+      return { name: p.name, school: p.school, label: '화학Ⅰ ' + (tk + 1) + '회 · 돌아보기', att: '설문', tRaw: p.tRaw, course: p.course, status: '진단 보고서', msg: sendSurveyMsg_(p.name, p.key, tk) };
     }
     var label = p.isTest ? '숙제' : ((SEND_COURSE_KO[p.course] || p.course) + ' ' + p.round + '회');
     var att = p.isTest ? '숙제' : p.attempt;

@@ -100,6 +100,7 @@ async function main() {
       await page.waitForFunction(() => window.__SP_READY || window.__SP_ERR, null, { timeout: 90000 });
       const order = await page.evaluate(() => [...document.querySelectorAll('.pv-bar button')].map(b => b.id));
       if (k === 'A') chk('«Word 보고서 저장»이 인쇄 단추보다 앞에 있고 주 단추다', order.indexOf('pvDocx') >= 0 && order.indexOf('pvDocx') < order.indexOf('pvPrint') && await page.evaluate(() => !document.querySelector('#pvDocx').classList.contains('ghost')), order);
+      const taken = await page.evaluate(() => (window.__SP_A && window.__SP_A.record && window.__SP_A.record.taken) || 0);
       const tiles = await page.evaluate(() => [...document.querySelectorAll('.sp-kpi')].map(x => ({ t: x.querySelector('.t').innerText.trim(), v: x.querySelector('.v').innerText.replace(/\s+/g, '') })));
       const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 180000 }), page.click('#pvDocx')]);
       const file = path.join(OUT, dl.suggestedFilename());
@@ -107,7 +108,7 @@ async function main() {
       const info = await page.evaluate(() => window.__SP_DOCX || null);
       chk(k + ' (' + label + '): Word 를 오류 없이 만들었다 · ' + path.basename(file), !errs.length && fs.statSync(file).size > 20000 && !!info, errs.slice(0, 3));
       chk(k + ': 파일 이름 «화학1 돌아보기 진단 보고서 - ' + P.name + '.docx»', path.basename(file) === '화학1 돌아보기 진단 보고서 - ' + P.name + '.docx', path.basename(file));
-      made.push({ who: k, label, name: P.name, file, tiles, plan: info && info.plan[0] });
+      made.push({ who: k, label, name: P.name, file, tiles, taken, plan: info && info.plan[0] });
       await ctx.close();
     }
 
@@ -149,6 +150,8 @@ async function main() {
     const want = m.who === 'A' ? 11 : m.who === 'C' ? 6 : 8;
     chk(m.who + ': 그림 ' + media.length + '개(꾸밈 4 + 그래프) — 그래프가 실제로 들어갔다', media.length >= want, media);
     const xml = unzipText(m.file, 'word/document.xml'), txt = xmlText(xml);
+    const bk = (xml.match(/<w:bookmarkStart [^>]*w:id="(\d+)"/g) || []).map(x => /w:id="(\d+)"/.exec(x)[1]);
+    chk(m.who + ': 목차 책갈피 ' + bk.length + '개 · 번호가 겹치지 않는다(Word 가 고치기 창을 띄우지 않게)', bk.length >= 17 && new Set(bk).size === bk.length, bk.slice(0, 5));
     const hf = parts.filter(f => /^word\/(header|footer)\d+\.xml$/.test(f)).map(f => xmlText(unzipText(m.file, f))).join(' ');
     const bad = (txt + ' ' + hf).split(/[.。!?]\s|\s{2,}/).filter(l => FORBID.test(l));
     chk(m.who + ': 금지 낱말 없음', !bad.length, bad.slice(0, 3));
@@ -156,12 +159,16 @@ async function main() {
     chk(m.who + ': 학생 이름이 표지에 · 머리글에', txt.indexOf(m.name) >= 0 && hf.indexOf(m.name) >= 0, '');
     /* 화면 타일 넷 = Word 타일 넷 */
     const at = txt.indexOf('AT A GLANCE'), seg = at >= 0 ? txt.slice(at, at + 6000) : '';
-    const got = m.tiles.map(x => { const i = seg.indexOf(x.t); if (i < 0) return null; const mm = /(\d+%|—)/.exec(seg.slice(i + x.t.length, i + x.t.length + 120)); return mm ? mm[1] : null; });
+    /* 1절 타일은 «큰 숫자 | 이름·풀이» 차례 — 이름 바로 앞의 숫자를 읽는다 */
+    const got = m.tiles.map(x => { const i = seg.indexOf(x.t); if (i < 0) return null; const mm = seg.slice(Math.max(0, i - 40), i).match(/\d+%|—/g); return mm ? mm[mm.length - 1] : null; });
     chk(m.who + ': 화면 타일 넷의 숫자 = Word 타일 넷 (' + m.tiles.map(x => x.v).join(' · ') + ')', m.tiles.length === 4 && got.every((g, i) => g === m.tiles[i].v), { html: m.tiles.map(x => x.v), word: got });
     const sum = txt.indexOf('ONE-PAGE SUMMARY'), seg2 = sum >= 0 ? txt.slice(sum, sum + 4000) : '';
     const got2 = m.tiles.map(x => { const i = seg2.indexOf(x.t); if (i < 0) return null; const mm = /(\d+%|—)/.exec(seg2.slice(i + x.t.length, i + x.t.length + 80)); return mm ? mm[1] : null; });
     chk(m.who + ': 한 장 요약의 숫자도 같다', got2.every((g, i) => g === m.tiles[i].v), got2);
-    chk(m.who + ': 절 열넷 + 부모님께 + 부록 + 목차', ['이 보고서를 읽는 법', '한눈에 보기', '18주 학습 여정', '자기 판단과 실제 기록', '단원별 진단', '개념별 진단표', '남은 오개념 카드', '공부 습관과 마음', '어려웠던 점과 처방', '다음 과정을 위한 처방', '지금까지의 모든 시험', '영역·개념 누적 지도', '되풀이되는 오개념', '이전 KMChC 학습진단과 비교', '부모님께', '부록', '목차', '한 장 요약'].every(s => txt.indexOf(s) >= 0), '');
+    chk(m.who + ': 절 열넷 + 부모님께 + 부록 + 목차', ['이 보고서를 읽는 법', '한눈에 보기', '학습 여정', '자기 판단과 실제 기록', '단원별 진단', '개념별 진단표', '남은 오개념 카드', '공부 습관과 마음', '어려웠던 점과 처방', '다음 과정을 위한 처방', '지금까지의 모든 시험', '영역·개념 누적 지도', '되풀이되는 오개념', '이전 KMChC 학습진단과 비교', '부모님께', '부록', '목차', '한 장 요약'].every(s => txt.indexOf(s) >= 0), '');
+    /* 회차는 18 로 박지 않는다 — 그 학생이 실제로 본 회차 수(선생님 2026-10-04) */
+    { const flat = txt.replace(/\s+/g, ''), nums = [...new Set((flat.match(/화학1\d+회돌아보기/g) || []).map(x => +x.slice(3).match(/\d+/)[0]))];
+      chk(m.who + ': 제목의 회차 = 그 학생이 실제로 본 회차 수(' + m.taken + ') · 다른 수가 섞이지 않는다', m.taken > 0 ? (nums.length === 1 && nums[0] === m.taken) : (nums.length === 0 && /화학1돌아보기/.test(flat)), nums); }
   }
 
   console.log('\n── LibreOffice PDF ──');

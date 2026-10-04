@@ -34,9 +34,19 @@
   var SA = root.SurveyAnalysis || (typeof require === 'function' ? require('./survey_analysis.js') : null);
   var WD = SR.words, CAT = SR.CAT, CAT_ORDER = SR.CAT_ORDER;
   var LIB = 'vendor/docx.iife.js', ART = 'assets/survey_report/';
-  var BRAND = '화학 · 다원교육 · 조준모', TITLE = '화학1 18회 돌아보기 진단 보고서';
+  var BRAND = '화학 · 다원교육 · 조준모';
+  /* 회차는 18 로 박지 않는다(선생님 2026-10-04 — «학생이 18회를 다 본 게 아니라 실제로 응시한 회차만 센다»).
+     학생마다 그리기·만들기 전에 CUR_N = 그 학생이 실제로 본 화학1 회차 수(A.record.taken)로 맞춘다. */
+  var CUR_N = 0;
+  function RW() { return CUR_N > 0 ? CUR_N + '회' : '수업'; }
+  function RWE() { return CUR_N > 0 ? CUR_N + '-ROUND' : 'COURSE'; }
+  function RWS() { return CUR_N > 0 ? CUR_N + ' ROUNDS' : 'REVIEW'; }
+  function TITLE_() { return '화학1 ' + (CUR_N > 0 ? CUR_N + '회 ' : '') + '돌아보기 진단 보고서'; }
+  function halves(rr) { var k = Math.ceil(rr.length / 2); return [rr.slice(0, k), rr.slice(k)]; }
+  function halfLabel(h, front) { return h.length ? (front ? '앞쪽 ' : '뒤쪽 ') + h.length + '회(' + h[0].round + '~' + h[h.length - 1].round + '회) 평균' : (front ? '앞쪽' : '뒤쪽') + ' 평균'; }
   var FONT = 'Malgun Gothic';
   var D = null;   // docx 이름공간(build 때 채운다)
+  var BK_ID = 0;   // 책갈피 번호(문서 안에서 겹치지 않게)
 
   /* ── 쪽 틀(twip) ── A4 11906 × 16838 */
   var PG = { w: 11906, h: 16838, top: 1420, bottom: 1300, side: 1080, header: 600, footer: 560 };
@@ -70,21 +80,27 @@
       (c >= 0x3000 && c <= 0x303F) || (c >= 0xFF00 && c <= 0xFFEF) || (c >= 0x2460 && c <= 0x27BF)) return 1.0;
     if (ch === ' ') return 0.33;
     if (c >= 48 && c <= 57) return 0.64;
-    if (c >= 65 && c <= 90) return 0.72;
-    if (c >= 97 && c <= 122) return 0.6;
+    if (c >= 65 && c <= 90) return 0.7;
+    if (c >= 97 && c <= 122) return 0.54;
     if ('.,:;\'"!|()[]·'.indexOf(ch) >= 0) return 0.4;
     if ('«»<>=+-/%~×→←↑↓▲▼≥≤±−'.indexOf(ch) >= 0) return 0.8;
     return 0.95;
   }
   function textW(t, size, bold) { var s = 0; t = String(t); for (var i = 0; i < t.length; i++) s += cw(t.charAt(i)); return s * size * 10 * (bold ? 1.04 : 1); }
-  /* segs 를 폭 w 에 넣었을 때 줄 수 — 어절 단위로 넘기는 것을 감안해 7% 여유 */
+  /* segs 를 폭 w 에 넣었을 때 줄 수 — 한 줄에 들어가면 1. 넘치면 어절 단위로 넘기므로 줄마다 어절 반 개쯤(1.7em)을 잃는다고 본다(3% 여유) */
+  function wrapN(cur, w, size) {
+    cur *= 1.01;
+    if (cur <= w) return 1;
+    var eff = Math.max(300, w - 17 * size);
+    return 1 + Math.ceil((cur - w) / eff);
+  }
   function linesOf(segs, w, size) {
     var n = 0, cur = 0;
     segs.forEach(function (s) {
-      if (s.br) { n += Math.max(1, Math.ceil(cur * 1.07 / w)); cur = 0; return; }
+      if (s.br) { n += wrapN(cur, w, size); cur = 0; return; }
       if (s.t != null) cur += textW(s.t, s.s || size, s.b); else if (s.field) cur += 2 * size * 10;
     });
-    n += Math.max(1, Math.ceil(cur * 1.07 / w));
+    n += wrapN(cur, w, size);
     return n;
   }
 
@@ -108,6 +124,7 @@
     }
     return out;
   }
+  function segText(segs) { return norm(segs).map(function (s) { return s.t || ''; }).join(''); }
   function norm(segs) {
     if (segs == null) return [];
     if (!Array.isArray(segs)) segs = [segs];
@@ -140,8 +157,11 @@
     var size = o.size || 20, line = o.line || lh(size);
     var w = (o.w || CW) - (o.indL || 0) - (o.indR || 0) - (o.padW || 0);
     var kids = [];
-    if (o.bookmark) kids.push(new D.Bookmark({ id: o.bookmark, children: segs.slice(0, 1).map(function (s) { return RUN(s, size, o); }) }));
-    segs.slice(o.bookmark ? 1 : 0).forEach(function (s) { kids.push(RUN(s, size, o)); });
+    /* 책갈피(목차 PAGEREF 의 과녁) — docx 의 Bookmark 는 번호를 늘 1 로 매겨 겹치므로 시작·끝을 직접 단다 */
+    var bkId = o.bookmark ? ++BK_ID : 0;
+    if (o.bookmark) kids.push(new D.BookmarkStart(o.bookmark, bkId));
+    segs.forEach(function (s) { kids.push(RUN(s, size, o)); });
+    if (o.bookmark) kids.push(new D.BookmarkEnd(bkId));
     var p = new D.Paragraph({
       alignment: o.align ? D.AlignmentType[o.align] : undefined,
       spacing: { before: o.before || 0, after: o.after || 0, line: line, lineRule: D.LineRuleType.EXACT },
@@ -151,7 +171,8 @@
       tabStops: o.tabs, children: kids
     });
     var n = o.lines || linesOf(segs, Math.max(400, w), size);
-    return { el: p, h: n * line + (o.before || 0) + (o.after || 0) + (o.extraH || 0), kn: !!o.kn, kind: 'p' };
+    var bx = 0; ['top', 'bottom'].forEach(function (k) { var b = o.border && o.border[k]; if (b) bx += (b.space || 0) * 20 + Math.round((b.size || 4) * 2.5) + 10; });
+    return { el: p, h: n * line + (o.before || 0) + (o.after || 0) + bx, kn: !!o.kn, kind: 'p', label: segs.map(function (x) { return x.t || ''; }).join('').slice(0, 18) };
   }
   function SP(h) { return P([{ t: '', s: 2 }], { size: 2, line: Math.max(20, h) }); }
   /* 그림 문단 — png:{data,w,h} · wpx: 96dpi 화소 폭 */
@@ -162,7 +183,7 @@
     var p = new D.Paragraph({ alignment: D.AlignmentType[o.align || 'CENTER'], keepNext: !!o.kn, keepLines: true,
       spacing: { before: o.before || 0, after: o.after || 0, line: 240, lineRule: D.LineRuleType.AUTO },
       children: [new D.ImageRun({ type: 'png', data: png.data, transformation: { width: wpx, height: hpx }, altText: o.alt ? { name: o.alt, description: o.alt, title: o.alt } : undefined })] });
-    return { el: p, h: hpx * 15 + (o.before || 0) + (o.after || 0) + 80, kn: !!o.kn, kind: 'p' };
+    return { el: p, h: hpx * 15 + (o.before || 0) + (o.after || 0) + 80, kn: !!o.kn, kind: 'p', label: '[그림 ' + (o.alt || '') + ']' };
   }
 
   /* 표 — rows: [{cells:[{span, c:[항목], fill, bd:{top,bottom,left,right}, m:[위,오른,아래,왼], va}], h(고정), min, hdr}]
@@ -170,11 +191,21 @@
      o.atomic 이면 마지막 행 말고 모든 행의 문단에 keepNext — 표 전체가 한 쪽에 붙는다(카드). */
   function t(segs, o) { return { k: 't', segs: segs, o: o || {} }; }
   function im(png, wpx, o) { return { k: 'im', png: png, wpx: wpx, o: o || {} }; }
+  /* 표 끝에 붙는 설명(o.tail) — 마지막 행과 떨어지지 않게 표의 행으로 넣는다(설명만 다음 쪽에 홀로 가지 않게) */
+  function withTail(colW, rows, o) {
+    if (!o.tail) return rows;
+    rows = rows.slice();
+    rows[rows.length - 1] = Object.assign({}, rows[rows.length - 1], { kn: true });
+    rows.push({ cells: [{ span: colW.length, c: [t(typeof o.tail === 'string' ? { html: o.tail, c: K.mut } : o.tail, { size: 17, line: 270 })], m: [90, 0, 0, 0] }] });
+    return rows;
+  }
   function TB(colW, rows, o) {
     o = o || {};
-    var rowEls = [], rowH = [], hdrH = 0, hdrN = 0;
-    rows.forEach(function (r, ri) {
-      var last = ri === rows.length - 1, kn = !!(o.atomic && !last) || !!r.kn;
+    rows = withTail(colW, rows, o);
+    var nb = { style: D.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+    /* 행 하나 만들기 — 쪽 계획이 표를 쪽마다 끊어 새 표로 낼 때 다시 부른다(같은 행 객체를 두 표에 넣지 않게) */
+    function buildRow(ri) {
+      var r = rows[ri], last = ri === rows.length - 1, kn = !!(o.atomic && !last) || !!r.kn;
       var ci = 0, cells = [], hmax = 0;
       r.cells.forEach(function (c) {
         var span = c.span || 1, w = sum(colW.slice(ci, ci + span)); ci += span;
@@ -187,10 +218,11 @@
           else b = P(it.segs, Object.assign({}, it.o, { w: inner, kn: kn || it.o.kn }));
           kids.push(b.el); hh += b.h;
         });
+        if (c.raw) [].concat(c.raw).forEach(function (rw) { var x = typeof rw === 'function' ? rw() : rw; kids.push(x.el); hh += x.h; var tail = P([{ t: '', s: 2 }], { size: 2, line: c.rawGap || 20, kn: kn }); kids.push(tail.el); hh += c.rawGap || 20; });
         if (!kids.length) { var e = P([{ t: '', s: 2 }], { size: 2, line: 40, w: inner, kn: kn }); kids.push(e.el); hh += e.h; }
-        hmax = Math.max(hmax, hh + m[0] + m[2]);
         var bd = c.bd || {};
-        var nb = { style: D.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+        var bh = (bd.top ? Math.round((bd.top.size || 4) * 2.5) : 0) + (bd.bottom ? Math.round((bd.bottom.size || 4) * 2.5) : 0);
+        hmax = Math.max(hmax, hh + m[0] + m[2] + bh);
         cells.push(new D.TableCell({ width: { size: w, type: D.WidthType.DXA }, columnSpan: span > 1 ? span : undefined,
           shading: SH(c.fill), verticalAlign: c.va ? D.VerticalAlignTable[c.va] : D.VerticalAlignTable.TOP,
           margins: { top: m[0], right: m[1], bottom: m[2], left: m[3] },
@@ -198,14 +230,24 @@
           children: kids }));
       });
       var h = r.h ? r.h : Math.max(hmax, r.min || 0);
-      rowH.push(h); if (r.hdr) { hdrH += h; hdrN++; }
-      rowEls.push(new D.TableRow({ children: cells, cantSplit: true, tableHeader: !!r.hdr,
-        height: r.h ? { value: r.h, rule: D.HeightRule.EXACT } : (r.min ? { value: r.min, rule: D.HeightRule.ATLEAST } : undefined) }));
-    });
-    var tbl = new D.Table({ columnWidths: colW, width: { size: sum(colW), type: D.WidthType.DXA }, layout: D.TableLayoutType.FIXED,
-      borders: noBorders(), alignment: o.center ? D.AlignmentType.CENTER : undefined, rows: rowEls });
-    return { el: tbl, kind: 'tbl', rows: rowH, hdr: hdrH, hdrN: hdrN, atomic: !!o.atomic, h: sum(rowH), kn: !!o.kn };
+      var el = new D.TableRow({ children: cells, cantSplit: true, tableHeader: !!r.hdr,
+        height: r.h ? { value: r.h, rule: D.HeightRule.EXACT } : (r.min ? { value: r.min, rule: D.HeightRule.ATLEAST } : undefined) });
+      return { el: el, h: h, kn: kn };
+    }
+    function table(rowEls) {
+      return new D.Table({ columnWidths: colW, width: { size: sum(colW), type: D.WidthType.DXA }, layout: D.TableLayoutType.FIXED,
+        borders: noBorders(), alignment: o.center ? D.AlignmentType.CENTER : undefined, rows: rowEls });
+    }
+    var built = rows.map(function (r, ri) { return buildRow(ri); });
+    var hdrN = 0; while (hdrN < rows.length && rows[hdrN].hdr) hdrN++;
+    var rowH = built.map(function (b) { return b.h; });
+    var first = rows[0] && rows[0].cells[0] && rows[0].cells[0].c && rows[0].cells[0].c[0];
+    return { el: table(built.map(function (b) { return b.el; })), kind: 'tbl', rows: rowH, rowKn: built.map(function (b) { return b.kn; }),
+      hdr: sum(rowH.slice(0, hdrN)), hdrN: hdrN, atomic: !!o.atomic, h: sum(rowH), kn: !!o.kn,
+      make: function (idxs) { return table(idxs.map(function (i) { return buildRow(i).el; })); },
+      label: 'T:' + (first && first.segs ? segText(first.segs).slice(0, 18) : first && first.k === 'im' ? '[그림]' : '') };
   }
+  function TBraw(colW, rows, o) { return TB(colW, rows, Object.assign({ m: [60, 100, 60, 100] }, o || {})); }
   function eq(n, w) { var a = [], x = Math.floor((w || CW) / n); for (var i = 0; i < n; i++) a.push(i === n - 1 ? (w || CW) - x * (n - 1) : x); return a; }
 
   /* ══════════ 꾸밈 덩어리 ══════════ */
@@ -216,7 +258,7 @@
       out.push(P([{ t: (/^\d+$/.test(no) ? 'SECTION ' + no + '   ·   ' : '') + en, c: K.goldInk, b: true }], { size: 16, sp: 36, kn: true, brk: brk, before: brk ? 0 : 520, after: 40,
         border: brk ? undefined : { top: BD(K.goldLine, 6, D.BorderStyle.SINGLE, 14) } }));
       out.push(P([{ t: no, c: K.gold, b: true, s: 46 }, { t: '   ', s: 30 }, { t: title, c: K.g9, b: true, s: 40 }], { size: 40, line: 660, kn: true, after: 170, bookmark: bk,
-        border: { bottom: BD(K.g8, 18, D.BorderStyle.THICK_THIN_SMALL_GAP, 6) }, extraH: 60 }));
+        border: { bottom: BD(K.g8, 18, D.BorderStyle.THICK_THIN_SMALL_GAP, 6) } }));
       if (lede) out.push(P({ html: lede, c: K.ink2 }, { size: 20, line: 330, kn: true, after: 200 }));
       return out;
     };
@@ -290,34 +332,6 @@
     });
     return TBraw([lw, bw, vw], built, o);
   }
-  /* TB 와 같지만 칸 안에 미리 만든 표(raw)를 넣을 수 있다 */
-  function TBraw(colW, rows, o) {
-    o = o || {};
-    var rowEls = [], rowH = [];
-    rows.forEach(function (r, ri) {
-      var last = ri === rows.length - 1, kn = !!(o.atomic && !last) || !!r.kn;
-      var ci = 0, cells = [], hmax = 0;
-      r.cells.forEach(function (c) {
-        var span = c.span || 1, w = sum(colW.slice(ci, ci + span)); ci += span;
-        var m = c.m || [60, 100, 60, 100], inner = w - m[1] - m[3], kids = [], hh = 0;
-        (c.c || []).forEach(function (it) {
-          var b = it.k === 'im' ? IMG(it.png, Math.min(it.wpx, Math.floor(inner / 15)), Object.assign({}, it.o, { kn: kn || it.o.kn })) : P(it.segs, Object.assign({}, it.o, { w: inner, kn: kn || it.o.kn }));
-          kids.push(b.el); hh += b.h;
-        });
-        if (c.raw) { kids.push(c.raw.el); hh += c.raw.h; var tail = P([{ t: '', s: 2 }], { size: 2, line: 20, kn: kn }); kids.push(tail.el); hh += 20; }
-        if (!kids.length) { var e = P([{ t: '', s: 2 }], { size: 2, line: 40, kn: kn }); kids.push(e.el); hh += 40; }
-        hmax = Math.max(hmax, hh + m[0] + m[2]);
-        var bd = c.bd || {}, nb = { style: D.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-        cells.push(new D.TableCell({ width: { size: w, type: D.WidthType.DXA }, columnSpan: span > 1 ? span : undefined, shading: SH(c.fill),
-          verticalAlign: c.va ? D.VerticalAlignTable[c.va] : D.VerticalAlignTable.TOP, margins: { top: m[0], right: m[1], bottom: m[2], left: m[3] },
-          borders: { top: bd.top || nb, bottom: bd.bottom || nb, left: bd.left || nb, right: bd.right || nb }, children: kids }));
-      });
-      rowH.push(Math.max(hmax, r.min || 0));
-      rowEls.push(new D.TableRow({ children: cells, cantSplit: true, tableHeader: !!r.hdr, height: r.min ? { value: r.min, rule: D.HeightRule.ATLEAST } : undefined }));
-    });
-    return { el: new D.Table({ columnWidths: colW, width: { size: sum(colW), type: D.WidthType.DXA }, layout: D.TableLayoutType.FIXED, borders: noBorders(), rows: rowEls }),
-      kind: 'tbl', rows: rowH, hdr: 0, hdrN: 0, atomic: !!o.atomic, h: sum(rowH), kn: !!o.kn };
-  }
   function chipSeg(k, extra) { var c = catC(k); return { t: ' ' + c.name + (extra || '') + ' ', b: true, c: c.ink, sh: c.tint, s: 16 }; }
   function tagSegs(r) {
     var out = [], T = [['provisional', '잠정'], ['ref', '참고'], ['chronic', '반복 막힘'], ['resolved', '막힘 해소'], ['latent', '잠복 직관'], ['recovered', '재시 회복']];
@@ -375,8 +389,7 @@
       bias: M.bias != null ? C.bias(M.bias) : null,
       radar: C.radar(A),
       cycle: A.hasSurvey ? C.cycle(A.habits.subs) : null,
-      timeline: (A.timeline || []).length ? C.timeline(A) : null,
-      km: A.kmCompare && A.kmCompare.rows.length ? C.kmCompare(A.kmCompare) : null
+      timeline: (A.timeline || []).length ? C.timeline(A) : null
     };
     for (var k in jobs) out[k] = await svgPng(jobs[k], 3);
     out.spark = {};
@@ -421,7 +434,7 @@
     var R = A.record, M = A.metrics;
     var hceTxt = M.hce == null ? '자신 있다고 표시한 개념이 없거나 기록이 부족해 계산하지 않았습니다.' : '«그렇다» 이상으로 자신 있다고 한 ' + M.hceN + '개 가운데 기록이 흔들린 개념 ' + M.hceWeak + '개.';
     return [
-      { t: '18주 첫 시도 정답률', easy: '처음 본 문장을 바로 맞힌 비율', v: R.rate, d: '처음 본 문장에서 바로 맞힌 비율 (' + (R.total.n ? R.total.ok + ' / ' + R.total.n : '기록 없음') + ')',
+      { t: (RW() + ' 첫 시도 정답률'), easy: '처음 본 문장을 바로 맞힌 비율', v: R.rate, d: '처음 본 문장에서 바로 맞힌 비율 (' + (R.total.n ? R.total.ok + ' / ' + R.total.n : '기록 없음') + ')',
         b: R.rate == null ? 'na' : R.rate >= 0.85 ? 'good' : R.rate >= 0.7 ? 'ok' : 'low', mean: meanRate(R.rate) },
       { t: '재시 교정률', easy: '틀린 개념을 다음 재시에서 고친 비율', v: R.retakeRate, d: R.retake.withData ? '처음 틀린 개념을 다음 재시에서 다른 문장으로 바로잡은 비율 (' + R.retake.fixedNext + ' / ' + R.retake.withData + ')' : '재시 기록이 없어 계산하지 않았습니다.',
         b: R.retakeRate == null ? 'na' : R.retakeRate >= 0.8 ? 'good' : R.retakeRate >= 0.5 ? 'ok' : 'low', mean: meanRetake(R) },
@@ -438,6 +451,7 @@
   /* ══════════ 한 학생의 Word 구역 ══════════ */
   function student(st, art, charts, idx, batch) {
     var A = st.A, R = A.record, M = A.metrics, nm = st.name || '학생', who = st.name ? st.name + ' 학생' : '이 학생';
+    CUR_N = (R && R.taken) || 0;
     var counts = A.counts, totalRows = A.rows.length, bank = st.bank || {};
     var pre = 'sp' + idx + '_';
     var S = [];   // 절 목록 {id, fresh, head(brk), blocks | make(toc)}
@@ -448,28 +462,28 @@
     /* ── 한 장 요약(학부모용) ── */
     S.push({ id: 'sum', fresh: true, title: '한 장 요약 — 부모님이 먼저 보실 곳', toc: '숫자 넷 · 세 줄 요약 · 먼저 다질 곳',
       head: centerHead('FOR PARENTS · ONE-PAGE SUMMARY', '한 장 요약', '바쁘시면 이 한 장만 보셔도 됩니다. 숫자마다 <b>«그래서 무슨 뜻인지»</b>를 바로 옆에 적었습니다.', art, pre + 'sum'),
-      blocks: summaryBlocks(A, who) });
+      blocks: null, level: 0, make: function () { return this._b || (this._b = summaryBlocks(A, who, this.level)); } });
 
     /* ── 목차 ── */
     var tocList = [['sum', '', '한 장 요약', '부모님이 먼저 보실 곳 — 숫자 넷과 세 줄 요약'], ['s0', '0', '이 보고서를 읽는 법', '여섯 갈래 · 자주 나오는 말 풀이'], ['s1', '1', '한눈에 보기', '숫자 넷 · 여섯 갈래 개수 · 세 줄 요약'],
-      ['s2', '2', '18주 학습 여정', '회차별 첫 시도 · 재시 · 막힘과 해소'], ['s3', '3', '자기 판단과 실제 기록', '자신감 × 기록 · 치우침 · 구별력'], ['s4', '4', '단원별 진단', '여덟 단원 묶음의 기록과 자신감'],
+      ['s2', '2', (RW() + ' 학습 여정'), '회차별 첫 시도 · 재시 · 막힘과 해소'], ['s3', '3', '자기 판단과 실제 기록', '자신감 × 기록 · 치우침 · 구별력'], ['s4', '4', '단원별 진단', '여덟 단원 묶음의 기록과 자신감'],
       ['s5', '5', '개념별 진단표', '개념 40 · 직관 문장 20 전수 진단'], ['s6', '6', '남은 오개념 카드', '이런 생각 → 왜 → 실제로는 → 확인 문장'], ['s7', '7', '공부 습관과 마음', '계획 · 점검 · 성찰 · 효능감 · 부담'],
       ['s8', '8', '어려웠던 점과 처방', '느낀 어려움과 기록 · 맞춤 처방'], ['s9', '9', '다음 과정을 위한 처방', '우선순위 3 · 한 주 순서 · 숨은 실력'], ['s10', '10', '지금까지의 모든 시험', 'DT 전 과목 · 모의시험'],
       ['s11', '11', '영역·개념 누적 지도', '모든 시험을 단원 묶음으로'], ['s12', '12', '되풀이되는 오개념', '여러 시험에서 같은 자리'], ['s13', '13', '이전 KMChC 학습진단과 비교', '그때 → 지금'],
       ['sp', 'P', '부모님께', '과정을 짚는 말 · 함께 나눌 질문'], ['sa', 'A', '부록', '지표 정의 · 판정 구간 · 응답 품질 · 한계 · 참고문헌']];
-    S.push({ id: 'toc', fresh: true, head: centerHead('CONTENTS', '목차', who + '의 18주 기록 · 설문 · 지금까지의 모든 시험을 열네 개의 절로 나눠 정리했습니다.', art, null),
+    S.push({ id: 'toc', fresh: true, head: centerHead('CONTENTS', '목차', (RW() + ' 기록 · 설문 · 지금까지의 모든 시험을 열네 개의 절로 나눴습니다.'), art, null),
       make: function (pages) { return tocBlocks(tocList, pages, pre); } });
 
     /* ── 0. 읽는 법 ── */
     S.push({ id: 's0', fresh: true, head: secHead('0', '이 보고서를 읽는 법', 'HOW TO READ', '설문 부분은 점수가 아니라 <b>스스로 느낀 것</b>입니다. 느낌과 실제 기록이 다를 때 그 차이가 가장 쓸모 있는 정보이며, 어느 쪽이 «틀렸다»는 뜻은 아닙니다.', pre + 's0'),
       blocks: readBlocks() });
     /* ── 1. 한눈에 ── */
-    S.push({ id: 's1', fresh: true, head: secHead('1', '한눈에 보기', 'AT A GLANCE', who + '의 18주 기록과 설문을 네 개의 숫자와 여섯 갈래로 줄였습니다.', pre + 's1'), blocks: glanceBlocks(A, who) });
-    S.push({ id: 's2', head: secHead('2', '18주 학습 여정', 'THE 18-WEEK JOURNEY', '매주 앞 내용까지 다시 묻는 누적 시험이었습니다. 진한 선은 회차마다 첫 시도 정답률, 점선은 그 가운데 <b>지난 단원 문항</b>의 정답률, 금색 막대는 재시 횟수입니다.', pre + 's2'), blocks: journeyBlocks(A, charts) });
-    S.push({ id: 's3', head: secHead('3', '자기 판단과 실제 기록', 'CALIBRATION', '동그라미 하나가 개념 하나입니다(숫자는 설문 문항 번호). 가로는 설문에서 고른 자신감, 세로는 18주 첫 시도 정답률입니다. 점선 위에 있으면 느낌과 기록이 일치합니다.', pre + 's3'), blocks: calBlocks(A, charts) });
+    S.push({ id: 's1', fresh: true, head: secHead('1', '한눈에 보기', 'AT A GLANCE', who + ('의 ' + RW() + ' 기록과 설문을 네 개의 숫자와 여섯 갈래로 줄였습니다.'), pre + 's1'), blocks: glanceBlocks(A, who) });
+    S.push({ id: 's2', head: secHead('2', (RW() + ' 학습 여정'), ('THE ' + RWE() + ' JOURNEY'), '매주 앞 내용까지 다시 묻는 누적 시험이었습니다. 진한 선은 회차마다 첫 시도 정답률, 점선은 그 가운데 <b>지난 단원 문항</b>의 정답률, 금색 막대는 재시 횟수입니다.', pre + 's2'), blocks: journeyBlocks(A, charts) });
+    S.push({ id: 's3', head: secHead('3', '자기 판단과 실제 기록', 'CALIBRATION', ('동그라미 하나가 개념 하나입니다(숫자는 설문 문항 번호). 가로는 설문에서 고른 자신감, 세로는 ' + RW() + ' 첫 시도 정답률입니다. 점선 위에 있으면 느낌과 기록이 일치합니다.'), pre + 's3'), blocks: calBlocks(A, charts) });
     S.push({ id: 's4', head: secHead('4', '단원별 진단', 'BY UNIT', '여덟 단원 묶음마다 기록(초록 면)과 자신감(금색 점선)을 같은 눈금에 겹쳤습니다. 두 선이 벌어진 곳이 느낌과 기록이 어긋난 단원입니다.', pre + 's4'), blocks: unitBlocks(A, charts) });
     S.push({ id: 's5', head: secHead('5', '개념별 진단표', 'CONCEPT BY CONCEPT', '설문의 개념 40개와 직관 문장 20개를 모두 진단했습니다. 고칠 차례(남은 오개념 → 과신 → 보강 → 숨은 실력 → 강점 → 관찰)로 늘어놓았습니다.', pre + 's5'), blocks: conceptBlocks(A) });
-    S.push({ id: 's6', head: secHead('6', '남은 오개념 카드', 'MISCONCEPTION CARDS', '설문에서 공감한 직관 문장과 18주 기록이 같은 곳을 가리키는 개념입니다. «이런 생각이 들었죠 → 왜 그럴듯한가 → 실제로는 → 확인 문장» 차례로 읽고, 확인 문장의 O/X를 직접 판단해 보세요.', pre + 's6'), blocks: misBlocks(A, bank) });
+    S.push({ id: 's6', head: secHead('6', '남은 오개념 카드', 'MISCONCEPTION CARDS', ('설문에서 공감한 직관 문장과 ' + RW() + ' 기록이 같은 곳을 가리키는 개념입니다. «이런 생각이 들었죠 → 왜 그럴듯한가 → 실제로는 → 확인 문장» 차례로 읽고, 확인 문장의 O/X를 직접 판단해 보세요.'), pre + 's6'), blocks: misBlocks(A, bank) });
     S.push({ id: 's7', head: secHead('7', '공부 습관과 마음', 'HABITS & MINDSET', '습관 문항을 자기조절 학습의 세 단계(계획 → 점검 → 성찰)로 묶고, 효능감·시험 부담·흥미를 실제 기록과 나란히 놓았습니다. 숫자는 «그 문장에 얼마나 동의했나»(1~5)입니다.', pre + 's7'), blocks: habitBlocks(A, charts) });
     S.push({ id: 's8', head: secHead('8', '어려웠던 점과 처방', 'DIFFICULTIES', '어려웠던 점 10문항을 동의한 정도 차례로 늘어놓고, 시험 기록으로 확인할 수 있는 것은 옆에 함께 적었습니다.', pre + 's8'), blocks: diffBlocks(A) });
     S.push({ id: 's9', head: secHead('9', '다음 과정을 위한 처방', 'NEXT STEPS', '화학1 심화·화학2를 시작하기 전에 다질 곳 세 개, 한 주의 공부 순서, 그리고 이미 내 것인 개념의 확정 목록입니다.', pre + 's9'), blocks: nextBlocks(A, bank) });
@@ -478,57 +492,81 @@
     S.push({ id: 's12', head: secHead('12', '되풀이되는 오개념', 'RECURRING MISCONCEPTIONS', '여러 시험·여러 해에 걸쳐 같은 자리에서 걸린 생각을 주제별로 묶었습니다. 출처가 여럿인 주제일수록 위에 놓았습니다.', pre + 's12'), blocks: recurBlocks(A) });
     S.push({ id: 's13', head: secHead('13', '이전 KMChC 학습진단과 비교', 'THEN AND NOW', '예전에 받은 「화학 정밀 학습진단」과 이번 설문에 같은 축이 있는 것끼리 «그때 → 지금»을 놓았습니다.', pre + 's13'), blocks: kmBlocks(A, charts) });
     S.push({ id: 'sp', head: secHead('P', '부모님께', 'FOR PARENTS', '이 보고서는 아이를 평가하는 문서가 아니라 다음 공부의 방향을 찾는 지도입니다. 아래 말들이 대화의 출발점이 되기를 바랍니다.', pre + 'sp'), blocks: parentBlocks(A, art) });
-    S.push({ id: 'sa', head: secHead('A', '부록', 'APPENDIX', '판정 틀은 정오 × 확신의 결정표(Hasan 외, 1999)를 개념 단위로 옮긴 것이고, «지식 설문»의 자신감을 시험과 맞댄 일반화학 연구(Bell & Volckmann, 2011)에 가장 가깝습니다.', pre + 'sa'), blocks: appendixBlocks(A, art) });
+    S.push({ id: 'sa', head: secHead('A', '부록', 'APPENDIX', '판정 틀은 정오 × 확신의 결정표(Hasan 외, 1999)를 개념 단위로 옮긴 것이고, «지식 설문»의 자신감을 시험과 맞댄 일반화학 연구(Bell & Volckmann, 2011)에 가장 가깝습니다.', pre + 'sa'), blocks: null, level: 0, make: function () { return this._b || (this._b = appendixBlocks(A, art, this.level)); } });
 
+    /* 한 장 요약은 꼭 한 장 — 넘치면 덜어 낸다. 부록이 마지막 쪽에 몇 줄만 남기면 참고문헌을 촘촘히, 그래도 남으면 마무리 상자를 뺀다. */
+    var sum = S.filter(function (x) { return x.id === 'sum'; })[0], sa = S.filter(function (x) { return x.id === 'sa'; })[0];
+    var hh = function (bl) { return bl.reduce(function (a, b) { return a + b.h; }, 0); };
+    while (sum.level < 4 && hh(sum.head(true)) + hh(sum.make()) > CAP) { sum.level++; sum._b = null; }
     var plan = paginate(S);
-    var els = emit(S, plan);
-    return { els: els, plan: plan };
+    if (plan.fill[plan.fill.length - 1] < 35) {
+      var best = { lv: 0, plan: plan };
+      for (var lv = 1; lv <= 2; lv++) {
+        sa.level = lv; sa._b = null; var pl = paginate(S), lf = pl.fill[pl.fill.length - 1], bf = best.plan.fill[best.plan.fill.length - 1];
+        if (pl.total < best.plan.total || (pl.total === best.plan.total && lf > bf && bf < 35)) best = { lv: lv, plan: pl };
+      }
+      sa.level = best.lv; sa._b = null; plan = paginate(S);
+    }
+    return { els: plan.els, plan: plan };
   }
 
-  /* ══════════ 쪽 계획 ══════════ */
+  /* ══════════ 쪽 계획 ══════════
+     덩어리마다 어림 높이로 쪽을 채워 보고, 새 쪽이 필요한 자리에는 «쪽 나눔 앞에» 문단(BRK)을 박는다.
+     나눠지는 표는 쪽마다 새 표로 끊어 내고(머리 행은 다시 붙인다) 그 사이에도 BRK 를 둔다.
+     그래서 어림이 넉넉한 한(실제 높이 ≤ 어림) Word 든 LibreOffice 든 이 계획대로 쪽이 나뉜다 —
+     목차의 쪽 번호(PAGEREF 의 저장값)도 이 계획에서 나오므로 열자마자 맞다. */
   function blocksOf(s, pages) { return s.blocks || s.make(pages || {}); }
-  function firstChunk(b) { if (!b) return 0; if (b.kind === 'tbl' && !b.atomic) return b.hdr + (b.rows[b.hdrN] || 0); return b.h; }
+  function firstChunk(b) { if (!b) return 0; if (b.kind === 'tbl' && !b.atomic) { var h = b.hdr, j = b.hdrN; h += b.rows[j] || 0; while (b.rowKn[j] && j + 1 < b.rows.length) { j++; h += b.rows[j]; } return h; } return b.h; }
   function chainH(all, i) { var tot = 0, j = i; while (all[j] && all[j].kn) { tot += all[j].h; j++; } return tot + firstChunk(all[j]); }
-  function paginate(S) {
-    var page = 0, used = 0, pages = {}, brk = {}, fill = [];
+  function BRK() { return new D.Paragraph({ pageBreakBefore: true, keepNext: true, spacing: { before: 0, after: 0, line: 20, lineRule: D.LineRuleType.EXACT }, children: [new D.TextRun({ text: '', size: 2 })] }); }
+  var DEBUG = false, dbgN = 0;
+  function MARK(b) { dbgN++; var m = P([{ t: '⟦' + dbgN + '⟧', c: 'C0392B', s: 12 }], { size: 12, line: 200, kn: b.kn }); m.dbg = { n: dbgN, kind: b.kind, h: b.h, label: b.label || '', atomic: !!b.atomic }; return m; }
+  function run(S, tocPages, doEmit) {
+    var page = 0, used = 0, pages = {}, brk = {}, fill = [], els = [], log = [];
     function newPage() { if (page) fill[page] = used; page++; used = 0; }
-    function place(all) {
+    function put(el) { if (doEmit) els.push(el); }
+    S.forEach(function (s) {
+      if (s.cover) { newPage(); pages[s.id] = page; s.blocks.forEach(function (b) { put(b.el); }); used = CAP; return; }
+      var body = blocksOf(s, tocPages || {});
+      var need = chainH(s.head(false).concat(body), 0);
+      var fresh = !!s.fresh || used >= CAP * 0.6 || used + need > CAP;
+      brk[s.id] = fresh;
+      if (fresh) newPage(); else used += 0;
+      pages[s.id] = page;
+      var all = s.head(fresh).concat(body);
+      if (DEBUG) all = all.reduce(function (a, b) { a.push(MARK(b)); a.push(b); return a; }, []);
       for (var i = 0; i < all.length; i++) {
         var b = all[i];
-        if (b.kind === 'tbl' && !b.atomic && !b.kn) {
+        if (b.dbg && doEmit) log.push({ page: page, y: used, n: b.dbg.n, kind: b.dbg.kind, h: b.dbg.h, label: b.dbg.label, atomic: b.dbg.atomic });
+        if (b.kind === 'tbl' && !b.atomic) {
+          var chunk = [], idx = function (n) { var a = []; for (var q = 0; q < n; q++) a.push(q); return a; };
           for (var r = 0; r < b.rows.length; r++) {
-            var h = b.rows[r];
-            if (used + h > CAP && used > 0) { newPage(); if (r >= b.hdrN) used += b.hdr; }
-            used += h;
+            var h = b.rows[r], nd = h, j = r;
+            while (b.rowKn[j] && j + 1 < b.rows.length) { j++; nd += b.rows[j]; }
+            if (r >= b.hdrN && used + nd > CAP && used > 0) {
+              var real = chunk.filter(function (q) { return q >= b.hdrN; }).length;
+              if (real) put(b.make(chunk));
+              newPage(); put(BRK());
+              chunk = idx(b.hdrN); used += b.hdr;
+            }
+            chunk.push(r); used += h;
           }
+          put(chunk.length === b.rows.length ? b.el : b.make(chunk));
         } else {
-          var need = b.kn ? chainH(all, i) : b.h;
-          if (used + need > CAP && used > 0) newPage();
-          used += b.h;
-          if (used > CAP) { var over = used - CAP; newPage(); used = over; }
+          var nd2 = b.kn ? chainH(all, i) : b.h;
+          if (used + nd2 > CAP && used > 0) { newPage(); put(BRK()); }
+          put(b.el); used += b.h;
+          while (used > CAP) { var over = used - CAP; newPage(); used = over; }
         }
       }
-    }
-    S.forEach(function (s) {
-      if (s.cover) { newPage(); pages[s.id] = page; used = CAP; return; }
-      var probe = s.head(false).concat(blocksOf(s, pages));
-      var need = chainH(probe, 0);
-      var fresh = s.fresh || used >= CAP * 0.5 || used + need > CAP;
-      brk[s.id] = fresh;
-      if (fresh) newPage();
-      pages[s.id] = page;
-      place(s.head(fresh).concat(blocksOf(s, pages)));
     });
     fill[page] = used;
-    return { pages: pages, brk: brk, total: page, fill: fill.slice(1).map(function (u) { return Math.round(u / CAP * 100); }) };
+    return { pages: pages, brk: brk, total: page, fill: fill.slice(1).map(function (u) { return Math.round(u / CAP * 100); }), els: els, log: log };
   }
-  function emit(S, plan) {
-    var els = [];
-    S.forEach(function (s) {
-      var bl = s.cover ? s.blocks : s.head(plan.brk[s.id]).concat(blocksOf(s, plan.pages));
-      bl.forEach(function (b) { els.push(b.el); });
-    });
-    return els;
+  function paginate(S) {
+    var p1 = run(S, null, false);          // 1차: 목차 쪽 번호를 모른 채로
+    var p2 = run(S, p1.pages, true);       // 2차: 그 번호로 목차를 채워 내보낸다(목차 높이는 같다)
+    return p2;
   }
 
   /* ══════════ 표지 ══════════ */
@@ -537,10 +575,10 @@
     var white = 'FFFFFF';
     /* 띠 안(고정 높이 행) — 그림의 초록 띠 0~8400twip 에 맞춘다 */
     var band = [
-      t([{ t: 'CHEMISTRY I   ·   18-WEEK REVIEW   ·   DIAGNOSTIC REPORT', c: K.goldLight, b: true }], { size: 16, sp: 40, before: 760 }),
-      t([{ t: '화학1 18회 돌아보기', c: white, b: true }], { size: 64, line: 860, before: 420 }),
+      t([{ t: ('CHEMISTRY I   ·   ' + RWE() + ' REVIEW   ·   DIAGNOSTIC REPORT'), c: K.goldLight, b: true }], { size: 16, sp: 40, before: 760 }),
+      t([{ t: ('화학1 ' + (CUR_N > 0 ? CUR_N + '회 ' : '') + '돌아보기'), c: white, b: true }], { size: 64, line: 860, before: 420 }),
       t([{ t: '진단 보고서', c: white, b: true }], { size: 64, line: 860 }),
-      t([{ t: '18주의 실제 기록  ×  하루의 설문  ×  지금까지의 모든 시험', c: 'E8D9B0', b: true }], { size: 25, line: 400, before: 260 }),
+      t([{ t: (RW() + '의 실제 기록  ×  하루의 설문  ×  지금까지의 모든 시험'), c: 'E8D9B0', b: true }], { size: 25, line: 400, before: 260 }),
       t([{ t: '━━━━━━', c: K.gold2 }], { size: 20, line: 300, before: 160 }),
       t([{ t: '매주 치른 누적 O/X 시험의 행동 기록과 마지막 시간의 점수 없는 설문 100문항, 그리고 지금까지 본 시험을 개념마다 맞대어 무엇을 이미 알고 무엇을 다음에 다져야 하는지 정리했습니다. 이 보고서는 점수를 매기는 문서가 아니라 다음 공부의 지도입니다.', c: 'E4EEEA' }], { size: 20, line: 340, before: 200, indR: 2200 })
     ];
@@ -559,14 +597,16 @@
     out.push(SP(320));
     /* 핵심 숫자 셋 */
     var nums = [];
-    if (R.rate != null) nums.push({ v: valSegs(R.rate, 50), t: '18주 첫 시도 정답률', d: R.total.ok + ' / ' + R.total.n + '문항을 처음 보자마자 맞혔습니다' });
+    if (R.rate != null) nums.push({ v: valSegs(R.rate, 50), t: (RW() + ' 첫 시도 정답률'), d: R.total.ok + ' / ' + R.total.n + '문항을 처음 보자마자 맞혔습니다' });
     if (R.retakeRate != null) nums.push({ v: valSegs(R.retakeRate, 50), t: '재시 교정률', d: '틀린 개념을 다음 재시에서 바로잡은 비율' });
     if (M.accuracy != null) nums.push({ v: valSegs(M.accuracy, 50), t: '자기 판단 정확도', d: '«자신 있다»는 느낌과 기록이 맞는 정도' });
     var nR = R.rounds.filter(function (r) { return r.rate != null; }).length, other = (A.timeline || []).filter(function (x) { return x.course !== 'ch1'; }).length;
     if (nums.length < 3 && nR) nums.push({ v: [{ t: String(nR), s: 50, b: true, c: K.g8 }, { t: '회', s: 25, b: true, c: K.g8 }], t: '화학1 첫 시도 기록', d: '회차마다 처음 본 시험을 개념별로 셌습니다' });
     if (nums.length < 3 && A.hasSurvey) nums.push({ v: [{ t: '100', s: 50, b: true, c: K.g8 }, { t: '문항', s: 25, b: true, c: K.g8 }], t: '마무리 설문 응답', d: '개념 자신감 40 · 직관 20 · 습관과 마음 40' });
     if (nums.length < 3) nums.push({ v: [{ t: String(totalRowsOf(A)), s: 50, b: true, c: K.g8 }, { t: '개', s: 25, b: true, c: K.g8 }], t: '개념을 여섯 갈래로 진단', d: '느낌(자신감·직관) × 기록' });
-    if (nums.length < 3) nums.push({ v: [{ t: String(other), s: 50, b: true, c: K.g8 }, { t: '번', s: 25, b: true, c: K.g8 }], t: '그 밖의 시험', d: '다른 과목 · 모의시험' });
+    if (nums.length < 3 && other) nums.push({ v: [{ t: String(other), s: 50, b: true, c: K.g8 }, { t: '번', s: 25, b: true, c: K.g8 }], t: '그 밖의 시험', d: '다른 과목 · 모의시험' });
+    if (nums.length < 3 && A.hasSurvey) nums.push({ v: [{ t: '40', s: 50, b: true, c: K.g8 }, { t: '문항', s: 25, b: true, c: K.g8 }], t: '공부 습관과 마음', d: '계획 · 점검 · 성찰 · 효능감 · 부담 · 흥미' });
+    if (nums.length < 3) nums.push({ v: [{ t: '8', s: 50, b: true, c: K.g8 }, { t: '묶음', s: 25, b: true, c: K.g8 }], t: '단원별 진단', d: '물질부터 산·염기까지 여덟 단원 묶음' });
     nums = nums.slice(0, 3);
     out.push(TB(eq(3), [{ cells: nums.map(function (n, i) {
       return { c: [t(n.v, { size: 50, line: 700 }), t([{ t: n.t, c: K.g9, b: true }], { size: 19, line: 300, before: 20 }), t([{ t: n.d, c: K.ink2 }], { size: 16, line: 250, before: 30 })],
@@ -584,32 +624,33 @@
   function totalRowsOf(A) { return A.rows.length; }
 
   /* ══════════ 한 장 요약 ══════════ */
-  function summaryBlocks(A, who) {
+  function summaryBlocks(A, who, level) {
+    level = level || 0;
     var out = [], R = A.record, M = A.metrics, ks = kpiList(A);
-    var lab = [2700, 1700, CW - 4400];
+    var lab = [2450, 1400, CW - 3850];
     var rows = [{ hdr: true, cells: [
       { c: [t([{ t: '무엇을 쟀나', c: K.white, b: true }], { size: 17 })], fill: K.g8 },
       { c: [t([{ t: '숫자', c: K.white, b: true }], { size: 17, align: 'CENTER' })], fill: K.g8 },
       { c: [t([{ t: '그래서 무슨 뜻인가', c: K.white, b: true }], { size: 17 })], fill: K.g8 }] }];
     ks.forEach(function (k, i) {
       rows.push({ cells: [
-        { c: [t([{ t: k.t, c: K.g9, b: true }], { size: 19 }), t([{ t: k.easy, c: K.mut }], { size: 16 })], fill: i % 2 ? K.white : K.g0, va: 'CENTER', bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } },
-        { c: [t(valSegs(k.v, 36), { size: 36, line: 500, align: 'CENTER' }), t([bandSeg(k.b, k.inv)], { size: 15, line: 240, align: 'CENTER' })], fill: i % 2 ? K.white : K.g0, va: 'CENTER', bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } },
-        { c: [t([{ t: k.mean, c: K.ink }], { size: 18, line: 290 })], fill: i % 2 ? K.white : K.g0, va: 'CENTER', bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } }] });
+        { c: [t([{ t: k.t, c: K.g9, b: true }], { size: 18, line: 280 }), t([{ t: k.easy, c: K.mut }], { size: 15, line: 235 })], fill: i % 2 ? K.white : K.g0, va: 'CENTER', bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } },
+        { c: [t(valSegs(k.v, 34), { size: 34, line: 460, align: 'CENTER' }), t([bandSeg(k.b, k.inv)], { size: 15, line: 235, align: 'CENTER' })], fill: i % 2 ? K.white : K.g0, va: 'CENTER', bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } },
+        { c: [t([{ t: k.mean, c: K.ink }], { size: 17, line: 270 })], fill: i % 2 ? K.white : K.g0, va: 'CENTER', bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } }] });
     });
     /* 여섯 갈래 한 줄 */
     var catSegs = []; CAT_ORDER.forEach(function (k, i) { var c = catC(k); if (i) catSegs.push({ t: '  ' }); catSegs.push({ t: c.name + ' ', c: c.ink, b: true }); catSegs.push({ t: String(A.counts[k]), c: c.ink, b: true, s: 22 }); });
     var fixN = A.counts.remain + A.counts.over + A.counts.reinforce;
     rows.push({ cells: [
-      { c: [t([{ t: '개념 ' + A.rows.length + '개 진단', c: K.g9, b: true }], { size: 19 }), t([{ t: '느낌 × 기록 여섯 갈래', c: K.mut }], { size: 16 })], fill: K.g0, va: 'CENTER' },
-      { span: 2, c: [t(catSegs, { size: 18, line: 330 }), t([{ t: A.hasRecord ? '그래서 → 먼저 다질 곳 ' + fixN + '개, 이미 단단한 곳(강점) ' + A.counts.strong + '개, 생각보다 잘 아는 곳(숨은 실력) ' + A.counts.hidden + '개입니다.' : '기록이 이어지지 않아 갈래는 대부분 «관찰»로 두었습니다.', c: K.ink }], { size: 18, line: 290, before: 40 })], fill: K.g0, va: 'CENTER' }] });
-    out.push(TB(lab, rows, { m: [90, 130, 90, 130] }));
-    out.push(SP(200));
+      { c: [t([{ t: '개념 ' + A.rows.length + '개 진단', c: K.g9, b: true }], { size: 18, line: 280 }), t([{ t: '느낌 × 기록 여섯 갈래', c: K.mut }], { size: 15, line: 235 })], fill: K.g0, va: 'CENTER' },
+      { span: 2, c: [t(catSegs, { size: 17, line: 320 }), t([{ t: A.hasRecord ? '그래서 → 먼저 다질 곳 ' + fixN + '개, 이미 단단한 곳(강점) ' + A.counts.strong + '개, 생각보다 잘 아는 곳(숨은 실력) ' + A.counts.hidden + '개입니다.' : '기록이 이어지지 않아 갈래는 대부분 «관찰»로 두었습니다.', c: K.ink }], { size: 17, line: 270, before: 30 })], fill: K.g0, va: 'CENTER' }] });
+    out.push(TB(lab, rows, { m: [70, 120, 70, 120] }));
+    out.push(SP(180));
     /* 세 줄 요약 */
-    out.push(threeBox(A, who));
+    out.push(threeBox(A, who, true, level >= 3));
     out.push(SP(160));
     /* 먼저 다질 곳 · 이미 아는 것 */
-    var pri = A.priorities.slice(0, 3), hid = A.hidden.slice(0, 5);
+    var pri = A.priorities.slice(0, 3), hid = A.hidden.slice(0, level >= 2 ? 3 : 5);
     var left = [t([{ t: '먼저 다질 개념', c: K.red, b: true }], { size: 19, after: 60 })];
     if (pri.length) pri.forEach(function (r, i) { left.push(t([{ t: (i + 1) + '  ', c: K.gold, b: true }, { t: short(labelOf(r), 22), b: true }, { t: '  ' }, chipSeg(r.verdict), { t: '  ' + pct(r.rec.p), c: K.mut, s: 16 }], { size: 18, line: 330 })); });
     else left.push(t([{ t: '지금 급히 다질 개념이 없습니다. 다음 과정에서는 가끔 꺼내 보는 «유지»면 충분합니다.', c: K.ink2 }], { size: 18 }));
@@ -617,18 +658,17 @@
     if (hid.length) hid.forEach(function (r) { right.push(t([{ t: '✓  ', c: K.blue, b: true }, { t: short(labelOf(r), 24), b: true }, { t: '  ' + pct(r.rec.p), c: K.mut, s: 16 }], { size: 18, line: 330 })); });
     else { var st2 = A.sorted.filter(function (r) { return r.verdict === 'strong'; }).slice(0, 4); if (st2.length) { right[0] = t([{ t: '이미 단단한 개념(강점)', c: K.ok, b: true }], { size: 19, after: 60 }); st2.forEach(function (r) { right.push(t([{ t: '✓  ', c: K.ok, b: true }, { t: short(labelOf(r), 24), b: true }, { t: '  ' + pct(r.rec.p), c: K.mut, s: 16 }], { size: 18, line: 330 })); }); } else right.push(t([{ t: '기록이 이어지면 채워집니다.', c: K.ink2 }], { size: 18 })); }
     out.push(TB([CW / 2 - 60, 120, CW / 2 - 60], [{ cells: [CARD(left, { top: K.red, fill: K.redSoft, border: 'F1DDD3' }), { c: [] }, CARD(right, { top: K.blue, fill: K.blueSoft, border: 'D3E1EE' })] }], { atomic: true }));
-    out.push(SP(160));
     var q = WD.questions(A)[0];
-    out.push(NOTE('<b>부모님이 해 주실 한 가지</b> — ' + (A.remain.length || A.counts.over ? '높은 자신감으로 틀린 개념은 혼낼 일이 아니라 정확한 설명이 가장 잘 듣는 지점입니다. ' : '') + '«' + q + '» 하고 물어봐 주세요. 자세한 말은 «부모님께» 절에 있습니다.', { color: K.g8, fill: K.g0 }));
+    if (level < 1) out.push(SP(160), NOTE('<b>부모님이 해 주실 한 가지</b> — «' + q + '» 하고 물어봐 주세요. 혼내기보다 추론을 먼저 들어 주는 것이 가장 잘 듣습니다(«부모님께» 절).', { color: K.g8, fill: K.g0, size: 18, line: 285 }));
     return out;
   }
-  function threeBox(A, who) {
-    var S3 = WD.summaryLines(A, who);
-    var rows = [{ cells: [{ span: 2, c: [t([{ t: '세 줄 요약', c: K.white, b: true }], { size: 20, sp: 20 })], fill: K.g8, m: [80, 160, 80, 180] }] }];
+  function threeBox(A, who, compact, tight) {
+    var S3 = WD.summaryLines(A, who), fs = compact ? (tight ? 17 : 18) : 19, ln = compact ? (tight ? 265 : 285) : 300, mv = compact ? (tight ? 60 : 80) : 110;
+    var rows = [{ cells: [{ span: 2, c: [t([{ t: '세 줄 요약', c: K.white, b: true }], { size: 19, sp: 20 })], fill: K.g8, m: [70, 160, 70, 180] }] }];
     [['잘한 점', S3.good, K.ok], ['다음 우선순위', S3.next, K.red], ['습관 제안', S3.habit, K.goldInk]].forEach(function (x, i) {
       rows.push({ cells: [
-        { c: [t([{ t: x[0], c: x[2], b: true }], { size: 19 })], m: [110, 100, 110, 180], bd: { bottom: i < 2 ? BD(K.line2, 4, D.BorderStyle.SINGLE, 0) : undefined } },
-        { c: [t(x[1], { size: 19, line: 300 })], m: [110, 160, 110, 100], bd: { bottom: i < 2 ? BD(K.line2, 4, D.BorderStyle.SINGLE, 0) : undefined } }] });
+        { c: [t([{ t: x[0], c: x[2], b: true }], { size: fs, line: ln })], m: [mv, 100, mv, 180], bd: { bottom: i < 2 ? BD(K.line2, 4, D.BorderStyle.SINGLE, 0) : undefined } },
+        { c: [t(x[1], { size: fs, line: ln })], m: [mv, 160, mv, 100], bd: { bottom: i < 2 ? BD(K.line2, 4, D.BorderStyle.SINGLE, 0) : undefined } }] });
     });
     var b = BD(K.g8, 12, D.BorderStyle.SINGLE, 0);
     rows.forEach(function (r) { r.cells.forEach(function (c, ci) { c.bd = c.bd || {}; c.bd.left = ci === 0 ? b : c.bd.left; if (ci === r.cells.length - 1) c.bd.right = b; }); });
@@ -644,62 +684,60 @@
       if (pg) { field = new D.SimpleField(' PAGEREF ' + pre + x[0] + ' \\h ', undefined); field.root.push(new D.TextRun({ text: String(pg), bold: true, color: K.g8, size: 24, font: FONT })); }
       var dot = BD('CFCABD', 4, D.BorderStyle.DOTTED, 0);
       return { cells: [
-        { c: [t([{ t: x[1] || '◆', c: K.gold, b: true }], { size: x[1] ? 30 : 20, line: 440 })], va: 'CENTER', bd: { bottom: dot }, m: [100, 60, 100, 60] },
-        { c: [t([{ t: x[2], c: K.g9, b: true }], { size: 22, line: 340 }), t([{ t: x[3], c: K.mut }], { size: 16, line: 250 })], va: 'CENTER', bd: { bottom: dot }, m: [100, 100, 100, 100] },
-        { c: [t(field ? [{ field: field }] : [{ t: '' }], { size: 24, align: 'RIGHT' })], va: 'CENTER', bd: { bottom: dot }, m: [100, 60, 100, 60] }] };
+        { c: [t([{ t: x[1] || '◆', c: K.gold, b: true }], { size: x[1] ? 28 : 18, line: 400 })], va: 'CENTER', bd: { bottom: dot }, m: [40, 60, 40, 60] },
+        { c: [t([{ t: x[2], c: K.g9, b: true }], { size: 21, line: 300 }), t([{ t: x[3], c: K.mut }], { size: 15, line: 220 })], va: 'CENTER', bd: { bottom: dot }, m: [40, 100, 40, 100] },
+        { c: [t(field ? [{ field: field }] : [{ t: '' }], { size: 24, line: 360, align: 'RIGHT' })], va: 'CENTER', bd: { bottom: dot }, m: [40, 60, 40, 60] }] };
     });
-    var out = [TB([900, CW - 1900, 1000], rows, { m: [100, 80, 100, 80] })];
-    out.push(SP(200));
-    out.push(CAPT('쪽 번호는 Word 에서 열면 자동으로 맞춰집니다(인쇄 전 F9). 이 보고서의 모든 숫자는 화면 보고서(인쇄판)와 같은 계산에서 나왔습니다.', { before: 0 }));
+    var out = [TB([900, CW - 1900, 1000], rows, { tail: '이 보고서의 모든 숫자는 화면 보고서(인쇄판)와 같은 계산에서 나왔습니다. 쪽 번호는 Word 가 인쇄할 때 다시 맞춥니다.' })];
     return out;
   }
 
   /* ══════════ 0. 읽는 법 ══════════ */
   function readBlocks() {
     var out = [];
-    var three = [['기록은 18주의 행동', '매주 60문항, 첫 시도에서 맞힌 것과 재시에서 다른 문장으로 고친 것을 개념마다 셌습니다. 둘이 충돌하면 기록에 더 큰 무게를 둡니다.'],
-      ['설문은 하루의 느낌', '개념 자신감 40 · 직관 문장 20 · 습관과 마음 40문항. 정답이 없는 문항이라 솔직하게 답했을 때 가장 정확한 지도가 됩니다.'],
-      ['판정은 «아직»의 말', '여섯 갈래는 고정된 꼬리표가 아니라 지금의 위치입니다. 다음 시험 한 번으로도 바뀔 수 있고, 바뀌라고 만든 표시입니다.']];
+    var three = [[('기록은 ' + RW() + '의 행동'), '첫 시도에 맞힌 것과 재시에서 다른 문장으로 고친 것을 개념마다 셌습니다. 느낌과 부딪히면 기록을 더 믿습니다.'],
+      ['설문은 하루의 느낌', '개념 자신감 40 · 직관 문장 20 · 습관과 마음 40문항. 정답이 없어 솔직할수록 정확한 지도가 됩니다.'],
+      ['판정은 «아직»의 말', '여섯 갈래는 꼬리표가 아니라 지금의 위치입니다. 다음 시험 한 번으로도 바뀌라고 만든 표시입니다.']];
     var w3 = [Math.floor((CW - 240) / 3), 120, Math.floor((CW - 240) / 3), 120, CW - 240 - 2 * Math.floor((CW - 240) / 3)];
     var cells = [];
-    three.forEach(function (x, i) { if (i) cells.push({ c: [] }); cells.push(CARD([t([{ t: x[0], c: K.g9, b: true }], { size: 21, after: 60 }), t(x[1], { size: 18, line: 290, c: K.ink2 })], { fill: K.g0, top: K.g8, border: K.g2 })); });
+    three.forEach(function (x, i) { if (i) cells.push({ c: [] }); cells.push(CARD([t([{ t: x[0], c: K.g9, b: true }], { size: 20, line: 310, after: 40 }), t(x[1], { size: 17, line: 265, c: K.ink2 })], { fill: K.g0, top: K.g8, border: K.g2, m: [90, 130, 90, 130] })); });
     out.push(TB(w3, [{ cells: cells }], { atomic: true }));
-    out.push(H3('여섯 갈래 — 느낌(자신감·직관) × 기록'));
-    var cat = [], wc = [Math.floor((CW - 240) / 3), 120, Math.floor((CW - 240) / 3), 120, CW - 240 - 2 * Math.floor((CW - 240) / 3)];
-    [CAT_ORDER.slice(0, 3), CAT_ORDER.slice(3)].forEach(function (grp, gi) {
-      var cs = [];
-      grp.forEach(function (k, i) {
-        var c = catC(k);
-        if (i) cs.push({ c: [] });
-        cs.push({ c: [t([{ t: c.name, c: c.ink, b: true }], { size: 21, after: 30 }), t(c.desc, { size: 18, line: 280 }), t([{ t: '→ ' + c.act, c: K.ink2 }], { size: 17, line: 270, before: 40 })],
-          fill: c.tint, bd: { left: BD(c.color, 30, D.BorderStyle.SINGLE, 0) }, m: [120, 150, 120, 170] });
-      });
-      cat.push({ cells: cs });
-      if (gi === 0) cat.push({ cells: [{ span: 5, c: [] }], h: 120 });
-    });
-    out.push(TB(wc, cat, { atomic: true }));
-    out.push(CAPT('순서는 고칠 차례입니다: 남은 오개념 → 과신 → 보강 필요 → 숨은 실력 → 강점. 「잠정」은 그 개념을 물은 문항이 8개보다 적어 판단이 흔들릴 수 있다는 표시입니다.'));
-    /* 결정표 */
-    out.push(H3('판정의 뼈대 — 확신 × 정오 결정표', { sub: 'Hasan 외(1999)의 결정표를 개념 단위로' }));
-    var hdr = function (x) { return { c: [t([{ t: x, c: K.white, b: true }], { size: 18, align: 'CENTER' })], fill: K.g8, va: 'CENTER' }; };
-    var cellC = function (k, extra) { var c = catC(k); return { c: [t([{ t: c.name, c: c.ink, b: true }], { size: 20, align: 'CENTER' }), t([{ t: extra, c: K.ink2 }], { size: 16, align: 'CENTER', line: 250 })], fill: c.tint, va: 'CENTER', bd: { bottom: BD(K.white, 24, D.BorderStyle.SINGLE, 0), right: BD(K.white, 24, D.BorderStyle.SINGLE, 0) } }; };
-    out.push(TB([2300, (CW - 2300) / 2, (CW - 2300) / 2], [
-      { cells: [{ c: [], fill: K.g9 }, hdr('느낌: 자신 있음'), hdr('느낌: 자신 없음 · 보통')] },
-      { cells: [{ c: [t([{ t: '기록 강함', c: K.g9, b: true }], { size: 19 }), t([{ t: '첫 시도 85% 이상', c: K.mut }], { size: 16 })], fill: K.g0, va: 'CENTER' }, cellC('strong', '유지용 간격 복습만'), cellC('hidden', '«이건 아는 것» 확정')] },
-      { cells: [{ c: [t([{ t: '기록 약함', c: K.g9, b: true }], { size: 19 }), t([{ t: '첫 시도 70% 미만 · 반복 막힘', c: K.mut }], { size: 16 })], fill: K.g0, va: 'CENTER' }, cellC('over', '읽기 말고 맞혀 보기'), cellC('reinforce', '기초 다시 · 간격 두고 꺼내기')] }
-    ], { atomic: true, m: [110, 120, 110, 120] }));
-    out.push(CAPT('직관 문장(오개념 문장)에 공감했고 기록도 약하면 «남은 오개념», 공감했지만 기록이 좋으면 «잠복 직관»(관찰)입니다. 기록이 중간(70~85%)이거나 물은 문항이 3개 미만이면 «관찰»로 두고 다음 시험에서 확인합니다.'));
+    /* 여섯 갈래 = 확신 × 정오 결정표(Hasan 외, 1999)를 개념 단위로 + 직관 줄 + 관찰 */
+    out.push(H3('여섯 갈래 — 느낌(자신감·직관) × 기록', { sub: '확신 × 정오 결정표(Hasan 외, 1999)를 개념마다' }));
+    var cellC = function (k, span) {
+      var c = catC(k);
+      return { span: span, c: [t([{ t: c.name + '  ', c: c.ink, b: true }, { t: c.desc, c: K.ink, s: 16 }], { size: 20, line: 300 }), t([{ t: '→ ' + c.act, c: K.ink2 }], { size: 16, line: 250, before: 20 })],
+        fill: c.tint, bd: { left: BD(c.color, 30, D.BorderStyle.SINGLE, 0), bottom: BD(K.white, 30, D.BorderStyle.SINGLE, 0), right: BD(K.white, 30, D.BorderStyle.SINGLE, 0) }, m: [70, 130, 70, 150] };
+    };
+    var hdr = function (x, sub) { return { c: [t([{ t: x, c: K.white, b: true }], { size: 18, align: 'CENTER', line: 280 }), t([{ t: sub, c: K.g2 }], { size: 15, align: 'CENTER', line: 230 })], fill: K.g8, va: 'CENTER', bd: { right: BD(K.white, 30, D.BorderStyle.SINGLE, 0) } }; };
+    var side = function (x, sub) { return { c: [t([{ t: x, c: K.g9, b: true }], { size: 18, line: 280 }), t([{ t: sub, c: K.mut }], { size: 15, line: 235 })], fill: K.g1, va: 'CENTER', bd: { bottom: BD(K.white, 30, D.BorderStyle.SINGLE, 0), right: BD(K.white, 30, D.BorderStyle.SINGLE, 0) }, m: [70, 110, 70, 130] }; };
+    var cw2 = [2000, Math.floor((CW - 2000) / 2), CW - 2000 - Math.floor((CW - 2000) / 2)];
+    out.push(TB(cw2, [
+      { cells: [{ c: [t([{ t: '기록 ↓  느낌 →', c: K.goldLight, b: true }], { size: 15, align: 'CENTER' })], fill: K.g9, va: 'CENTER', bd: { right: BD(K.white, 30, D.BorderStyle.SINGLE, 0) } }, hdr('자신 있음', '«그렇다» 이상'), hdr('자신 없음 · 보통', '«보통» 이하')] },
+      { cells: [side('기록 강함', '첫 시도 85% 이상 · 나중에도 유지'), cellC('strong'), cellC('hidden')] },
+      { cells: [side('기록 약함', '첫 시도 70% 미만 · 반복 막힘'), cellC('over'), cellC('reinforce')] },
+      { cells: [side('직관 신호 + 기록 약함', '틀린 생각에 공감했고 기록도 흔들림'), cellC('remain', 2)] },
+      { cells: [side('그 사이', '기록 70~85% · 물은 문항이 적음'), cellC('watch', 2)] }
+    ], { atomic: true }));
+    out.push(CAPT('고칠 차례: 남은 오개념 → 과신 → 보강 필요 → 숨은 실력 → 강점. 공감했지만 기록이 좋으면 «잠복 직관»(관찰), 물은 문항이 8개 미만이면 「잠정」입니다.'));
     /* 말 풀이 */
-    out.push(H3('이 보고서에 자주 나오는 말'));
+    out.push(H3('이 보고서에 자주 나오는 말', { before: 120 }));
     var gl = [['첫 시도 정답률', '그 회차에서 처음 본 문장을 바로 맞힌 비율. 재시에서 맞힌 것은 넣지 않습니다.'],
-      ['재시 교정률', '처음 틀린 개념을 다음 재시에서 «다른 문장으로» 다시 물었을 때 바로잡은 비율. 문장을 외운 것이 아니라 개념을 고쳤다는 증거입니다.'],
-      ['앎 지수', 'O/X는 찍어도 반은 맞으므로, 정답률에서 찍은 몫을 뺀 값(2 × 정답률 − 1). 50% → 0, 100% → 1.'],
-      ['자신감', '설문에서 고른 «매우 그렇다 ~ 전혀 아니다»를 0~1로 옮긴 값. 높을수록 자신 있다고 느낀 것입니다.'],
-      ['직관 신호', '틀린 생각을 담은 문장에 «그렇다»고 공감한 것. 단일 문항이라 «진단»이 아니라 «신호»라고 부릅니다.'],
-      ['반복 막힘 · 해소', '3회차 이상 묻고 절반 이상 틀린 개념. 그 뒤로 계속 맞히면 «막힘 해소»입니다.']];
-    out.push(TB([2300, CW - 2300], gl.map(function (g, i) { return { cells: [
-      { c: [t([{ t: g[0], c: K.g8, b: true }], { size: 19 })], fill: i % 2 ? K.white : K.g0, bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } },
-      { c: [t(g[1], { size: 18, line: 290 })], fill: i % 2 ? K.white : K.g0, bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) } }] }; }), { m: [90, 140, 90, 140] }));
+      ['재시 교정률', '처음 틀린 개념을 다음 재시에서 «다른 문장으로» 다시 물었을 때 바로잡은 비율 — 문장을 외운 것이 아니라 개념을 고쳤다는 증거입니다.'],
+      ['앎 지수', 'O/X는 찍어도 반은 맞으므로 정답률에서 찍은 몫을 뺀 값(2 × 정답률 − 1). 50% → 0, 100% → 1.'],
+      ['자신감 · 직관 신호', '자신감은 설문의 «매우 그렇다 ~ 전혀 아니다»를 0~1로 옮긴 값. 직관 신호는 틀린 생각을 담은 문장에 공감한 것(단일 문항이라 «진단» 대신 «신호»).']];
+    var gw0 = 1500, gw1 = Math.floor((CW - 2 * gw0 - 120) / 2), glRows = [];
+    for (var gi = 0; gi < gl.length; gi += 2) {
+      var cs = [];
+      [gl[gi], gl[gi + 1]].forEach(function (g, j) {
+        if (j) cs.push({ c: [] });
+        if (!g) { cs.push({ c: [] }, { c: [] }); return; }
+        var f = { fill: K.g0, bd: { bottom: BD(K.white, 24, D.BorderStyle.SINGLE, 0) } };
+        cs.push(Object.assign({ c: [t([{ t: g[0], c: K.g8, b: true }], { size: 17, line: 265 })] }, f), Object.assign({ c: [t(g[1], { size: 16, line: 250 })] }, f));
+      });
+      glRows.push({ cells: cs });
+    }
+    out.push(TB([gw0, gw1, 120, gw0, CW - 2 * gw0 - gw1 - 120], glRows, { m: [70, 110, 70, 110], atomic: true }));
     return out;
   }
 
@@ -708,21 +746,26 @@
     var out = [], R = A.record, M = A.metrics, counts = A.counts;
     if (A.quality.flags.length) out.push(NOTE('<b>응답 품질 점검</b> — ' + WD.qualityText(A.quality) + ' 자세한 결과는 부록에 있습니다.', { color: K.red, fill: K.redSoft }), SP(120));
     if (!A.hasRecord) out.push(NOTE('<b>화학1 시험 기록이 이 링크와 아직 이어지지 않았습니다.</b> 기록 숫자는 비워 두고, 설문에서 드러난 느낌과 습관을 중심으로 정리했습니다. 기록이 이어지면 같은 링크에서 다시 만들 수 있습니다.'), SP(120));
-    if (!A.hasSurvey) out.push(NOTE('<b>설문 응답이 아직 없습니다.</b> 18주 기록만으로 정리했고, 자신감과 직관을 맞대는 부분은 비워 두었습니다.'), SP(120));
-    var ks = kpiList(A), gw = 110, tw = Math.floor((CW - 3 * gw) / 4), cols = [tw, gw, tw, gw, tw, gw, CW - 3 * tw - 3 * gw];
-    var cells = [];
-    ks.forEach(function (k, i) {
-      if (i) cells.push({ c: [] });
-      cells.push({ c: [
-        t([{ t: k.t, c: K.g9, b: true }], { size: 18, line: 280 }),
-        t([{ t: k.easy, c: K.mut }], { size: 15, line: 240 }),
-        t(valSegs(k.v, 52), { size: 52, line: 740, before: 40 }),
-        t([bandSeg(k.b, k.inv)], { size: 15, line: 260, after: 60 }),
-        t([{ t: k.d, c: K.ink2 }], { size: 15, line: 235, after: 80 }),
-        t([{ t: '그래서 ', c: K.goldInk, b: true }, { t: k.mean, c: K.ink }], { size: 16, line: 250 })],
-        fill: K.g0, bd: { top: BD(K.g8, 30, D.BorderStyle.SINGLE, 0), bottom: BD(K.g2, 6, D.BorderStyle.SINGLE, 0) }, m: [130, 130, 140, 150] });
+    if (!A.hasSurvey) out.push(NOTE(('<b>설문 응답이 아직 없습니다.</b> ' + RW() + ' 기록만으로 정리했고, 자신감과 직관을 맞대는 부분은 비워 두었습니다.')), SP(120));
+    /* 숫자 타일 넷 — 두 줄 두 칸(학부모가 읽기 쉽게 넓게): 왼쪽 큰 숫자 · 오른쪽 이름·풀이·뜻 */
+    var ks = kpiList(A), gap = 140, half = Math.floor((CW - gap) / 2), vw = 1650, cols = [vw, half - vw, gap, vw, CW - half - gap - vw], krows = [];
+    [ks.slice(0, 2), ks.slice(2)].forEach(function (pair, pi) {
+      var cs = [];
+      pair.forEach(function (k, i) {
+        if (i) cs.push({ c: [] });
+        var bd = { top: BD(K.g8, 30, D.BorderStyle.SINGLE, 0), bottom: BD(K.g2, 6, D.BorderStyle.SINGLE, 0) };
+        cs.push({ c: [t(valSegs(k.v, 56), { size: 56, line: 760, align: 'CENTER' }), t([bandSeg(k.b, k.inv)], { size: 15, line: 260, align: 'CENTER' })], fill: K.g0, va: 'CENTER', bd: bd, m: [120, 60, 120, 80] });
+        cs.push({ c: [
+          t([{ t: k.t, c: K.g9, b: true }], { size: 20, line: 310 }),
+          t([{ t: k.easy, c: K.goldInk, b: true }], { size: 15, line: 240, after: 50 }),
+          t([{ t: k.d, c: K.ink2 }], { size: 15, line: 235, after: 70 }),
+          t([{ t: '그래서 ', c: K.goldInk, b: true }, { t: k.mean, c: K.ink }], { size: 16, line: 255 })],
+          fill: K.g0, bd: bd, m: [130, 150, 130, 60] });
+      });
+      krows.push({ cells: cs });
+      if (!pi) krows.push({ cells: [{ span: 5, c: [] }], h: 140 });
     });
-    out.push(TB(cols, [{ cells: cells }], { atomic: true }));
+    out.push(TB(cols, krows, { atomic: true }));
     out.push(H3('여섯 갈래 개수 — 개념 ' + A.rows.length + '개'));
     out.push(stackBar(counts, CW, 300));
     out.push(SP(90));
@@ -732,10 +775,9 @@
       return { c: [t([{ t: String(counts[k]), c: c.ink, b: true }], { size: 40, line: 560 }), t([{ t: c.name, c: c.ink, b: true }], { size: 18, line: 280 }), t([{ t: c.desc, c: K.ink2 }], { size: 15, line: 235, before: 30 })],
         fill: c.tint, bd: { top: BD(c.color, 24, D.BorderStyle.SINGLE, 0), right: BD(K.white, 30, D.BorderStyle.SINGLE, 0) }, m: [100, 110, 110, 130] };
     }) }], { atomic: true }));
-    out.push(SP(200));
-    out.push(threeBox(A, who));
     if (A.hasRecord) {
       out.push(H3('갈래마다 먼저 볼 개념'));
+      var gw = 110, tw = Math.floor((CW - 3 * gw) / 4), cols4 = [tw, gw, tw, gw, tw, gw, CW - 3 * tw - 3 * gw];
       var cs = [];
       ['remain', 'over', 'reinforce', 'hidden'].forEach(function (k, i) {
         var c = catC(k), rs = A.sorted.filter(function (r) { return r.verdict === k; }).slice(0, 3);
@@ -745,8 +787,8 @@
         else items.push(t([{ t: '해당 개념이 없습니다', c: K.mut }], { size: 17 }));
         cs.push(CARD(items, { top: c.color }));
       });
-      out.push(TB(cols, [{ cells: cs }], { atomic: true }));
-    }
+      out.push(TB(cols4, [{ cells: cs }], { atomic: true }));
+    } else out.push(SP(200), threeBox(A, who));
     out.push(CAPT('자기 판단 정확도와 확신 오류 비율은 O/X의 «찍어도 50%»를 보정한 앎 지수(2×정답률 − 1)로 계산했습니다. 구간(좋음·보통·점검 필요)은 문헌이 정한 표준이 아니라 이 보고서가 쓰는 제안값입니다 — 부록 B.', { before: 120 }));
     return out;
   }
@@ -761,14 +803,14 @@
   /* ══════════ 2. 여정 ══════════ */
   function journeyBlocks(A, charts) {
     var out = [], R = A.record;
-    if (!R.has) { out.push(EMPTY('화학1 시험 기록이 없습니다.', '이 절은 18주 기록이 이어지면 채워집니다.')); return out; }
-    out.push(IMG(charts.journey, 640, { alt: '18주 첫 시도 정답률과 재시 횟수', after: 40 }));
+    if (!R.has) { out.push(EMPTY('화학1 시험 기록이 없습니다.', ('이 절은 ' + RW() + ' 기록이 이어지면 채워집니다.'))); return out; }
+    out.push(IMG(charts.journey, 640, { alt: (RW() + ' 첫 시도 정답률과 재시 횟수'), after: 40 }));
     out.push(CAPT('아래 띠는 그 회차에 새로 배운 단원입니다. 맨 위 ◆는 여러 번 막혔던 개념이 그 회차부터 계속 맞기 시작한 자리(막힘 해소)입니다. 금색 점선은 회차 통과 기준 80%입니다.', { before: 0 }));
     var rr = R.rounds.filter(function (r) { return r.rate != null; });
     var best = rr.slice().sort(function (a, b) { return b.rate - a.rate || a.round - b.round; })[0];
-    var h1 = rr.filter(function (r) { return r.round <= 9; }), h2 = rr.filter(function (r) { return r.round >= 10; });
+    var hh = halves(rr.slice().sort(function (a, b) { return a.round - b.round; })), h1 = hh[0], h2 = hh[1];
     var av = function (a) { return a.length ? a.reduce(function (s, r) { return s + r.rate; }, 0) / a.length : null; };
-    var minis = [['가장 높았던 회차', best ? best.round + '회 · ' + pct(best.rate) : '—'], ['전반(1~9회) 평균', pct(av(h1))], ['후반(10~18회) 평균', pct(av(h2))], ['지난 단원 문항', pct(R.reviewRate) + (R.review.n ? ' (' + R.review.n + '문항)' : '')]];
+    var minis = [['가장 높았던 회차', best ? best.round + '회 · ' + pct(best.rate) : '—'], [halfLabel(h1, true), pct(av(h1))], [halfLabel(h2, false), pct(av(h2))], ['지난 단원 문항', pct(R.reviewRate) + (R.review.n ? ' (' + R.review.n + '문항)' : '')]];
     var gw = 110, tw = Math.floor((CW - 3 * gw) / 4), cols = [tw, gw, tw, gw, tw, gw, CW - 3 * tw - 3 * gw], cs = [];
     minis.forEach(function (m, i) { if (i) cs.push({ c: [] }); cs.push(CARD([t([{ t: m[0], c: K.mut, b: true }], { size: 16, align: 'CENTER' }), t([{ t: m[1], c: K.g8, b: true }], { size: 26, line: 400, align: 'CENTER' })], { fill: K.g0, border: K.g2 })); });
     out.push(TB(cols, [{ cells: cs }], { atomic: true }));
@@ -782,7 +824,7 @@
     }
     out.push(SP(160));
     var trend = av(h2) != null && av(h1) != null ? av(h2) - av(h1) : null;
-    out.push(NOTE('<b>해석</b> — 18주 동안 매주 앞 내용까지 다시 확인하는 방식으로 공부했습니다. 이것은 기억 연구에서 효과가 가장 큰 것으로 알려진 <b>«시험으로 공부하기»와 «간격 두고 다시 꺼내기»</b>를 꾸준히 실천한 것입니다(Roediger & Karpicke, 2006; Rawson & Dunlosky, 2011). ' +
+    out.push(NOTE(('<b>해석</b> — ' + RW() + ' 동안 매주 앞 내용까지 다시 확인하는 방식으로 공부했습니다. 이것은 기억 연구에서 효과가 가장 큰 것으로 알려진 <b>«시험으로 공부하기»와 «간격 두고 다시 꺼내기»</b>를 꾸준히 실천한 것입니다(Roediger & Karpicke, 2006; Rawson & Dunlosky, 2011). ') +
       (trend == null ? '' : trend >= 0.03 ? '뒤로 갈수록 단원이 어려워졌는데도 후반 평균이 ' + Math.round(trend * 100) + '%p 높습니다. ' : trend <= -0.03 ? '후반에는 평형·산염기처럼 여러 조건을 함께 따지는 단원이 이어지면서 평균이 ' + Math.round(-trend * 100) + '%p 내려갔습니다. 어려워진 단원에서 흔한 모습이며, 4절의 단원별 진단에서 어디서 내려갔는지 볼 수 있습니다. ' : '앞뒤 평균이 고르게 유지되어, 단원이 어려워져도 흔들리지 않았습니다. ') +
       (open.length ? '반복해서 막힌 개념은 «여러 번 다시 풀기»만으로는 잘 풀리지 않는 유형입니다. 문장을 바꿔도 같은 곳에서 틀린다면 그 밑의 생각 자체를 다뤄야 합니다 — 6절과 9절에 정리했습니다.' : '')));
     return out;
@@ -812,7 +854,7 @@
     out.push(SP(160));
     out.push(NOTE('<b>왜 이것이 중요한가</b> — «다시 보니 술술 읽힌다»는 익숙한 느낌은 «안다»는 착각을 가장 쉽게 만듭니다. 반복해서 읽으면 자신감은 오르지만 오래 남는 것은 시험으로 꺼내 본 쪽이었습니다(Bjork 외, 2013). ' +
       '확신하며 틀린 내용은 정확한 설명을 한 번 제대로 들으면 오히려 가장 잘 고쳐지고(Butterfield & Metcalfe, 2001), 자신 없이 맞힌 내용은 «맞았다»는 확인을 받을 때 오래 남습니다(Butler 외, 2008). 그래서 과신은 다음 공부의 첫 번째 우선순위, 숨은 실력은 확정해 둘 목록이 됩니다.'));
-    out.push(CAPT('설문은 18주 결과를 받은 뒤에 했으므로, 자신감에는 «기억하는 내 기록»이 섞여 있습니다. 높은 일치는 순수한 예측력이라기보다 «내 기록을 얼마나 정확히 받아들였는가»로 읽는 것이 정확합니다.', { before: 120 }));
+    out.push(CAPT(('설문은 ' + RW() + ' 결과를 받은 뒤에 했으므로, 자신감에는 «기억하는 내 기록»이 섞여 있습니다. 높은 일치는 순수한 예측력이라기보다 «내 기록을 얼마나 정확히 받아들였는가»로 읽는 것이 정확합니다.'), { before: 120 }));
     return out;
   }
 
@@ -836,8 +878,8 @@
         { c: [t([{ t: sgn(gap), b: true, c: gap == null ? K.mut : gap > 0.15 ? K.red : gap < -0.15 ? K.blue : K.ok }], { size: 18, align: 'RIGHT' })], fill: fill, bd: bb },
         { c: [t(dist.length ? dist : [{ t: '—', c: K.mut }], { size: 15, line: 250 })], fill: fill, bd: bb }] });
     });
-    out.push(TB(cols, rows, { m: [70, 90, 70, 90] }));
-    out.push(CAPT('앎 지수 = 2 × 첫 시도 정답률 − 1(찍은 몫을 뺀 실제 앎) · 자신감 = 그 단원 개념들의 설문 자신감 평균(0~1) · 차이 = 자신감 − 앎 지수. 붉은 글씨(+0.15 넘음)는 느낌이 기록보다 앞선 단원, 파란 글씨(−0.15 아래)는 생각보다 잘 아는 단원입니다.'));
+    out.push(TB(cols, rows, { m: [70, 90, 70, 90], tail: '앎 지수 = 2 × 첫 시도 정답률 − 1(찍은 몫을 뺀 실제 앎) · 자신감 = 그 단원 개념들의 설문 자신감 평균(0~1) · 차이 = 자신감 − 앎 지수. 붉은 글씨(+0.15 넘음)는 느낌이 기록보다 앞선 단원, 파란 글씨(−0.15 아래)는 생각보다 잘 아는 단원입니다.' }));
+    out.push(SP(160));
     out.push(NOTE(WD.unitText(A)));
     return out;
   }
@@ -869,6 +911,8 @@
         { c: [t(WD.adviceOf(r), { size: 16, line: 250, c: K.ink2 })], fill: fill, bd: { bottom: bb } }] });
     });
     if (rows.length > 1) out.push(TB(cols, rows, { m: [70, 80, 70, 80] }));
+    var CAP5 = '자신감 ●는 설문 1~5 응답(●5개 = 매우 그렇다). 직관 «신호»는 오개념 문장에 동의했거나 맞는 직관 문장을 부정한 것, «애매»는 보통이다. 재시 = 다음 재시에서 바로잡은 회차 / 처음 틀린 회차. 유지 = 처음 나온 회차 뒤 누적 시험에서의 정답률. 「잠정」= 물은 문항 8개 미만.';
+    var keys5 = ['strong', 'watch'].filter(function (key) { return A.sorted.some(function (r) { return r.verdict === key; }); });
     ['strong', 'watch'].forEach(function (key) {
       var rs = A.sorted.filter(function (r) { return r.verdict === key; });
       if (!rs.length) return;
@@ -885,9 +929,9 @@
             fill: c.tint, bd: { left: BD(c.color, 18, D.BorderStyle.SINGLE, 0), bottom: BD(K.white, 24, D.BorderStyle.SINGLE, 0), right: BD(K.white, 24, D.BorderStyle.SINGLE, 0) }, m: [60, 100, 60, 120] };
         }) });
       }
-      out.push(TB(w3, grid));
+      out.push(TB(w3, grid, { tail: key === keys5[keys5.length - 1] ? CAP5 : null }));
     });
-    out.push(CAPT('자신감 ●는 설문 1~5 응답(●5개 = 매우 그렇다). 직관 «신호»는 오개념 문장에 동의했거나 맞는 직관 문장을 부정한 것, «애매»는 보통이다. 재시 = 다음 재시에서 바로잡은 회차 / 처음 틀린 회차. 유지 = 처음 나온 회차 뒤 누적 시험에서의 정답률. 「잠정」= 물은 문항 8개 미만.', { before: 120 }));
+    if (!keys5.length) out.push(CAPT(CAP5, { before: 120 }));
     return out;
   }
 
@@ -1032,8 +1076,9 @@
     var days = [['월', '덮고 떠올리기 10분 — 지난주 배운 것을 빈 종이에 핵심 문장으로'], ['화', '「' + short(p1, 14) + '」 — 오개념과 정답 나란히 비교 + O/X 3문장'], ['수', '새 내용 공부 끝에 «나오면 맞힐까?» 1~5로 예측 적기'], ['목', '틀린 O/X 문장을 맞는 문장으로 고쳐 쓰기'], ['금', '1주 전·1달 전 내용 다시 꺼내기(간격 복습) · 「' + short(p2, 12) + '」'], ['토', '수요일 예측 맞춰 보기 — 예측과 결과 비교 한 줄'], ['일', '쉬기 · 숨은 실력 목록 훑으며 «아는 것» 확인 5분']];
     var dc = eq(7);
     out.push(TB(dc, [{ cells: days.map(function (d) { return { c: [t([{ t: d[0], c: K.white, b: true }], { size: 20, align: 'CENTER' })], fill: d[0] === '일' ? K.gold : K.g8, bd: { right: BD(K.white, 24, D.BorderStyle.SINGLE, 0) } }; }) },
-      { cells: days.map(function (d) { return { c: [t(d[1], { size: 16, line: 255 })], fill: d[0] === '일' ? K.goldSoft : K.g0, bd: { right: BD(K.white, 24, D.BorderStyle.SINGLE, 0) }, m: [90, 90, 90, 100] }; }), min: 1500 }], { atomic: true, m: [60, 60, 60, 60] }));
-    out.push(CAPT('덮고 떠올리기·간격 두고 다시 꺼내기·틀린 O/X 고쳐 쓰기·예측 후 확인은 학습법 연구에서 효과가 크다고 정리된 방법입니다(Dunlosky 외, 2013; Uner 외, 2022; Nederhand 외, 2020).'));
+      { cells: days.map(function (d) { return { c: [t(d[1], { size: 16, line: 255 })], fill: d[0] === '일' ? K.goldSoft : K.g0, bd: { right: BD(K.white, 24, D.BorderStyle.SINGLE, 0) }, m: [90, 90, 90, 100] }; }), min: 1500 }], { atomic: true, m: [60, 60, 60, 60],
+      tail: '덮고 떠올리기·간격 두고 다시 꺼내기·틀린 O/X 고쳐 쓰기·예측 후 확인은 학습법 연구에서 효과가 크다고 정리된 방법입니다(Dunlosky 외, 2013; Uner 외, 2022; Nederhand 외, 2020).' }));
+    out.push(SP(120));
     out.push(H3('숨은 실력 확정 목록 — «이건 내가 아는 것»'));
     var hid = A.hidden.concat(A.rows.filter(function (r) { return r.tags.indexOf('recovered') >= 0 && r.verdict !== 'hidden'; }));
     var nHid = A.hidden.length, nRec = hid.length - nHid;
@@ -1114,8 +1159,7 @@
           { c: [t(ar.length ? [{ t: ar[0].name + ' ' + pct(ar[0].p), c: K.ok, b: true }].concat(ar.length > 1 ? [{ br: true }, { t: ar[ar.length - 1].name + ' ' + pct(ar[ar.length - 1].p), c: K.red, b: true }] : []) : [{ t: '—' }], { size: 16, line: 255 })], fill: fill, bd: bb },
           { c: [t(dep, { size: 16, line: 255 })], fill: fill, bd: bb }] });
       });
-      out.push(TB([2200, 1300, 1050, 900, 2200, CW - 7650], rows2, { m: [70, 90, 70, 90] }));
-      out.push(CAPT('개념 깊이는 또래 정답률 60% 이상을 «쉬운 문항», 미만을 «어려운 문항»으로 나눈 정답률입니다(또래 8명 이상일 때). 이 보고서는 다른 학생과 견주는 자리를 싣지 않습니다.'));
+      out.push(TB([2200, 1300, 1050, 900, 2200, CW - 7650], rows2, { m: [70, 90, 70, 90], tail: '개념 깊이는 또래 정답률 60% 이상을 «쉬운 문항», 미만을 «어려운 문항»으로 나눈 정답률입니다(또래 8명 이상일 때). 이 보고서는 다른 학생과 견주는 자리를 싣지 않습니다.' }));
     } else out.push(NOTE(WD.extMsg(X.status.exam, '모의시험'), { color: K.line, fill: K.cream }));
     return out;
   }
@@ -1136,8 +1180,7 @@
     var hd = function (x, al) { return { c: [t([{ t: x, c: K.white, b: true }], { size: 16, align: al })], fill: K.g8, bd: { right: BD(K.white, 18, D.BorderStyle.SINGLE, 0) } }; };
     var rows = [{ hdr: true, cells: [hd('단원 묶음')].concat(AM.cols.map(function (c) { return hd(c, 'CENTER'); })).concat([hd('합계', 'CENTER')]) }];
     AM.rows.forEach(function (r) { rows.push({ cells: [{ c: [t([{ t: r.name, b: true }], { size: 18 })], va: 'CENTER', fill: K.g0, bd: { bottom: BD(K.white, 18, D.BorderStyle.SINGLE, 0) } }].concat(r.cells.map(function (c) { return heatCell(c); })).concat([heatCell({ n: r.n, ok: r.ok, p: r.p }, true)]) }); });
-    out.push(TB(cols, rows, { m: [90, 80, 90, 100] }));
-    out.push(CAPT('칸 안 숫자는 «정답률 · 문항 수»입니다. 다른 과목·모의시험의 단원·영역 이름은 내용에 따라 가장 가까운 화학Ⅰ 묶음에 얹었습니다(화학Ⅰ 심화는 개념 대응표로 옮김). 5문항 미만의 칸은 회색으로 흐리게 표시합니다.'));
+    out.push(TB(cols, rows, { m: [90, 80, 90, 100], tail: '칸 안 숫자는 «정답률 · 문항 수»입니다. 다른 과목·모의시험의 단원·영역 이름은 내용에 따라 가장 가까운 화학Ⅰ 묶음에 얹었습니다(화학Ⅰ 심화는 개념 대응표로 옮김). 5문항 미만의 칸은 회색으로 흐리게 표시합니다.' }));
     if (AM.examAreas.length) {
       var weakA = AM.examAreas.filter(function (x) { return x.p < 0.8; }).slice(0, 5), strongA = AM.examAreas.filter(function (x) { return x.p >= 0.85; }).reverse().slice(0, 5);
       var hw = CW / 2 - 60;
@@ -1185,12 +1228,13 @@
         { c: [t([{ t: r.name, b: true }], { size: 17, line: 265 })], fill: fill, bd: bb, va: 'CENTER' },
         { c: [t(r.beforeTxt, { size: 17 })], fill: fill, bd: bb, va: 'CENTER' },
         { c: [t(r.nowTxt ? [{ t: r.nowTxt }] : [{ t: '이번 설문에 없는 축', c: K.mut }], { size: 17, line: 265 })], fill: fill, bd: bb, va: 'CENTER' },
-        { c: [t([{ t: '그때 ' + (r.before == null ? '—' : Math.round(r.before)), c: K.goldInk, b: true }, { t: '  →  ', c: K.mut }, { t: '지금 ' + (r.now == null ? '—' : Math.round(r.now)), c: K.g8, b: true }], { size: 17 })], fill: fill, bd: bb, va: 'CENTER' },
+        { c: [t([{ t: '그때 ' + (r.before == null ? '—' : Math.round(r.before)), c: K.goldInk, b: true }, { t: '  →  ', c: K.mut }, { t: '지금 ' + (r.now == null ? '—' : Math.round(r.now)), c: K.g8, b: true }], { size: 16, line: 250, after: 40 })],
+          raw: [BAR(r.before == null ? 0 : r.before / 100, 1900, K.gold2, 90), BAR(r.now == null ? 0 : r.now / 100, 1900, K.g8, 90)], rawGap: 40, fill: fill, bd: bb, va: 'CENTER', m: [60, 100, 40, 100] },
         { c: [t([{ t: r.diff == null ? '—' : (r.diff > 0 ? '▲ ' : r.diff < 0 ? '▼ ' : '') + Math.abs(Math.round(r.diff)), b: true, c: good == null ? K.mut : Math.abs(r.diff) < 8 ? K.mut : good ? K.ok : K.red }], { size: 18, align: 'RIGHT' })], fill: fill, bd: bb, va: 'CENTER' }] });
     });
-    out.push(TB([2500, 1600, 2200, 2200, CW - 8500], rows, { m: [70, 90, 70, 90] }));
-    if (charts.km) { out.push(SP(80)); out.push(IMG(charts.km, 600, { alt: '그때와 지금', after: 0 })); }
-    out.push(CAPT('그때는 «도달 단계»(사다리 0~4단)와 0~100 점수, 지금은 «동의 정도»(1~5)라 눈금이 다릅니다. 둘 다 0~100으로 옮겨 <b>방향만</b> 봅니다(8 미만의 차이는 같은 것으로 봅니다). 금색 막대가 그때, 초록 막대가 지금입니다. 그때 응답의 타당도 표시: ' + (KC.validity || '—') + '.'));
+    rows.forEach(function (r) { r.cells.forEach(function (c) { if (!c.m) c.m = [70, 90, 70, 90]; }); });
+    out.push(TBraw([2400, 1500, 2150, 2100, CW - 8150], rows, { tail: '그때는 «도달 단계»(사다리 0~4단)와 0~100 점수, 지금은 «동의 정도»(1~5)라 눈금이 다릅니다. 둘 다 0~100으로 옮겨 <b>방향만</b> 봅니다(8 미만의 차이는 같은 것으로 봅니다). 금색 막대가 그때, 초록 막대가 지금입니다. 그때 응답의 타당도 표시: ' + (KC.validity || '—') + '.' }));
+    out.push(SP(160));
     out.push(NOTE(WD.kmText(KC)));
     var K0 = (X.kmchc || []).slice().sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); })[0];
     if (K0 && (K0.misc || []).length) {
@@ -1267,7 +1311,8 @@
     ['Zimmerman, B. J. (2002). Becoming a self-regulated learner: An overview. Theory Into Practice, 41(2), 64–70. https://doi.org/10.1207/s15430421tip4102_2', '서지 확인'],
     ['Chen, C., Lee, S., & Stevenson, H. W. (1995). Response style and cross-cultural comparisons of rating scales among East Asian and North American students. Psychological Science, 6(3), 170–175. https://doi.org/10.1111/j.1467-9280.1995.tb00327.x', '서지·초록 확인']
   ];
-  function appendixBlocks(A, art) {
+  function appendixBlocks(A, art, level) {
+    level = level || 0;
     var out = [], R = A.record, M = A.metrics, Q = A.quality;
     var hd = function (x, al) { return { c: [t([{ t: x, c: K.white, b: true }], { size: 16, align: al })], fill: K.g8 }; };
     var bbF = function (i) { return { bd: { bottom: BD(K.line2, 4, D.BorderStyle.SINGLE, 0) }, fill: i % 2 ? 'FCFCFA' : K.white }; };
@@ -1310,11 +1355,10 @@
         qrows.push({ cells: cs });
         if (!gi) qrows.push({ cells: [{ span: 5, c: [] }], h: 90 });
       });
-      out.push(TB(g3, qrows, { atomic: true }));
-      out.push(CAPT('기준 — 직선: 표준편차 < 0.5 또는 같은 값 15연속 · 묵종: 직관 동의율 > 80%이면서 오개념·맞는 직관 모두 동의 · 맞는 직관 부정: 평균 ≥ 4 · 중간점: «보통» > 50% · 빠른 응답: 5분 안 · 빈 응답: 10문항 초과. ' + (Q.flags.length ? '걸린 항목에 따라 ' + WD.qualityText(Q) : '모두 통과해 설문 응답을 그대로 판정에 썼습니다.')));
+      out.push(TB(g3, qrows, { atomic: true, tail: '기준 — 직선: 표준편차 < 0.5 또는 같은 값 15연속 · 묵종: 직관 동의율 > 80%이면서 오개념·맞는 직관 모두 동의 · 맞는 직관 부정: 평균 ≥ 4 · 중간점: «보통» > 50% · 빠른 응답: 5분 안 · 빈 응답: 10문항 초과. ' + (Q.flags.length ? '걸린 항목에 따라 ' + WD.qualityText(Q) : '모두 통과해 설문 응답을 그대로 판정에 썼습니다.') }));
     } else out.push(NOTE('설문 응답이 없어 점검하지 않았습니다.', { color: K.line }));
     out.push(H3('D. 방법상 한계'));
-    ['설문은 18주 결과를 받은 <b>뒤에</b> 했습니다 — 자신감에는 기억하는 기록이 섞여 있습니다. 자신감·직관은 개념마다 <b>한 문항</b>이라 «진단»이 아니라 «신호»라고 씁니다.',
+    [('설문은 ' + RW() + ' 결과를 받은 <b>뒤에</b> 했습니다 — 자신감에는 기억하는 기록이 섞여 있습니다. 자신감·직관은 개념마다 <b>한 문항</b>이라 «진단»이 아니라 «신호»라고 씁니다.'),
       '개념마다 물은 문항 수가 다릅니다(적게는 1~2개). 8개 미만은 «잠정», 3개 미만은 판정을 미뤘습니다.',
       '같은 개념의 재시 문장이 비슷하면 표면 단서로 맞혔을 가능성이 남습니다. 구간 수치는 제안값이며 첫 학기 자료의 분포를 보고 다시 맞춥니다.',
       '«성취가 낮을수록 과신한다»는 집단 그래프는 무작위 자료에서도 비슷하게 나와 개인 해석의 근거로 쓰지 않았습니다. 모의시험·학습진단은 선생님이 확인한 짝만 붙였고, 다른 학생과 견주는 숫자는 어느 곳에서 오든 싣지 않았습니다.'
@@ -1322,10 +1366,11 @@
     out.push(H3('E. 참고문헌'));
     var refs = WD.REFS.concat(REFS_MORE);
     refs.forEach(function (r, i) {
-      out.push(P([{ t: '[' + (i + 1) + ']  ', c: K.g8, b: true }, { t: r[0].replace('https://doi.org/', 'doi:') }, { t: '  · ' + r[1], c: K.goldInk, b: true }], { size: 15, line: 235, after: 60, indL: 520, hang: 520, c: K.ink2 }));
+      out.push(P([{ t: '[' + (i + 1) + ']  ', c: K.g8, b: true }, { t: r[0].replace('https://doi.org/', 'doi:') }, { t: '  · ' + r[1], c: K.goldInk, b: true }], { size: 15, line: level ? 225 : 235, after: level ? 20 : 60, indL: 520, hang: 520, c: K.ink2 }));
     });
     out.push(CAPT('확인 표기 — «서지·초록 확인»: 저자·연도·제목·학술지·권호·쪽·DOI와 초록을 직접 확인 · «서지 확인»: 서지만 확인 · «요지는 2차 자료»: 원문 대신 인용 논문·기관 요약으로 요지를 확인.', { before: 60 }));
     /* 마무리 — 로고 · 연락 */
+    if (level >= 2) return out;
     out.push(SP(200));
     var closing = [];
     if (art.logo) closing.push(im(art.logo, 90, { align: 'CENTER' }));
@@ -1354,7 +1399,7 @@
       new D.Paragraph({ spacing: tiny, children: kids }),
       new D.Paragraph({ spacing: { before: 0, after: 0, line: 300, lineRule: D.LineRuleType.EXACT }, indent: { left: lwTw }, tabStops: [{ type: D.TabStopType.RIGHT, position: CW - lwTw }],
         border: { bottom: BD(K.line, 6, D.BorderStyle.SINGLE, 5) },
-        children: [new D.TextRun({ text: BRAND, bold: true, color: K.g8, size: 16, font: FONT, characterSpacing: 10 }), new D.TextRun({ text: '\t' + TITLE + (name ? ' · ' + name : ''), color: K.mut, size: 16, font: FONT })] })] });
+        children: [new D.TextRun({ text: BRAND, bold: true, color: K.g8, size: 16, font: FONT, characterSpacing: 10 }), new D.TextRun({ text: '\t' + TITLE_() + (name ? ' · ' + name : ''), color: K.mut, size: 16, font: FONT })] })] });
     return { first: first, default: def };
   }
   function footers(batch) {
@@ -1362,7 +1407,7 @@
     var def = new D.Footer({ children: [new D.Paragraph({ spacing: { before: 0, after: 0, line: 300, lineRule: D.LineRuleType.EXACT },
       tabStops: [{ type: D.TabStopType.CENTER, position: Math.round(CW / 2) }, { type: D.TabStopType.RIGHT, position: CW }], border: { top: BD(K.line, 6, D.BorderStyle.SINGLE, 5) },
       children: [new D.TextRun({ text: BRAND, bold: true, color: K.g8, size: 16, font: FONT, characterSpacing: 10 }),
-        new D.TextRun({ text: '\t설문은 하루의 느낌, 기록은 18주의 행동입니다\t', color: K.mut, size: 15, font: FONT }),
+        new D.TextRun({ text: ('\t설문은 하루의 느낌, 기록은 ' + RW() + '의 행동입니다\t'), color: K.mut, size: 15, font: FONT }),
         new D.TextRun({ children: ['쪽 ', D.PageNumber.CURRENT, ' / ', batch ? D.PageNumber.TOTAL_PAGES_IN_SECTION : D.PageNumber.TOTAL_PAGES], bold: true, color: K.g8, size: 16, font: FONT })] })] });
     return { first: first, default: def };
   }
@@ -1376,6 +1421,7 @@
   async function build(list, opt) {
     opt = opt || {};
     D = await ensureLib();
+    DEBUG = !!opt.debug; dbgN = 0;
     var art = await loadArt();
     var batch = list.length > 1 || !!opt.batch;
     var sections = [], plans = [];
@@ -1384,13 +1430,13 @@
       var charts = await makeCharts(st.A);
       var one = student(st, art, charts, i, batch);
       var hd = headers(art, st.name), ft = footers(batch);
-      plans.push({ name: st.name, pages: one.plan.total, toc: one.plan.pages, fill: one.plan.fill, brk: one.plan.brk });
+      plans.push({ name: st.name, pages: one.plan.total, toc: one.plan.pages, fill: one.plan.fill, brk: one.plan.brk, log: DEBUG ? one.plan.log : undefined });
       sections.push({ properties: { titlePage: true, type: i ? D.SectionType.NEXT_PAGE : undefined,
         page: { size: { width: PG.w, height: PG.h }, margin: { top: PG.top, bottom: PG.bottom, left: PG.side, right: PG.side, header: PG.header, footer: PG.footer, gutter: 0 }, pageNumbers: { start: 1 } } },
         headers: hd, footers: ft, children: one.els });
     }
     var doc = new D.Document({
-      creator: BRAND, title: TITLE + (list.length === 1 && list[0].name ? ' — ' + list[0].name : ''), description: '화학1 18회 기록 × 마무리 설문 × 지금까지의 모든 시험 진단 보고서',
+      creator: BRAND, title: (list.length > 1 ? '화학1 돌아보기 진단 보고서' : TITLE_()) + (list.length === 1 && list[0].name ? ' — ' + list[0].name : ''), description: ('화학1 ' + (CUR_N > 0 && list.length === 1 ? CUR_N + '회 ' : '') + '기록 × 마무리 설문 × 지금까지의 모든 시험 진단 보고서'),
       styles: { default: { document: { run: { font: { ascii: FONT, eastAsia: FONT, hAnsi: FONT, cs: FONT }, size: 20, color: K.ink }, paragraph: { spacing: { line: 310, lineRule: D.LineRuleType.EXACT } } } } },
       sections: sections });
     var blob = await D.Packer.toBlob(doc);

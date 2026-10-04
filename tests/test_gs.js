@@ -1358,8 +1358,8 @@ console.log('[설문] kind:survey 는 「결과」 탭의 한 줄(과목 ch1sv) 
   const r1 = post(base);
   const s1 = svRows();
   T('저장: 결과 탭에 한 줄 · 설문 탭은 안 만든다', r1.ok === true && r1.updated === false && s1.length === 1 && !SHEETS['설문'] && /survey_report\.html\?student=/.test(r1.reportLink), JSON.stringify(r1));
-  T('저장: DT 회차처럼 — 과목 ch1sv · 회차 19 · 시도/통과 «설문» · 점수 빈칸 · 학생키는 서버가(canonicalKey_) · 학교·학년 정리',
-    s1[0][5] === '휘문중-홍길동' && s1[0][6] === '휘문중' && s1[0][7] === '2' && s1[0][9] === 19 && s1[0][10] === '설문' && s1[0][4] === '설문' && s1[0][3] === '' && s1[0][13] === 'ch1-final-2026', JSON.stringify(s1[0]));
+  T('저장: DT 회차처럼 — 과목 ch1sv · 회차 = 실제로 본 화학1 회차 수 + 1(여기선 1회 봤으니 2) · 시도/통과 «설문» · 점수 빈칸 · 학생키는 서버가(canonicalKey_) · 학교·학년 정리',
+    s1[0][5] === '휘문중-홍길동' && s1[0][6] === '휘문중' && s1[0][7] === '2' && s1[0][9] === 2 && s1[0][10] === '설문' && s1[0][4] === '설문' && s1[0][3] === '' && s1[0][13] === 'ch1-final-2026', JSON.stringify(s1[0]));
   T('저장: 답은 글자로 · 걸린시간·출처는 축 칸 JSON · 테스트 빈칸', String(s1[0][18]).replace(/^'/, '') === A1 && JSON.parse(s1[0][14]).ms === 600000 && JSON.parse(s1[0][14]).src === 'web' && s1[0][15] === '');
   T('저장: 결과 탭 B열 링크 = 돌아보기 진단 보고서(DT 성적표 아님)', String(s1[0][1]).indexOf('survey_report.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0, String(s1[0][1]));
   { const i = R._rows.findIndex(r => r[8] === 'ch1sv'); const keepL = R._rows[i][1]; R._rows[i][1] = 'https://x/report.html?student=old';
@@ -1390,6 +1390,15 @@ console.log('[설문] kind:survey 는 「결과」 탭의 한 줄(과목 ch1sv) 
   T('개인 코드: 그 학생 것만 · 실제 기록이 있으면 TEST 는 뺀다', o1.ok === true && o1.rows.length === 1 && o1.rows[0].ans === A2 && !o1.rows[0].isTest && !('studentKey' in o1.rows[0]), JSON.stringify(o1));
   post(Object.assign({}, base, { name: '설문만', school: '가상고' }));
   const o3 = get({ action: 'surveyOne', student: ctx.pubId_('가상고-설문만') });
+  { const r = R._rows.find(x => x[8] === 'ch1sv' && x[0] === '설문만'); T('DT 기록 없는 학생의 설문 줄 회차 = 1', r && r[9] === 1, JSON.stringify(r && r[9])); }
+  /* 기록이 나중에 늘면 다음 저장 때 회차를 다시 센다 */
+  R._rows.push(['홍길동','L',D1,90,'통과','휘문중-홍길동','휘문중','2','ch1',2,'정시',54,6,'','{}','','[]','[]','O'.repeat(60)],
+               ['홍길동','L',D1,95,'통과','휘문중-홍길동','휘문중','2','ch1',2,'재시',57,3,'','{}','','[]','[]','O'.repeat(60)],
+               ['홍길동','L',D1,50,'미달','휘문중-홍길동','휘문중','2','ch1',3,'정시',30,30,'','{}','TEST','[]','[]','O'.repeat(60)]);
+  post(Object.assign({}, base, { name: '김민준', school: '단대부중', ans: A1, src: 'paper', ms: 0 }));
+  { const r = R._rows.find(x => x[8] === 'ch1sv' && x[5] === '휘문중-홍길동' && x[13] === 'ch1-final-2026' && x[15] === '');
+    T('회차 다시 세기: 1·2회(재시는 한 번으로) = 2회 → 3 · TEST 회차는 안 센다', r && r[9] === 3, JSON.stringify(r && r[9])); }
+  for (let i = R._rows.length - 1; i >= 1; i--) { const x = R._rows[i]; if (x[5] === '휘문중-홍길동' && x[8] === 'ch1' && (x[9] === 2 || x[9] === 3)) R._rows.splice(i, 1); }
   T('개인 코드: DT 기록 없이 설문만 한 학생도 찾는다', o3.ok === true && o3.rows.length === 1 && o3.rows[0].name === '설문만', JSON.stringify(o3));
   T('개인 코드: 진단용 화학1 기록은 ch1 시험 줄만(설문 줄 아님) · 점수·통과는 안 싣는다', Array.isArray(o1.ch1) && o1.ch1.length === 1
     && o1.ch1.every(r => r.course === 'ch1' && !('score' in r) && !('pass' in r)) && (o3.ch1 || []).length === 0, JSON.stringify(o1.ch1));
@@ -1405,7 +1414,7 @@ console.log('[설문] kind:survey 는 「결과」 탭의 한 줄(과목 ch1sv) 
   const iHong = data.findIndex(r => r[8] === 'ch1sv' && r[5] === '휘문중-홍길동' && r[13] === 'ch1-final-2026' && r[15] === '');
   const iTest = data.findIndex(r => r[8] === 'ch1sv' && r[15] === 'TEST');
   const mH = msgs[iHong], mT = msgs[iTest];
-  T('문자발송: 설문 줄 = «화학Ⅰ 돌아보기 · 설문 · 진단 보고서» + 진단 보고서 링크', mH && mH.label === '화학Ⅰ 돌아보기' && mH.att === '설문' && mH.status === '진단 보고서'
+  T('문자발송: 설문 줄 = «화학Ⅰ (본 회차+1)회 · 돌아보기 · 설문 · 진단 보고서» · 문자는 «1회 돌아보기»(18 아님) + 진단 보고서 링크', mH && mH.label === '화학Ⅰ 2회 · 돌아보기' && mH.att === '설문' && /화학Ⅰ 1회 돌아보기/.test(mH.msg) && /직접 응시한 1회/.test(mH.msg) && !/18/.test(mH.msg) && mH.status === '진단 보고서'
     && mH.msg.indexOf('survey_report.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0 && /홍길동 학생/.test(mH.msg) && !/점|통과|재시/.test(mH.msg.replace('점수가', '')), JSON.stringify(mH));
   T('문자발송: 테스트 설문 줄은 문자 없음', mT && mT.msg === '' && mT.status === '', JSON.stringify(mT));
   const iDt = data.findIndex(r => r[8] === 'ch1' && r[5] === '휘문중-홍길동');

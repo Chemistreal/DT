@@ -14,7 +14,15 @@
   'use strict';
   var SA = root.SurveyAnalysis || (typeof require === 'function' ? require('./survey_analysis.js') : null);
   var BRAND = '화학 · 다원교육 · 조준모';
-  var TITLE = '화학1 18회 돌아보기 진단 보고서';
+  /* 회차는 18 로 박지 않는다(선생님 2026-10-04 — «학생이 18회를 다 본 게 아니라 실제로 응시한 회차만 센다»).
+     학생마다 그리기·만들기 전에 CUR_N = 그 학생이 실제로 본 화학1 회차 수(A.record.taken)로 맞춘다. */
+  var CUR_N = 0;
+  function RW() { return CUR_N > 0 ? CUR_N + '회' : '수업'; }
+  function RWE() { return CUR_N > 0 ? CUR_N + '-ROUND' : 'COURSE'; }
+  function RWS() { return CUR_N > 0 ? CUR_N + ' ROUNDS' : 'REVIEW'; }
+  function TITLE_() { return '화학1 ' + (CUR_N > 0 ? CUR_N + '회 ' : '') + '돌아보기 진단 보고서'; }
+  function halves(rr) { var k = Math.ceil(rr.length / 2); return [rr.slice(0, k), rr.slice(k)]; }
+  function halfLabel(h, front) { return h.length ? (front ? '앞쪽 ' : '뒤쪽 ') + h.length + '회(' + h[0].round + '~' + h[h.length - 1].round + '회) 평균' : (front ? '앞쪽' : '뒤쪽') + ' 평균'; }
 
   /* ── 색 ── 짙은 초록(exam 성적표 계열) 바탕, 갈래 색은 대비 4.5 이상인 글자색을 따로 둔다 */
   var CAT = {
@@ -317,7 +325,7 @@
     var R = A.record, W = 680, H = 330, x0 = 52, x1 = 664, yT = 26, yB = 196, bT = 214, bB = 262, uT = 276, uB = 300;
     var N = 18, xs = function (r) { return x0 + (r - 0.5) * (x1 - x0) / N; };
     var lo = 0.4, ys = function (p) { return yB - (Math.max(lo, Math.min(1, p)) - lo) / (1 - lo) * (yB - yT); };
-    var g = '<svg class="sp-fig" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="18주 첫 시도 정답률과 재시 횟수" ' + FONT + '>';
+    var g = '<svg class="sp-fig" viewBox="0 0 ' + W + ' ' + H + ('" role="img" aria-label="' + RW() + ' 첫 시도 정답률과 재시 횟수" ') + FONT + '>';
     [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].forEach(function (p) {
       g += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + ys(p) + '" y2="' + ys(p) + '" stroke="' + (p === 0.8 ? '#C9A962' : '#ECE9E1') + '" stroke-width="' + (p === 0.8 ? 1.2 : 1) + '"' + (p === 0.8 ? ' stroke-dasharray="5 4"' : '') + '/>';
       g += '<text x="' + (x0 - 7) + '" y="' + (ys(p) + 4) + '" font-size="11" text-anchor="end" fill="#5E6A65">' + Math.round(p * 100) + '%</text>';
@@ -412,7 +420,7 @@
     g += '<text x="' + (sx(0.25)) + '" y="' + (sy(1) + 14) + '" font-size="11" text-anchor="middle" fill="#235A87" font-weight="800">숨은 실력</text>';
     g += '<text x="' + (sx(0.375)) + '" y="' + (sy(0.4) + 14) + '" font-size="11" text-anchor="middle" fill="#7F6118" font-weight="800">보강 필요</text>';
     g += '<text x="' + ((m0 + m1) / 2) + '" y="388" font-size="11" text-anchor="middle" fill="#1F2A26" font-weight="700">설문 자신감 →</text>';
-    g += '<text x="14" y="' + ((yT + yB) / 2) + '" font-size="11" text-anchor="middle" fill="#1F2A26" font-weight="700" transform="rotate(-90 14 ' + ((yT + yB) / 2) + ')">18주 기록(첫 시도 정답률) →</text>';
+    g += '<text x="14" y="' + ((yT + yB) / 2) + '" font-size="11" text-anchor="middle" fill="#1F2A26" font-weight="700" transform="rotate(-90 14 ' + ((yT + yB) / 2) + (')">' + RW() + ' 기록(첫 시도 정답률) →</text>');
     var pts = A.rows.filter(function (r) { return r.type === 'concept' && r.C != null && r.rec.n >= SA.TH.minN; });
     /* 같은 자리(자신감 칸 × 앎 지수 0.1 칸)에 몰린 점은 가로로 나란히, 넘치면 아래 줄로 — 숫자가 겹치지 않게 */
     var groups = {}, pos = {};
@@ -528,7 +536,7 @@
     var g = '<svg class="sp-cv-seal" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="none" stroke="#A9853C" stroke-width="2"/><circle cx="60" cy="60" r="48" fill="none" stroke="#A9853C" stroke-width=".8"/>';
     var d = ''; for (var k = 0; k < 6; k++) { var a = Math.PI / 6 + k * Math.PI / 3; d += (k ? 'L' : 'M') + (60 + 22 * Math.cos(a)).toFixed(1) + ' ' + (60 + 22 * Math.sin(a)).toFixed(1); }
     g += '<path d="' + d + 'Z" fill="none" stroke="#0E5A4C" stroke-width="3"/><circle cx="60" cy="60" r="11" fill="none" stroke="#0E5A4C" stroke-width="2"/>';
-    g += '<text x="60" y="100" font-size="9" text-anchor="middle" fill="#8A6A38" ' + FONT + ' font-weight="700" letter-spacing="2">18 WEEKS</text>';
+    g += '<text x="60" y="100" font-size="9" text-anchor="middle" fill="#8A6A38" ' + FONT + (' font-weight="700" letter-spacing="2">' + RWS() + '</text>');
     g += '<text x="60" y="27" font-size="9" text-anchor="middle" fill="#8A6A38" ' + FONT + ' font-weight="700" letter-spacing="2">REVIEW</text></svg>';
     return g;
   }
@@ -635,6 +643,7 @@
 
   function buildFlows(ctx) {
     var A = ctx.A, who = ctx.name ? esc(ctx.name) + ' 학생' : '이 학생', R = A.record, M = A.metrics, flows = [];
+    CUR_N = (R && R.taken) || 0;
     var nm = ctx.name || '학생';
     var counts = A.counts, totalRows = A.rows.length;
 
@@ -645,8 +654,8 @@
     ];
     var nItems = R.total.n, nRounds = R.rounds.filter(function (r) { return r.rate != null; }).length;
     var otherN = (A.timeline || []).filter(function (t) { return t.course !== 'ch1'; }).length;
-    var cover = '<div class="sp-cv-band">' + coverPattern() + '<div class="in"><div class="sp-cv-eyebrow">CHEMISTRY I · 18-WEEK REVIEW · DIAGNOSTIC REPORT</div>' +
-      '<div class="sp-cv-title">화학1 18회 돌아보기<br>진단 보고서</div><div class="sp-cv-sub">18주의 실제 기록 × 하루의 설문</div><div class="sp-cv-rule"></div>' +
+    var cover = '<div class="sp-cv-band">' + coverPattern() + ('<div class="in"><div class="sp-cv-eyebrow">CHEMISTRY I · ' + RWE() + ' REVIEW · DIAGNOSTIC REPORT</div>') +
+      ('<div class="sp-cv-title">화학1 ' + (CUR_N > 0 ? CUR_N + '회 ' : '') + '돌아보기<br>진단 보고서</div><div class="sp-cv-sub">' + RW() + '의 실제 기록 × 하루의 설문</div><div class="sp-cv-rule"></div>') +
       '<div class="sp-cv-lede">매주 치른 누적 O/X 시험의 행동 기록과 마지막 시간의 점수 없는 설문 100문항을 개념마다 맞대어, ' +
       '무엇을 이미 알고 무엇을 다음에 다져야 하는지 정리했습니다. 이 보고서는 점수를 매기는 문서가 아니라 다음 공부의 지도입니다.</div></div></div>' +
       '<div class="sp-cv-gold"></div>' + sealSVG() +
@@ -657,7 +666,7 @@
       '<div><b>' + (nItems ? nItems.toLocaleString('ko-KR') : '—') + '</b><span>문항을 개념별로 맞댐</span></div>' +
       '<div><b>' + otherN + '</b><span>그 밖의 시험(다른 과목·모의시험)</span></div>' +
       '<div><b>' + totalRows + '</b><span>개 개념을 6갈래로 진단</span></div></div>' +
-      '<div class="sp-cv-toc"><div class="h">이 보고서에 담긴 것</div><ol>' + ['한눈에 보기', '18주 학습 여정', '자기 판단과 실제 기록', '단원별 진단', '개념별 진단표', '남은 오개념 카드', '공부 습관과 마음', '어려웠던 점과 처방', '다음 과정을 위한 처방', '지금까지의 모든 시험', '영역·개념 누적 지도', '되풀이되는 오개념', '이전 학습진단과 비교', '부모님께 · 부록'].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></div></div>' +
+      '<div class="sp-cv-toc"><div class="h">이 보고서에 담긴 것</div><ol>' + ['한눈에 보기', (RW() + ' 학습 여정'), '자기 판단과 실제 기록', '단원별 진단', '개념별 진단표', '남은 오개념 카드', '공부 습관과 마음', '어려웠던 점과 처방', '다음 과정을 위한 처방', '지금까지의 모든 시험', '영역·개념 누적 지도', '되풀이되는 오개념', '이전 학습진단과 비교', '부모님께 · 부록'].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></div></div>' +
       '<div class="sp-cv-foot"><div><img alt="다원교육" src="' + ctx.logo + '"></div><div class="sp-cv-brand" data-sp-brand>' + BRAND + '<small>학생·부모 상담용 · 이 문서는 점수나 순위를 매기지 않습니다</small></div></div>';
     flows.push({ cover: true, blocks: [el(cover)] });
 
@@ -665,14 +674,14 @@
     var f0 = [];
     f0.push(secHead('0', '이 보고서를 읽는 법', 'HOW TO READ', '설문 부분은 점수가 아니라 <b>스스로 느낀 것</b>입니다. 느낌과 실제 기록이 다를 때 그 차이가 가장 쓸모 있는 정보이며, 어느 쪽이 «틀렸다»는 뜻은 아닙니다.'));
     f0.push(el('<div class="sp-grid3">' +
-      '<div class="sp-card tint"><div class="sp-h3" style="margin-top:0">기록은 18주의 행동</div>매주 60문항, 첫 시도에서 맞힌 것과 재시에서 다른 문장으로 고친 것을 개념마다 셌습니다. 둘이 충돌하면 기록에 더 큰 무게를 둡니다.</div>' +
+      ('<div class="sp-card tint"><div class="sp-h3" style="margin-top:0">기록은 ' + RW() + '의 행동</div>매주 60문항, 첫 시도에서 맞힌 것과 재시에서 다른 문장으로 고친 것을 개념마다 셌습니다. 둘이 충돌하면 기록에 더 큰 무게를 둡니다.</div>') +
       '<div class="sp-card tint"><div class="sp-h3" style="margin-top:0">설문은 하루의 느낌</div>개념 자신감 40 · 직관 문장 20 · 습관과 마음 40문항. 정답이 없는 문항이라 솔직하게 답했을 때 가장 정확한 지도가 됩니다.</div>' +
       '<div class="sp-card tint"><div class="sp-h3" style="margin-top:0">판정은 «아직»의 말</div>여섯 갈래는 고정된 꼬리표가 아니라 지금의 위치입니다. 다음 시험 한 번으로도 바뀔 수 있고, 바뀌라고 만든 표시입니다.</div></div>'));
     f0.push(h3('여섯 갈래 — 느낌(자신감·직관) × 기록'));
     f0.push(el('<div class="sp-grid3">' + CAT_ORDER.map(function (k) { return '<div class="sp-card" style="margin:0;padding:7px 10px;border-color:' + CAT[k].color + '55;background:' + CAT[k].tint + '"><div style="font-weight:800;color:' + CAT[k].ink + '">' + esc(CAT[k].name) + '</div><div style="font-size:9pt;line-height:1.45">' + esc(CAT[k].desc) + '</div><div style="font-size:8.8pt;line-height:1.45;color:#4A5651;margin-top:2px">→ ' + esc(CAT[k].act) + '</div></div>'; }).join('') + '</div>'));
     f0.push(el('<p class="sp-cap">순서는 고칠 차례입니다: 남은 오개념 → 과신 → 보강 필요 → 숨은 실력 → 강점. 「잠정」은 그 개념을 물은 문항이 8개보다 적어 판단이 흔들릴 수 있다는 표시입니다.</p>'));
     f0.push(h3('차례'));
-    var toc = [['1', '한눈에 보기', 's1'], ['2', '18주 학습 여정', 's2'], ['3', '자기 판단과 실제 기록', 's3'], ['4', '단원별 진단', 's4'], ['5', '개념별 진단표', 's5'], ['6', '남은 오개념 카드와 잠복 직관 점검', 's6'], ['7', '공부 습관과 마음', 's7'], ['8', '어려웠던 점과 처방', 's8'], ['9', '다음 과정을 위한 처방', 's9'], ['10', '지금까지의 모든 시험', 's10'], ['11', '영역·개념 누적 지도', 's11'], ['12', '되풀이되는 오개념', 's12'], ['13', '이전 KMChC 학습진단과 비교', 's13'], ['P', '부모님께', 'sp'], ['A', '부록 — 지표 정의 · 판정 구간 · 응답 품질 · 한계 · 참고문헌', 'sa']];
+    var toc = [['1', '한눈에 보기', 's1'], ['2', (RW() + ' 학습 여정'), 's2'], ['3', '자기 판단과 실제 기록', 's3'], ['4', '단원별 진단', 's4'], ['5', '개념별 진단표', 's5'], ['6', '남은 오개념 카드와 잠복 직관 점검', 's6'], ['7', '공부 습관과 마음', 's7'], ['8', '어려웠던 점과 처방', 's8'], ['9', '다음 과정을 위한 처방', 's9'], ['10', '지금까지의 모든 시험', 's10'], ['11', '영역·개념 누적 지도', 's11'], ['12', '되풀이되는 오개념', 's12'], ['13', '이전 KMChC 학습진단과 비교', 's13'], ['P', '부모님께', 'sp'], ['A', '부록 — 지표 정의 · 판정 구간 · 응답 품질 · 한계 · 참고문헌', 'sa']];
     var half = Math.ceil(toc.length / 2), tocT = function (a) { return '<table class="sp-toc"><tbody>' + a.map(function (t) { return '<tr><td class="no">' + t[0] + '</td><td>' + esc(t[1]) + '</td><td class="pg" data-toc="' + t[2] + '">·</td></tr>'; }).join('') + '</tbody></table>'; };
     toc[toc.length - 1][1] = '부록 — 지표·판정 구간·응답 품질·문헌';
     f0.push(el('<div class="sp-grid2" style="gap:0 22px">' + tocT(toc.slice(0, half)) + tocT(toc.slice(half)) + '</div>'));
@@ -680,13 +689,13 @@
 
     /* ── 1. 한눈에 보기 ── */
     var f1 = [];
-    f1.push(secHead('1', '한눈에 보기', 'AT A GLANCE', who + '의 18주 기록과 설문을 네 개의 숫자와 여섯 갈래로 줄였습니다.'));
+    f1.push(secHead('1', '한눈에 보기', 'AT A GLANCE', who + ('의 ' + RW() + ' 기록과 설문을 네 개의 숫자와 여섯 갈래로 줄였습니다.')));
     if (A.quality.flags.length) f1.push(el('<div class="sp-warn"><b>응답 품질 점검</b> — ' + qualityText(A.quality) + ' 자세한 결과는 부록에 있습니다.</div>'));
     if (!A.hasRecord) f1.push(el('<div class="sp-note"><b>화학1 시험 기록이 이 링크와 아직 이어지지 않았습니다.</b> 기록 숫자는 비워 두고, 설문에서 드러난 느낌과 습관을 중심으로 정리했습니다. 기록이 이어지면 같은 링크에서 다시 만들 수 있습니다.</div>'));
-    if (!A.hasSurvey) f1.push(el('<div class="sp-note"><b>설문 응답이 아직 없습니다.</b> 18주 기록만으로 정리했고, 자신감과 직관을 맞대는 부분은 비워 두었습니다.</div>'));
+    if (!A.hasSurvey) f1.push(el(('<div class="sp-note"><b>설문 응답이 아직 없습니다.</b> ' + RW() + ' 기록만으로 정리했고, 자신감과 직관을 맞대는 부분은 비워 두었습니다.</div>')));
     var hceTxt = M.hce == null ? '자신 있다고 표시한 개념이 없거나 기록이 부족해 계산하지 않았습니다.' : '«그렇다» 이상으로 자신 있다고 한 ' + M.hceN + '개 가운데 기록이 흔들린 개념 ' + M.hceWeak + '개.';
     f1.push(el('<div class="sp-grid4">' +
-      kpi('18주 첫 시도 정답률', R.rate, '처음 본 문장에서 바로 맞힌 비율 (' + (R.total.n ? R.total.ok + ' / ' + R.total.n : '기록 없음') + ')', R.rate == null ? 'na' : R.rate >= 0.85 ? 'good' : R.rate >= 0.7 ? 'ok' : 'low') +
+      kpi((RW() + ' 첫 시도 정답률'), R.rate, '처음 본 문장에서 바로 맞힌 비율 (' + (R.total.n ? R.total.ok + ' / ' + R.total.n : '기록 없음') + ')', R.rate == null ? 'na' : R.rate >= 0.85 ? 'good' : R.rate >= 0.7 ? 'ok' : 'low') +
       kpi('재시 교정률', R.retakeRate, R.retake.withData ? '처음 틀린 개념을 다음 재시에서 다른 문장으로 바로잡은 비율 (' + R.retake.fixedNext + ' / ' + R.retake.withData + ')' : '재시 기록이 없어 계산하지 않았습니다.', R.retakeRate == null ? 'na' : R.retakeRate >= 0.8 ? 'good' : R.retakeRate >= 0.5 ? 'ok' : 'low') +
       kpi('자기 판단 정확도', M.accuracy, M.accuracy == null ? '자신감과 기록을 맞댈 개념이 부족합니다.' : '자신감과 기록의 평균 차이 ' + fx(M.mad) + ' → 1에서 뺀 값 (개념 ' + M.K + '개)', M.madBand || 'na') +
       kpi('확신 오류 비율', M.hce, hceTxt, M.hceBand || 'na', true) + '</div>'));
@@ -712,16 +721,16 @@
 
     /* ── 2. 18주 여정 ── */
     var f2 = [];
-    f2.push(secHead('2', '18주 학습 여정', 'THE 18-WEEK JOURNEY', '매주 앞 내용까지 다시 묻는 누적 시험이었습니다. 진한 선은 회차마다 첫 시도 정답률, 점선은 그 가운데 <b>지난 단원 문항</b>의 정답률, 금색 막대는 재시 횟수입니다.'));
+    f2.push(secHead('2', (RW() + ' 학습 여정'), ('THE ' + RWE() + ' JOURNEY'), '매주 앞 내용까지 다시 묻는 누적 시험이었습니다. 진한 선은 회차마다 첫 시도 정답률, 점선은 그 가운데 <b>지난 단원 문항</b>의 정답률, 금색 막대는 재시 횟수입니다.'));
     if (R.has) {
       f2.push(el(journeySVG(A) + '<p class="sp-cap">아래 띠는 그 회차에 새로 배운 단원입니다. 맨 위 ◆는 여러 번 막혔던 개념이 그 회차부터 계속 맞기 시작한 자리(막힘 해소)입니다. 금색 점선은 회차 통과 기준 80%입니다.</p>'));
       var rr = R.rounds.filter(function (r) { return r.rate != null; });
       var best = rr.slice().sort(function (a, b) { return b.rate - a.rate || a.round - b.round; })[0];
-      var h1 = rr.filter(function (r) { return r.round <= 9; }), h2 = rr.filter(function (r) { return r.round >= 10; });
+      var hh = halves(rr.slice().sort(function (a, b) { return a.round - b.round; })), h1 = hh[0], h2 = hh[1];
       var av = function (a) { return a.length ? a.reduce(function (s, r) { return s + r.rate; }, 0) / a.length : null; };
       f2.push(el('<div class="sp-grid4">' +
         mini('가장 높았던 회차', best ? best.round + '회 · ' + pct(best.rate) : '—') +
-        mini('전반(1~9회) 평균', pct(av(h1))) + mini('후반(10~18회) 평균', pct(av(h2))) +
+        mini(halfLabel(h1, true), pct(av(h1))) + mini(halfLabel(h2, false), pct(av(h2))) +
         mini('지난 단원 문항', pct(R.reviewRate) + (R.review.n ? ' <span class="sp-dim">(' + R.review.n + '문항)</span>' : '')) + '</div>'));
       var res = R.chronic.filter(function (c) { return c.resolvedAt; }), open = R.chronic.filter(function (c) { return !c.resolvedAt; });
       f2.push(h3('여러 번 막혔던 개념과 해소'));
@@ -731,15 +740,15 @@
         '<div class="sp-card brass"><div class="sp-h3" style="margin-top:0">아직 진행 중 ' + open.length + '개</div>' +
         (open.length ? open.slice(0, 10).map(function (c) { return '<div>· ' + esc(c.m) + ' <span class="sp-dim">— ' + c.asked + '회 중 ' + c.wrong + '회 막힘</span></div>'; }).join('') : '<span class="sp-dim">모두 해소했습니다.</span>') + '</div></div>'));
       var trend = av(h2) != null && av(h1) != null ? av(h2) - av(h1) : null;
-      f2.push(el('<div class="sp-note"><b>해석</b> — 18주 동안 매주 앞 내용까지 다시 확인하는 방식으로 공부했습니다. 이것은 기억 연구에서 효과가 가장 큰 것으로 알려진 <b>«시험으로 공부하기»와 «간격 두고 다시 꺼내기»</b>를 꾸준히 실천한 것입니다(Roediger & Karpicke, 2006). ' +
+      f2.push(el(('<div class="sp-note"><b>해석</b> — ' + RW() + ' 동안 매주 앞 내용까지 다시 확인하는 방식으로 공부했습니다. 이것은 기억 연구에서 효과가 가장 큰 것으로 알려진 <b>«시험으로 공부하기»와 «간격 두고 다시 꺼내기»</b>를 꾸준히 실천한 것입니다(Roediger & Karpicke, 2006). ') +
         (trend == null ? '' : trend >= 0.03 ? '뒤로 갈수록 단원이 어려워졌는데도 후반 평균이 ' + Math.round(trend * 100) + '%p 높습니다. ' : trend <= -0.03 ? '후반에는 평형·산염기처럼 여러 조건을 함께 따지는 단원이 이어지면서 평균이 ' + Math.round(-trend * 100) + '%p 내려갔습니다. 어려워진 단원에서 흔한 모습이며, 4절의 단원별 진단에서 어디서 내려갔는지 볼 수 있습니다. ' : '앞뒤 평균이 고르게 유지되어, 단원이 어려워져도 흔들리지 않았습니다. ') +
         (open.length ? '반복해서 막힌 개념은 «여러 번 다시 풀기»만으로는 잘 풀리지 않는 유형입니다. 문장을 바꿔도 같은 곳에서 틀린다면 그 밑의 생각 자체를 다뤄야 합니다 — 6절과 9절에 정리했습니다.' : '') + '</div>'));
-    } else f2.push(el('<div class="sp-empty"><b>화학1 시험 기록이 없습니다.</b><br>이 절은 18주 기록이 이어지면 채워집니다.</div>'));
+    } else f2.push(el(('<div class="sp-empty"><b>화학1 시험 기록이 없습니다.</b><br>이 절은 ' + RW() + ' 기록이 이어지면 채워집니다.</div>')));
     flows.push({ id: 's2', blocks: f2 });
 
     /* ── 3. 자기 판단과 실제 기록 ── */
     var f3 = [];
-    f3.push(secHead('3', '자기 판단과 실제 기록', 'CALIBRATION', '동그라미 하나가 개념 하나입니다(숫자는 설문 문항 번호). 가로는 설문에서 고른 자신감, 세로는 18주 첫 시도 정답률입니다. 점선 위에 있으면 느낌과 기록이 일치합니다.'));
+    f3.push(secHead('3', '자기 판단과 실제 기록', 'CALIBRATION', ('동그라미 하나가 개념 하나입니다(숫자는 설문 문항 번호). 가로는 설문에서 고른 자신감, 세로는 ' + RW() + ' 첫 시도 정답률입니다. 점선 위에 있으면 느낌과 기록이 일치합니다.')));
     if (A.hasSurvey && R.has) {
       var sc = scatterSVG(A);
       f3.push(el('<div style="display:grid;grid-template-columns:1.12fr 1fr;gap:12px;align-items:start"><div>' + sc.svg + '<p class="sp-cap">색은 5절 진단표의 갈래와 같습니다. 바탕 색 구역은 대략적인 위치이며, 실제 갈래는 학생 자신의 응답 습관(평소 자신감 수준)과 재시·유지 기록까지 함께 보고 정했습니다. 기록이 3문항 미만인 개념(' + (40 - sc.n) + '개)은 빠졌습니다.</p></div><div>' +
@@ -748,7 +757,7 @@
         '<div class="sp-card"><div class="sp-h3" style="margin-top:0">확신 오류</div>' + hceText(M) + '</div></div></div>'));
       f3.push(el('<div class="sp-note"><b>왜 이것이 중요한가</b> — «다시 보니 술술 읽힌다»는 익숙한 느낌은 «안다»는 착각을 가장 쉽게 만듭니다. 반복해서 읽으면 자신감은 오르지만 오래 남는 것은 시험으로 꺼내 본 쪽이었습니다(Bjork 외, 2013). ' +
         '확신하며 틀린 내용은 정확한 설명을 한 번 제대로 들으면 오히려 가장 잘 고쳐지고(Butterfield & Metcalfe, 2001), 자신 없이 맞힌 내용은 «맞았다»는 확인을 받을 때 오래 남습니다(Butler 외, 2008). 그래서 과신은 다음 공부의 첫 번째 우선순위, 숨은 실력은 확정해 둘 목록이 됩니다.</div>'));
-      f3.push(el('<p class="sp-cap">설문은 18주 결과를 받은 뒤에 했으므로, 자신감에는 «기억하는 내 기록»이 섞여 있습니다. 높은 일치는 순수한 예측력이라기보다 «내 기록을 얼마나 정확히 받아들였는가»로 읽는 것이 정확합니다.</p>'));
+      f3.push(el(('<p class="sp-cap">설문은 ' + RW() + ' 결과를 받은 뒤에 했으므로, 자신감에는 «기억하는 내 기록»이 섞여 있습니다. 높은 일치는 순수한 예측력이라기보다 «내 기록을 얼마나 정확히 받아들였는가»로 읽는 것이 정확합니다.</p>')));
     } else f3.push(el('<div class="sp-empty"><b>' + (A.hasSurvey ? '시험 기록' : '설문 응답') + '이 없어 맞댈 수 없습니다.</b><br>자신감과 기록이 둘 다 있어야 그릴 수 있는 그림입니다.</div>'));
     flows.push({ id: 's3', blocks: f3 });
 
@@ -798,7 +807,7 @@
 
     /* ── 6. 남은 오개념 카드 ── */
     var f6 = [];
-    f6.push(secHead('6', '남은 오개념 카드', 'MISCONCEPTION CARDS', '설문에서 공감한 직관 문장과 18주 기록이 같은 곳을 가리키는 개념입니다. «이런 생각이 들었죠 → 왜 그럴듯한가 → 실제로는 → 확인 문장» 차례로 읽고, 확인 문장의 O/X를 직접 판단해 보세요.'));
+    f6.push(secHead('6', '남은 오개념 카드', 'MISCONCEPTION CARDS', ('설문에서 공감한 직관 문장과 ' + RW() + ' 기록이 같은 곳을 가리키는 개념입니다. «이런 생각이 들었죠 → 왜 그럴듯한가 → 실제로는 → 확인 문장» 차례로 읽고, 확인 문장의 O/X를 직접 판단해 보세요.')));
     var cards = A.remain.slice();
     if (!cards.length) {
       f6.push(el('<div class="sp-empty"><b>남은 오개념 카드가 없습니다.</b><br>' + (A.quality.intuitionHold ? '직관 문장 응답은 응답 품질 점검에 따라 해석을 미뤘습니다(부록 C).' : A.hasRecord ? '공감한 직관 문장이 있더라도 기록은 이미 그 생각을 넘어서 있습니다. 직관과 지식이 같은 방향을 가리키고 있다는 좋은 신호입니다.' : '기록이 이어지면 직관 문장과 맞대어 볼 수 있습니다.') + '</div>'));
@@ -1060,7 +1069,7 @@
       '<p class="sp-cap">기준 — 직선: 표준편차 < 0.5 또는 같은 값 15연속 · 묵종: 직관 동의율 > 80%이면서 오개념·맞는 직관 모두 동의 · 맞는 직관 부정: 평균 ≥ 4 · 중간점: «보통» > 50% · 빠른 응답: 5분 안 · 빈 응답: 10문항 초과. ' + (Q.flags.length ? '걸린 항목에 따라 ' + qualityText(Q) : '모두 통과해 설문 응답을 그대로 판정에 썼습니다.') + '</p>' : '<div class="sp-card">설문 응답이 없어 점검하지 않았습니다.</div>'));
     fa.push(h3('D. 방법상 한계'));
     fa.push(el('<ul class="sp-ul">' + [
-      '설문은 18주 결과를 받은 <b>뒤에</b> 했습니다 — 자신감에는 기억하는 기록이 섞여 있습니다. 자신감·직관은 개념마다 <b>한 문항</b>이라 «진단»이 아니라 «신호»라고 씁니다.',
+      ('설문은 ' + RW() + ' 결과를 받은 <b>뒤에</b> 했습니다 — 자신감에는 기억하는 기록이 섞여 있습니다. 자신감·직관은 개념마다 <b>한 문항</b>이라 «진단»이 아니라 «신호»라고 씁니다.'),
       '개념마다 물은 문항 수가 다릅니다(적게는 1~2개). 8개 미만은 «잠정», 3개 미만은 판정을 미뤘습니다.',
       '같은 개념의 재시 문장이 비슷하면 표면 단서로 맞혔을 가능성이 남습니다. 구간 수치는 제안값이며 첫 학기 자료의 분포를 보고 다시 맞춥니다.',
       '«성취가 낮을수록 과신한다»는 집단 그래프는 무작위 자료에서도 비슷하게 나와 개인 해석의 근거로 쓰지 않았습니다. 모의시험·학습진단은 선생님이 확인한 짝만 붙였습니다.'
@@ -1106,7 +1115,7 @@
     var up = KC.rows.filter(function (r) { return r.diff != null && (r.negative ? r.diff <= -8 : r.diff >= 8); }), down = KC.rows.filter(function (r) { return r.diff != null && (r.negative ? r.diff >= 8 : r.diff <= -8); });
     var t = '<b>해석</b> — ';
     if (up.length) t += up.map(function (r) { return '«' + esc(r.name) + '»'; }).join(', ') + '이(가) 그때보다 좋아진 방향입니다. ';
-    if (down.length) t += down.map(function (r) { return '«' + esc(r.name) + '»'; }).join(', ') + '은(는) 그때보다 낮게 답했습니다 — 18주 동안 어려워진 단원과 함께 겪는 자연스러운 흔들림일 수 있어, 숫자보다 그 이유를 함께 이야기해 보면 좋겠습니다. ';
+    if (down.length) t += down.map(function (r) { return '«' + esc(r.name) + '»'; }).join(', ') + ('은(는) 그때보다 낮게 답했습니다 — ' + RW() + ' 동안 어려워진 단원과 함께 겪는 자연스러운 흔들림일 수 있어, 숫자보다 그 이유를 함께 이야기해 보면 좋겠습니다. ');
     if (!up.length && !down.length) t += '그때와 지금이 크게 다르지 않습니다. 마음가짐이 안정적으로 이어지고 있습니다. ';
     if (KC.miscN) t += '그때 학습진단에서 고른 오개념 ' + KC.miscN + '개는 12절에 이번 기록과 함께 묶어 두었습니다.';
     return t;
@@ -1270,8 +1279,8 @@
   function newPage(ctx, cover) {
     var pg = document.createElement('section'); pg.className = 'sp-page' + (cover ? ' sp-cover' : '');
     if (!cover) {
-      pg.innerHTML = '<div class="sp-run-top"><div class="l"><img alt="" src="' + ctx.logo + '"><span data-sp-brand>' + BRAND + '</span></div><div class="r">' + esc(TITLE) + (ctx.name ? ' · ' + esc(ctx.name) : '') + '</div></div>' +
-        '<div class="sp-body"></div><div class="sp-run-bot"><b data-sp-brand>' + BRAND + '</b><span>설문은 하루의 느낌, 기록은 18주의 행동입니다</span><span class="pn"></span></div>';
+      pg.innerHTML = '<div class="sp-run-top"><div class="l"><img alt="" src="' + ctx.logo + '"><span data-sp-brand>' + BRAND + '</span></div><div class="r">' + esc(TITLE_()) + (ctx.name ? ' · ' + esc(ctx.name) : '') + '</div></div>' +
+        '<div class="sp-body"></div><div class="sp-run-bot"><b data-sp-brand>' + BRAND + ('</b><span>설문은 하루의 느낌, 기록은 ' + RW() + '의 행동입니다</span><span class="pn"></span></div>');
     } else pg.innerHTML = '<div class="sp-body"></div>';
     ctx.host.appendChild(pg);
     return pg.querySelector('.sp-body');
@@ -1429,6 +1438,6 @@
     crossText: crossText, priorityAct: priorityAct, praise: praise, questions: questions, kmText: kmText, depthWord: depthWord,
     qualityText: qualityText, extMsg: extMsg, md: md, pct: pct, fx: fx, sgn: sgn, ymd: ymd, josa: josa, short: short,
     WHY: WHY, CURE: CURE, REFS: REFS };
-  root.SurveyRender = { render: render, fitScreen: fitScreen, loadRounds: loadRounds, loadCommon: loadCommon, getJSON: getJSON, charts: charts, words: words, BRAND: BRAND, TITLE: TITLE, CAT: CAT, CAT_ORDER: CAT_ORDER, esc: esc };
+  root.SurveyRender = { render: render, fitScreen: fitScreen, loadRounds: loadRounds, loadCommon: loadCommon, getJSON: getJSON, charts: charts, words: words, BRAND: BRAND, TITLE: '화학1 돌아보기 진단 보고서', CAT: CAT, CAT_ORDER: CAT_ORDER, esc: esc };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.SurveyRender;
 })(typeof self !== 'undefined' ? self : this);

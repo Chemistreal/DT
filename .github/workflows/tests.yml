@@ -239,6 +239,10 @@ jobs:
       #   가상 학생 넷으로 실제 브라우저에서 그려 본다.
       - name: 돌아보기 진단 보고서가 그려진다 (실제 브라우저)
         run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/survey_print.js
+      # 돌아보기 진단 보고서 Word — 화면과 같은 숫자 · 금지 낱말 · 회차는 학생이 실제로 본 수.
+      #   soffice 가 없으면 PDF 쪽 검사만 건너뛴다(만들기·숫자·낱말 검사는 돈다).
+      - name: 돌아보기 진단 보고서 Word 가 화면과 같은 말을 한다
+        run: NODE_PATH=tests/node_modules REQUIRE_BROWSER=1 node tests/survey_docx.js
       - name: Run regression suite
         run: NODE_PATH=tests/node_modules node tests/run.js
       - name: Upload failure screenshots
