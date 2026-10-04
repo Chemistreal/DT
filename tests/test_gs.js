@@ -1357,16 +1357,16 @@ console.log('[설문] kind:survey 는 「결과」 탭의 한 줄(과목 ch1sv) 
   const base = { kind: 'survey', studentKey: '아무거나', name: '홍길동', school: '휘문중학교', year: '중2', survey: 'ch1-final-2026', ans: A1, ms: 600000 };
   const r1 = post(base);
   const s1 = svRows();
-  T('저장: 결과 탭에 한 줄 · 설문 탭은 안 만든다', r1.ok === true && r1.updated === false && s1.length === 1 && !SHEETS['설문'] && /survey_print\.html\?student=/.test(r1.reportLink), JSON.stringify(r1));
+  T('저장: 결과 탭에 한 줄 · 설문 탭은 안 만든다', r1.ok === true && r1.updated === false && s1.length === 1 && !SHEETS['설문'] && /survey_report\.html\?student=/.test(r1.reportLink), JSON.stringify(r1));
   T('저장: DT 회차처럼 — 과목 ch1sv · 회차 19 · 시도/통과 «설문» · 점수 빈칸 · 학생키는 서버가(canonicalKey_) · 학교·학년 정리',
     s1[0][5] === '휘문중-홍길동' && s1[0][6] === '휘문중' && s1[0][7] === '2' && s1[0][9] === 19 && s1[0][10] === '설문' && s1[0][4] === '설문' && s1[0][3] === '' && s1[0][13] === 'ch1-final-2026', JSON.stringify(s1[0]));
   T('저장: 답은 글자로 · 걸린시간·출처는 축 칸 JSON · 테스트 빈칸', String(s1[0][18]).replace(/^'/, '') === A1 && JSON.parse(s1[0][14]).ms === 600000 && JSON.parse(s1[0][14]).src === 'web' && s1[0][15] === '');
-  T('저장: 결과 탭 B열 링크 = 돌아보기 진단 보고서(DT 성적표 아님)', String(s1[0][1]).indexOf('survey_print.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0, String(s1[0][1]));
+  T('저장: 결과 탭 B열 링크 = 돌아보기 진단 보고서(DT 성적표 아님)', String(s1[0][1]).indexOf('survey_report.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0, String(s1[0][1]));
   { const i = R._rows.findIndex(r => r[8] === 'ch1sv'); const keepL = R._rows[i][1]; R._rows[i][1] = 'https://x/report.html?student=old';
-    post(Object.assign({}, base)); T('예전 판이 적은 DT 링크는 다음 저장 때 돌아보기 링크로 고친다', /survey_print\.html/.test(R._rows[i][1]), R._rows[i][1]); }
+    post(Object.assign({}, base)); T('예전 판이 적은 DT 링크는 다음 저장 때 돌아보기 링크로 고친다', /survey_report\.html/.test(R._rows[i][1]), R._rows[i][1]); }
   T('저장해도 DT 시험 줄은 한 칸도 안 바뀐다', JSON.stringify(R._rows.filter(r => r[8] !== 'ch1sv')) === JSON.stringify(JSON.parse(dtBefore)));
   ctx.refreshReportLinks();
-  T('링크 일괄 갱신(refreshReportLinks)도 설문 줄은 돌아보기 · 시험 줄은 DT 성적표', R._rows.slice(1).every(r => !r[5] || (r[8] === 'ch1sv' ? /survey_print\.html/.test(r[1]) : /report\.html/.test(r[1]))));
+  T('링크 일괄 갱신(refreshReportLinks)도 설문 줄은 돌아보기 · 시험 줄은 DT 성적표', R._rows.slice(1).every(r => !r[5] || (r[8] === 'ch1sv' ? /survey_report\.html/.test(r[1]) : /report\.html/.test(r[1]))));
   const r2 = post(Object.assign({}, base, { ans: A2, ms: 700000 }));
   T('덮어쓰기: 같은 학생·같은 설문은 한 줄 · 마지막 제출', r2.ok === true && r2.updated === true && svRows().length === 1 && String(svRows()[0][18]).replace(/^'/, '') === A2, JSON.stringify(svRows().length));
   const r3 = post(Object.assign({}, base, { isTest: true }));
@@ -1406,7 +1406,7 @@ console.log('[설문] kind:survey 는 「결과」 탭의 한 줄(과목 ch1sv) 
   const iTest = data.findIndex(r => r[8] === 'ch1sv' && r[15] === 'TEST');
   const mH = msgs[iHong], mT = msgs[iTest];
   T('문자발송: 설문 줄 = «화학Ⅰ 돌아보기 · 설문 · 진단 보고서» + 진단 보고서 링크', mH && mH.label === '화학Ⅰ 돌아보기' && mH.att === '설문' && mH.status === '진단 보고서'
-    && mH.msg.indexOf('survey_print.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0 && /홍길동 학생/.test(mH.msg) && !/점|통과|재시/.test(mH.msg.replace('점수가', '')), JSON.stringify(mH));
+    && mH.msg.indexOf('survey_report.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0 && /홍길동 학생/.test(mH.msg) && !/점|통과|재시/.test(mH.msg.replace('점수가', '')), JSON.stringify(mH));
   T('문자발송: 테스트 설문 줄은 문자 없음', mT && mT.msg === '' && mT.status === '', JSON.stringify(mT));
   const iDt = data.findIndex(r => r[8] === 'ch1' && r[5] === '휘문중-홍길동');
   T('문자발송: DT 시험 줄 문자는 그대로(통과)', msgs[iDt] && msgs[iDt].status === '통과' && /화학Ⅰ 1회/.test(msgs[iDt].msg), JSON.stringify(msgs[iDt]));

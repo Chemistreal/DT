@@ -765,7 +765,8 @@ var SV_COURSE = 'ch1sv', SV_ROUND = 19, SV_ATTEMPT = '설문';
 function isSvRaw_(r) { return !!r && String(r[8] || '') === SV_COURSE; }
 /* 결과 탭 원본(머리 포함)에서 설문 줄을 뺀다 — DT 시험 집계는 이것만 본다. */
 function dtRaw_(data) { return (data || []).filter(function (r, i) { return i === 0 || !isSvRaw_(r); }); }
-function svLinkOf_(key) { return REPORT_BASE_URL + 'survey_print.html?student=' + pubId_(key); }
+/* 학생·부모 링크는 survey_report.html(선생님 「설문 결과」 링크 목록과 같은 주소). 그 화면 맨 위에 전체 진단 보고서(survey_print · Word) 단추가 있다. */
+function svLinkOf_(key) { return REPORT_BASE_URL + 'survey_report.html?student=' + pubId_(key); }
 /* 결과 탭 B열(리포트링크)은 줄마다 그 줄의 성적표다 — 시험 줄은 DT 성적표, 설문 줄은 돌아보기 진단 보고서.
    링크를 다시 쓰는 곳(병합·일괄 갱신·편집 동기화)은 모두 이것을 부른다. */
 function rowLinkOf_(key, course) { return String(course || '') === SV_COURSE ? svLinkOf_(key) : linkOf_(key); }
@@ -1988,7 +1989,7 @@ function sendSurveyMsg_(name, key) {
   return '[다원교육 영재관 · 화학 조준모]\n'
     + name + ' 학생 화학Ⅰ 18회 돌아보기 진단 보고서입니다.\n'
     + '\u00b7 18주 동안의 실제 기록과 마지막 시간 설문을 함께 분석했습니다(시험 점수가 아닙니다).\n'
-    + '아래 링크에서 보고서를 보고 Word 파일로 저장할 수 있습니다.\n'
+    + '아래 링크에서 결과를 보고, 전체 진단 보고서(Word 저장)도 열 수 있습니다.\n'
     + svLinkOf_(key);
 }
 /* 결과 시트의 각 행에 대응하는 종합 문자 배열(행 순서 1:1 유지, 숙제/빈행은 빈칸) */

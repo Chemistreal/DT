@@ -32,6 +32,8 @@ ul{margin:6px 0 0;padding-left:18px} li{margin:8px 0}
 .nt{display:block;color:var(--sub);font-size:14px}
 .th{display:block;font-size:14px;color:var(--sub)} .th b{color:var(--teal-d)}
 .muted{color:var(--faint);font-size:12.5px}
+.fullrep{display:inline-block;padding:10px 16px;border-radius:10px;background:var(--teal,#0B6E6E);color:#fff;font-weight:700;text-decoration:none}
+.fullrep:focus-visible{outline:3px solid var(--teal-line,#BFE0DD);outline-offset:2px}
 </style>
 <style id="ct-theme" data-v="4" data-fam="tool" data-seal="1">/* 이 조각은 tools/theme.py 가 넣습니다. 손으로 고치지 마세요 —
    다음 실행에서 덮어써집니다. 색을 바꾸려면 그 파일을 고치세요. */
@@ -88,7 +90,8 @@ function render(DOC,row,d,hasRec){
   const conceptLi=o=>'<li><span class="cn">'+esc(o.label)+'</span>'+(o.note?'<span class="nt">'+md(o.note)+'</span>':'')+'</li>';
   let h='<div class="card"><h1>'+esc(row.name)+' 학생의 화학1 돌아보기</h1>'+
     '<p class="lede">설문에서 고른 느낌을 그동안의 수업 기록과 함께 살펴 정리했어요. 시험 결과가 아니라, 다음 공부를 어디서부터 하면 좋을지 알려 주는 안내예요.</p>'+
-    (hasRec?'':'<p class="muted">수업 기록이 아직 이 링크와 이어지지 않아, 이번에는 설문 느낌만으로 정리했어요.</p>')+'</div>';
+    (hasRec?'':'<p class="muted">수업 기록이 아직 이 링크와 이어지지 않아, 이번에는 설문 느낌만으로 정리했어요.</p>')+
+    '<p style="margin:12px 0 0"><a class="fullrep" id="fullRep" href="survey_print.html?student='+encodeURIComponent(CODE)+'">전체 진단 보고서 보기 · Word 저장 →</a></p></div>';
   if(strong.length) h+='<div class="card sec good"><h2>자신 있고 실제로도 탄탄한 개념</h2><p class="lede">스스로도 자신 있고, 수업 기록에서도 꾸준히 잘 해낸 개념이에요.</p><div class="chips">'+strong.map(o=>'<span class="chip">'+esc(o.label)+'</span>').join('')+'</div></div>';
   if(hidden.length) h+='<div class="card sec calm"><h2>생각보다 잘하고 있는 개념</h2><p class="lede">자신은 없다고 했지만 기록을 보면 이미 잘 알고 있어요. 조금 더 믿어도 좋아요.</p><div class="chips">'+hidden.map(o=>'<span class="chip t">'+esc(o.label)+'</span>').join('')+'</div></div>';
   if(over.length) h+='<div class="card sec look"><h2>한 번 더 확인하면 좋을 개념</h2><p class="lede">자신 있다고 느끼지만, 기록을 보면 아직 흔들리는 자리예요. 짧은 정리를 한 번 읽어 보세요.</p><ul>'+over.map(conceptLi).join('')+'</ul></div>';
