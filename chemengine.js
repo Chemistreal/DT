@@ -829,9 +829,102 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     return { from: carry.from || null, to: to, rounds: (carry.rounds || []).slice(), list: list };
   }
 
+  /* ══════════════════════════════════════════════════════════
+     설문 「화학1 돌아보기」 진단 (선생님 결정 2026-10-04 · 간접 측정)
+     설문은 내용을 묻지 않는다. 설문의 느낌(자신감·생각)을 학생의 **실제 기록**과 맞댄다.
+       surveyRecord(rows, itemsOf, course)  개념 코드별 물은 횟수·맞힌 횟수·재시에서 고침
+         rows    그 학생의 행(성적표 ?student= 의 rows · 관리자 ?all=1 의 rows 를 학생으로 거른 것)
+         itemsOf (course, round) → 회차 파일(또는 jeongsi.items) · carryOver 와 같은 꼴
+         첫 응시 answers 를 items[k].c · a 와 맞댄다(빈칸도 «맞히지 못함»). 답안 길이가 다르면 그 회차는 안 센다.
+         재시 행의 retakeCids · retakeKeys 로 코드마다 «재시에서 고침»(뒤 시도가 앞 시도를 덮는다).
+       surveyDiagnose(doc, ans, rec)  doc = appdata/survey_ch1.json · ans = '1'~'5' 100자리 · rec = surveyRecord 결과
+         concept  자신감(1·2 높음 / 3 보통 / 4·5 낮음) × 기록(정답률 ≥0.8 좋음 / ≤0.6 약함 / 3회 미만 «기록 적음»)
+                  strong 강점 · over 과신 · hidden 숨은 실력 · reinforce 보강 필요 · normal 보통
+         belief   mis=true 면 1·2 가 신호(3 흔들림), mis=false 면 4·5 가 신호
+                  remain 남아 있는 오개념(신호 + 기록 약함) · intuition 직관이 흔들림(신호·흔들림만)
+                  recordWeak 기록상 약함(기록만) · fine
+         exp      묶음별 평균(1~5, 높을수록 좋은 쪽 · rev 는 뒤집는다)
+     화면이 학생·부모에게 보여 줄 때는 숫자·정답률을 싣지 않는다 — 이 함수는 판정만 준다. */
+  var SV_GOOD = 0.8, SV_WEAK = 0.6, SV_MIN_N = 3;
+  function surveyRecord(rows, itemsOf, course) {
+    course = course || 'ch1';
+    var rec = {}, byRound = {};
+    function at(c) { return rec[c] || (rec[c] = { n: 0, ok: 0, fixed: null, rounds: [] }); }
+    (rows || []).forEach(function (r) {
+      if (r && String(r.course) === course && r.round != null && !r.isTest) (byRound[Number(r.round)] || (byRound[Number(r.round)] = [])).push(r);
+    });
+    Object.keys(byRound).map(Number).sort(function (a, b) { return a - b; }).forEach(function (rd) {
+      var atts = byRound[rd].slice().sort(function (a, b) { return order(a.attempt) - order(b.attempt); });
+      var first = atts.filter(function (a) { return order(a.attempt) === 0; })[0];
+      var x = typeof itemsOf === 'function' ? itemsOf(course, rd) : (itemsOf || {})[course + '#' + rd];
+      var its = Array.isArray(x) ? x : (x && x.jeongsi && x.jeongsi.items) || null;
+      if (first && its && its.length) {
+        var ans = String(first.answers || '');
+        if (ans.length === its.length) its.forEach(function (it, k) {
+          if (!it || !it.c) return;
+          var o = at(it.c); o.n++; if (ans.charAt(k) === it.a) o.ok++;
+          if (o.rounds.indexOf(rd) < 0) o.rounds.push(rd);
+        });
+      }
+      atts.forEach(function (r) {
+        if (order(r.attempt) === 0) return;
+        var a = String(r.answers || ''), rc = String(r.retakeCids || ''), rk = String(r.retakeKeys || '');
+        var arr = rc ? rc.split(',') : [];
+        if (!(rc && rk && a && arr.length === a.length && rk.length === a.length)) return;
+        var now = {};
+        arr.forEach(function (c, k) { if (!c) return; var ok = a.charAt(k) === rk.charAt(k); if (now[c] == null) now[c] = true; if (!ok) now[c] = false; });
+        Object.keys(now).forEach(function (c) { at(c).fixed = now[c]; });
+      });
+    });
+    return rec;
+  }
+  function surveyLevel_(codes, rec) {
+    var n = 0, ok = 0, fixed = false;
+    (codes || []).forEach(function (c) { var o = (rec || {})[c]; if (!o) return; n += o.n; ok += o.ok; if (o.fixed === true) fixed = true; });
+    var rate = n ? ok / n : null;
+    var level = n < SV_MIN_N ? 'few' : rate >= SV_GOOD ? 'good' : rate <= SV_WEAK ? 'weak' : 'mid';
+    return { n: n, ok: ok, rate: rate, level: level, fixed: fixed };
+  }
+  function surveyDiagnose(doc, ans, rec) {
+    ans = String(ans || '');
+    var out = { concepts: [], beliefs: [], exp: {}, expOrder: [], counts: {} };
+    function cnt(k) { out.counts[k] = (out.counts[k] || 0) + 1; }
+    ((doc && doc.items) || []).forEach(function (it, i) {
+      var v = Number(ans.charAt(i)) || 0;
+      if (it.type === 'concept') {
+        var conf = !v ? null : v <= 2 ? 'high' : v === 3 ? 'mid' : 'low';
+        var r = surveyLevel_(it.codes, rec), vd = 'normal';
+        if (conf === 'high' && r.level === 'good') vd = 'strong';
+        else if (conf === 'high' && r.level === 'weak') vd = 'over';
+        else if (conf === 'low' && r.level === 'good') vd = 'hidden';
+        else if (conf === 'low' && r.level === 'weak') vd = 'reinforce';
+        cnt(vd);
+        out.concepts.push({ i: i, k: it.k, r: it.r, label: it.label || it.s, s: it.s, codes: it.codes || [], note: it.note || '', v: v, conf: conf, rec: r, verdict: vd });
+      } else if (it.type === 'belief') {
+        var sig = !v ? null : (it.mis !== false) ? (v <= 2 ? 'sig' : v === 3 ? 'shaky' : 'ok') : (v >= 4 ? 'sig' : v === 3 ? 'shaky' : 'ok');
+        var b = surveyLevel_(it.codes, rec), weak = b.level === 'weak', bv;
+        if (sig === 'sig' && weak) bv = 'remain';
+        else if (weak) bv = 'recordWeak';
+        else if (sig === 'sig' || sig === 'shaky') bv = 'intuition';
+        else bv = 'fine';
+        cnt(bv);
+        out.beliefs.push({ i: i, k: it.k, r: it.r, s: it.s, truth: it.truth || '', codes: it.codes || [], mis: it.mis !== false, v: v, signal: sig, rec: b, verdict: bv });
+      } else if (it.type === 'exp') {
+        var g = it.group || 'etc';
+        var e = out.exp[g] || (out.exp[g] = { group: g, name: it.gname || g, sum: 0, n: 0, avg: null, items: [] });
+        if (out.expOrder.indexOf(g) < 0) out.expOrder.push(g);
+        var sc = v ? (it.rev ? v : 6 - v) : null;
+        if (sc != null) { e.sum += sc; e.n++; e.avg = e.sum / e.n; }
+        e.items.push({ i: i, k: it.k, s: it.s, rev: !!it.rev, v: v, score: sc });
+      }
+    });
+    return out;
+  }
+
   // ---------- export (Node + 브라우저) ----------
   var api = {
     carryOver: carryOver, COURSE_LINK: COURSE_LINK, carryView: carryView,
+    surveyRecord: surveyRecord, surveyDiagnose: surveyDiagnose, SV_GOOD: SV_GOOD, SV_WEAK: SV_WEAK, SV_MIN_N: SV_MIN_N,
     focusCourse: focusCourse, COURSE_ORDER: COURSE_ORDER,
     norm: norm, studentKey: studentKey, axisOf: axisOf, axisName: axisName, AXES: AXES,
     gradeAttempt: gradeAttempt, notCorrectConcepts: notCorrectConcepts,

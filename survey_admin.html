@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chemistreal · 화학1 돌아보기 결과 (관리자)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"></noscript>
+<style>
+:root{
+  --paper:#FAFAF7; --surface:#FFFFFF; --ink:#16202E; --sub:#5F6D7C; --faint:#626D7B;
+  --line:#E7E8E2; --line2:#EEF0EA;
+  --teal:#0B6E6E; --teal-d:#0A5A5A; --teal-soft:#E4F0EF; --teal-line:#BFE0DD;
+  --o:#1B8A4C; --o-bg:#E7F5EC; --x:#C0392B; --x-bg:#FBEBE9;
+  --brass:#A9853C; --brass-soft:#F5EEDF;
+  --shadow:0 1px 2px rgba(16,32,46,.04), 0 6px 20px rgba(16,32,46,.04);
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font-family:'Pretendard',system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:960px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-inset-bottom))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0;box-shadow:var(--shadow);min-width:0}
+h1{font-size:20px;margin:.1em 0 .2em} h2{font-size:15px;margin:0 0 8px;color:var(--teal-d)}
+.lede{color:var(--sub);font-size:13.5px;margin:.2em 0 .6em}
+.muted{color:var(--faint);font-size:12.5px}
+button,a.btn{font-family:inherit;cursor:pointer;border:0;border-radius:10px;font-size:14px;font-weight:700;padding:9px 13px;background:var(--teal);color:#fff;text-decoration:none;display:inline-block}
+button.ghost,a.btn.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line);font-weight:600}
+button.sm{font-size:12.5px;padding:6px 9px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tabs button{background:var(--line2);color:var(--sub)} .tabs button.sel{background:var(--teal);color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+label{font-size:12.5px;color:var(--sub);font-weight:600}
+input,select{font-family:inherit;font-size:15px;padding:9px 10px;border:1.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);min-width:0}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line2);padding:6px 6px;text-align:left;vertical-align:top}
+th{color:var(--sub);font-weight:700;white-space:nowrap}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line2);min-width:80px}
+.bar i{display:block;height:100%}
+.det{background:var(--paper);border-radius:10px;padding:10px;margin:6px 0}
+.det li{margin:3px 0;font-size:13px}
+/* 종이 응답 입력 — 키보드로 차례로 친다. 아래 표는 인쇄 OMR 과 같은 4열 × 25행 */
+#enKeys{width:100%;font-size:18px;font-family:ui-monospace,monospace;letter-spacing:.08em;border:2px solid var(--teal);background:var(--teal-soft)}
+#enKeys:focus{outline:none;box-shadow:0 0 0 3px var(--teal-line)}
+.omr{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.omr .col{flex:1 1 150px;min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.orow{display:flex;align-items:center;gap:8px;padding:2px 10px;cursor:pointer;font-variant-numeric:tabular-nums}
+.orow.alt{background:var(--line2)} .orow.ten{border-bottom:2px solid var(--ink)}
+.orow .no{width:30px;font-size:12px;font-weight:800;color:var(--sub)}
+.orow .v{font-size:16px;font-weight:800;font-family:ui-monospace,monospace;color:var(--teal-d);min-width:1ch}
+.orow.cur{outline:2px solid var(--brass);outline-offset:-2px;background:var(--brass-soft)}
+.orow.miss{box-shadow:inset 3px 0 0 var(--x)} .orow.miss .no{color:var(--x)}
+.sum{font-family:ui-monospace,monospace;font-size:14px;line-height:1.8;word-break:break-all}
+.bad{color:var(--x);font-weight:700}
+</style>
+<style id="ct-theme" data-v="4" data-fam="tool" data-seal="1">/* 이 조각은 tools/theme.py 가 넣습니다. 손으로 고치지 마세요 —
+   다음 실행에서 덮어써집니다. 색을 바꾸려면 그 파일을 고치세요. */
+:root{--ink:#16202E;--ink-soft:#5C5C66;--ink-faint:#706E66;--sub:#5F6D7C;--faint:#626D7B;--line:#E7E8E2;--line2:#EEF0EA;--line-strong:#D2C8B5;--paper:#FAFAF7;--card:#fff;--panel:#fff;--surface:#fff;--teal:#0B6E6E;--teal-d:#0A5A5A;--teal-soft:#E4F0EF;--teal-line:#BFE0DD;--brass:#A9853C;--brass-deep:#8A6A38;--brass-soft:#F5EEDF;/* 금색은 두 가지 일을 한다 — 글자색으로도 쓰고 흰 글씨를 얹는 단추      바탕으로도 쓴다. 원래 값(#9a7b27)은 양쪽 다 4.01:1 로 본문 기준(4.5)에      못 미쳤다. 한 단 낮춰 글자 4.77 · 단추 5.12 로 올린다. */--gold:#866A20;--o:#1B8A4C;--o-bg:#E7F5EC;--x:#C0392B;--x-bg:#FBEBE9;--bad:#b23b3b;--slate:#41595A}
+html{color-scheme:light;-webkit-text-size-adjust:100%}
+@media screen{
+  body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  ::selection{background:#0B6E6E26}
+  :focus-visible{outline:2px solid #0B6E6E;outline-offset:2px;border-radius:3px}
+  table{font-variant-numeric:tabular-nums}
+  hr{border:0;border-top:1px solid var(--line)}
+  @media (min-width:1080px){body{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='560' viewBox='0 0 520 560'%3E%3Cg fill='none' stroke='%230B6E6E' stroke-width='9' stroke-linejoin='round' opacity='0.055'%3E%3Cpath d='M260 60 L433 160 L433 360 L260 460 L87 360 L87 160 Z'/%3E%3Cpath d='M260 120 L381 190 L381 330 L260 400 L139 330 L139 190 Z'/%3E%3Cpath d='M260 60 L260 0 M433 160 L485 130 M433 360 L485 390 M260 460 L260 520 M87 360 L35 390 M87 160 L35 130'/%3E%3C/g%3E%3Cg fill='%230B6E6E' opacity='0.05'%3E%3Ccircle cx='260' cy='60' r='17'/%3E%3Ccircle cx='433' cy='160' r='17'/%3E%3Ccircle cx='433' cy='360' r='17'/%3E%3Ccircle cx='260' cy='460' r='17'/%3E%3Ccircle cx='87' cy='360' r='17'/%3E%3Ccircle cx='87' cy='160' r='17'/%3E%3C/g%3E%3C/svg%3E");background-repeat:no-repeat;background-attachment:fixed;background-position:right -110px top 90px;background-size:520px 560px}}
+  header .logo{letter-spacing:.16em;font-weight:700}
+  header::after{content:'';display:block;height:3px;margin-top:16px;border-radius:2px;background:linear-gradient(90deg,#0B6E6E 0%,#0B6E6E66 34%,#0B6E6E00 76%)}
+}</style>
+</head><body>
+<div class="wrap" id="app"><div class="card"><p class="muted">불러오는 중…</p></div></div>
+<script src="chemengine.js"></script>
+<script>
+/* 「화학1 돌아보기」 설문 결과 — 선생님 화면. 학생 화면(survey.html)과 달리 판정이 보인다.
+   판정은 chemengine.js 의 surveyRecord · surveyDiagnose(개인 결과·인쇄 보고서와 같은 함수)로 한다:
+   설문 느낌을 학생의 실제 화학1 기록(?all=1 의 행 · 회차 파일)과 맞댄다.
+   종이 응답 입력(?entry=1 · index.html 화학1 회차 목록 끝 «돌아보기» 칸)은 키보드로 1번부터 차례로 친다.
+   저장은 kind:'survey'(src:'paper') — 시험 결과 탭과 섞이지 않는다. */
+const SAVE_URL='https://script.google.com/macros/s/AKfycbzvFaPXgEgCBQ8HowtP8tPTtdiIVFtmZSUf0KFXUOVOh3ektrFMkz4KSR4I52LDBzB8rw/exec';
+const LINK_BASE='https://chemistreal.github.io/DT/';
+const QS=new URLSearchParams(location.search);
+const IS_TEST=QS.get('test')==='1';
+function admTok(){ var t=''; try{ t=localStorage.getItem('dt_admtok')||''; }catch(e){} return (t||'').trim(); }   /* admin.html 과 같은 관리자 문(전체 공개 모드) */
+function $(s){ return document.querySelector(s); }
+function esc(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function md(t){ return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'); }
+let DOC=null, SROWS=null, ALL=null, ROUNDS={}, tab=QS.get('entry')==='1'?'entry':'class', showTest=false, openKey=null, loadErr='', PDFS=[];
+const VCOL={strong:'#1B8A4C',over:'#C0392B',hidden:'#0B6E6E',reinforce:'#A9853C',normal:'#C9CDC4'};
+
+async function getJSON(u){ const r=await fetch(u,{cache:'no-store'}); if(!r.ok) throw new Error(String(r.status)); return await r.json(); }
+async function boot(){
+  try{ DOC=await getJSON('appdata/survey_ch1.json'); }catch(e){ $('#app').innerHTML='<div class="card"><h1>설문 파일을 못 읽었습니다</h1></div>'; return; }
+  render();
+  checkPdfs();
+  await loadServer();
+}
+/* 인쇄물은 따로 만들어 루트에 둔다. 없으면 단추를 숨긴다. */
+async function checkPdfs(){
+  const L=[['survey_ch1_form.pdf','인쇄용 설문지'],['survey_ch1_omr.pdf','OMR 응답지'],['survey_ch1_notes.pdf','정리 노트']];
+  const got=[];
+  for(const [f,n] of L){ try{ const r=await fetch(f,{method:'HEAD',cache:'no-store'}); if(r.ok) got.push([f,n]); }catch(e){} }
+  PDFS=got; const el=$('#pdfs'); if(el) el.innerHTML=pdfHTML();
+}
+function pdfHTML(){ return PDFS.map(p=>'<a class="btn ghost" href="'+p[0]+'" download>'+esc(p[1])+' PDF</a>').join(' '); }
+async function loadServer(){
+  loadErr='';
+  const t=encodeURIComponent(admTok());
+  for(let i=0;i<3;i++){
+    try{
+      const a=await getJSON(SAVE_URL+'?action=survey&survey='+encodeURIComponent(DOC.id)+'&token='+t+'&t='+Date.now());
+      if(a&&a.ok===false){ loadErr=a.error==='auth'?'관리자 코드가 맞지 않습니다.':'설문 기록을 못 읽었습니다.'; break; }
+      SROWS=(a&&a.rows)||[];
+      const b=await getJSON(SAVE_URL+'?all=1&token='+t+'&t='+Date.now());
+      ALL=(b&&b.rows)||[];
+      break;
+    }catch(e){ loadErr='서버에 닿지 못했습니다.'; if(i<2) await new Promise(z=>setTimeout(z,700*(i+1))); }
+  }
+  if(SROWS){ loadErr=''; await loadRounds(); }
+  if(tab==='entry'){ const s=$('#enStuList'); if(s) s.innerHTML=stuOptions(); }   // 입력 중에는 화면을 다시 그리지 않는다(입력 칸 초점 유지)
+  else render();
+}
+async function loadRounds(){
+  const need={};
+  (ALL||[]).forEach(r=>{ if(String(r.course)==='ch1'&&r.round) need[Number(r.round)]=1; });
+  await Promise.all(Object.keys(need).map(async rd=>{ try{ ROUNDS[rd]=await getJSON('appdata/round_ch1_'+String(rd).padStart(2,'0')+'.json'); }catch(e){} }));
+}
+/* 학생마다 한 줄(같은 학생 · 같은 설문은 서버가 이미 한 줄로 둔다. 테스트 행은 토글로만) */
+function students(){
+  return (SROWS||[]).filter(r=>showTest||!r.isTest).map(r=>{
+    const rows=(ALL||[]).filter(x=>x.studentKey===r.studentKey);
+    const rec=ChemEngine.surveyRecord(rows,(c,rd)=>ROUNDS[rd]||null,'ch1');
+    return { row:r, rec:rec, d:ChemEngine.surveyDiagnose(DOC,r.ans,rec), link:r.code?LINK_BASE+'survey_report.html?student='+r.code:'' };
+  });
+}
+function setTab(t){ tab=t; render(); }
+function render(){
+  if(!DOC) return;
+  let h='<div class="card"><h1>'+esc(DOC.title)+' · 결과</h1><p class="lede">설문 느낌(자신감·생각)을 학생의 실제 화학1 기록과 맞댄 판정입니다. 학생 화면에는 판정이 보이지 않습니다.</p>'+
+    '<div class="tabs"><button class="'+(tab==='class'?'sel':'')+'" onclick="setTab(\'class\')">반 요약</button><button class="'+(tab==='students'?'sel':'')+'" onclick="setTab(\'students\')">학생별</button><button id="tabEntry" class="'+(tab==='entry'?'sel':'')+'" onclick="setTab(\'entry\')">종이 응답 입력</button></div>'+
+    '<div class="row"><label><input type="checkbox" id="tt" aria-label="테스트 행 포함" '+(showTest?'checked':'')+' onchange="showTest=this.checked;render()"> 테스트 행 포함</label>'+
+    '<button class="ghost sm" onclick="csvAll()">CSV 내려받기</button><button class="ghost sm" onclick="csvLinks()">링크 목록 CSV</button><button class="ghost sm" onclick="SROWS=null;render();loadServer()">새로 읽기</button></div>'+
+    '<div class="row" id="pdfs" style="margin-top:6px">'+pdfHTML()+'</div></div>';
+  if(tab==='entry') h+=entryView();
+  else if(loadErr) h+='<div class="card"><p class="bad">'+esc(loadErr)+'</p><button onclick="loadServer()">다시 읽기</button></div>';
+  else if(!SROWS) h+='<div class="card"><p class="muted">시트에서 읽는 중…</p></div>';
+  else h+= tab==='class'?classView():studentsView();
+  $('#app').innerHTML=h;
+  if(tab==='entry') entryAfter();
+}
+function pct(a,b){ return b?Math.round(100*a/b)+'%':'—'; }
+function classView(){
+  const S=students(), N=S.length;
+  if(!N) return '<div class="card"><p class="muted">아직 제출이 없습니다.</p></div>';
+  const con=DOC.items.map((it,i)=>({it,i})).filter(x=>x.it.type==='concept').map(x=>{
+    const c={label:x.it.label||x.it.s,strong:0,over:0,hidden:0,reinforce:0,normal:0,few:0};
+    S.forEach(s=>{ const o=s.d.concepts.find(y=>y.i===x.i); if(!o) return; c[o.verdict]++; if(o.rec.level==='few') c.few++; });
+    return c; }).sort((a,b)=>b.over-a.over||b.reinforce-a.reinforce);
+  const bel=DOC.items.map((it,i)=>({it,i})).filter(x=>x.it.type==='belief').map(x=>{
+    const c={s:x.it.s,truth:x.it.truth||'',remain:0,intuition:0,recordWeak:0,fine:0};
+    S.forEach(s=>{ const o=s.d.beliefs.find(y=>y.i===x.i); if(o) c[o.verdict]++; });
+    return c; }).sort((a,b)=>b.remain-a.remain||b.intuition-a.intuition);
+  const groups={}; S.forEach(s=>s.d.expOrder.forEach(g=>{ const e=s.d.exp[g]; const G=groups[g]||(groups[g]={name:e.name,sum:0,n:0}); if(e.avg!=null){ G.sum+=e.avg; G.n++; } }));
+  const diff=DOC.items.map((it,i)=>({it,i})).filter(x=>x.it.type==='exp'&&x.it.group==='difficulty').map(x=>{
+    let a=0; S.forEach(s=>{ const v=Number(s.row.ans.charAt(x.i)); if(v&&v<=2) a++; }); return {s:x.it.s,a}; }).sort((p,q)=>q.a-p.a);
+  return '<div class="card"><h2>학생 '+N+'명</h2><p class="muted">강점 = 자신감 높음 + 기록 좋음(정답률 ≥ '+ChemEngine.SV_GOOD*100+'%) · 과신 = 자신감 높음 + 기록 약함(≤ '+ChemEngine.SV_WEAK*100+'%) · 숨은 실력 = 자신감 낮음 + 기록 좋음 · 보강 필요 = 낮음 + 약함 · 기록 '+ChemEngine.SV_MIN_N+'회 미만은 «보통»으로 둡니다. 생각 문항: 흔한 오개념 직관에 «그렇다»(맞는 직관이면 «아니다») + 기록 약함 = 남은 오개념.</p></div>'+
+    '<div class="card"><h2>경험 묶음 평균 (1~5, 높을수록 좋은 쪽)</h2><table><tr><th scope="col">묶음</th><th scope="col">평균</th></tr>'+
+      Object.keys(groups).map(g=>'<tr><td>'+esc(groups[g].name)+'</td><td class="n">'+(groups[g].n?(groups[g].sum/groups[g].n).toFixed(2):'—')+'</td></tr>').join('')+'</table>'+
+      (diff.length?'<h2 style="margin-top:12px">어려웠다고 한 것(그렇다 이상)</h2><table><tr><th scope="col">문항</th><th scope="col">학생</th></tr>'+diff.map(x=>'<tr><td>'+esc(x.s)+'</td><td class="n">'+x.a+'명 · '+pct(x.a,N)+'</td></tr>').join('')+'</table>':'')+'</div>'+
+    '<div class="card"><h2>개념별 — 과신 학생 수 순</h2><div class="tw"><table id="conTable"><tr><th scope="col">개념</th><th scope="col">과신</th><th scope="col">보강</th><th scope="col">강점</th><th scope="col">숨은 실력</th><th scope="col">기록 적음</th><th scope="col"></th></tr>'+
+      con.map(c=>'<tr><td>'+esc(c.label)+'</td><td class="n">'+c.over+'</td><td class="n">'+c.reinforce+'</td><td class="n">'+c.strong+'</td><td class="n">'+c.hidden+'</td><td class="n">'+c.few+'</td><td>'+bar(c,N)+'</td></tr>').join('')+'</table></div></div>'+
+    '<div class="card"><h2>생각 문항 — 남아 있는 오개념 순</h2><div class="tw"><table id="belTable"><tr><th scope="col">문장</th><th scope="col">남은 오개념</th><th scope="col">직관 흔들림</th><th scope="col">기록상 약함</th><th scope="col">실제로는</th></tr>'+
+      bel.map(c=>'<tr><td>'+esc(c.s)+'</td><td class="n">'+c.remain+'</td><td class="n">'+c.intuition+'</td><td class="n">'+c.recordWeak+'</td><td class="muted">'+esc(c.truth)+'</td></tr>').join('')+'</table></div></div>';
+}
+function bar(c,N){ return '<div class="bar" title="강점·과신·숨은 실력·보강·보통">'+['strong','over','hidden','reinforce','normal'].map(k=>c[k]?'<i style="width:'+(100*c[k]/N)+'%;background:'+VCOL[k]+'"></i>':'').join('')+'</div>'; }
+function studentsView(){
+  const S=students();
+  if(!S.length) return '<div class="card"><p class="muted">아직 제출이 없습니다.</p></div>';
+  return '<div class="card"><div class="tw"><table id="stuTable"><tr><th scope="col">학생</th><th scope="col">강점</th><th scope="col">과신</th><th scope="col">숨은</th><th scope="col">보강</th><th scope="col">남은 오개념</th><th scope="col">걸린 시간</th><th scope="col"></th></tr>'+
+    S.map((s,ix)=>{ const r=s.row, c=s.d.counts, k=r.studentKey+(r.isTest?'#t':'');
+      return '<tr><td><b>'+esc(r.name)+'</b> <span class="muted">'+esc(r.school)+(r.year?' '+esc(r.year):'')+(r.src==='paper'?' · 종이':'')+(r.isTest?' · 테스트':'')+'</span></td>'+
+        ['strong','over','hidden','reinforce','remain'].map(v=>'<td class="n">'+(c[v]||0)+'</td>').join('')+
+        '<td class="n">'+(r.ms?Math.round(r.ms/60000)+'분':'—')+'</td>'+
+        '<td style="white-space:nowrap"><button class="ghost sm" onclick="toggleOpen('+ix+')">자세히</button> '+
+        (s.link?'<button class="sm" onclick="copyLink('+ix+')">링크 복사</button>':'')+'</td></tr>'+
+        (openKey===k?'<tr><td colspan="8">'+detail(s)+'</td></tr>':'');
+    }).join('')+'</table></div></div>';
+}
+function toggleOpen(ix){ const s=students()[ix]; if(!s) return; const k=s.row.studentKey+(s.row.isTest?'#t':''); openKey=openKey===k?null:k; render(); }
+function detail(s){
+  const d=s.d, li=(arr,f)=>arr.length?'<ul>'+arr.map(f).join('')+'</ul>':'<p class="muted">없음</p>';
+  const recTxt=o=>o.rec.n?(' <span class="muted">(기록 '+o.rec.ok+'/'+o.rec.n+(o.rec.fixed?' · 재시에서 고침':'')+')</span>'):' <span class="muted">(기록 없음)</span>';
+  const pick=v=>d.concepts.filter(o=>o.verdict===v);
+  const groups=d.expOrder.map(g=>esc(d.exp[g].name)+' '+(d.exp[g].avg!=null?d.exp[g].avg.toFixed(1):'—')).join(' · ');
+  return '<div class="det"><p><b>경험 묶음</b> '+groups+'</p>'+
+    '<p><b>과신(자신감 높음 · 기록 약함)</b></p>'+li(pick('over'),o=>'<li>'+esc(o.label)+recTxt(o)+(o.note?'<br><span class="muted">'+md(o.note)+'</span>':'')+'</li>')+
+    '<p><b>남아 있는 오개념(생각 + 기록)</b></p>'+li(d.beliefs.filter(o=>o.verdict==='remain'),o=>'<li>'+esc(o.s)+recTxt(o)+'<br><span class="muted">실제로는 '+esc(o.truth)+'</span></li>')+
+    '<p><b>보강 필요</b></p>'+li(pick('reinforce'),o=>'<li>'+esc(o.label)+recTxt(o)+'</li>')+
+    '<p><b>숨은 실력</b></p>'+li(pick('hidden'),o=>'<li>'+esc(o.label)+recTxt(o)+'</li>')+
+    '<p><b>강점</b></p>'+li(pick('strong'),o=>'<li>'+esc(o.label)+'</li>')+
+    '<p><b>직관이 흔들림(기록은 괜찮음)</b></p>'+li(d.beliefs.filter(o=>o.verdict==='intuition'),o=>'<li>'+esc(o.s)+'</li>')+
+    (s.link?'<p class="muted">개인 링크: '+esc(s.link)+'</p>':'')+'</div>';
+}
+async function copyText(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ try{ prompt('복사해 쓰세요',t); }catch(e2){} return false; } }
+async function copyLink(ix){ const s=students()[ix]; if(!s||!s.link) return; const ok=await copyText(s.link); if(ok) alert(s.row.name+' 학생 링크를 복사했습니다.'); }
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function saveCsv(name,lines){
+  const blob=new Blob(['﻿'+lines.map(r=>r.map(csvCell).join(',')).join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500);
+}
+function csvAll(){
+  const S=students(); const head=['이름','학교','학년','출처','테스트','시각','걸린시간(분)','강점','과신','숨은실력','보강필요','남은오개념','직관흔들림','링크'].concat(DOC.items.map(x=>x.k));
+  saveCsv('survey_'+DOC.id+'.csv',[head].concat(S.map(s=>{ const r=s.row,c=s.d.counts;
+    return [r.name,r.school,r.year,r.src||'web',r.isTest?'TEST':'',r.date,r.ms?Math.round(r.ms/60000):'',c.strong||0,c.over||0,c.hidden||0,c.reinforce||0,c.remain||0,c.intuition||0,s.link].concat(r.ans.split('')); })));
+}
+function csvLinks(){ saveCsv('survey_links_'+DOC.id+'.csv',[['이름','학교','학년','링크']].concat(students().filter(s=>!s.row.isTest).map(s=>[s.row.name,s.row.school,s.row.year,s.link]))); }
+
+/* ── 종이 응답 입력 ──────────────────────────────────────────────
+   입력 칸 하나에 초점을 두고 숫자 1~5 를 치면 1번부터 차례로 채워지고 다음 번호로 간다.
+   백스페이스는 한 칸 뒤로(그 칸을 비운다), 다른 키는 무시, 100자리 붙여 넣기도 받는다.
+   아래 표는 인쇄 OMR 과 같은 4열 × 25행(5문항마다 바탕 번갈아 · 10문항마다 굵은 선). */
+let EN=null;
+function enBlank(){ return { name:QS.get('name')||'', school:QS.get('school')||'', grade:QS.get('grade')||'', ans:DOC.items.map(()=>''), cur:0, step:'keys', showMiss:false, msg:'' }; }
+function enLoad(){ try{ const v=JSON.parse(localStorage.getItem('dt_survey_entry')||'null'); if(v&&Array.isArray(v.ans)&&v.ans.length===DOC.items.length){ if(v.step!=='confirm') v.step='keys'; return v; } }catch(e){} return null; }
+function enSave(){ try{ localStorage.setItem('dt_survey_entry',JSON.stringify(EN)); }catch(e){} }
+function knownStudents(){ const m={}; (ALL||[]).forEach(r=>{ if(r.isTest||!r.studentKey||String(r.course)!=='ch1') return; m[r.studentKey]={name:r.name,school:r.school,year:r.year}; });
+  (SROWS||[]).forEach(r=>{ if(!r.isTest) m[r.studentKey]={name:r.name,school:r.school,year:r.year}; });
+  return Object.keys(m).map(k=>m[k]).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko')); }
+function stuOptions(){ return knownStudents().map(s=>'<option value="'+esc(s.name)+' · '+esc(s.school)+(s.year?' · '+esc(s.year):'')+'"></option>').join(''); }
+function entryView(){
+  if(!EN) EN=enLoad()||enBlank();
+  const n=DOC.items.length;
+  if(EN.step==='confirm'){
+    const s=EN.ans.join(''); let lines=''; for(let i=0;i<n;i+=10) lines+='<div><span class="muted">'+(i+1)+'–'+(i+10)+'</span> '+s.slice(i,i+5)+' '+s.slice(i+5,i+10)+'</div>';
+    return '<div class="card" id="confirm"><h2>저장 전 확인</h2><p><b>'+esc(EN.name)+'</b> · '+esc(EN.school)+(EN.grade?' · '+esc(EN.grade):'')+(IS_TEST?' · 테스트':'')+'</p>'+
+      '<div class="sum">'+lines+'</div><p class="muted">종이와 한 줄씩 맞춰 보세요. 같은 학생이 이미 냈으면 이 답으로 바뀝니다.</p>'+
+      '<div class="row"><button class="ghost" onclick="EN.step=\'keys\';render()">← 고치기</button><button id="enSave" onclick="enSubmit()">저장</button></div>'+(EN.msg?'<p>'+EN.msg+'</p>':'')+'</div>';
+  }
+  if(EN.step==='saved') return '<div class="card"><h2>저장했습니다</h2><p>'+esc(EN.name)+' 학생 종이 응답을 「설문」 탭에 넣었습니다(시험 결과와는 따로).</p><button id="enNext" onclick="enNext()">다음 학생</button></div>';
+  let cols='';
+  for(let c=0;c<4;c++){
+    let rows='';
+    for(let r=0;r<25;r++){ const i=c*25+r; if(i>=n) break;
+      rows+='<div class="orow'+((Math.floor(r/5)%2)?' alt':'')+((r%10===9)?' ten':'')+'" id="o'+i+'" onclick="enGo('+i+')"><span class="no">'+(i+1)+'</span><span class="v"></span></div>'; }
+    cols+='<div class="col">'+rows+'</div>';
+  }
+  return '<div class="card"><h2>학생</h2>'+
+    '<div class="row"><input id="enName" aria-label="이름" placeholder="이름 (명단에서 고르면 학교·학년이 채워집니다)" list="enStuList" value="'+esc(EN.name)+'" oninput="enName(this.value)" style="flex:2 1 160px">'+
+    '<datalist id="enStuList">'+stuOptions()+'</datalist>'+
+    '<input id="enSchool" aria-label="학교" placeholder="학교" value="'+esc(EN.school)+'" oninput="EN.school=this.value;enSave()" style="flex:1 1 110px">'+
+    '<input id="enGrade" aria-label="학년" placeholder="학년" value="'+esc(EN.grade)+'" oninput="EN.grade=this.value;enSave()" style="flex:0 1 70px"></div></div>'+
+    '<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">답 <span id="enCnt"></span></h2><span class="muted">1~5 를 차례로 · 백스페이스 = 한 칸 뒤로 · 다른 키는 무시</span></div>'+
+    '<input id="enKeys" aria-label="답 입력 — 숫자 1~5 를 1번부터 차례로" autocomplete="off" inputmode="numeric" placeholder="여기를 누르고 1번부터 숫자를 치세요">'+
+    '<div class="row" style="margin-top:8px"><input id="enPaste" aria-label="100자리 답 붙여 넣기" placeholder="100자리 붙여 넣기 (1~5)" style="flex:1 1 220px"><button class="ghost sm" onclick="enPaste()">붙여 넣기</button><button class="ghost sm" onclick="enClear()">모두 지우기</button></div>'+
+    '<p id="enMsg" class="bad">'+(EN.msg||'')+'</p>'+
+    '<div class="omr" id="omr">'+cols+'</div>'+
+    '<div class="row" style="margin-top:12px"><button id="enCheck" onclick="enCheck()">확인 →</button></div></div>';
+}
+/* 표는 다시 그리지 않고 칸만 고친다 — 다시 그리면 입력 칸이 초점을 잃는다. */
+function enPaint(){
+  if(!EN||EN.step!=='keys') return;
+  const n=DOC.items.length;
+  for(let i=0;i<n;i++){ const el=$('#o'+i); if(!el) continue; el.querySelector('.v').textContent=EN.ans[i]||''; el.classList.toggle('cur',i===EN.cur); el.classList.toggle('miss',EN.showMiss&&!EN.ans[i]); }
+  const c=$('#enCnt'); if(c) c.textContent=EN.ans.filter(Boolean).length+'/'+n;
+  const k=$('#enKeys'); if(k) k.value=EN.ans.map(v=>v||'·').join('').replace(/·+$/,'');
+  const m=$('#enMsg'); if(m) m.innerHTML=EN.msg||'';
+}
+function entryAfter(){
+  if(!EN||EN.step!=='keys') return;
+  enPaint();
+  const k=$('#enKeys'); if(!k) return;
+  k.addEventListener('keydown',enKey);
+  k.addEventListener('paste',function(e){ e.preventDefault(); const t=(e.clipboardData&&e.clipboardData.getData('text'))||''; enFill(t); });
+  k.addEventListener('beforeinput',function(e){ e.preventDefault(); });   // 칸의 글자는 이 화면이 쓴다 — 자판이 직접 넣는 것은 막는다
+  if(EN.name&&EN.school) k.focus();
+}
+function enKey(e){
+  if(e.ctrlKey||e.metaKey||e.altKey) return;            // 붙여 넣기(Ctrl+V) 등은 그대로
+  if(e.key==='Tab') return;
+  e.preventDefault();
+  const n=DOC.items.length;
+  if(/^[1-5]$/.test(e.key)){
+    EN.ans[EN.cur]=e.key; EN.msg='';
+    if(EN.cur<n-1) EN.cur++;
+    enSave(); enPaint(); scrollCur();
+    if(EN.ans.every(Boolean)) enCheck();
+  } else if(e.key==='Backspace'){
+    if(EN.ans[EN.cur]&&EN.cur===n-1){ EN.ans[EN.cur]=''; }                  // 마지막 칸은 그 자리를 비운다
+    else { EN.cur=Math.max(0,EN.cur-1); EN.ans[EN.cur]=''; }
+    enSave(); enPaint(); scrollCur();
+  }
+}
+function scrollCur(){ const el=$('#o'+EN.cur); if(el&&el.scrollIntoView) el.scrollIntoView({block:'nearest'}); }
+function enGo(i){ EN.cur=i; enSave(); enPaint(); const k=$('#enKeys'); if(k) k.focus(); }
+function enName(v){
+  EN.name=v;
+  const m=/^(.+?) · (.+?)(?: · (.+))?$/.exec(v);       // 명단에서 고른 «이름 · 학교 · 학년»
+  if(m){ EN.name=m[1]; EN.school=m[2]; EN.grade=m[3]||EN.grade; const a=$('#enName'),b=$('#enSchool'),c=$('#enGrade'); if(a) a.value=EN.name; if(b) b.value=EN.school; if(c) c.value=EN.grade; const k=$('#enKeys'); if(k) k.focus(); }
+  enSave();
+}
+function enFill(raw){
+  raw=String(raw||'').replace(/[\s,]/g,'');
+  const n=DOC.items.length;
+  if(!new RegExp('^[1-5]{'+n+'}$').test(raw)){ EN.msg='붙여 넣은 답이 '+n+'자리 1~5 가 아닙니다(지금 '+raw.length+'자리'+(/[^1-5]/.test(raw)?', 1~5 밖 글자 있음':'')+'). 넣지 않았습니다.'; enPaint(); return false; }
+  EN.ans=raw.split(''); EN.cur=n-1; EN.msg=''; enSave(); enPaint(); return true;
+}
+function enPaste(){ const el=$('#enPaste'); if(enFill(el?el.value:'')) enCheck(); }
+function enClear(){ if(!confirm('입력한 답을 모두 지울까요?')) return; EN.ans=DOC.items.map(()=>''); EN.cur=0; EN.showMiss=false; EN.msg=''; enSave(); enPaint(); }
+function enCheck(){
+  if(!EN.name.trim()||!EN.school.trim()){ EN.msg='이름과 학교를 넣어 주세요.'; enPaint(); return; }
+  const miss=EN.ans.map((v,i)=>v?-1:i).filter(i=>i>=0);
+  if(miss.length){ EN.showMiss=true; EN.cur=miss[0]; EN.msg='빈칸 '+miss.length+'개: '+miss.slice(0,12).map(i=>i+1).join(', ')+(miss.length>12?' …':''); enSave(); enPaint(); return; }
+  EN.showMiss=false; EN.msg=''; EN.step='confirm'; enSave(); render();
+}
+async function enSubmit(){
+  const ans=EN.ans.join('');
+  if(!new RegExp('^[1-5]{'+DOC.items.length+'}$').test(ans)){ EN.step='keys'; EN.msg='답이 '+DOC.items.length+'칸이 아닙니다.'; render(); return; }
+  const b=$('#enSave'); if(b) b.disabled=true;
+  let ok=false;
+  try{
+    const r=await fetch(SAVE_URL,{method:'POST',body:JSON.stringify({ kind:'survey', src:'paper', name:EN.name.trim(), school:EN.school.trim(), year:EN.grade.trim(),
+      studentKey:ChemEngine.studentKey(EN.name,EN.school), survey:DOC.id, ans:ans, ms:0, isTest:IS_TEST })});
+    const j=await r.json(); ok=!!(j&&j.ok); if(!ok) EN.msg='<span class="bad">저장 안 됨: '+esc((j&&j.msg)||'서버 거절')+'</span>';
+  }catch(e){ EN.msg='<span class="bad">서버에 닿지 못했습니다. 다시 눌러 주세요(답은 그대로).</span>'; }
+  if(ok){ EN.step='saved'; EN.msg=''; EN.ans=DOC.items.map(()=>''); EN.cur=0; SROWS=null; }   // 시트가 원본 — 이 기기에는 답을 남기지 않는다
+  enSave(); render();
+  if(ok) loadServer();
+}
+function enNext(){ EN=enBlank(); EN.name=''; EN.school=''; EN.grade=''; enSave(); render(); }
+boot();
+</script>
+</body></html>

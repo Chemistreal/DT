@@ -4268,6 +4268,126 @@ async function assertNoOverflow(page, label) {
       assert(!/CH1-\d/.test(all), '화면에 개념 코드가 나왔다');
       await assertNoOverflow(page, 'survey');
     });
+    /* 결과 화면: 가짜 학생 둘(1회를 다 맞힌 학생 · 다 못 맞힌 학생), 개념은 모두 «매우 그렇다», 생각 문항은 서로 반대.
+       기대값은 엔진을 부르지 않고 회차 파일에서 직접 센다. */
+    const RR = []; for (let rd = 1; rd <= 18; rd++) { const f = path.join(ROOT, 'appdata', 'round_ch1_' + String(rd).padStart(2, '0') + '.json'); if (fs.existsSync(f)) RR.push([rd, JSON.parse(fs.readFileSync(f, 'utf8')).jeongsi.items]); }
+    const n1 = {}; RR.forEach(([, its]) => its.forEach(x => { n1[x.c] = (n1[x.c] || 0) + 1; }));
+    const enough = it => (it.codes || []).reduce((a, c) => a + (n1[c] || 0), 0) >= 3;
+    const ansA = SVD.items.map(x => x.type === 'concept' ? '1' : x.type === 'belief' ? (x.mis === false ? '1' : '5') : '3').join('');
+    const ansB = SVD.items.map(x => x.type === 'concept' ? '1' : x.type === 'belief' ? (x.mis === false ? '5' : '1') : '3').join('');
+    const flip = a => a === 'O' ? 'X' : 'O';
+    const FAKE = {
+      survey: [
+        { date: '2026-10-04', studentKey: '가상중-학생가', name: '학생가', school: '가상중', year: '2', survey: SVD.id, ans: ansA, ms: 600000, isTest: false, src: 'web', code: 'codea1' },
+        { date: '2026-10-04', studentKey: '가상중-학생나', name: '학생나', school: '가상중', year: '2', survey: SVD.id, ans: ansB, ms: 0, isTest: false, src: 'paper', code: 'codeb2' },
+        { date: '2026-10-04', studentKey: '가상중-시험행', name: '시험행', school: '가상중', year: '2', survey: SVD.id, ans: ansA, ms: 0, isTest: true, src: 'web', code: 'codet3' },
+      ],
+      /* 행은 «2개» 학생이 회차마다 한 줄 — 학생가는 다 맞힘, 학생나는 다 못 맞힘 */
+      all: [].concat(...RR.map(([rd, its]) => [
+        { studentKey: '가상중-학생가', name: '학생가', school: '가상중', course: 'ch1', round: rd, attempt: '정시', answers: its.map(x => x.a).join(''), isTest: false },
+        { studentKey: '가상중-학생나', name: '학생나', school: '가상중', course: 'ch1', round: rd, attempt: '정시', answers: its.map(x => flip(x.a)).join(''), isTest: false },
+      ])),
+    };
+    const mockAdmin = async page => page.route('**/script.google.com/**', route => {
+      const u = route.request().url();
+      const body = u.includes('action=survey') ? { ok: true, rows: FAKE.survey } : u.includes('all=1') ? { ok: true, rows: FAKE.all, excluded: [] } : { ok: true };
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    });
+    await test('survey_admin · 가짜 학생 2명으로 판정을 맞게 센다 · 테스트 행은 토글로만 · 링크 복사', async page => {
+      await mockAdmin(page);
+      await page.goto(BASE + 'survey_admin.html'); await page.waitForSelector('#conTable', { timeout: 15000 });
+      const expStrong = SVD.items.filter(x => x.type === 'concept' && enough(x)).length;
+      /* 학생나는 오개념 직관(mis)엔 «매우 그렇다», 맞는 직관엔 «전혀 아니다» — 둘 다 신호 + 기록 약함 = 남은 오개념 */
+      const expRemain = SVD.items.filter(x => x.type === 'belief' && enough(x)).length;
+      assert(expStrong > 0 && expRemain > 0, '시험 자료가 회차 파일에서 개념을 못 찾았다');
+      const head = await page.evaluate(() => document.body.innerText);
+      assert(/학생 2명/.test(head), '학생 수(테스트 행 빼고 2명)가 아니다');
+      const cls = await page.$$eval('#conTable tr', trs => trs.slice(1).map(tr => [].slice.call(tr.cells, 1, 6).map(td => Number(td.textContent))));
+      const sum = i => cls.reduce((a, r) => a + r[i], 0);
+      assert(sum(0) === expStrong && sum(2) === expStrong, '반 요약 과신·강점 합: ' + sum(0) + '/' + sum(2) + ' 기대 ' + expStrong);
+      const bels = await page.$$eval('#belTable tr', trs => trs.slice(1).map(tr => [].slice.call(tr.cells, 1, 4).map(td => Number(td.textContent))));
+      assert(bels.reduce((a, r) => a + r[0], 0) === expRemain, '남은 오개념 합: ' + bels.reduce((a, r) => a + r[0], 0) + ' 기대 ' + expRemain);
+      await page.click('.tabs button:nth-child(2)'); await page.waitForSelector('#stuTable');
+      const stu = await page.$$eval('#stuTable tr', trs => trs.slice(1).filter(tr => tr.cells.length > 2).map(tr => [tr.cells[0].textContent].concat([].slice.call(tr.cells, 1, 6).map(td => Number(td.textContent)))));
+      const A = stu.find(r => /학생가/.test(r[0])), B = stu.find(r => /학생나/.test(r[0]));
+      assert(stu.length === 2 && A && B, '학생 표(테스트 빼고 둘): ' + JSON.stringify(stu));
+      assert(A[1] === expStrong && A[2] === 0 && A[5] === 0, '학생가(다 맞힘·자신 있음) = 강점 ' + expStrong + ': ' + JSON.stringify(A));
+      assert(B[1] === 0 && B[2] === expStrong && B[5] === expRemain, '학생나(다 못 맞힘·자신 있음) = 과신 ' + expStrong + ' · 남은 오개념 ' + expRemain + ': ' + JSON.stringify(B));
+      assert(/종이/.test(B[0]), '종이 응답 표시가 없다');
+      await page.check('#tt'); await page.waitForTimeout(100);
+      assert((await page.$$eval('#stuTable tr', trs => trs.filter(tr => /시험행/.test(tr.textContent)).length)) === 1, '테스트 포함을 켜도 테스트 행이 안 나온다');
+      await page.uncheck('#tt');
+      const copied = await page.evaluate(async () => { let got = ''; navigator.clipboard.writeText = t => { got = t; return Promise.resolve(); }; window.alert = () => {}; await copyLink(0); return got; });
+      assert(/survey_report\.html\?student=code(a1|b2)$/.test(copied), '링크 복사: ' + copied);
+      await page.setViewportSize({ width: 360, height: 740 }); await page.waitForTimeout(100);
+      await assertNoOverflow(page, 'survey_admin');
+    });
+    await test('survey_report · 코드로 그 학생 것만 · 점수·정답률·«틀림» 없음 · 성적표 조회(열람 기록)를 안 부른다', async page => {
+      const urls = [];
+      const R = FAKE.all.filter(r => r.studentKey === '가상중-학생나');
+      await page.route('**/script.google.com/**', route => {
+        const u = route.request().url(); urls.push(u);
+        const body = u.includes('action=surveyOne') ? { ok: true, rows: [{ date: '2026-10-04', name: '학생나', survey: SVD.id, ans: ansB, isTest: false }], ch1: R } : { ok: false };
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      });
+      await page.goto(BASE + 'survey_report.html?student=codeb2'); await page.waitForFunction(() => /돌아보기/.test((document.querySelector('h1') || {}).textContent || ''), null, { timeout: 15000 });
+      const txt = await page.evaluate(() => document.body.innerText);
+      assert(urls.length === 1 && /action=surveyOne/.test(urls[0]) && /student=codeb2/.test(urls[0]), '부른 창구: ' + urls.join(' | '));
+      assert(/학생나/.test(txt), '이름이 없다');
+      const docText = SVD.items.map(x => [x.s, x.label, x.truth, (x.note || '').replace(/\*\*/g, '')].filter(Boolean).join('\n')).join('\n') + SVD.title;
+      const chrome = docText.split('\n').filter(Boolean).reduce((a, q) => a.split(q).join(''), txt);
+      const m = chrome.match(/점수|정답률|정답|등수|석차|틀림|틀렸|오답|오개념|신호|과신|\d+\s*%|\d+\s*점/);
+      assert(!m, '개인 결과에 «' + (m && m[0]) + '»');
+      assert(/이런 생각이 남아 있을 수 있어요/.test(txt) && /실제로는/.test(txt), '남은 생각 → 실제로는 절이 없다');
+      assert(/한 번 더 확인하면 좋을 개념/.test(txt), '확인할 개념 절이 없다');
+      await page.goto(BASE + 'survey_report.html'); await page.waitForTimeout(300);
+      assert(/링크를 확인/.test(await page.evaluate(() => document.body.innerText)), '코드 없이 열면 안내가 없다');
+      await assertNoOverflow(page, 'survey_report');
+    });
+    await test('index · 화학1 회차 끝 «돌아보기» → 종이 응답 4×25 입력 → kind:survey(시험 결과 아님)로 저장', async page => {
+      await page.goto(BASE + 'index.html?test=1'); await page.waitForSelector('.rchip');
+      await page.evaluate(() => { courseTab = 'ch1'; render(); });
+      const href = await page.$eval('#svChip', a => a.getAttribute('href'));
+      const lastIsChip = await page.evaluate(() => { const g = document.querySelector('.rgrid'); return g && g.lastElementChild && g.lastElementChild.id === 'svChip'; });
+      assert(/^survey_admin\.html\?entry=1/.test(href) && /test=1/.test(href) && lastIsChip, '회차 목록 끝에 돌아보기 칸이 없다: ' + href);
+      await page.evaluate(() => { courseTab = 'ch2'; render(); });
+      assert(!(await page.$('#svChip')), '화학2 목록에도 돌아보기 칸이 있다');
+      let body = null;
+      await page.route('**/script.google.com/**', route => {
+        if (route.request().method() === 'POST') body = JSON.parse(route.request().postData() || '{}');
+        const u = route.request().url();
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(u.includes('all=1') ? { ok: true, rows: [] } : { ok: true, rows: [] }) });
+      });
+      await page.goto(BASE + href); await page.waitForSelector('#omr');
+      const cols = await page.$$eval('#omr .col', cs => cs.map(c => { const r = c.querySelectorAll('.orow'); return [r.length, r[0].querySelector('.no').textContent]; }));
+      assert(JSON.stringify(cols) === JSON.stringify([[25, '1'], [25, '26'], [25, '51'], [25, '76']]), 'OMR 과 같은 4열×25행 표가 아니다: ' + JSON.stringify(cols));
+      await page.fill('#enName', '테스트학생'); await page.fill('#enSchool', '가상중'); await page.fill('#enGrade', '2');
+      await page.fill('#enPaste', '12345'); await page.click('text=붙여 넣기');
+      assert(/100자리/.test(await page.$eval('#enMsg', e => e.textContent)), '짧은 붙여 넣기를 막지 않았다');
+      const want = Array.from({ length: 100 }, (_, i) => String(1 + (i * 3) % 5)).join('');
+      const cnt = () => page.$eval('#enCnt', e => e.textContent);
+      await page.click('#enKeys');
+      await page.keyboard.type(want.slice(0, 10));
+      await page.keyboard.type('a7 0');                            // 다른 키는 무시
+      assert((await cnt()) === '10/100', '1~5 밖 키가 들어갔다: ' + (await cnt()));
+      await page.keyboard.type(want.slice(10, 98));
+      await page.keyboard.press('Backspace');                      // 한 칸 뒤로(98번을 비운다)
+      assert((await cnt()) === '97/100' && await page.$('#o97.cur'), '백스페이스가 한 칸 뒤로 가지 않았다: ' + (await cnt()));
+      await page.keyboard.type(want.slice(97, 98));
+      assert((await page.$eval('#o42 .v', e => e.textContent)) === want[42], '표에 친 값이 안 보인다');
+      await page.click('#enCheck');
+      assert(/빈칸 2개/.test(await page.$eval('#enMsg', e => e.textContent)) && await page.$('#o98.cur.miss'), '빈칸을 알려 주지 않았다');
+      await page.click('#enKeys');
+      await page.keyboard.type(want.slice(98));                     // 100칸이 차면 저장 전 확인으로
+      await page.waitForSelector('#confirm');
+      const conf = await page.$eval('#confirm', e => e.textContent);
+      assert(/테스트학생/.test(conf) && conf.replace(/[^1-5\n]/g, '').indexOf(want.slice(0, 5)) >= 0, '확인 화면에 이름·요약이 없다');
+      await page.click('#enSave'); await page.waitForSelector('#enNext');
+      assert(body && body.kind === 'survey' && body.src === 'paper' && body.ans === want && body.isTest === true && body.name === '테스트학생', '보낸 몸: ' + JSON.stringify(body));
+      ['score', 'pass', 'round', 'course', 'attempt', 'answers', 'correctCount', 'wrongMis'].forEach(k => assert(!(k in body), '시험 결과 칸이 실렸다: ' + k));
+      const left = await page.evaluate(() => JSON.parse(localStorage.getItem('dt_survey_entry')).ans.filter(Boolean).length);
+      assert(left === 0, '저장한 뒤에도 답이 기기에 남았다');
+    }, { adminGate: true });
     await test('survey · 보내기 실패하면 다시 보내기 단추 · 답은 남는다', async page => {
       let n = 0;
       await page.route('**/script.google.com/**', route => { n++; return n === 1 ? route.abort() : route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }); });

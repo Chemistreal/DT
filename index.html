@@ -896,7 +896,7 @@ function render(){
       <div class="tabs">${Object.keys(COURSE).map(c=>`<button class="${c===courseTab?'sel':''}" onclick="courseTab='${c}';render()">${COURSE[c]}</button>`).join('')}</div>
       <div class="rgrid">${rounds.map(r=>{const st=hist[r.course+'#'+r.round];
         const mk=st==='pass'?'<span style="position:absolute;top:3px;right:5px;color:#1f7a4d;font-size:12px;font-weight:800;line-height:1">✓</span>':st==='fail'?'<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#c0392b"></span>':'';
-        return `<div class="rchip" style="position:relative" onclick="pickRound('${r.data}')">${mk}<span class="n mono">${r.round}</span><span class="u">회</span></div>`;}).join('')}</div>
+        return `<div class="rchip" style="position:relative" onclick="pickRound('${r.data}')">${mk}<span class="n mono">${r.round}</span><span class="u">회</span></div>`;}).join('')}${courseTab==='ch1'?`<a class="rchip" id="svChip" style="text-decoration:none" title="화학1 · 추가 회차 · 돌아보기 설문(종이 응답 옮겨 넣기 — 시험 기록과 따로 저장)" href="survey_admin.html?entry=1${S.name?'&name='+encodeURIComponent(S.name)+'&school='+encodeURIComponent(S.school||'')+'&grade='+encodeURIComponent(S.grade||''):''}${TESTMODE?'&test=1':''}"><span class="n mono">+</span><span class="u">돌아보기</span></a>`:''}</div>
       ${anyHist?`<p class="note" style="margin-bottom:4px"><span style="color:#1f7a4d;font-weight:800">✓</span> 통과 · <span style="color:#c0392b">●</span> 미통과(재시 필요) · 표시 없음 안 봄</p>`:''}
       <p class="note">화학Ⅰ·Ⅱ 각 18회, 화학Ⅰ 심화·일반화학 각 10회 · 누적 OX. 통과 기준 ${MANIFEST.pass}점.</p>
       ${S.name?`<div class="btnrow"><button class="ghost" onclick="go('id')">학생 정보로</button></div>`:''}</div>`;

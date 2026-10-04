@@ -1346,6 +1346,10 @@ console.log('[설문] kind:survey 는 「설문」 탭에 · 같은 학생·설�
   const get = p => J(ctx.doGet({ parameter: p }));
   delete SHEETS['설문'];
   const A1 = '1'.repeat(50) + '5'.repeat(50), A2 = '3'.repeat(100);
+  const resN0 = SHEETS['결과']._rows.length;
+  SHEETS['결과']._rows.push(['홍길동','L',D1,85,'통과','휘문중-홍길동','휘문중','2','ch1',1,'정시',51,9,'','{}','','[]','[]','O'.repeat(60)],
+    ['홍길동','L',D2,70,'미달','휘문중-홍길동','휘문중','2','ch2',1,'정시',42,18,'','{}','','[]','[]','X'.repeat(60)]);
+  const resBefore = JSON.stringify(SHEETS['결과']._rows);
   const g0 = get({ action: 'survey', survey: 'ch1-final-2026' });
   T('탭이 없어도 읽기는 된다 · rows = [] · 탭을 만들지 않는다', g0.ok === true && Array.isArray(g0.rows) && g0.rows.length === 0 && !SHEETS['설문'], JSON.stringify(g0));
   const base = { kind: 'survey', studentKey: '아무거나', name: '홍길동', school: '휘문중학교', year: '중2', survey: 'ch1-final-2026', ans: A1, ms: 600000 };
@@ -1381,9 +1385,59 @@ console.log('[설문] kind:survey 는 「설문」 탭에 · 같은 학생·설�
   post(Object.assign({}, base, { name: '설문만', school: '가상고' }));
   const o3 = get({ action: 'surveyOne', student: ctx.pubId_('가상고-설문만') });
   T('개인 코드: 결과 탭에 없고 설문만 한 학생도 찾는다', o3.ok === true && o3.rows.length === 1 && o3.rows[0].name === '설문만', JSON.stringify(o3));
+  const res = SHEETS['결과']._rows.slice(1).map(ctx.mapRow_);
+  const want1 = res.filter(r => r.studentKey === '휘문중-홍길동' && r.course === 'ch1').length;
+  T('개인 코드: 진단용 화학1 기록(ch1)도 그 학생 것만 · 점수·통과는 안 싣는다', want1 > 0 && Array.isArray(o1.ch1) && o1.ch1.length === want1
+    && o1.ch1.every(r => r.course === 'ch1' && !('score' in r) && !('pass' in r) && !('name' in r)) && (o3.ch1 || []).length === 0, JSON.stringify(o1.ch1));
+  T('설문 저장은 시험 결과 탭(점수·통과·재시·석차의 원본)을 한 칸도 안 바꾼다', JSON.stringify(SHEETS['결과']._rows) === resBefore);
   const ob = get({ action: 'surveyOne', student: 'zzzzzzzzzzzzzz' }), oe = get({ action: 'surveyOne' });
   T('개인 코드: 틀린 코드·빈 코드는 아무것도 안 준다', ob.ok === false && !ob.rows && oe.ok === false && !oe.rows);
   delete SHEETS['설문'];
+  SHEETS['결과']._rows.length = resN0;
+}
+
+console.log('[설문 진단] chemengine surveyRecord · surveyDiagnose (문항은 파일에서)');
+{
+  const CE = require('../chemengine.js');
+  const DOC = JSON.parse(fs.readFileSync('appdata/survey_ch1.json', 'utf8'));
+  const con = DOC.items.filter(x => x.type === 'concept'), bel = DOC.items.filter(x => x.type === 'belief');
+  const cA = con[0], cB = con.find(x => x.codes.every(c => cA.codes.indexOf(c) < 0));
+  const cC = con.find(x => x !== cB && x.codes.every(c => cA.codes.indexOf(c) < 0 && cB.codes.indexOf(c) < 0));
+  const bM = bel.find(x => x.mis !== false && x.codes.every(c => cA.codes.indexOf(c) < 0 && cB.codes.indexOf(c) < 0));
+  const bT = bel.find(x => x.mis === false);
+  /* 1회: cA 코드 5문항 다 맞힘 · cB 코드 5문항 다 못 맞힘 · bM 코드 4문항 다 못 맞힘(빈칸 포함) · cC 코드 2문항(기록 적음) */
+  const its = [], ans = [];
+  const add = (code, a, got, k) => { for (let i = 0; i < k; i++) { its.push({ c: code, a: a }); ans.push(got); } };
+  add(cA.codes[0], 'O', 'O', 5); add(cB.codes[0], 'X', 'O', 5); add(bM.codes[0], 'O', 'X', 3); add(bM.codes[0], 'O', '.', 1); add(cC.codes[0], 'O', 'O', 2);
+  /* 2회: cB 코드는 첫 응시 못 맞히고 재시에서 고침 */
+  const its2 = [{ c: cB.codes[0], a: 'O' }], rows = [
+    { course: 'ch1', round: 1, attempt: '정시', answers: ans.join('') },
+    { course: 'ch1', round: 2, attempt: '정시', answers: 'X' },
+    { course: 'ch1', round: 2, attempt: '재시', answers: 'O', retakeCids: cB.codes[0], retakeKeys: 'O' },
+    { course: 'ch1', round: 3, attempt: '정시', answers: 'OO' },                     // 회차 파일과 길이가 다르면 안 센다
+    { course: 'ch2', round: 1, attempt: '정시', answers: ans.join('') },             // 다른 과목은 안 센다
+    { course: 'ch1', round: 1, attempt: '정시', answers: 'O'.repeat(its.length), isTest: true },
+  ];
+  const itemsOf = (c, rd) => (rd === 1 ? its : rd === 2 ? its2 : rd === 3 ? [{ c: cA.codes[0], a: 'O' }] : null);
+  const rec = CE.surveyRecord(rows, itemsOf, 'ch1');
+  T('기록: 코드별 물은·맞힌 횟수(첫 응시만 · 빈칸은 못 맞힘 · 다른 과목·테스트·길이 다른 회차 제외)',
+    rec[cA.codes[0]].n === 5 && rec[cA.codes[0]].ok === 5 && rec[cB.codes[0]].n === 6 && rec[cB.codes[0]].ok === 0 && rec[bM.codes[0]].n === 4 && rec[bM.codes[0]].ok === 0,
+    JSON.stringify(rec));
+  T('기록: 재시에서 고침', rec[cB.codes[0]].fixed === true && rec[cA.codes[0]].fixed === null);
+  const idx = it => DOC.items.indexOf(it);
+  const mk = set => { const a = DOC.items.map(() => '3'); Object.keys(set).forEach(i => { a[i] = set[i]; }); return a.join(''); };
+  let d = CE.surveyDiagnose(DOC, mk({ [idx(cA)]: '1', [idx(cB)]: '2', [idx(cC)]: '1', [idx(bM)]: '1', [idx(bT)]: '5' }), rec);
+  const V = it => (d.concepts.concat(d.beliefs).find(o => o.k === it.k) || {}).verdict;
+  T('판정: 자신감 높음+기록 좋음 = 강점 · 높음+약함 = 과신 · 기록 3회 미만 = 보통', V(cA) === 'strong' && V(cB) === 'over' && V(cC) === 'normal', [V(cA), V(cB), V(cC)].join(','));
+  T('판정: 오개념 직관에 «그렇다» + 기록 약함 = 남은 오개념', V(bM) === 'remain', V(bM));
+  T('판정: 맞는 직관(mis:false)에 «전혀 아니다» = 신호 → 기록이 없으면 직관 흔들림', V(bT) === 'intuition', V(bT));
+  d = CE.surveyDiagnose(DOC, mk({ [idx(cA)]: '5', [idx(cB)]: '4', [idx(bM)]: '5' }), rec);
+  T('판정: 자신감 낮음+기록 좋음 = 숨은 실력 · 낮음+약함 = 보강 필요 · 바른 생각+기록 약함 = 기록상 약함', V(cA) === 'hidden' && V(cB) === 'reinforce' && V(bM) === 'recordWeak', [V(cA), V(cB), V(bM)].join(','));
+  const exps = DOC.items.filter(x => x.type === 'exp'), g0 = exps[0].group;
+  const ex = {}; exps.forEach(x => { ex[idx(x)] = x.rev ? '5' : '1'; });
+  d = CE.surveyDiagnose(DOC, mk(ex), {});
+  T('경험: 묶음별 평균(rev 는 뒤집어 높을수록 좋은 쪽) · 묶음 이름', d.expOrder.length >= 2 && d.expOrder.every(g => d.exp[g].avg === 5) && d.exp[g0].name === exps[0].gname, JSON.stringify(d.expOrder.map(g => [g, d.exp[g].avg])));
+  T('판정 수: counts 가 목록과 같다', Object.keys(d.counts).reduce((a, k) => a + d.counts[k], 0) === con.length + bel.length);
 }
 
 console.log(`\n결과: pass=${pass} fail=${fail}`);

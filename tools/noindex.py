@@ -49,7 +49,8 @@ PERSONAL = {
     # 학생별 진단을 그린다. 셋 다 암호를 묻지 않고 주소만 알면 열린다.
     'dt': ['report.html', 'parent_report.html', 'OX_grader.html',
            'OX_grader_prescription.html', 'hw_grader.html',
-           'roster.html', 'pending.html', 'admin.html'],
+           'roster.html', 'pending.html', 'admin.html',
+           'survey_admin.html', 'survey_report.html'],
     'kmchc': ['report.html', 'answers.html',
               '리포트_고급_미리보기.html', '리포트링크생성기.html'],
 }

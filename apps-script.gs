@@ -817,7 +817,15 @@ function surveyOne_(code, sid) {
   var mine = rows.filter(function (x) { return x.studentKey === key && (!sid || x.survey === String(sid)); });
   var hasReal = mine.some(function (x) { return !x.isTest; });
   if (hasReal) mine = mine.filter(function (x) { return !x.isTest; });
-  return { ok: true, rows: mine.map(function (x) { return { date: x.date, name: x.name, survey: x.survey, ans: x.ans, isTest: x.isTest }; }) };
+  /* 진단에 쓰는 이 학생의 화학1 기록(첫 응시 답안·재시 서명만). ?student= 성적표 조회를 따로 부르지 않게 —
+     그 길은 «성적표 열람» 으로 세어진다(logView_). 점수·통과는 싣지 않는다. */
+  var ch1 = [];
+  try {
+    var data = sheet_().getDataRange().getValues(); data.shift();
+    ch1 = data.map(mapRow_).filter(function (r) { return r.studentKey === key && String(r.course) === 'ch1'; })
+      .map(function (r) { return { course: 'ch1', round: r.round, attempt: r.attempt, answers: r.answers, retakeCids: r.retakeCids, retakeKeys: r.retakeKeys, isTest: r.isTest }; });
+  } catch (e) { ch1 = []; }
+  return { ok: true, rows: mine.map(function (x) { return { date: x.date, name: x.name, survey: x.survey, ans: x.ans, isTest: x.isTest }; }), ch1: ch1 };
 }
 
 /* 명단 조회(반 코드 또는 관리자 코드). exam 드롭다운, hw_grader 명단에 사용.
