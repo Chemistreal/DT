@@ -35,7 +35,7 @@ td.no { width: 9mm; color: #5b6b5e; font-weight: bold; font-size: 9pt; }
 td.ox { width: 54mm; white-space: nowrap; text-align: right; }
 .c { display: inline-block; width: 8.4mm; height: 8.4mm; border: 1.2px solid #7a857c; border-radius: 50%; margin-left: 1.6mm; text-align: center; line-height: 8mm; font-size: 8pt; color: #7a857c; }
 .foot { margin-top: 5mm; text-align: center; color: #5b6b5e; font-size: 9pt; }
-.sec { font-size: 12pt; margin: 6mm 0 2mm; padding-bottom: 1mm; border-bottom: 2px solid #3d5a45; -webkit-text-stroke: .3px currentColor; }
+.sec { break-after: avoid; page-break-after: avoid; font-size: 12pt; margin: 6mm 0 2mm; padding-bottom: 1mm; border-bottom: 2px solid #3d5a45; -webkit-text-stroke: .3px currentColor; }
 .it { display: grid; grid-template-columns: 11mm 1fr; gap: 1mm 3mm; padding: 2mm 0; border-bottom: 1px solid #e3e6e1; break-inside: avoid; }
 .it .n { color: #5b6b5e; font-weight: bold; font-size: 9pt; }
 .it .q { color: #555; }
@@ -145,7 +145,7 @@ def notes(d):
             '<div class="sec pg">생각과 느낌 — 실제로는 이래요</div>%s'
             '<div class="sec pg">개념 정리 노트</div>%s'
             '<div class="sec pg">어려웠던 점 — 이렇게 해 보세요</div>%s'
-            '<div class="sec">공부 습관 · 마음 · 다음 과정</div><div class="tips">%s</div>'
+            '<div class="keep"><div class="sec">공부 습관 · 마음 · 다음 과정</div><div class="tips">%s</div></div>'
             '<div class="foot">화학 · 다원교육 · 조준모</div></body></html>'
             % (d['title'], css, html.escape(d['title']), r, b, c, dd, tips))
 
@@ -165,7 +165,8 @@ NOTE_CSS = """
 table.map td { padding: 1.6mm 1mm; font-size: 9.2pt; }
 table.map td.rn { width: 12mm; color: #3d5a45; font-weight: bold; }
 table.map td.rt { width: 42mm; font-weight: bold; }
-.tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
+.keep { break-inside: avoid; page-break-inside: avoid; }
+.tips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; break-inside: avoid; }
 .tipbox { border: 1px solid #dfe5dc; border-top: 3px solid #3d5a45; border-radius: 1.5mm; padding: 2mm 3mm; font-size: 9pt; }
 .tipbox .tt { font-weight: bold; margin-bottom: 1mm; }
 .tipbox ul { margin: 0; padding-left: 4mm; }
