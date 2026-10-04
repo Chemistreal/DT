@@ -379,8 +379,9 @@ function applyMergeScan_() {
     if (raw && raw !== ns) { sh.getRange(i + 1, 7).setValue(ns); fixed++; }   // G 학교 표기 통일
     var k = String(data[i][5] || '').trim(); var c = remap[k]; if (!c) continue;
     sh.getRange(i + 1, 6).setValue(c);                       // F 학생키 = 정규키
-    if (link[c] == null) link[c] = linkOf_(c);
-    sh.getRange(i + 1, 2).setValue(link[c]);                 // B 리포트링크 = 정규 코드
+    var lk = c + '#' + (String(data[i][8] || '') === SV_COURSE ? 'sv' : '');
+    if (link[lk] == null) link[lk] = rowLinkOf_(c, data[i][8]);
+    sh.getRange(i + 1, 2).setValue(link[lk]);                // B 리포트링크 = 정규 코드(설문 줄은 돌아보기)
     keys++;
   }
   if (keys || fixed) {
@@ -404,12 +405,13 @@ function mergeSplitStudents() {
    (기존 옛 링크도 서버가 계속 해석하므로 이미 발송한 링크는 그대로 열린다.) */
 function refreshReportLinks() {
   var sh = sheet_(); var last = sh.getLastRow(); if (last < 2) { Logger.log('데이터 없음'); return; }
-  var keys = sh.getRange(2, 6, last - 1, 1).getValues();        // F 학생키
+  var keys = sh.getRange(2, 6, last - 1, 4).getValues();        // F 학생키 … I 과목
   var cache = {}, n = 0;
   var links = keys.map(function (r) {
     var k = String(r[0] || '').trim(); if (!k) return [''];
-    if (cache[k] == null) cache[k] = linkOf_(k);
-    n++; return [cache[k]];
+    var ck = k + '#' + String(r[3] || '');
+    if (cache[ck] == null) cache[ck] = rowLinkOf_(k, r[3]);
+    n++; return [cache[ck]];
   });
   sh.getRange(2, 2, last - 1, 1).setValues(links);              // B 리포트링크
   SpreadsheetApp.flush();
@@ -764,9 +766,24 @@ function isSvRaw_(r) { return !!r && String(r[8] || '') === SV_COURSE; }
 /* 결과 탭 원본(머리 포함)에서 설문 줄을 뺀다 — DT 시험 집계는 이것만 본다. */
 function dtRaw_(data) { return (data || []).filter(function (r, i) { return i === 0 || !isSvRaw_(r); }); }
 function svLinkOf_(key) { return REPORT_BASE_URL + 'survey_print.html?student=' + pubId_(key); }
+/* 결과 탭 B열(리포트링크)은 줄마다 그 줄의 성적표다 — 시험 줄은 DT 성적표, 설문 줄은 돌아보기 진단 보고서.
+   링크를 다시 쓰는 곳(병합·일괄 갱신·편집 동기화)은 모두 이것을 부른다. */
+function rowLinkOf_(key, course) { return String(course || '') === SV_COURSE ? svLinkOf_(key) : linkOf_(key); }
+/* 예전 판이 설문 줄에 DT 성적표 링크를 적어 둔 것을 돌아보기 링크로 고친다. */
+function svFixLinks_(sh) {
+  var last = sh.getLastRow(); if (last < 2) return 0;
+  var v = sh.getRange(2, 1, last - 1, 9).getValues(), n = 0;
+  for (var i = 0; i < v.length; i++) {
+    if (String(v[i][8] || '') !== SV_COURSE) continue;
+    var k = String(v[i][5] || '').trim(); if (!k) continue;
+    var want = svLinkOf_(k);
+    if (String(v[i][1] || '') !== want) { sh.getRange(i + 2, 2).setValue(want); n++; }
+  }
+  return n;
+}
 function svMeta_(v) { try { var o = JSON.parse(String(v || '{}')); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; } }
 function svRowVals_(key, name, school, year, sid, ans, ms, test, src, when) {
-  return [name, linkOf_(key), when || new Date(), '', SV_ATTEMPT, key, normSchool_(school), normGrade_(year || ''),
+  return [name, svLinkOf_(key), when || new Date(), '', SV_ATTEMPT, key, normSchool_(school), normGrade_(year || ''),
     SV_COURSE, SV_ROUND, SV_ATTEMPT, '', '', sid, JSON.stringify({ ms: ms, src: src }), test,
     '[]', '[]', "'" + ans, '', '', ''];
 }
@@ -816,6 +833,7 @@ function saveSurvey_(d) {
   try {
     var sh = sheet_();
     try { svMigrate_(sh); } catch (eM) {}
+    try { svFixLinks_(sh); } catch (eF) {}
     var row = svRowVals_(key, name, school, d.year || '', sid, ans, ms, test, src);
     at = svFindRow_(sh.getDataRange().getValues(), key, sid, !!d.isTest);
     if (at > 0) sh.getRange(at, 1, 1, row.length).setValues([row]);
@@ -1731,18 +1749,18 @@ function onEditSync(e) {
     var oldKey = keyOf_(oldName, oldSchool);
     var newKey = keyOf_(name, school);
     var newLink = linkOf_(newKey);
-    setKeyLink_(sh, row, newKey, newLink);            // 편집한 행
+    setKeyLink_(sh, row, newKey, rowLinkOf_(newKey, sh.getRange(row, 9).getValue()));   // 편집한 행(설문 줄은 돌아보기 링크)
     if (oldKey && oldKey !== newKey) {                // 같은 학생의 다른 행도 통일
       var last = sh.getLastRow();
       if (last >= 2) {
-        var vals = sh.getRange(2, 1, last - 1, 7).getValues();   // A..G
+        var vals = sh.getRange(2, 1, last - 1, 9).getValues();   // A..I
         for (var i = 0; i < vals.length; i++) {
           var rr = i + 2;
           if (rr === row) continue;
           if (String(vals[i][5]) === oldKey) {        // F == 이전 학생키
             sh.getRange(rr, 1).setValue(name);        // 이름 통일
             sh.getRange(rr, 7).setValue(school);      // 학교 통일
-            setKeyLink_(sh, rr, newKey, newLink);
+            setKeyLink_(sh, rr, newKey, String(vals[i][8] || '') === SV_COURSE ? svLinkOf_(newKey) : newLink);
           }
         }
       }
@@ -1769,13 +1787,13 @@ function resyncAllKeysLinks() {
   var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(TAB);
   var last = sh.getLastRow();
   if (last < 2) { Logger.log('데이터 없음'); return; }
-  var rng = sh.getRange(2, 1, last - 1, 8);             // A..H (이름,링크,시각,점수,통과,키,학교,학년)
+  var rng = sh.getRange(2, 1, last - 1, 9);             // A..I (이름,링크,시각,점수,통과,키,학교,학년,과목)
   var v = rng.getValues();
   for (var i = 0; i < v.length; i++) {
     var school = normSchool_(v[i][6]);                  // G 학교
     var grade = normGrade_(v[i][7]);                    // H 학년
     var key = keyOf_(v[i][0], school);                  // A 이름 + 정규화 학교
-    v[i][1] = linkOf_(key);                             // B 링크
+    v[i][1] = rowLinkOf_(key, v[i][8]);                 // B 링크(설문 줄은 돌아보기)
     v[i][5] = key;                                      // F 학생키
     v[i][6] = school;                                   // G 학교(정규화)
     v[i][7] = grade;                                    // H 학년(숫자)

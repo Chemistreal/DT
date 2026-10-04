@@ -1361,7 +1361,12 @@ console.log('[설문] kind:survey 는 「결과」 탭의 한 줄(과목 ch1sv) 
   T('저장: DT 회차처럼 — 과목 ch1sv · 회차 19 · 시도/통과 «설문» · 점수 빈칸 · 학생키는 서버가(canonicalKey_) · 학교·학년 정리',
     s1[0][5] === '휘문중-홍길동' && s1[0][6] === '휘문중' && s1[0][7] === '2' && s1[0][9] === 19 && s1[0][10] === '설문' && s1[0][4] === '설문' && s1[0][3] === '' && s1[0][13] === 'ch1-final-2026', JSON.stringify(s1[0]));
   T('저장: 답은 글자로 · 걸린시간·출처는 축 칸 JSON · 테스트 빈칸', String(s1[0][18]).replace(/^'/, '') === A1 && JSON.parse(s1[0][14]).ms === 600000 && JSON.parse(s1[0][14]).src === 'web' && s1[0][15] === '');
+  T('저장: 결과 탭 B열 링크 = 돌아보기 진단 보고서(DT 성적표 아님)', String(s1[0][1]).indexOf('survey_print.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0, String(s1[0][1]));
+  { const i = R._rows.findIndex(r => r[8] === 'ch1sv'); const keepL = R._rows[i][1]; R._rows[i][1] = 'https://x/report.html?student=old';
+    post(Object.assign({}, base)); T('예전 판이 적은 DT 링크는 다음 저장 때 돌아보기 링크로 고친다', /survey_print\.html/.test(R._rows[i][1]), R._rows[i][1]); }
   T('저장해도 DT 시험 줄은 한 칸도 안 바뀐다', JSON.stringify(R._rows.filter(r => r[8] !== 'ch1sv')) === JSON.stringify(JSON.parse(dtBefore)));
+  ctx.refreshReportLinks();
+  T('링크 일괄 갱신(refreshReportLinks)도 설문 줄은 돌아보기 · 시험 줄은 DT 성적표', R._rows.slice(1).every(r => !r[5] || (r[8] === 'ch1sv' ? /survey_print\.html/.test(r[1]) : /report\.html/.test(r[1]))));
   const r2 = post(Object.assign({}, base, { ans: A2, ms: 700000 }));
   T('덮어쓰기: 같은 학생·같은 설문은 한 줄 · 마지막 제출', r2.ok === true && r2.updated === true && svRows().length === 1 && String(svRows()[0][18]).replace(/^'/, '') === A2, JSON.stringify(svRows().length));
   const r3 = post(Object.assign({}, base, { isTest: true }));

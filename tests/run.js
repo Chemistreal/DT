@@ -961,6 +961,17 @@ async function assertNoOverflow(page, label) {
     assert(text.indexOf('조준모T테스트예시자료') < 0, '빈 파라미터에 데모 학생이 노출됨');
     assert(/열 수 없습니다|확인/.test(text), '링크 오류 안내가 표시되지 않음');
   });
+  /* 선생님 2026-10-04 — «** 사용 금지». 학부모 성적표에 «첫 응시 점수보다 **재시로 무엇을 잡았는지**가»
+     처럼 별표가 글자 그대로 찍혔다. 화면 전체에서 «**» 가 보이지 않아야 하고, 나중에 붙는 글도 지운다(nostar.js). */
+  await test('report · 화면 어디에도 «**» 가 글자로 안 보인다 (나중에 붙는 글 포함)', async page => {
+    await page.goto(BASE + 'report.html'); await page.waitForTimeout(1500);
+    const before = await page.evaluate(() => document.body.innerText.indexOf('**'));
+    await page.evaluate(() => { const d = document.createElement('div'); d.id = 'starProbe'; d.textContent = '먼저 **굵게** 볼 것'; document.body.appendChild(d); });
+    await page.waitForTimeout(100);
+    const probe = await page.$eval('#starProbe', e => e.textContent);
+    assert(before < 0, '성적표 화면에 «**» 가 보인다');
+    assert(probe === '먼저 굵게 볼 것', '나중에 붙은 글의 «**» 를 안 지웠다: ' + probe);
+  });
   await test('report · 파라미터 없으면 미리보기(데모) 표시', async page => {
     // 링크 없이 report.html 직접 열기 = 미리보기. 이때만 데모 학생을 보여준다(OG 프리뷰 용).
     await page.goto(BASE + 'report.html'); await page.waitForTimeout(1200);
