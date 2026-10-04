@@ -20,7 +20,8 @@ function makeSheet(name, rows) {
         getValue() { return (s._rows[row - 1] || [])[col - 1]; },
         setValues(v) { for (let i = 0; i < v.length; i++) { while (s._rows.length < row + i) s._rows.push([]); const rr = s._rows[row - 1 + i]; for (let j = 0; j < v[i].length; j++) rr[col - 1 + j] = v[i][j]; } return this; },
         setValue(x) { while (s._rows.length < row) s._rows.push([]); s._rows[row - 1][col - 1] = x; return this; },
-        setBackgrounds() { return this; }
+        setBackgrounds() { return this; },
+        clearContent() { for (let i = 0; i < nr; i++) { const rr = s._rows[row - 1 + i]; if (rr) for (let j = 0; j < nc; j++) rr[col - 1 + j] = ''; } return this; }
       };
     },
     setConditionalFormatRules() {},
@@ -1340,39 +1341,41 @@ console.log('[7단계 2차] 한 과목 학생은 그대로 · 여러 과목 학�
   sh._rows.length = n0;
 }
 
-console.log('[설문] kind:survey 는 「설문」 탭에 · 같은 학생·설문은 덮어쓰기 · 관리자 읽기 · 개인 코드 읽기');
+console.log('[설문] kind:survey 는 「결과」 탭의 한 줄(과목 ch1sv) · 덮어쓰기 · DT 집계에서 빠짐 · 문자발송 · 옛 설문 탭 옮기기');
 {
   const post = d => J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
   const get = p => J(ctx.doGet({ parameter: p }));
   delete SHEETS['설문'];
   const A1 = '1'.repeat(50) + '5'.repeat(50), A2 = '3'.repeat(100);
-  const resN0 = SHEETS['결과']._rows.length;
-  SHEETS['결과']._rows.push(['홍길동','L',D1,85,'통과','휘문중-홍길동','휘문중','2','ch1',1,'정시',51,9,'','{}','','[]','[]','O'.repeat(60)],
+  const R = SHEETS['결과'], resN0 = R._rows.length;
+  R._rows.push(['홍길동','L',D1,85,'통과','휘문중-홍길동','휘문중','2','ch1',1,'정시',51,9,'','{}','','[]','[]','O'.repeat(60)],
     ['홍길동','L',D2,70,'미달','휘문중-홍길동','휘문중','2','ch2',1,'정시',42,18,'','{}','','[]','[]','X'.repeat(60)]);
-  const resBefore = JSON.stringify(SHEETS['결과']._rows);
+  const dtBefore = JSON.stringify(R._rows);
+  const svRows = () => R._rows.slice(1).filter(r => r[8] === 'ch1sv');
   const g0 = get({ action: 'survey', survey: 'ch1-final-2026' });
-  T('탭이 없어도 읽기는 된다 · rows = [] · 탭을 만들지 않는다', g0.ok === true && Array.isArray(g0.rows) && g0.rows.length === 0 && !SHEETS['설문'], JSON.stringify(g0));
+  T('설문이 없어도 읽기는 된다 · rows = [] · 설문 탭을 만들지 않는다', g0.ok === true && Array.isArray(g0.rows) && g0.rows.length === 0 && !SHEETS['설문'], JSON.stringify(g0));
   const base = { kind: 'survey', studentKey: '아무거나', name: '홍길동', school: '휘문중학교', year: '중2', survey: 'ch1-final-2026', ans: A1, ms: 600000 };
   const r1 = post(base);
-  const sh = SHEETS['설문'];
-  T('저장: ok · 새 탭 머리', r1.ok === true && r1.updated === false && sh && sh._rows[0].join('|') === '시각|학생키|이름|학교|학년|설문|답|걸린시간|테스트|출처' && sh._rows[1][9] === 'web', JSON.stringify(r1));
-  T('저장: 학생키는 서버가 다시 만든다(canonicalKey_ · 보낸 값 무시) · 학교·학년 정리', sh._rows.length === 2 && sh._rows[1][1] === '휘문중-홍길동' && sh._rows[1][3] === '휘문중' && sh._rows[1][4] === '2', JSON.stringify(sh._rows[1]));
-  T('저장: 답은 글자로(앞자리 0·지수 표기 방지) · 걸린시간 · 테스트 빈칸', String(sh._rows[1][6]).replace(/^'/, '') === A1 && sh._rows[1][7] === 600000 && sh._rows[1][8] === '');
+  const s1 = svRows();
+  T('저장: 결과 탭에 한 줄 · 설문 탭은 안 만든다', r1.ok === true && r1.updated === false && s1.length === 1 && !SHEETS['설문'] && /survey_print\.html\?student=/.test(r1.reportLink), JSON.stringify(r1));
+  T('저장: DT 회차처럼 — 과목 ch1sv · 회차 19 · 시도/통과 «설문» · 점수 빈칸 · 학생키는 서버가(canonicalKey_) · 학교·학년 정리',
+    s1[0][5] === '휘문중-홍길동' && s1[0][6] === '휘문중' && s1[0][7] === '2' && s1[0][9] === 19 && s1[0][10] === '설문' && s1[0][4] === '설문' && s1[0][3] === '' && s1[0][13] === 'ch1-final-2026', JSON.stringify(s1[0]));
+  T('저장: 답은 글자로 · 걸린시간·출처는 축 칸 JSON · 테스트 빈칸', String(s1[0][18]).replace(/^'/, '') === A1 && JSON.parse(s1[0][14]).ms === 600000 && JSON.parse(s1[0][14]).src === 'web' && s1[0][15] === '');
+  T('저장해도 DT 시험 줄은 한 칸도 안 바뀐다', JSON.stringify(R._rows.filter(r => r[8] !== 'ch1sv')) === JSON.stringify(JSON.parse(dtBefore)));
   const r2 = post(Object.assign({}, base, { ans: A2, ms: 700000 }));
-  T('덮어쓰기: 같은 학생·같은 설문은 한 줄 · 마지막 제출', r2.ok === true && r2.updated === true && sh._rows.length === 2 && String(sh._rows[1][6]).replace(/^'/, '') === A2 && sh._rows[1][7] === 700000, JSON.stringify(sh._rows.length));
+  T('덮어쓰기: 같은 학생·같은 설문은 한 줄 · 마지막 제출', r2.ok === true && r2.updated === true && svRows().length === 1 && String(svRows()[0][18]).replace(/^'/, '') === A2, JSON.stringify(svRows().length));
   const r3 = post(Object.assign({}, base, { isTest: true }));
-  T('테스트 제출은 따로 한 줄(TEST) · 실제 행을 덮지 않는다', r3.ok === true && sh._rows.length === 3 && sh._rows[2][8] === 'TEST' && String(sh._rows[1][6]).replace(/^'/, '') === A2);
+  T('테스트 제출은 따로 한 줄(TEST) · 실제 줄을 덮지 않는다', r3.ok === true && svRows().length === 2 && svRows()[1][15] === 'TEST' && String(svRows()[0][18]).replace(/^'/, '') === A2);
   const r4 = post(Object.assign({}, base, { name: '김민준', school: '단대부중', ans: A1, src: 'paper', ms: 0 }));
-  T('다른 학생은 새 줄 · 종이 응답은 출처 paper', r4.ok === true && sh._rows.length === 4 && sh._rows[3][1] === '단대부중-김민준' && sh._rows[3][9] === 'paper');
+  T('다른 학생은 새 줄 · 종이 응답은 출처 paper', r4.ok === true && svRows().length === 3 && svRows()[2][5] === '단대부중-김민준' && JSON.parse(svRows()[2][14]).src === 'paper');
   const r5 = post(Object.assign({}, base, { survey: 'other-1' }));
-  T('다른 설문은 새 줄', r5.ok === true && sh._rows.length === 5);
+  T('다른 설문은 새 줄', r5.ok === true && svRows().length === 4);
   T('받지 않는 꼴: 답이 비거나 1~5 밖 · 이름 없음 · 설문 이름 이상', post(Object.assign({}, base, { ans: '12' + '0'.repeat(98) })).ok === false
     && post(Object.assign({}, base, { ans: '' })).ok === false && post(Object.assign({}, base, { name: '' })).ok === false
-    && post(Object.assign({}, base, { survey: '<x>' })).ok === false && sh._rows.length === 5);
+    && post(Object.assign({}, base, { survey: '<x>' })).ok === false && svRows().length === 4);
   const g1 = get({ action: 'survey', survey: 'ch1-final-2026' });
-  T('관리자 읽기: 이 설문 행만(테스트 포함 · isTest 표시) · 답 · 코드', g1.ok === true && g1.rows.length === 3 && g1.rows.filter(x => x.isTest).length === 1
-    && g1.rows.every(x => x.survey === 'ch1-final-2026' && /^[1-5]{100}$/.test(x.ans) && x.code === ctx.pubId_(x.studentKey)), JSON.stringify(g1.rows.map(x => [x.studentKey, x.isTest])));
-  /* 읽기 보호는 다른 관리자 읽기와 같은 adminOk_ 를 탄다 — 닫으면 같이 닫힌다 */
+  T('관리자 읽기: 이 설문 줄만(테스트 포함 · isTest 표시) · 답 · 코드 · 출처', g1.ok === true && g1.rows.length === 3 && g1.rows.filter(x => x.isTest).length === 1
+    && g1.rows.every(x => x.survey === 'ch1-final-2026' && /^[1-5]{100}$/.test(x.ans) && x.code === ctx.pubId_(x.studentKey)) && g1.rows.some(x => x.src === 'paper'), JSON.stringify(g1.rows.map(x => [x.studentKey, x.isTest, x.src])));
   const keep = ctx.adminOk_;
   ctx.adminOk_ = t => String(t || '') === 'sv-adm-1';
   const gd = get({ action: 'survey', survey: 'ch1-final-2026' }), gk = get({ action: 'survey', survey: 'ch1-final-2026', token: 'sv-adm-1' });
@@ -1380,20 +1383,46 @@ console.log('[설문] kind:survey 는 「설문」 탭에 · 같은 학생·설�
   T('관리자 읽기는 adminOk_ 를 탄다(닫히면 auth · 토큰이면 열림)', gd.ok === false && gd.error === 'auth' && gk.ok === true && gk.rows.length === 3, JSON.stringify(gd));
   const o1 = get({ action: 'surveyOne', student: ctx.pubId_('휘문중-홍길동'), survey: 'ch1-final-2026' });
   T('개인 코드: 그 학생 것만 · 실제 기록이 있으면 TEST 는 뺀다', o1.ok === true && o1.rows.length === 1 && o1.rows[0].ans === A2 && !o1.rows[0].isTest && !('studentKey' in o1.rows[0]), JSON.stringify(o1));
-  const o2 = get({ action: 'surveyOne', student: ctx.pubId_('단대부중-김민준') });
-  T('개인 코드: 다른 학생 코드엔 그 학생 것만', o2.ok === true && o2.rows.length === 1 && o2.rows[0].name === '김민준');
   post(Object.assign({}, base, { name: '설문만', school: '가상고' }));
   const o3 = get({ action: 'surveyOne', student: ctx.pubId_('가상고-설문만') });
-  T('개인 코드: 결과 탭에 없고 설문만 한 학생도 찾는다', o3.ok === true && o3.rows.length === 1 && o3.rows[0].name === '설문만', JSON.stringify(o3));
-  const res = SHEETS['결과']._rows.slice(1).map(ctx.mapRow_);
-  const want1 = res.filter(r => r.studentKey === '휘문중-홍길동' && r.course === 'ch1').length;
-  T('개인 코드: 진단용 화학1 기록(ch1)도 그 학생 것만 · 점수·통과는 안 싣는다', want1 > 0 && Array.isArray(o1.ch1) && o1.ch1.length === want1
-    && o1.ch1.every(r => r.course === 'ch1' && !('score' in r) && !('pass' in r) && !('name' in r)) && (o3.ch1 || []).length === 0, JSON.stringify(o1.ch1));
-  T('설문 저장은 시험 결과 탭(점수·통과·재시·석차의 원본)을 한 칸도 안 바꾼다', JSON.stringify(SHEETS['결과']._rows) === resBefore);
-  const ob = get({ action: 'surveyOne', student: 'zzzzzzzzzzzzzz' }), oe = get({ action: 'surveyOne' });
-  T('개인 코드: 틀린 코드·빈 코드는 아무것도 안 준다', ob.ok === false && !ob.rows && oe.ok === false && !oe.rows);
+  T('개인 코드: DT 기록 없이 설문만 한 학생도 찾는다', o3.ok === true && o3.rows.length === 1 && o3.rows[0].name === '설문만', JSON.stringify(o3));
+  T('개인 코드: 진단용 화학1 기록은 ch1 시험 줄만(설문 줄 아님) · 점수·통과는 안 싣는다', Array.isArray(o1.ch1) && o1.ch1.length === 1
+    && o1.ch1.every(r => r.course === 'ch1' && !('score' in r) && !('pass' in r)) && (o3.ch1 || []).length === 0, JSON.stringify(o1.ch1));
+  /* DT 성적표·관리 읽기에는 설문 줄이 안 나간다 — 과목이 하나 더 생겨 성적표가 «돌아보기» 과목으로 넘어가면 안 된다 */
+  const gs = get({ student: ctx.pubId_('휘문중-홍길동') });
+  T('DT 성적표(?student=) 에는 설문 줄이 없다 · 과목은 그대로', gs.ok === true && gs.rows.length === 2 && gs.rows.every(r => r.course !== 'ch1sv') && gs.cumulative && gs.cumulative.course !== 'ch1sv', JSON.stringify(gs.rows.map(r => r.course)));
+  const ga = get({ all: '1' });
+  T('관리 전체 읽기(?all=1) 에도 설문 줄이 없다', ga.ok === true && ga.rows.every(r => r.course !== 'ch1sv') && ga.rows.length === R._rows.length - 1 - svRows().length);
+  T('설문만 한 학생 코드로 DT 성적표를 열어도 빈 기록(깨지지 않음)', (() => { const x = get({ student: ctx.pubId_('가상고-설문만') }); return x.ok === true && x.rows.length === 0; })());
+  /* 문자발송: 설문 줄은 «진단 보고서» 문자 · 링크는 진단 보고서 화면 · TEST 줄은 문자 없음 */
+  const data = R._rows.slice(1);
+  const msgs = ctx.buildRowMessages_(data);
+  const iHong = data.findIndex(r => r[8] === 'ch1sv' && r[5] === '휘문중-홍길동' && r[13] === 'ch1-final-2026' && r[15] === '');
+  const iTest = data.findIndex(r => r[8] === 'ch1sv' && r[15] === 'TEST');
+  const mH = msgs[iHong], mT = msgs[iTest];
+  T('문자발송: 설문 줄 = «화학Ⅰ 돌아보기 · 설문 · 진단 보고서» + 진단 보고서 링크', mH && mH.label === '화학Ⅰ 돌아보기' && mH.att === '설문' && mH.status === '진단 보고서'
+    && mH.msg.indexOf('survey_print.html?student=' + ctx.pubId_('휘문중-홍길동')) >= 0 && /홍길동 학생/.test(mH.msg) && !/점|통과|재시/.test(mH.msg.replace('점수가', '')), JSON.stringify(mH));
+  T('문자발송: 테스트 설문 줄은 문자 없음', mT && mT.msg === '' && mT.status === '', JSON.stringify(mT));
+  const iDt = data.findIndex(r => r[8] === 'ch1' && r[5] === '휘문중-홍길동');
+  T('문자발송: DT 시험 줄 문자는 그대로(통과)', msgs[iDt] && msgs[iDt].status === '통과' && /화학Ⅰ 1회/.test(msgs[iDt].msg), JSON.stringify(msgs[iDt]));
+  /* 옛 「설문」 탭에 먼저 들어간 줄은 다음 저장 때 결과 탭으로 옮겨지고 설문 탭은 비워진다 */
+  SHEETS['설문'] = makeSheet('설문', [[]]);
+  R._rows.length = resN0;
+  R._rows.push(...JSON.parse(dtBefore).slice(resN0));
+  const legacy = [['시각','학생키','이름','학교','학년','설문','답','걸린시간','테스트','출처'],
+    [D1, '가상중-옛줄', '옛줄', '가상중', '3', 'ch1-final-2026', "'" + A1, 300000, '', 'paper']];
+  if (SHEETS['설문']) SHEETS['설문']._rows = legacy.map(r => r.slice());
+  const gl = get({ action: 'survey', survey: 'ch1-final-2026' });
+  T('옮기기 전에도 옛 설문 탭 줄이 읽힌다', SHEETS['설문'] && gl.ok === true && gl.rows.some(x => x.name === '옛줄' && x.src === 'paper'), JSON.stringify(gl.rows && gl.rows.map(x => x.name)));
+  post(Object.assign({}, base, { name: '새줄', school: '가상중' }));
+  const moved = svRows();
+  T('다음 저장 때 옛 줄이 결과 탭으로 옮겨지고(답·출처·걸린시간 그대로) 설문 탭 자료 줄은 비워진다',
+    moved.some(r => r[0] === '옛줄' && String(r[18]).replace(/^'/, '') === A1 && JSON.parse(r[14]).src === 'paper' && JSON.parse(r[14]).ms === 300000)
+    && moved.some(r => r[0] === '새줄') && SHEETS['설문']._rows.slice(1).every(r => r.every(v => v === '' || v == null)), JSON.stringify(moved.map(r => r[0])));
+  const gl2 = get({ action: 'survey', survey: 'ch1-final-2026' });
+  T('옮긴 뒤 같은 학생이 두 번 세어지지 않는다', gl2.rows.filter(x => x.name === '옛줄').length === 1);
   delete SHEETS['설문'];
-  SHEETS['결과']._rows.length = resN0;
+  R._rows.length = resN0;
 }
 
 console.log('[설문 진단] chemengine surveyRecord · surveyDiagnose (문항은 파일에서)');

@@ -633,12 +633,12 @@ function doGet(e) {
   if (!raw) {
     // 개인정보 보호: 키 없는 전체 조회는 관리자 토큰이 있을 때만(관리 콘솔 전용)
     if (e.parameter.all === '1' && adminOk_(token)) {
-      var dataA = sheet_().getDataRange().getValues(); dataA.shift();
+      var dataA = dtRaw_(sheet_().getDataRange().getValues()); dataA.shift();
       return json_({ ok: true, rows: dataA.map(mapRow_), excluded: getExcluded_() });
     }
     return json_({ ok: false, error: 'student key required' });
   }
-  var data = sheet_().getDataRange().getValues();
+  var data = dtRaw_(sheet_().getDataRange().getValues());
   data.shift(); // 헤더 제거
   var all = data.map(mapRow_);
   var rows = valid ? all.filter(function (r) { return r.studentKey === key; }) : [];
@@ -751,15 +751,54 @@ function challengesOf_(key) {
    같은 학생 · 같은 설문 · 같은 테스트 여부면 마지막 제출로 그 행을 덮어쓴다.
    읽기  ?action=survey&survey=<id>        관리자(adminOk_) — 행 목록 + 학생별 성적표 코드
          ?action=surveyOne&student=<코드>   그 학생 것만(성적표 ?student= 와 같은 코드) */
-var SV_TAB = '설문';
+var SV_TAB = '설문';                       // 예전 저장 자리 — 이제는 읽기·옮기기만(아래 svMigrate_)
 var SV_HEADERS = ['시각','학생키','이름','학교','학년','설문','답','걸린시간','테스트','출처'];
-function surveySheet_() {
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sh = ss.getSheetByName(SV_TAB) || ss.insertSheet(SV_TAB);
-  var head = sh.getLastRow() > 0 ? String(sh.getRange(1, 1).getValue() || '') : '';
-  if (head === '' || head === SV_HEADERS[0]) sh.getRange(1, 1, 1, SV_HEADERS.length).setValues([SV_HEADERS]);
-  return sh;
+/* 2026-10-04 선생님: «성적처리를 설문탭에 하지 말고 결과에 넣고, 문자발송 탭에도 쓰듯이 — DT 마지막 회차처럼».
+   그래서 설문 한 건은 「결과」 탭의 한 줄이다. 과목 칸이 SV_COURSE 라 DT 성적표·석차·미응시·재시 집계는
+   이 줄을 보지 않는다(dtRaw_ 가 거른다). 칸 쓰임:
+     이름 · 리포트링크(성적표 링크 그대로 — 링크 일괄 갱신과 맞물린다) · 시각 · 점수(빈칸) · 통과(«설문») ·
+     학생키 · 학교 · 학년 · 과목(ch1sv) · 회차(19 — 화학1 18회 다음) · 시도(«설문») · 맞음/틀림(빈칸) ·
+     오개념 칸 = 설문 이름 · 축 칸 = {"ms":걸린시간,"src":"web"|"paper"} · 테스트 · … · 답안 = 1~5 글자 */
+var SV_COURSE = 'ch1sv', SV_ROUND = 19, SV_ATTEMPT = '설문';
+function isSvRaw_(r) { return !!r && String(r[8] || '') === SV_COURSE; }
+/* 결과 탭 원본(머리 포함)에서 설문 줄을 뺀다 — DT 시험 집계는 이것만 본다. */
+function dtRaw_(data) { return (data || []).filter(function (r, i) { return i === 0 || !isSvRaw_(r); }); }
+function svLinkOf_(key) { return REPORT_BASE_URL + 'survey_print.html?student=' + pubId_(key); }
+function svMeta_(v) { try { var o = JSON.parse(String(v || '{}')); return (o && typeof o === 'object') ? o : {}; } catch (e) { return {}; } }
+function svRowVals_(key, name, school, year, sid, ans, ms, test, src, when) {
+  return [name, linkOf_(key), when || new Date(), '', SV_ATTEMPT, key, normSchool_(school), normGrade_(year || ''),
+    SV_COURSE, SV_ROUND, SV_ATTEMPT, '', '', sid, JSON.stringify({ ms: ms, src: src }), test,
+    '[]', '[]', "'" + ans, '', '', ''];
 }
+/* 같은 학생 · 같은 설문 · 같은 테스트 여부의 줄(1부터 센 행 번호). 없으면 0. */
+function svFindRow_(data, key, sid, isTest) {
+  for (var i = data.length - 1; i >= 1; i--) {
+    var r = data[i];
+    if (isSvRaw_(r) && String(r[5] || '').trim() === key && String(r[13] || '') === sid && (String(r[15] || '') === 'TEST') === !!isTest) return i + 1;
+  }
+  return 0;
+}
+/* 예전 「설문」 탭에 이미 들어간 줄을 결과 탭으로 옮긴다(결과 탭에 같은 줄이 있으면 결과 탭이 이긴다).
+   옮긴 뒤 설문 탭의 자료 줄은 지운다(머리는 남김). 저장 때마다 불리지만 남은 줄이 없으면 아무것도 안 한다. */
+function svMigrate_(sh) {
+  var old = null;
+  try { old = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SV_TAB); } catch (e) { old = null; }
+  if (!old || old.getLastRow() < 2) return 0;
+  var rows = old.getDataRange().getValues().slice(1).filter(function (r) { return String(r[1] || '').trim() && String(r[5] || ''); });
+  var data = sh.getDataRange().getValues(), add = [];
+  rows.forEach(function (r) {
+    var key = String(r[1]).trim(), sid = String(r[5]), test = String(r[8] || '') === 'TEST';
+    if (svFindRow_(data, key, sid, test)) return;
+    add.push(svRowVals_(key, String(r[2] || ''), String(r[3] || ''), String(r[4] || ''), sid,
+      String(r[6] == null ? '' : r[6]).replace(/^'/, ''), Number(r[7]) || 0, test ? 'TEST' : '', String(r[9] || 'web'), r[0]));
+  });
+  if (add.length) { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, add.length, add[0].length).setValues(add); }
+  SpreadsheetApp.flush();
+  old.getRange(2, 1, old.getLastRow() - 1, Math.max(1, old.getLastColumn())).clearContent();
+  return add.length;
+}
+/* 편집기에서 한 번 눌러도 된다(저장 때 저절로도 옮겨진다). */
+function migrateSurveyTab() { var n = svMigrate_(sheet_()); try { buildSendSheet(); } catch (e) {} Logger.log('설문 탭 → 결과 탭: ' + n + '줄 옮김'); }
 function saveSurvey_(d) {
   var name = cleanName_(d.name || ''), school = String(d.school || '').trim();
   if (!name || !school) return { ok: false, error: 'bad', msg: '이름과 학교가 필요합니다.' };
@@ -771,32 +810,48 @@ function saveSurvey_(d) {
   var key = canonicalKey_(name, school);
   var test = d.isTest ? 'TEST' : '';
   var src = d.src === 'paper' ? 'paper' : 'web';            // 종이 설문을 선생님이 옮겨 적은 것은 paper
-  var row = [new Date(), key, name, normSchool_(school), normGrade_(d.year || ''), sid, "'" + ans, ms, test, src];
   var lock = null;
   try { if (typeof LockService !== 'undefined') { lock = LockService.getScriptLock(); lock.waitLock(10000); } } catch (eL) { lock = null; }
+  var at = 0;
   try {
-    var sh = surveySheet_(), data = sh.getDataRange().getValues(), at = 0;
-    for (var i = data.length - 1; i >= 1; i--) {
-      var r = data[i];
-      if (String(r[1] || '').trim() === key && String(r[5] || '') === sid && (String(r[8] || '') === 'TEST') === !!d.isTest) { at = i + 1; break; }
-    }
+    var sh = sheet_();
+    try { svMigrate_(sh); } catch (eM) {}
+    var row = svRowVals_(key, name, school, d.year || '', sid, ans, ms, test, src);
+    at = svFindRow_(sh.getDataRange().getValues(), key, sid, !!d.isTest);
     if (at > 0) sh.getRange(at, 1, 1, row.length).setValues([row]);
-    else sh.getRange(Math.max(1, data.length) + 1, 1, 1, row.length).setValues([row]);
-    return { ok: true, updated: at > 0, code: pubId_(key) };
+    else { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, 1, row.length).setValues([row]); }
   } finally { if (lock) { try { lock.releaseLock(); } catch (eR) {} } }
+  try { buildSendSheet(); } catch (eS) {}                   // DT 회차 저장과 같이 — 문자발송 탭에 바로
+  return { ok: true, updated: at > 0, code: pubId_(key), reportLink: svLinkOf_(key) };
+}
+function svRowOf_(r) {
+  var m = svMeta_(r[14]);
+  return { date: r[2], studentKey: String(r[5] || '').trim(), name: String(r[0] || ''), school: String(r[6] || ''),
+    year: String(r[7] || ''), survey: String(r[13] || ''), ans: String(r[18] == null ? '' : r[18]).replace(/^'/, ''),
+    ms: Number(m.ms) || 0, isTest: String(r[15] || '') === 'TEST', src: String(m.src || 'web') };
 }
 function surveyRowOf_(r) {
   return { date: r[0], studentKey: String(r[1] || '').trim(), name: String(r[2] || ''), school: String(r[3] || ''),
     year: String(r[4] || ''), survey: String(r[5] || ''), ans: String(r[6] == null ? '' : r[6]).replace(/^'/, ''),
     ms: Number(r[7]) || 0, isTest: String(r[8] || '') === 'TEST', src: String(r[9] || 'web') };
 }
-/* 읽기만 한다 — 탭이 없으면 만들지 않고 빈 목록. */
+/* 읽기만 한다. 결과 탭의 설문 줄 + (아직 안 옮긴) 예전 설문 탭 줄. 같은 학생·설문·테스트면 결과 탭이 이긴다. */
 function surveyRows_() {
+  var out = [], seen = {};
+  try {
+    sheet_().getDataRange().getValues().slice(1).filter(isSvRaw_).map(svRowOf_).forEach(function (x) {
+      if (!x.studentKey || !x.survey) return;
+      seen[x.studentKey + '#' + x.survey + '#' + x.isTest] = 1; out.push(x);
+    });
+  } catch (e) {}
   try {
     var sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SV_TAB);
-    if (!sh || sh.getLastRow() < 2) return [];
-    return sh.getDataRange().getValues().slice(1).map(surveyRowOf_).filter(function (x) { return x.studentKey && x.survey; });
-  } catch (e) { return []; }
+    if (sh && sh.getLastRow() >= 2) sh.getDataRange().getValues().slice(1).map(surveyRowOf_).forEach(function (x) {
+      if (!x.studentKey || !x.survey || seen[x.studentKey + '#' + x.survey + '#' + x.isTest]) return;
+      out.push(x);
+    });
+  } catch (e) {}
+  return out;
 }
 function surveyAll_(sid) {
   sid = String(sid || '').trim();
@@ -867,7 +922,7 @@ function namesData_(code) {
 /* index.html 반 패널용 익명 투영(이름/학교/키/링크 미포함, 학생키는 s1,s2..로 치환).
    클라이언트 집계 로직은 그대로 두고 데이터 원천만 익명화한다. */
 function cohortMis_() {
-  var data = sheet_().getDataRange().getValues(); data.shift();
+  var data = dtRaw_(sheet_().getDataRange().getValues()); data.shift();
   var all = data.map(mapRow_);
   var idx = {}, n = 0, out = [];
   all.forEach(function (r) {
@@ -1107,7 +1162,7 @@ function courseKo_(c) { return c === 'ch1' ? '화학Ⅰ' : c === 'ch1s' ? '화�
 
 function computePending_(activeDays) {
   activeDays = activeDays || 14;
-  var data = sheet_().getDataRange().getValues(); data.shift();
+  var data = dtRaw_(sheet_().getDataRange().getValues()); data.shift();
   var all = data.map(mapRow_).filter(function (r) { return !r.isTest && r.studentKey; });
   var excluded = getExcluded_();
   var groups = {};
@@ -1198,7 +1253,7 @@ function computePending_(activeDays) {
    ============================================================ */
 function computePassed_(days) {
   days = days || 14;
-  var data = sheet_().getDataRange().getValues(); data.shift();
+  var data = dtRaw_(sheet_().getDataRange().getValues()); data.shift();
   var all = data.map(mapRow_).filter(function (r) { return !r.isTest && r.studentKey; });
   var excluded = getExcluded_();
   var groups = {};
@@ -1427,7 +1482,7 @@ function currentRoundFor_(all, course, withinDays) {
 function computeAbsentees_(withinDays, overrides) {
   withinDays = withinDays || 8;
   overrides = overrides || {};                              // { 반라벨: 회차 } — pending.html 수동 지정
-  var data = sheet_().getDataRange().getValues(); data.shift();
+  var data = dtRaw_(sheet_().getDataRange().getValues()); data.shift();
   var all = data.map(mapRow_).filter(function (r) { return r.studentKey; });
   var classes = getRoster_(), roundCache = {}, out = [];
   classes.forEach(function (k) {
@@ -1910,6 +1965,14 @@ function sendSummary_(rowsOfSC) {
   return { status: '재시 안내', msg: sendRetakeMsg_(name, ck, round, baseScore, link) };
 }
 
+/* 설문(화학1 돌아보기) 줄의 문자 — 점수·통과가 없다. 링크는 진단 보고서(Word 저장 단추가 있는 화면). */
+function sendSurveyMsg_(name, key) {
+  return '[다원교육 영재관 · 화학 조준모]\n'
+    + name + ' 학생 화학Ⅰ 18회 돌아보기 진단 보고서입니다.\n'
+    + '\u00b7 18주 동안의 실제 기록과 마지막 시간 설문을 함께 분석했습니다(시험 점수가 아닙니다).\n'
+    + '아래 링크에서 보고서를 보고 Word 파일로 저장할 수 있습니다.\n'
+    + svLinkOf_(key);
+}
 /* 결과 시트의 각 행에 대응하는 종합 문자 배열(행 순서 1:1 유지, 숙제/빈행은 빈칸) */
 function buildRowMessages_(data) {
   var parsed = data.map(function (r) {
@@ -1921,11 +1984,15 @@ function buildRowMessages_(data) {
       round: Number(r[9]), attempt: String(r[10] || ''), isTest: isTest, empty: (!name && !key) };
   });
   var groups = {};
-  parsed.forEach(function (p) { if (p.isTest || p.empty || !p.key) return; var g = p.key + '#' + p.course + '#' + p.round; (groups[g] || (groups[g] = [])).push(p); });
+  parsed.forEach(function (p) { if (p.isTest || p.empty || !p.key || p.course === SV_COURSE) return; var g = p.key + '#' + p.course + '#' + p.round; (groups[g] || (groups[g] = [])).push(p); });
   var cache = {};
   Object.keys(groups).forEach(function (g) { cache[g] = sendSummary_(groups[g]); });
   return parsed.map(function (p) {
     if (p.empty) return null;
+    if (p.course === SV_COURSE) {
+      if (p.isTest || !p.key) return { name: p.name, school: p.school, label: '화학Ⅰ 돌아보기', att: '설문', tRaw: p.tRaw, course: p.course, status: '', msg: '' };
+      return { name: p.name, school: p.school, label: '화학Ⅰ 돌아보기', att: '설문', tRaw: p.tRaw, course: p.course, status: '진단 보고서', msg: sendSurveyMsg_(p.name, p.key) };
+    }
     var label = p.isTest ? '숙제' : ((SEND_COURSE_KO[p.course] || p.course) + ' ' + p.round + '회');
     var att = p.isTest ? '숙제' : p.attempt;
     if (p.isTest || !p.key) return { name: p.name, school: p.school, label: label, att: att, tRaw: p.tRaw, course: p.course, status: '', msg: '' };
@@ -1956,6 +2023,7 @@ function buildSendSheet() {
       nBg.push([classColorOf_(cmap, norm_(o.name), String(o.course || '')) || null]);
       if (o.status === '통과') { sBg.push(['#C6EFCE']); sFc.push(['#0B6E39']); }
       else if (o.status === '재시 안내') { sBg.push(['#FFF2CC']); sFc.push(['#8A6A2F']); }
+      else if (o.status === '진단 보고서') { sBg.push(['#E4F0EF']); sFc.push(['#0A5A5A']); }
       else { sBg.push([null]); sFc.push(['#000000']); }
     });
     sh.getRange(2, 1, nBg.length, 1).setBackgrounds(nBg);
@@ -2691,7 +2759,7 @@ function snoozeList_() {
    ══════════════════════════════════════════════════════════════════ */
 function misNamed_(days) {
   days = days || 21;
-  var data = sheet_().getDataRange().getValues(); data.shift();
+  var data = dtRaw_(sheet_().getDataRange().getValues()); data.shift();
   var all = data.map(mapRow_).filter(function (r) { return !r.isTest && r.studentKey; });
   var excluded = getExcluded_();
   var groups = {};

@@ -288,7 +288,7 @@ function entryView(){
       '<div class="sum">'+lines+'</div><p class="muted">종이와 한 줄씩 맞춰 보세요. 같은 학생이 이미 냈으면 이 답으로 바뀝니다.</p>'+
       '<div class="row"><button class="ghost" onclick="EN.step=\'keys\';render()">← 고치기</button><button id="enSave" onclick="enSubmit()">저장</button></div>'+(EN.msg?'<p>'+EN.msg+'</p>':'')+'</div>';
   }
-  if(EN.step==='saved') return '<div class="card"><h2>저장했습니다</h2><p>'+esc(EN.name)+' 학생 종이 응답을 「설문」 탭에 넣었습니다(시험 결과와는 따로).</p><button id="enNext" onclick="enNext()">다음 학생</button></div>';
+  if(EN.step==='saved') return '<div class="card"><h2>저장했습니다</h2><p>'+esc(EN.name)+' 학생 종이 응답을 「결과」 탭에 «화학Ⅰ 돌아보기» 줄로 넣었습니다. 「문자발송」 탭에 진단 보고서 문자가 생깁니다.</p><button id="enNext" onclick="enNext()">다음 학생</button></div>';
   let cols='';
   for(let c=0;c<4;c++){
     let rows='';
