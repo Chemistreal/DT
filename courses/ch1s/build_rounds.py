@@ -17,7 +17,10 @@
     (다른 과목 항목은 순서·글자 그대로). 그다음 tools/challenge_bank.py --write 가 challenge.html 에 싣는다.
   · 복습-재출제 칸: design.json blueprint 의 from_round 회 from_n 번 문장을 글자 그대로
   · 은행의 정시 문장(n 이 붙은 form): 회차 파일 문장 그대로
-  · 재시 3판(retakeC): 칸마다 그 개념의 은행 문장 가운데 정시보다 쉽거나 같은 것
+  · 재시 3판(retakeC): 칸마다 그 개념의 은행 문장 가운데 정시보다 쉽거나 같은 것(아직 안 치른 회차의 정시 문장은 빼고,
+    1·2·3판 겹침을 줄이고, 회차를 넘어 돌려 쓰며, 같은 판 안 같은 개념 문장끼리 덜 닮게 — build_retakes)
+
+새로 쓴 확인 문장 묶음은 courses/ch1s/merge_bank.py 로 은행에 합친 뒤 --write 한다(중복·정시 문장·화학1 문장 걸러 냄).
 
 은행 form 의 꼬리표: n = 이 문장이 나온 정시 칸("3-16") · from = 화학1 은행에서 글자 그대로 가져온 원래 코드.
 화학1 문장을 글자 그대로 두는 까닭: 화학1을 들은 학생의 «이미 본 문장» 기록이 그대로 맞물린다.
@@ -379,13 +382,47 @@ def sync_bank_own(dz, rounds, bank):
         e['forms'] = own.get(code, []) + [fm for fm in e['forms'] if 'n' not in fm]
 
 
+# 재시에 되도록 늦게 내는 문장 — 화학1 은행 원문이라 글자를 못 고치는 것 가운데 정의 안 된 줄임말(SN5)을 쓰거나
+# 근거가 흐린 생활 예(벌 독·암모니아수) 문장. 개념 문장이 모자랄 때만 나간다.
+LOW_PRI = {
+    'SN5의 혼성 오비탈은 sp³d이다.',
+    'SN5의 혼성 오비탈은 sp³d²이다.',
+    '벌에 쏘였을 때 암모니아수를 바르는 것은 산성 독을 중화하기 위해서이다.',
+}
+
+
+def first_seen(rounds):
+    """정규화한 문장 → 그 문장이 처음 정시에 나오는 회차."""
+    out = {}
+    for r in sorted(rounds):
+        for it in rounds[r]['jeongsi']['items']:
+            out.setdefault(norm(it['s']), r)
+    return out
+
+
+def _bigrams(k):
+    return {k[i:i + 2] for i in range(len(k) - 1)}
+
+
+def _sim(a, b):
+    """두 문장(정규화)의 글자 두 개 묶음 겹침(Jaccard) — 같은 틀에 숫자만 바꾼 문장끼리 높다."""
+    x, y = _bigrams(a), _bigrams(b)
+    return len(x & y) / float(len(x | y) or 1)
+
+
 def build_retakes(dz, rounds, bank):
     """회차마다 재시 3판. 칸마다 그 칸 개념의 은행 문장을 고른다.
-    고르는 순서: 이 회차 앞 판에서 안 쓴 것 → 어느 회차 정시에도 안 나온 것 → 칸과 정답(O/X)이 같은 것
-    → 칸보다 어렵지 않은 것 → 칸보다 한 단계 쉬운 것에 가까운 것 → 은행 순서.
-    이 회차 정시 문장과 한 판 안의 같은 문장은 절대 안 낸다. 개념 문장이 동나면 같은 회차 다른 개념에서 빌린다."""
+    아예 빼는 것: 이 회차 정시 문장 · 이 회차보다 뒤 회차에 정시로 처음 나오는 문장(아직 안 치른 시험을 미리 보이지
+    않는다) · 같은 판 안에서 이미 고른 문장.
+    고르는 순서: 이 회차 앞 판에서 안 쓴 것(1·2·3판 겹침 최소) → 늦게 낼 문장(LOW_PRI)이 아닌 것 → 앞 회차 정시에
+    안 나온 것 → 칸과 정답(O/X)이 같은 것 → 칸보다 어렵지 않은 것 → 칸보다 한 단계 쉬운 것에 가까운 것(재시 난이도는
+    정시보다 낮게 두는 것이 뜻이다) → 앞 회차 재시에 덜 나온 것(회차를 넘어 돌려 쓴다) → 같은 판에 이미 고른 같은
+    개념 문장과 덜 닮은 것(숫자만 바꾼 문장 몰림을 막는다) → 은행 순서.
+    개념 문장이 동나면 같은 회차 다른 개념에서 빌린다(같은 제외 규칙)."""
     cm = {c['c']: c for c in dz['concepts']}
-    every_js = {norm(it['s']) for r in rounds for it in rounds[r]['jeongsi']['items']}
+    seen_at = first_seen(rounds)
+    low = {norm(x) for x in LOW_PRI}
+    across = collections.Counter()                  # 앞 회차 재시에 나온 횟수
     for r in range(1, 11):
         items = rounds[r]['jeongsi']['items']
         this_js = {norm(it['s']) for it in items}
@@ -397,30 +434,41 @@ def build_retakes(dz, rounds, bank):
         versions = []
         for v in range(VERSIONS):
             used = set()
+            picked = collections.defaultdict(list)  # 개념 → 이 판에서 고른 문장(정규화)
 
-            def key(fm, slot, idx):
+            def key(fm, slot, idx, code):
                 k = norm(fm['s'])
                 t = max(1, slot['lvl'] - 1)
-                return (used_before[k], k in every_js, fm['a'] != slot['a'], fm['lvl'] > slot['lvl'],
-                        abs(fm['lvl'] - t), idx)
+                sim = max([_sim(k, q) for q in picked[code]] or [0.0])
+                return (used_before[k], k in low, k in seen_at, fm['a'] != slot['a'], fm['lvl'] > slot['lvl'],
+                        abs(fm['lvl'] - t), across[k], round(sim, 1), idx)
+
+            def cands(code, slot):
+                out = []
+                for i, fm in enumerate(bank[code]['forms']):
+                    k = norm(fm['s'])
+                    if k in this_js or k in used or seen_at.get(k, 0) > r:
+                        continue
+                    out.append((key(fm, slot, i, code), code, fm))
+                return out
 
             out = []
             for slot in items:
-                def cands(code):
-                    return [(key(fm, slot, i), code, fm) for i, fm in enumerate(bank[code]['forms'])
-                            if norm(fm['s']) not in this_js and norm(fm['s']) not in used]
-                pool = cands(slot['c'])
+                pool = cands(slot['c'], slot)
                 if not pool:
-                    pool = [x for code in order if code != slot['c'] for x in cands(code)]
+                    pool = [x for code in order if code != slot['c'] for x in cands(code, slot)]
                 if not pool:
                     sys.exit('%d회 %s 재시에 낼 문장이 없다' % (r, slot['n']))
                 _, code, fm = min(pool, key=lambda x: x[0])
                 k = norm(fm['s'])
                 used.add(k)
+                picked[code].append(k)
                 out.append({'c': code, 'u': cm[code]['u'], 'a': fm['a'], 's': fm['s'], 'f': fm['f'],
                             'w': fm['w'], 'lvl': fm['lvl']})
             used_before.update(used)
             versions.append({'v': v + 1, 'items': out})
+        for v in versions:
+            across.update(norm(x['s']) for x in v['items'])
         rounds[r]['retakeC'] = versions
 
 
@@ -578,6 +626,7 @@ def check():
             if '℃' in json.dumps(s, ensure_ascii=False):
                 errs.append('선수노트 %d-%d ℃ 대신 °C' % (r, i))
     # 재시
+    seen_at = first_seen(rounds)
     for r in range(1, 11):
         rc = rounds[r].get('retakeC', [])
         if len(rc) != VERSIONS:
@@ -597,6 +646,8 @@ def check():
                     break
                 if norm(x['s']) in this_js:
                     errs.append('%d회 재시 %d판에 정시 문장' % (r, v['v']))
+                elif seen_at.get(norm(x['s']), 0) > r:
+                    errs.append('%d회 재시 %d판에 아직 안 치른 %d회 정시 문장' % (r, v['v'], seen_at[norm(x['s'])]))
                 if not any(fm['s'] == x['s'] and fm['a'] == x['a'] for fm in bank.get(x['c'], {}).get('forms', [])):
                     errs.append('%d회 재시 %d판 문장이 은행 %s 에 없음 (--write)' % (r, v['v'], x['c']))
     return errs
