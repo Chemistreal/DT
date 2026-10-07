@@ -42,16 +42,16 @@ header{position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--pa
 .dawon-logo{height:30px;width:auto;display:block;flex:none}
 .brand{font-weight:800;letter-spacing:-.01em;font-size:15.5px}
 .challengebtn{display:block;max-width:340px;margin:14px auto 0;background:linear-gradient(135deg,#A9853C,#caa45a);color:#fff;border-radius:12px;padding:14px 16px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;box-shadow:0 2px 8px rgba(169,133,60,.25)}
-.challengebtn .cbadge{display:inline-block;background:rgba(255,255,255,.25);font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:10px;margin-right:8px;vertical-align:middle;letter-spacing:.04em}
-.challengebtn small{display:block;font-weight:400;font-size:11.5px;opacity:.92;margin-top:5px;line-height:1.4}
-.brand small{display:block;font-weight:500;color:var(--sub);font-size:11.5px;letter-spacing:.01em;margin-top:-2px}
-.testbadge{margin-left:auto;font-size:11.5px;color:#fff;background:var(--brass);border-radius:30px;padding:3px 10px;display:none;font-weight:600}
+.challengebtn .cbadge{display:inline-block;background:rgba(255,255,255,.25);font-size:12px;font-weight:800;padding:2px 8px;border-radius:10px;margin-right:8px;vertical-align:middle;letter-spacing:.04em}
+.challengebtn small{display:block;font-weight:400;font-size:13px;opacity:.92;margin-top:5px;line-height:1.4}
+.brand small{display:block;font-weight:500;color:var(--sub);font-size:13px;letter-spacing:.01em;margin-top:-2px}
+.testbadge{margin-left:auto;font-size:12px;color:#fff;background:var(--brass);border-radius:30px;padding:3px 10px;display:none;font-weight:600}
 /* reaction-coordinate stepper */
 .steps{max-width:720px;margin:0 auto;padding:0 12px 9px;display:flex;gap:0;align-items:center;overflow-x:auto;scrollbar-width:none}
 .steps::-webkit-scrollbar{display:none}
 .step{display:flex;align-items:center;gap:6px;flex:none}
-.step .dot{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--faint)}
-.step .lb{font-size:11.5px;color:var(--faint);white-space:nowrap}
+.step .dot{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--faint)}
+.step .lb{font-size:13px;color:var(--faint);white-space:nowrap}
 .step .seg{width:14px;height:1.5px;background:var(--line);margin:0 5px}
 .step.on .dot{background:var(--teal);border-color:var(--teal);color:#fff}
 .step.on .lb{color:var(--teal);font-weight:700}
@@ -62,7 +62,7 @@ h1{font-size:21px;letter-spacing:-.02em;margin:.1em 0 .15em}
 .lede{color:var(--sub);font-size:13.5px;margin:.3em 0 1.1em}
 .plink{margin-top:16px;padding:13px 15px;background:var(--o-bg);border-radius:12px}
 .pll{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:8px}.pll .muted{font-weight:400}
-.plurl{font-size:11.5px;color:var(--o);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
+.plurl{font-size:13px;color:var(--o);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
 h2{font-size:12px;letter-spacing:.06em;text-transform:none;color:var(--teal);font-weight:700;margin:1.5em 0 .5em;display:flex;align-items:center;gap:7px}
 h2:before{content:"";width:14px;height:2px;background:var(--teal);border-radius:2px}
 label{display:block;font-size:12px;color:var(--sub);margin:13px 0 5px;font-weight:600}
@@ -85,7 +85,7 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .tabs button.sel{background:var(--surface);color:var(--teal);box-shadow:var(--shadow)}
 .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px}
 .rchip{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;font-weight:700;color:var(--ink);gap:2px}
-.rchip:hover{border-color:var(--teal);color:var(--teal)} .rchip .n{font-size:18px} .rchip .u{font-size:11.5px;color:var(--faint);font-weight:500}
+.rchip:hover{border-color:var(--teal);color:var(--teal)} .rchip .n{font-size:18px} .rchip .u{font-size:13px;color:var(--faint);font-weight:500}
 /* pdf */
 .pdfbtn{display:flex;align-items:center;gap:13px;width:100%;text-align:left;background:var(--surface);color:var(--ink);border:1.5px solid var(--line);font-weight:600;margin:9px 0;padding:14px}
 .pdfbtn:hover{border-color:var(--teal-line);filter:none}
@@ -107,11 +107,11 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .curval{width:82px;height:82px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:800;background:var(--line2);color:var(--faint)}
 .curval.o{background:var(--o-bg);color:var(--o)} .curval.x{background:var(--x-bg);color:var(--x)}
 .dots{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin:16px 0}
-.dot2{aspect-ratio:1;border-radius:7px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--faint);cursor:pointer;background:var(--surface)}
+.dot2{aspect-ratio:1;border-radius:7px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--faint);cursor:pointer;background:var(--surface)}
 .dot2.o{background:var(--o-bg);color:var(--o);border-color:var(--o-bg)} .dot2.x{background:var(--x-bg);color:var(--x);border-color:var(--x-bg)}
 .dot2.cur{outline:2px solid var(--teal);outline-offset:1px}
-.hint{font-size:11.5px;color:var(--faint);text-align:center;margin:10px 0}
-.hint kbd{font-family:'JetBrains Mono',monospace;background:var(--line2);border-radius:5px;padding:1px 6px;font-size:11.5px;color:var(--ink)}
+.hint{font-size:13px;color:var(--faint);text-align:center;margin:10px 0}
+.hint kbd{font-family:'JetBrains Mono',monospace;background:var(--line2);border-radius:5px;padding:1px 6px;font-size:12px;color:var(--ink)}
 /* report */
 .scorewrap{display:flex;align-items:flex-end;gap:14px;margin:4px 0 2px}
 .scorewrap .big{font-size:54px;font-weight:800;line-height:.9;letter-spacing:-.03em}
@@ -120,7 +120,7 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .verdict.p{background:var(--o-bg);color:var(--o)} .verdict.f{background:var(--x-bg);color:var(--x)}
 .level{height:9px;background:var(--line2);border-radius:9px;overflow:hidden;margin:14px 0 4px;position:relative}
 .level i{display:block;height:100%;border-radius:9px} .level .pass{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.4}
-.lvlnote{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint)}
+.lvlnote{display:flex;justify-content:space-between;font-size:13px;color:var(--faint)}
 .kv{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;padding:9px 0;border-bottom:1px solid var(--line2)}
 .kv:last-child{border-bottom:0} .kv .r{color:var(--sub);font-size:12.5px}
 .axiscard{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;margin:7px 0}
@@ -128,7 +128,7 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .axiscard .axn{font-size:13px;font-weight:600;flex:1} .axiscard .axr{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--x);font-weight:700}
 .ubar{display:flex;align-items:center;gap:10px;margin:7px 0}.ubar .un{font-size:12.5px;width:84px;flex:none;color:var(--ink)}
 .ubar .ut{flex:1;height:8px;background:var(--line2);border-radius:8px;overflow:hidden}.ubar .ut i{display:block;height:100%;background:var(--teal);border-radius:8px}
-.ubar .uv{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--sub);width:54px;text-align:right;flex:none}
+.ubar .uv{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--sub);width:54px;text-align:right;flex:none}
 .ladder{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
 .lstep{font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 11px;border-radius:30px;border:1px solid var(--line);color:var(--sub)}
 .lstep.p{background:var(--o-bg);color:var(--o);border-color:var(--o-bg)} .lstep.f{background:var(--x-bg);color:var(--x);border-color:var(--x-bg)}
@@ -136,14 +136,14 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .gate{border:1.5px solid var(--line);border-radius:14px;padding:15px;margin:11px 0;transition:border-color .2s}
 .gate.done{border-color:var(--o);background:var(--o-bg)}
 .gate .gt{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:4px}
-.gate .gu{font-size:11.5px;color:var(--faint);font-weight:500}
-.gate .badge{margin-left:auto;font-size:11.5px;font-weight:700} .gate .badge.lock{color:var(--faint)} .gate .badge.ok{color:var(--o)}
+.gate .gu{font-size:13px;color:var(--faint);font-weight:500}
+.gate .badge{margin-left:auto;font-size:13px;font-weight:700} .gate .badge.lock{color:var(--faint)} .gate .badge.ok{color:var(--o)}
 .gprog{display:flex;align-items:center;gap:10px;margin:0 0 10px;position:sticky;top:0;z-index:5;background:var(--surface);padding:10px 0 8px}
 .gpbar{flex:1;height:9px;background:var(--line);border-radius:6px;overflow:hidden}
 .gpbar i{display:block;height:100%;background:var(--o);border-radius:6px;transition:width .3s}
 .gpt{font-size:12px;font-weight:700;color:var(--o);white-space:nowrap}
 .gencourage{font-size:12.5px;color:var(--o);background:var(--o-bg);border-radius:9px;padding:9px 13px;margin:0 0 14px;font-weight:600;line-height:1.45}
-.cqstage{font-size:11.5px;font-weight:700;color:var(--teal);margin:9px 0 3px;letter-spacing:.02em}
+.cqstage{font-size:13px;font-weight:700;color:var(--teal);margin:9px 0 3px;letter-spacing:.02em}
 .feedback{background:var(--x-bg);border:1px solid var(--x);border-radius:10px;padding:11px 13px;margin-top:9px;font-size:13px;line-height:1.5}
 .gdone{font-size:12.5px;color:var(--o);font-weight:600;margin-top:6px}
 button.ghost.sm{padding:7px 14px;font-size:12.5px;margin-top:9px;width:auto}
@@ -151,24 +151,24 @@ button.ghost.sm{padding:7px 14px;font-size:12.5px;margin-top:9px;width:auto}
 .deepstudy>summary{cursor:pointer;list-style:none;padding:9px 12px;font-size:12px;font-weight:700;color:var(--brass);display:flex;align-items:center;gap:6px;user-select:none}
 .deepstudy>summary::-webkit-details-marker{display:none}
 .deepstudy[open]>summary{border-bottom:1px solid var(--line)}
-.ds-sum-ico{font-size:11.5px}
+.ds-sum-ico{font-size:12px}
 .ds-body{padding:10px 12px 12px}
 .ds-dx,.ds-fx{margin-bottom:9px}
-.ds-lab{display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.ds-lab{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
 .ds-dx .ds-lab{color:var(--x)}.ds-fx .ds-lab{color:var(--o)}
 .ds-dx p,.ds-fx p{margin:0;font-size:12.5px;line-height:1.5;color:#2b3744}
 .ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:4px}
-.ds-cell{background:#fff;border:1px solid var(--line2);border-radius:7px;padding:7px 9px;font-size:11.5px;line-height:1.45;color:#3a4654}
-.ds-t{display:block;font-size:11.5px;font-weight:800;letter-spacing:.05em;color:var(--teal);margin-bottom:2px}
+.ds-cell{background:#fff;border:1px solid var(--line2);border-radius:7px;padding:7px 9px;font-size:13px;line-height:1.45;color:#3a4654}
+.ds-t{display:block;font-size:12px;font-weight:800;letter-spacing:.05em;color:var(--teal);margin-bottom:2px}
 @media(max-width:540px){.ds-grid{grid-template-columns:1fr}}
 .reading{background:var(--surface);border:1px solid var(--line2);border-left:3px solid var(--teal);border-radius:9px;padding:11px 13px;margin:9px 0;font-size:13px;color:#2b3744}
-.reading .lab{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--teal);font-weight:700;letter-spacing:.04em;display:block;margin-bottom:3px}
+.reading .lab{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--teal);font-weight:700;letter-spacing:.04em;display:block;margin-bottom:3px}
 .reading b{color:var(--ink)}
 .rlayer{padding:7px 0;border-bottom:1px solid var(--line2)}.rlayer:last-child{border-bottom:0;padding-bottom:0}.rlayer:first-child{padding-top:0}
 .rlayer.kill{color:#8E4B2F}.rlayer.kill .lab{color:#B5651D}
 .rlayer.one .lab{color:var(--brass)}
 .dcfig{margin:9px 0 4px;padding:8px 4px;background:#FCFCFA;border:1px solid var(--line2);border-radius:8px}.dcfig svg{width:100%;height:auto;max-height:150px;display:block}
-.gatedivider{margin:16px 0 10px;font-size:11.5px;color:var(--sub);text-align:center;border-top:1px dashed var(--line);padding-top:12px}
+.gatedivider{margin:16px 0 10px;font-size:13px;color:var(--sub);text-align:center;border-top:1px dashed var(--line);padding-top:12px}
 .gatedivider span{display:block;font-weight:700;color:var(--brass);font-size:13px;margin-bottom:2px}
 .retrieval{font-size:12px;color:var(--brass);background:var(--brass-soft,#F5EEDF);border-radius:8px;padding:8px 11px;margin:8px 0 6px;font-weight:600}
 .readtoggle{margin-top:10px;font-size:12px;font-weight:700;color:#8a6d2f;background:#faf6ec;border:1px solid #e3d4a8;border-radius:7px;padding:6px 11px;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -178,29 +178,29 @@ button.ghost.sm{padding:7px 14px;font-size:12.5px;margin-top:9px;width:auto}
 .coverhint{display:none}
 .reading.covered .coverhint{display:block;font-size:12.5px;color:#9a8049;font-weight:600;padding:2px 0 1px}
 .gagain{margin:0 0 12px;padding:11px 14px;background:#f6f4ef;border:1px solid #e3d9c4;border-radius:10px;font-size:14px;color:#5a4e36;line-height:1.6}
-.rootpill{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:700;color:#7a5b1a;background:#f3e6c4;border:1px solid #e0c68f;border-radius:5px;padding:1px 6px;vertical-align:middle}
-.recurpill{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:700;color:#9a3b32;background:#f7e3e0;border:1px solid #e6b8b1;border-radius:5px;padding:1px 6px;vertical-align:middle}
+.rootpill{display:inline-block;margin-left:6px;font-size:12px;font-weight:700;color:#7a5b1a;background:#f3e6c4;border:1px solid #e0c68f;border-radius:5px;padding:1px 6px;vertical-align:middle}
+.recurpill{display:inline-block;margin-left:6px;font-size:12px;font-weight:700;color:#9a3b32;background:#f7e3e0;border:1px solid #e6b8b1;border-radius:5px;padding:1px 6px;vertical-align:middle}
 .rootnote{margin:8px 0 2px;font-size:12.5px;color:#3f6b5f;background:#eef5f2;border:1px solid #cfe5dd;border-radius:8px;padding:8px 11px}
 .rootnote b{color:#2f5c4f}
 .cohort{margin:16px auto 0;max-width:340px;padding:13px 14px;background:#fbf9f4;border:1px solid #ece3cf;border-radius:12px}
 .cohhd{font-size:13.5px;color:#2a2118;margin-bottom:9px}
-.cohhd .muted{font-size:11.5px;font-weight:500}
+.cohhd .muted{font-size:13px;font-weight:500}
 .cohrow{display:flex;align-items:center;gap:8px;margin:5px 0}
 .cohmis{flex:0 0 42%;font-size:12px;color:#4a3f2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cohbar{flex:1;height:8px;background:#efe7d6;border-radius:5px;overflow:hidden}
 .cohbar i{display:block;height:100%;background:linear-gradient(90deg,#d9a441,#c0392b);border-radius:5px}
-.cohn{flex:0 0 auto;font-size:11.5px;color:#8a7a55}
+.cohn{flex:0 0 auto;font-size:13px;color:#8a7a55}
 .cohlink{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:700;color:#9a7b2a;text-decoration:none}
 .heatwrap{margin-top:12px;padding-top:11px;border-top:1px solid #ece3cf}
-.heatcap{font-size:11.5px;color:#8a7a55;margin-bottom:7px}
+.heatcap{font-size:12px;color:#8a7a55;margin-bottom:7px}
 .heatrow{display:flex;align-items:center;gap:3px;margin:3px 0}
-.heatu{flex:0 0 90px;font-size:11.5px;color:#4a3f2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.heatc{flex:1;min-width:0;text-align:center;font-size:11.5px;line-height:20px;height:20px;border-radius:3px;color:#5a4e36}
+.heatu{flex:0 0 90px;font-size:13px;color:#4a3f2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.heatc{flex:1;min-width:0;text-align:center;font-size:12px;line-height:20px;height:20px;border-radius:3px;color:#5a4e36}
 .heathd .heatc{background:none;color:#9a8a63;font-weight:700;height:auto;line-height:1.4}
 .heatc.h0{background:#f3efe4}.heatc.h1{background:#f1e2c2}.heatc.h2{background:#e6c388;color:#4a3a1e}.heatc.h3{background:#dd9a4e;color:#fff}.heatc.h4{background:#c0392b;color:#fff}
 .heatc.hna{background:#faf8f3;color:#cabfa6}
 .cq{font-size:14px;margin:11px 0 8px} .cq b{color:var(--teal)}
-.again{font-size:11.5px;color:var(--x);margin-left:9px;align-self:center}
+.again{font-size:13px;color:var(--x);margin-left:9px;align-self:center}
 /* done */
 .hero{text-align:center;padding:18px 0 6px}
 .hero .seal{width:62px;height:62px;border-radius:50%;background:var(--o-bg);color:var(--o);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 12px;border:2px solid var(--o)}
@@ -211,7 +211,7 @@ button.ghost.sm{padding:7px 14px;font-size:12.5px;margin-top:9px;width:auto}
 
 /* ===== 근본원인 진단 섹션 ===== */
 .dxroot{margin:16px 0 6px;padding:16px 0 2px;border-top:2px solid var(--brass)}
-.dxeyebrow{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:9px}
+.dxeyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:9px}
 .dxthesis{font-size:17.5px;line-height:1.52;color:var(--ink);margin:0 0 13px;letter-spacing:-.01em;font-weight:400}
 .dxthesis b{font-weight:700}
 .dxconv{margin:10px 0;padding:14px 12px 8px;background:#FCFAF6;border:1px solid var(--line);border-radius:10px}
@@ -220,18 +220,38 @@ button.ghost.sm{padding:7px 14px;font-size:12.5px;margin-top:9px;width:auto}
 .dxbars{display:flex;flex-direction:column;gap:8px}
 .dxbar{display:grid;grid-template-columns:132px 1fr 36px;align-items:center;gap:10px}
 .dxbn{font-size:12.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dxbn .rt{font-style:normal;font-size:11.5px;color:var(--brass);margin-left:5px;font-weight:700}
+.dxbn .rt{font-style:normal;font-size:13px;color:var(--brass);margin-left:5px;font-weight:700}
 .dxbt{height:7px;background:#EDEEE8;border-radius:4px;overflow:hidden}
 .dxbt i{display:block;height:100%;background:linear-gradient(90deg,var(--brass),#86692f);border-radius:4px}
-.dxbv{font-size:11.5px;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums}
+.dxbv{font-size:13px;color:var(--sub);text-align:right;font-variant-numeric:tabular-nums}
 .dxnote{font-size:12px;color:var(--sub);margin-top:10px;line-height:1.55}
 @media(max-width:540px){.dxbar{grid-template-columns:100px 1fr 32px}}
 .dxarc{margin:14px 0 2px;padding:13px 14px;background:var(--brass-soft);border-radius:10px}
 .dxarc-h{font-size:12px;font-weight:700;color:var(--brass);letter-spacing:.02em;margin-bottom:8px}
 .dxarc-r{margin:0 0 7px;font-size:12.5px;line-height:1.5;color:#3a4654}
 .dxarc-r:last-child{margin-bottom:0}
-.dxarc-l{display:block;font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--x);margin-bottom:2px}
+.dxarc-l{display:block;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--x);margin-bottom:2px}
 .dxarc-l.b{color:var(--o)}
+/* 대비: 초록·금색 **글자**가 흰 바탕에서 4.5:1 에 못 미쳤다(#1B8A4C 4.39 · #A9853C 3.4). 테마 조각(ct-theme)이
+   :root 에 옛 값을 다시 적으므로 한 단 더 구체적인 html:root 로 덮는다(테마 조각은 손대지 않는다). */
+html:root{--o:#157A42;--brass:#8A6A2F}
+.focusq .stmt,.hint,.cq,.gate .gt{word-break:keep-all}
+/* ── 학생이 재시 링크로 들어온 화면(html.stu) ─────────────────────────
+   선생님 채점 앱 그대로 보이던 것을 학생용으로 — 선생님 단추·단계는 숨기고, 재시 입력은
+   숫자 1/2 칸 대신 큰 O/X 단추(exam.html .oxbig 와 같은 꼴), 손가락 44px. 선생님(링크 아님)은 그대로. */
+.oxrow{display:flex;gap:12px}
+.oxbig{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:18px 0;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--sub);font-weight:800}
+.oxbig b{font-size:30px;line-height:1;font-family:'JetBrains Mono',monospace}
+.oxbig span{font-size:13px;font-weight:700}
+.oxbig.o.sel,.oxbig.o:hover{background:var(--o-bg);color:var(--o);border-color:var(--o)}
+.oxbig.x.sel,.oxbig.x:hover{background:var(--x-bg);color:var(--x);border-color:var(--x)}
+.navrow{display:flex;gap:10px;margin-top:12px}.navrow button{flex:1}
+.stupill{display:inline-block;font-size:13px;font-weight:700;color:var(--teal-d);background:var(--teal-soft);border-radius:30px;padding:5px 12px;margin:0 0 8px}
+.stulink{display:block;text-align:center;background:var(--teal);color:#fff;border-radius:12px;font-weight:700;padding:13px 16px;text-decoration:none;min-height:44px}
+html.stu .dots{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+html.stu .dot2{min-height:44px;font-size:13px}
+html.stu .readtoggle{min-height:44px;padding:10px 14px;font-size:13px}
+html.stu .oxbtns button{min-height:48px}
 </style><script src="nostar.js" defer></script>
 <style id="ct-theme" data-v="4" data-fam="tool" data-seal="1">/* 이 조각은 tools/theme.py 가 넣습니다. 손으로 고치지 마세요 —
    다음 실행에서 덮어써집니다. 색을 바꾸려면 그 파일을 고치세요. */
@@ -269,7 +289,10 @@ const Store={mem:{},get(k){try{return localStorage.getItem(k)}catch(e){return th
   set(k,v){try{localStorage.setItem(k,v)}catch(e){this.mem[k]=v}},del(k){try{localStorage.removeItem(k)}catch(e){delete this.mem[k]}}};
 const SKEY='chemistreal_session_v1';
 
-var TESTMODE=false;   /* 테스트 모드는 URL ?test=1 로만 켜짐 (수기 채점 실수로 TEST 저장 방지) */
+var TESTMODE=false;
+/* 학생이 재시 링크(index.html?retake=…)로 들어왔나. 들어온 길로 정한다 — S 는 blank() 로 몇 번이고 새로
+   만들어지므로 거기 두지 않는다. 선생님이 채점 앱에서 쓸 때는 false(지금 그대로). */
+var STU=false;   /* 테스트 모드는 URL ?test=1 로만 켜짐 (수기 채점 실수로 TEST 저장 방지) */
 let S=null, MANIFEST=null, FORMS=null, STUDY=null, courseTab='ch2', SAVE_STATE=null, SAVE_NOTE='', STUDENT_HIST=null, STUDENT_HIST_KEY=null, STUDENT_WEAK=null, COHORT=null, COHORT_LOADED=false, SERVER_LINK=null;
 function blank(){return {view:'select',name:'',school:'',grade:'',isTest:false,roundId:null,round:null,
   attemptNo:1,attempts:[],keyItems:[],answers:[],cur:0,graded:null,dx:null,gate:null,seen:{},wrongStmts:{}};}
@@ -431,19 +454,19 @@ molGeometry:`<svg viewBox="0 0 384 116" role="img" aria-label="분자 모양 4�
 <circle cx="24" cy="44" r="10" fill="#7FA9A4"/><text x="24" y="44" fill="#fff" font-size="11" font-weight="800" text-anchor="middle" dominant-baseline="central">O</text>
 <circle cx="48" cy="44" r="12" fill="#2B3744"/><text x="48" y="44" fill="#fff" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">C</text>
 <circle cx="72" cy="44" r="10" fill="#7FA9A4"/><text x="72" y="44" fill="#fff" font-size="11" font-weight="800" text-anchor="middle" dominant-baseline="central">O</text>
-<text x="48" y="82" fill="#A9853C" font-size="11" font-weight="700" text-anchor="middle">180°</text><text x="48" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">선형</text>
+<text x="48" y="82" fill="#8A6A2F" font-size="11" font-weight="700" text-anchor="middle">180°</text><text x="48" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">선형</text>
 <line x1="144" y1="30" x2="120" y2="62" stroke="#42525F" stroke-width="2.6"/><line x1="144" y1="30" x2="168" y2="62" stroke="#42525F" stroke-width="2.6"/>
 <circle cx="134" cy="15" r="2.3" fill="#A9853C"/><circle cx="154" cy="15" r="2.3" fill="#A9853C"/><circle cx="127" cy="23" r="2.3" fill="#A9853C"/><circle cx="161" cy="23" r="2.3" fill="#A9853C"/>
 <circle cx="144" cy="30" r="12" fill="#2B3744"/><text x="144" y="30" fill="#fff" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">O</text>
 <circle cx="120" cy="62" r="9" fill="#7FA9A4"/><text x="120" y="62" fill="#fff" font-size="10" font-weight="800" text-anchor="middle" dominant-baseline="central">H</text>
 <circle cx="168" cy="62" r="9" fill="#7FA9A4"/><text x="168" y="62" fill="#fff" font-size="10" font-weight="800" text-anchor="middle" dominant-baseline="central">H</text>
-<text x="144" y="82" fill="#A9853C" font-size="11" font-weight="700" text-anchor="middle">104.5°</text><text x="144" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">굽은</text>
+<text x="144" y="82" fill="#8A6A2F" font-size="11" font-weight="700" text-anchor="middle">104.5°</text><text x="144" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">굽은</text>
 <line x1="240" y1="46" x2="240" y2="24" stroke="#42525F" stroke-width="2.6"/><line x1="240" y1="46" x2="218" y2="66" stroke="#42525F" stroke-width="2.6"/><line x1="240" y1="46" x2="262" y2="66" stroke="#42525F" stroke-width="2.6"/>
 <circle cx="240" cy="46" r="12" fill="#2B3744"/><text x="240" y="46" fill="#fff" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">B</text>
 <circle cx="240" cy="24" r="9" fill="#7FA9A4"/><text x="240" y="24" fill="#fff" font-size="9" font-weight="800" text-anchor="middle" dominant-baseline="central">F</text>
 <circle cx="218" cy="66" r="9" fill="#7FA9A4"/><text x="218" y="66" fill="#fff" font-size="9" font-weight="800" text-anchor="middle" dominant-baseline="central">F</text>
 <circle cx="262" cy="66" r="9" fill="#7FA9A4"/><text x="262" y="66" fill="#fff" font-size="9" font-weight="800" text-anchor="middle" dominant-baseline="central">F</text>
-<text x="240" y="84" fill="#A9853C" font-size="11" font-weight="700" text-anchor="middle">120°</text><text x="240" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">평면삼각</text>
+<text x="240" y="84" fill="#8A6A2F" font-size="11" font-weight="700" text-anchor="middle">120°</text><text x="240" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">평면삼각</text>
 <line x1="336" y1="46" x2="336" y2="24" stroke="#42525F" stroke-width="2.6"/><line x1="336" y1="46" x2="314" y2="62" stroke="#42525F" stroke-width="2.6"/>
 <polygon points="336,46 356,58 351,64" fill="#42525F"/><line x1="336" y1="46" x2="336" y2="74" stroke="#42525F" stroke-width="1.4" stroke-dasharray="2.5 3"/>
 <circle cx="336" cy="46" r="12" fill="#2B3744"/><text x="336" y="46" fill="#fff" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">C</text>
@@ -451,18 +474,18 @@ molGeometry:`<svg viewBox="0 0 384 116" role="img" aria-label="분자 모양 4�
 <circle cx="314" cy="62" r="8" fill="#7FA9A4"/><text x="314" y="62" fill="#fff" font-size="9" font-weight="800" text-anchor="middle" dominant-baseline="central">H</text>
 <circle cx="356" cy="58" r="8" fill="#7FA9A4"/><text x="356" y="58" fill="#fff" font-size="9" font-weight="800" text-anchor="middle" dominant-baseline="central">H</text>
 <circle cx="336" cy="74" r="8" fill="#7FA9A4"/><text x="336" y="74" fill="#fff" font-size="9" font-weight="800" text-anchor="middle" dominant-baseline="central">H</text>
-<text x="336" y="92" fill="#A9853C" font-size="10" font-weight="700" text-anchor="middle">109.5°</text><text x="336" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">정사면체</text>
+<text x="336" y="92" fill="#8A6A2F" font-size="10" font-weight="700" text-anchor="middle">109.5°</text><text x="336" y="102" fill="#16202E" font-size="11.5" font-weight="800" text-anchor="middle">정사면체</text>
 </g></svg>`,
 orbitalFill:`<svg viewBox="0 0 340 150" role="img" aria-label="오비탈 채우기 질소"><g font-family="JetBrains Mono,monospace">
 <line x1="26" y1="132" x2="26" y2="22" stroke="#8A95A2" stroke-width="1.3"/><polygon points="26,18 22,26 30,26" fill="#8A95A2"/><text x="14" y="76" fill="#8A95A2" font-size="9.5" font-weight="700" transform="rotate(-90 14 76)" text-anchor="middle">에너지</text>
 <text x="44" y="126" fill="#61707F" font-size="11" font-weight="700">1s</text><rect x="66" y="112" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="78" y="121" fill="#16202E" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑↓</text>
 <text x="44" y="92" fill="#61707F" font-size="11" font-weight="700">2s</text><rect x="66" y="78" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="78" y="87" fill="#16202E" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑↓</text>
 <text x="44" y="54" fill="#61707F" font-size="11" font-weight="700">2p</text>
-<rect x="66" y="40" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="78" y="49" fill="#1B8A4C" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑</text>
-<rect x="96" y="40" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="108" y="49" fill="#1B8A4C" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑</text>
-<rect x="126" y="40" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="138" y="49" fill="#1B8A4C" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑</text>
-<text x="172" y="48" fill="#A9853C" font-size="10.5" font-weight="700">훈트: 먼저 하나씩</text>
-<text x="172" y="86" fill="#A9853C" font-size="10.5" font-weight="700">파울리: 짝은 반대 스핀</text>
+<rect x="66" y="40" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="78" y="49" fill="#157A42" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑</text>
+<rect x="96" y="40" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="108" y="49" fill="#157A42" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑</text>
+<rect x="126" y="40" width="24" height="18" rx="2" fill="none" stroke="#42525F" stroke-width="1.4"/><text x="138" y="49" fill="#157A42" font-size="12" font-weight="800" text-anchor="middle" dominant-baseline="central">↑</text>
+<text x="172" y="48" fill="#8A6A2F" font-size="10.5" font-weight="700">훈트: 먼저 하나씩</text>
+<text x="172" y="86" fill="#8A6A2F" font-size="10.5" font-weight="700">파울리: 짝은 반대 스핀</text>
 <text x="172" y="121" fill="#61707F" font-size="10.5" font-weight="700">낮은 칸부터 채움</text>
 <text x="66" y="146" fill="#16202E" font-size="10.5" font-weight="700">질소 N(7): 1s² 2s² 2p³</text>
 </g></svg>`,
@@ -474,13 +497,13 @@ periodicTrend:`<svg viewBox="0 0 340 150" role="img" aria-label="주기적 경�
 <line x1="70" y1="28" x2="220" y2="28" stroke="#0B6E6E" stroke-width="2"/><polygon points="226,28 218,24 218,32" fill="#0B6E6E"/>
 <text x="78" y="22" fill="#0B6E6E" font-size="10" font-weight="800">주기 → : 반지름↓, 전기음성도·이온화E↑</text>
 <line x1="58" y1="40" x2="58" y2="98" stroke="#A9853C" stroke-width="2"/><polygon points="58,104 54,96 62,96" fill="#A9853C"/>
-<text x="50" y="74" fill="#A9853C" font-size="10" font-weight="800" transform="rotate(-90 50 74)" text-anchor="middle">족 ↓ : 반지름↑</text>
+<text x="50" y="74" fill="#8A6A2F" font-size="10" font-weight="800" transform="rotate(-90 50 74)" text-anchor="middle">족 ↓ : 반지름↑</text>
 <text x="70" y="124" fill="#61707F" font-size="10" font-weight="700">유효 핵전하가 셀수록 전자를 세게 당겨 반지름↓·당기는 힘↑</text>
 </g></svg>`
 };
-DIAGRAMS.reactionEnergy=`<svg viewBox="0 0 340 158" role="img" aria-label="반응 에너지 도표"><g font-family="JetBrains Mono,monospace"><line x1="36" y1="18" x2="36" y2="138" stroke="#8A95A2" stroke-width="1.2"/><line x1="36" y1="138" x2="322" y2="138" stroke="#8A95A2" stroke-width="1.2"/><text x="22" y="78" fill="#8A95A2" font-size="9" font-weight="700" transform="rotate(-90 22 78)" text-anchor="middle">에너지</text><text x="185" y="152" fill="#8A95A2" font-size="9" font-weight="700" text-anchor="middle">반응 진행 →</text><path d="M50,100 L94,100 C122,100 140,46 166,46 C192,46 212,116 240,116 L300,116" fill="none" stroke="#0B6E6E" stroke-width="2.4"/><path d="M94,100 C116,100 142,70 166,70 C190,70 214,116 240,116" fill="none" stroke="#A9853C" stroke-width="1.5" stroke-dasharray="4 3"/><line x1="120" y1="100" x2="120" y2="46" stroke="#42525F" stroke-width="1" stroke-dasharray="2 2"/><polygon points="120,46 117,54 123,54" fill="#42525F"/><polygon points="120,100 117,92 123,92" fill="#42525F"/><text x="126" y="76" fill="#42525F" font-size="9.5" font-weight="700">Ea</text><line x1="288" y1="100" x2="288" y2="116" stroke="#1B8A4C" stroke-width="1"/><text x="293" y="112" fill="#1B8A4C" font-size="9" font-weight="700">ΔH&lt;0</text><text x="44" y="94" fill="#16202E" font-size="9.5" font-weight="700">반응물</text><text x="250" y="110" fill="#16202E" font-size="9.5" font-weight="700">생성물</text><text x="150" y="36" fill="#A9853C" font-size="9" font-weight="700">촉매: Ea 낮춤</text><text x="44" y="132" fill="#61707F" font-size="9">발열: 생성물&lt;반응물(ΔH&lt;0) · 흡열은 반대 · 촉매는 Ea만 낮춤(ΔH 불변)</text></g></svg>`;
-DIAGRAMS.titrationCurve=`<svg viewBox="0 0 340 158" role="img" aria-label="중화 적정 곡선"><g font-family="JetBrains Mono,monospace"><line x1="36" y1="16" x2="36" y2="138" stroke="#8A95A2" stroke-width="1.2"/><line x1="36" y1="138" x2="322" y2="138" stroke="#8A95A2" stroke-width="1.2"/><text x="22" y="76" fill="#8A95A2" font-size="9" font-weight="700" transform="rotate(-90 22 76)" text-anchor="middle">pH</text><text x="195" y="152" fill="#8A95A2" font-size="9" font-weight="700" text-anchor="middle">적정액 부피 →</text><line x1="36" y1="77" x2="322" y2="77" stroke="#D8DAD2" stroke-width="1" stroke-dasharray="3 3"/><text x="40" y="74" fill="#8A95A2" font-size="8">pH 7</text><rect x="60" y="105" width="80" height="33" fill="#E4F0EF" opacity="0.7"/><text x="66" y="122" fill="#0B6E6E" font-size="8.5" font-weight="700">완충 영역</text><path d="M48,128 C90,124 124,116 150,104 L150,104 C158,96 162,56 166,48 C170,40 176,34 200,31 C240,27 290,25 312,24" fill="none" stroke="#0B6E6E" stroke-width="2.4"/><circle cx="158" cy="77" r="4" fill="#A9853C"/><text x="164" y="70" fill="#A9853C" font-size="9.5" font-weight="700">당량점</text><line x1="158" y1="77" x2="158" y2="138" stroke="#A9853C" stroke-width="0.8" stroke-dasharray="2 2"/><text x="44" y="132" fill="#61707F" font-size="9">강산+강염기: 당량점 pH 7 · 당량점 부근 pH 급변 · 완충 영역은 변화 완만</text></g></svg>`;
-DIAGRAMS.phaseGraph=`<svg viewBox="0 0 340 158" role="img" aria-label="상평형 그림"><g font-family="JetBrains Mono,monospace"><line x1="36" y1="16" x2="36" y2="138" stroke="#8A95A2" stroke-width="1.2"/><line x1="36" y1="138" x2="322" y2="138" stroke="#8A95A2" stroke-width="1.2"/><text x="22" y="76" fill="#8A95A2" font-size="9" font-weight="700" transform="rotate(-90 22 76)" text-anchor="middle">압력</text><text x="190" y="152" fill="#8A95A2" font-size="9" font-weight="700" text-anchor="middle">온도 →</text><path d="M120,94 L146,22" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><path d="M120,94 Q185,66 250,44" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><path d="M120,94 L50,130" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><circle cx="120" cy="94" r="3.5" fill="#A9853C"/><text x="92" y="112" fill="#A9853C" font-size="9" font-weight="700">삼중점</text><circle cx="250" cy="44" r="3.5" fill="#A9853C"/><text x="222" y="40" fill="#A9853C" font-size="9" font-weight="700">임계점</text><text x="62" y="58" fill="#16202E" font-size="10" font-weight="700">고체</text><text x="160" y="44" fill="#16202E" font-size="10" font-weight="700">액체</text><text x="258" y="112" fill="#16202E" font-size="10" font-weight="700">기체</text><text x="44" y="132" fill="#61707F" font-size="8.5">융해·증기압·승화 곡선이 삼중점에서 만남 · 곡선 = 두 상이 공존하는 경계</text></g></svg>`;
+DIAGRAMS.reactionEnergy=`<svg viewBox="0 0 340 158" role="img" aria-label="반응 에너지 도표"><g font-family="JetBrains Mono,monospace"><line x1="36" y1="18" x2="36" y2="138" stroke="#8A95A2" stroke-width="1.2"/><line x1="36" y1="138" x2="322" y2="138" stroke="#8A95A2" stroke-width="1.2"/><text x="22" y="78" fill="#8A95A2" font-size="9" font-weight="700" transform="rotate(-90 22 78)" text-anchor="middle">에너지</text><text x="185" y="152" fill="#8A95A2" font-size="9" font-weight="700" text-anchor="middle">반응 진행 →</text><path d="M50,100 L94,100 C122,100 140,46 166,46 C192,46 212,116 240,116 L300,116" fill="none" stroke="#0B6E6E" stroke-width="2.4"/><path d="M94,100 C116,100 142,70 166,70 C190,70 214,116 240,116" fill="none" stroke="#A9853C" stroke-width="1.5" stroke-dasharray="4 3"/><line x1="120" y1="100" x2="120" y2="46" stroke="#42525F" stroke-width="1" stroke-dasharray="2 2"/><polygon points="120,46 117,54 123,54" fill="#42525F"/><polygon points="120,100 117,92 123,92" fill="#42525F"/><text x="126" y="76" fill="#42525F" font-size="9.5" font-weight="700">Ea</text><line x1="288" y1="100" x2="288" y2="116" stroke="#1B8A4C" stroke-width="1"/><text x="293" y="112" fill="#157A42" font-size="9" font-weight="700">ΔH&lt;0</text><text x="44" y="94" fill="#16202E" font-size="9.5" font-weight="700">반응물</text><text x="250" y="110" fill="#16202E" font-size="9.5" font-weight="700">생성물</text><text x="150" y="36" fill="#8A6A2F" font-size="9" font-weight="700">촉매: Ea 낮춤</text><text x="44" y="132" fill="#61707F" font-size="9">발열: 생성물&lt;반응물(ΔH&lt;0) · 흡열은 반대 · 촉매는 Ea만 낮춤(ΔH 불변)</text></g></svg>`;
+DIAGRAMS.titrationCurve=`<svg viewBox="0 0 340 158" role="img" aria-label="중화 적정 곡선"><g font-family="JetBrains Mono,monospace"><line x1="36" y1="16" x2="36" y2="138" stroke="#8A95A2" stroke-width="1.2"/><line x1="36" y1="138" x2="322" y2="138" stroke="#8A95A2" stroke-width="1.2"/><text x="22" y="76" fill="#8A95A2" font-size="9" font-weight="700" transform="rotate(-90 22 76)" text-anchor="middle">pH</text><text x="195" y="152" fill="#8A95A2" font-size="9" font-weight="700" text-anchor="middle">적정액 부피 →</text><line x1="36" y1="77" x2="322" y2="77" stroke="#D8DAD2" stroke-width="1" stroke-dasharray="3 3"/><text x="40" y="74" fill="#8A95A2" font-size="8">pH 7</text><rect x="60" y="105" width="80" height="33" fill="#E4F0EF" opacity="0.7"/><text x="66" y="122" fill="#0B6E6E" font-size="8.5" font-weight="700">완충 영역</text><path d="M48,128 C90,124 124,116 150,104 L150,104 C158,96 162,56 166,48 C170,40 176,34 200,31 C240,27 290,25 312,24" fill="none" stroke="#0B6E6E" stroke-width="2.4"/><circle cx="158" cy="77" r="4" fill="#A9853C"/><text x="164" y="70" fill="#8A6A2F" font-size="9.5" font-weight="700">당량점</text><line x1="158" y1="77" x2="158" y2="138" stroke="#A9853C" stroke-width="0.8" stroke-dasharray="2 2"/><text x="44" y="132" fill="#61707F" font-size="9">강산+강염기: 당량점 pH 7 · 당량점 부근 pH 급변 · 완충 영역은 변화 완만</text></g></svg>`;
+DIAGRAMS.phaseGraph=`<svg viewBox="0 0 340 158" role="img" aria-label="상평형 그림"><g font-family="JetBrains Mono,monospace"><line x1="36" y1="16" x2="36" y2="138" stroke="#8A95A2" stroke-width="1.2"/><line x1="36" y1="138" x2="322" y2="138" stroke="#8A95A2" stroke-width="1.2"/><text x="22" y="76" fill="#8A95A2" font-size="9" font-weight="700" transform="rotate(-90 22 76)" text-anchor="middle">압력</text><text x="190" y="152" fill="#8A95A2" font-size="9" font-weight="700" text-anchor="middle">온도 →</text><path d="M120,94 L146,22" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><path d="M120,94 Q185,66 250,44" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><path d="M120,94 L50,130" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><circle cx="120" cy="94" r="3.5" fill="#A9853C"/><text x="92" y="112" fill="#8A6A2F" font-size="9" font-weight="700">삼중점</text><circle cx="250" cy="44" r="3.5" fill="#A9853C"/><text x="222" y="40" fill="#8A6A2F" font-size="9" font-weight="700">임계점</text><text x="62" y="58" fill="#16202E" font-size="10" font-weight="700">고체</text><text x="160" y="44" fill="#16202E" font-size="10" font-weight="700">액체</text><text x="258" y="112" fill="#16202E" font-size="10" font-weight="700">기체</text><text x="44" y="132" fill="#61707F" font-size="8.5">융해·증기압·승화 곡선이 삼중점에서 만남 · 곡선 = 두 상이 공존하는 경계</text></g></svg>`;
 DIAGRAMS.solubilityGraph=`<svg viewBox="0 0 340 158" role="img" aria-label="용해도 곡선"><g font-family="JetBrains Mono,monospace"><line x1="36" y1="16" x2="36" y2="138" stroke="#8A95A2" stroke-width="1.2"/><line x1="36" y1="138" x2="322" y2="138" stroke="#8A95A2" stroke-width="1.2"/><text x="22" y="76" fill="#8A95A2" font-size="8.5" font-weight="700" transform="rotate(-90 22 76)" text-anchor="middle">용해도</text><text x="190" y="152" fill="#8A95A2" font-size="9" font-weight="700" text-anchor="middle">온도 →</text><path d="M48,120 Q150,96 304,30" fill="none" stroke="#0B6E6E" stroke-width="2.4"/><path d="M48,52 Q150,88 304,118" fill="none" stroke="#C0392B" stroke-width="2.2"/><text x="250" y="42" fill="#0B6E6E" font-size="9" font-weight="700">고체(온도↑→↑)</text><text x="210" y="130" fill="#C0392B" font-size="9" font-weight="700">기체(온도↑→↓)</text><text x="44" y="132" fill="#61707F" font-size="8.5"></text></g></svg>`;
 DIAGRAMS.gasLawGraph=`<svg viewBox="0 0 340 158" role="img" aria-label="기체 법칙 그래프"><g font-family="JetBrains Mono,monospace"><line x1="34" y1="20" x2="34" y2="120" stroke="#8A95A2" stroke-width="1.1"/><line x1="34" y1="120" x2="150" y2="120" stroke="#8A95A2" stroke-width="1.1"/><path d="M48,30 Q60,100 142,112" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><text x="92" y="142" fill="#16202E" font-size="9" font-weight="700" text-anchor="middle">보일: P ∝ 1/V</text><text x="40" y="32" fill="#8A95A2" font-size="8">P</text><text x="142" y="116" fill="#8A95A2" font-size="8">V</text><text x="92" y="154" fill="#61707F" font-size="8" text-anchor="middle">(일정 온도)</text><line x1="190" y1="20" x2="190" y2="120" stroke="#8A95A2" stroke-width="1.1"/><line x1="190" y1="120" x2="312" y2="120" stroke="#8A95A2" stroke-width="1.1"/><path d="M198,112 L300,34" fill="none" stroke="#0B6E6E" stroke-width="2.2"/><text x="250" y="142" fill="#16202E" font-size="9" font-weight="700" text-anchor="middle">샤를: V ∝ T</text><text x="196" y="32" fill="#8A95A2" font-size="8">V</text><text x="304" y="116" fill="#8A95A2" font-size="8">T(K)</text><text x="250" y="154" fill="#61707F" font-size="8" text-anchor="middle">(일정 압력)</text></g></svg>`;
 function getDiagram(mis,unit){ var t=((mis||'')+' '+(unit||''));
@@ -498,14 +521,21 @@ function getDiagram(mis,unit){ var t=((mis||'')+' '+(unit||''));
    학생을 차례로 채점한다. 학생부터 물으면 매 학생마다 회차를 다시 고르게 된다. */
 const ORD={select:0,id:1,pdf:2,grade:3,report:4,gate:5,retake:6,done:7};
 const STEPLB=['회차','학생','시험지','채점','진단','강의록','재시','완료'];
+/* 학생 화면에는 선생님 단계(회차·학생·시험지·채점)가 없다. */
+const ORD_STU={gate:0,retake:1,report:2,done:3};
+const STEPLB_STU=['강의록','재시','결과','통과'];
 function renderSteps(){
-  const cur=ORD[S.view];
-  $('#steps').innerHTML=STEPLB.map((lb,i)=>{
+  const cur=(STU?ORD_STU:ORD)[S.view], LB=STU?STEPLB_STU:STEPLB;
+  $('#steps').innerHTML=LB.map((lb,i)=>{
     const cls=i===cur?'on':i<cur?'past':'';
     return `<div class="step ${cls}"><div class="dot">${i<cur?'✓':i+1}</div><div class="lb">${lb}</div></div>`+
-      (i<STEPLB.length-1?'<div class="seg"></div>':'');
+      (i<LB.length-1?'<div class="seg"></div>':'');
   }).join('');
   $('#testBadge').style.display=S.isTest?'inline-block':'none';
+  /* 좁은 화면에서 단계 막대 오른쪽이 잘려 지금 단계(재시·완료)가 안 보였다 — 지금 단계를 막대 가운데로.
+     scrollIntoView 는 쪽 전체를 움직일 수 있어 막대만 옆으로 민다. */
+  var bar=$('#steps'), on=bar&&bar.querySelector('.step.on');
+  if(bar&&on){ bar.scrollLeft=Math.max(0,on.offsetLeft-bar.offsetLeft-(bar.clientWidth-on.offsetWidth)/2); }
 }
 function go(v){S.view=v;render();window.scrollTo(0,0);}
 function reportBase(){ return location.origin+location.pathname.replace(/[^/]*$/,''); }
@@ -544,6 +574,13 @@ function copyRetakeMsg(btn){
   catch(e){ try{window.prompt('아래 메시지를 복사하세요:',msg);}catch(_){} }
 }
 function saveStatusHTML(){
+  if(STU){   // 학생 화면: 시트·학부모 이야기 없이
+    if(SAVE_STATE==='saving') return '<span class="muted">결과 저장 중…</span>';
+    if(SAVE_STATE==='ok') return '<span style="color:var(--o);font-weight:600">✓ 결과가 저장되었습니다 · 성적표에 반영됩니다</span>';
+    if(SAVE_STATE==='fail') return '<span style="color:var(--x);font-weight:600">⚠ 결과 저장이 확인되지 않았습니다</span> <button class="ghost sm" style="margin-left:6px;min-height:44px" onclick="retrySave(this)">다시 보내기</button>';
+    if(SAVE_STATE==='refused') return '<span style="color:var(--x);font-weight:600">⚠ 이번 결과는 저장되지 않았습니다 · '+String(SAVE_NOTE||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];})+'</span>';
+    return '';
+  }
   if(SAVE_STATE==='saving') return '<span class="muted">시트에 저장 중...</span>';
   if(SAVE_STATE==='ok') return '<span style="color:#C9A227;font-weight:600">✓ 시트에 저장됨 · 학부모에게 링크 전달 가능</span>';
   if(SAVE_STATE==='fail') return '<span style="color:#D9534F;font-weight:600">⚠ 시트 저장 실패 · 링크 전달 전 재시도하세요</span> <button class="ghost sm" style="margin-left:6px" onclick="retrySave(this)">저장 재시도</button>';
@@ -563,7 +600,20 @@ function checkPdf(url,aId,label,results){
   return fetch(url,{method:'HEAD'}).then(function(r){ if(!r.ok) markPdfMissing(aId,label,results); })
     .catch(function(){}); // HEAD 불가(오프라인/메서드 제한)면 오경보 방지 위해 표시하지 않음
 }
+/* OMR 답안지 PDF — materials.json 에 그 회차 omr pdf 가 있을 때만(지금은 화학Ⅰ 심화). 없으면 단추를 안 만든다. */
+var OMR_PDF=null;
+function ensureOmr(){
+  if(OMR_PDF) return Promise.resolve(OMR_PDF);
+  return fetch('materials.json',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(m){
+    var o={}; ((m&&m.courses)||[]).forEach(function(c){ (c.rounds||[]).forEach(function(r){ var f=r.files&&r.files.omr; if(f&&f.pdf) o[c.key+'#'+Number(r.round)]=f.pdf; }); });
+    OMR_PDF=o; return o; }).catch(function(){ OMR_PDF={}; return OMR_PDF; });
+}
+function omrBtnHTML(course,round){
+  var f=OMR_PDF&&OMR_PDF[course+'#'+Number(round)]; if(!f) return '';
+  return '<a id="pdfOmr" class="pdfbtn" href="'+PDF_BASE+f+'" target="_blank" rel="noopener"><span class="ic">OMR</span><span>OMR 답안지 PDF<br><small>학생 배부용 · 60문항 O/X</small></span></a>';
+}
 function checkPdfs(){
+  if(!OMR_PDF){ ensureOmr().then(function(){ var sl=document.getElementById('omrSlot'); if(sl&&S&&S.view==='pdf'&&S.round) sl.innerHTML=omrBtnHTML(S.round.course,S.round.round); }); }
   var chk=document.getElementById('pdfChk'); if(!chk) return;
   var m=(MANIFEST.rounds||[]).find(function(r){return r.data===S.roundId;})||{};
   var results=[], jobs=[];
@@ -636,7 +686,7 @@ function setAns(i,v){ S.answers[i]=v; saveSession();
   if(i===S.cur){const n=S.answers.findIndex((a,j)=>j>i&&!a); S.cur=n>=0?n:Math.min(i+1,S.keyItems.length-1);} render(); }
 document.addEventListener('keydown',e=>{
   if(S.view!=='grade'&&S.view!=='retake')return; const k=e.key.toLowerCase();
-  if(k==='o'||k==='ㅐ'){setAns(S.cur,'O')} else if(k==='x'||k==='ㅌ'){setAns(S.cur,'X')}
+  if(k==='o'||k==='ㅐ'||(STU&&k==='1')){setAns(S.cur,'O')} else if(k==='x'||k==='ㅌ'||(STU&&k==='2')){setAns(S.cur,'X')}
   else if(e.key==='ArrowDown'||e.key==='ArrowRight'){S.cur=Math.min(S.cur+1,S.keyItems.length-1);render()}
   else if(e.key==='ArrowUp'||e.key==='ArrowLeft'){S.cur=Math.max(S.cur-1,0);render()}
 });
@@ -659,6 +709,41 @@ function inputScreen(title,sub,submitLabel,onSubmit,showStmt){
     <div class="dots">${dots}</div>
     <div class="btnrow"><button onclick="(${onSubmit})()">${submitLabel}${done<n?` · ${n-done}개 미기입(오답 처리)`:''}</button></div>
   </div>`;
+}
+
+/* 학생 재시 화면: 문장 + 큰 O/X 단추(exam.html 와 같은 꼴). 숫자 1/2 칸은 OMR 을 옮겨 적는 선생님 손이다. */
+function stuRetakeNo(){ return Math.max(1,(S.attemptNo||2)-1); }          // 재시 1차 = 재시, 2차 = 재재시 …
+function stuLeftConcepts(){ var c={}; ((S.dx&&S.dx.wrongConcepts)||[]).forEach(function(w){ c[w.c||w.mis]=1; }); return Object.keys(c).length; }
+function stuPill(n){ return '<div class="stupill" id="stuPill">재시 '+n+'차 · 남은 개념 '+stuLeftConcepts()+'개</div>'; }
+function stuGo(i){ S.cur=Math.max(0,Math.min(i,S.keyItems.length-1)); render(); }
+function stuInputScreen(title,sub){
+  const done=S.answers.filter(a=>a==='O'||a==='X').length, n=S.keyItems.length, it=S.keyItems[S.cur], sel=S.answers[S.cur];
+  const dots=S.keyItems.map((x,i)=>`<button type="button" class="dot2 ${S.answers[i]==='O'?'o':S.answers[i]==='X'?'x':''} ${i===S.cur?'cur':''}" onclick="stuGo(${i})" aria-label="${i+1}번">${i+1}</button>`).join('');
+  return `<div class="card">
+    ${stuPill(stuRetakeNo())}
+    <h1>${title}</h1><p class="lede">${sub}</p>
+    <div class="gradehead"><span class="cnt mono">${done}</span><span class="of mono">/ ${n}</span><div class="bar"><i style="width:${100*done/n}%"></i></div></div>
+    <div class="focusq">
+      <div class="qnum mono">문항 ${S.cur+1}</div>
+      <div class="stmt">${esc(it.s)}</div>
+      <div class="oxrow">
+        <button type="button" class="oxbig o ${sel==='O'?'sel':''}" onclick="setAns(S.cur,'O')"><b>O</b><span>옳다</span></button>
+        <button type="button" class="oxbig x ${sel==='X'?'sel':''}" onclick="setAns(S.cur,'X')"><b>X</b><span>틀리다</span></button>
+      </div>
+      <div class="navrow"><button type="button" class="ghost" ${S.cur===0?'disabled':''} onclick="stuGo(S.cur-1)">← 이전</button><button type="button" class="ghost" ${S.cur>=n-1?'disabled':''} onclick="stuGo(S.cur+1)">다음 →</button></div>
+    </div>
+    <div class="dots">${dots}</div>
+    <div class="btnrow"><button onclick="doGrade()">${title.split(' · ')[0]} 제출${done<n?` · ${n-done}개 미응답(오답 처리)`:''}</button></div>
+  </div>`;
+}
+function esc(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+/* 학생이 돌아갈 성적표. 시트가 준 링크가 있으면 그것, 없으면 링크로 받은 불투명 코드로. */
+function stuReportHref(){
+  if(SERVER_LINK) return SERVER_LINK;
+  if(S&&S._reportLink) return S._reportLink;
+  var a=(S&&S._retakeArgs)||[], k=String(a[0]||'');
+  if(k&&/^[0-9a-z]+$/i.test(k)) return 'report.html?student='+encodeURIComponent(k)+(a[1]?'&c='+encodeURIComponent(a[1]):'');
+  return S&&S.name?reportLink():'report.html';
 }
 
 // ---------- 흐름 ----------
@@ -885,7 +970,7 @@ function render(){
       <p style="margin:14px 0 4px">통과한 회차의 재시는 받지 않습니다. 성적표에서 결과를 확인하세요.</p>
       <div class="ladder" style="justify-content:center">${(S.attempts||[]).map(a=>`<span class="lstep ${a.pass?'p':'f'}">${attName(a.attempt)} ${pt(a.score)}${a.pass?' ✓':''}</span>`).join('')}</div></div>
       <div class="btnrow" style="max-width:340px;margin:10px auto 0"><a class="pdfbtn" style="justify-content:center;text-decoration:none" href="${S._reportLink||'report.html'}">성적표로 돌아가기 →</a></div></div>`; }
-  else if(v==='retakefail'){ h=`<div class="card"><h1>재시를 만들 수 없습니다</h1><p class="lede">이 회차의 첫 응시 답안 기록을 찾지 못했습니다. (답안이 시트에 저장된 응시부터 재시를 만들 수 있습니다.) 앱에서 직접 응시한 뒤 재시를 진행해 주세요.</p><div class="btnrow"><button onclick="S=blank();render()">학생 정보로</button></div></div>`; }
+  else if(v==='retakefail'){ h=`<div class="card"><h1>재시를 만들 수 없습니다</h1><p class="lede">이 회차의 첫 응시 답안 기록을 찾지 못했습니다. (답안이 시트에 저장된 응시부터 재시를 만들 수 있습니다.) 앱에서 직접 응시한 뒤 재시를 진행해 주세요.</p>${STU?`<div class="btnrow"><a class="stulink" style="flex:1" href="${stuReportHref()}">성적표로 돌아가기 →</a></div>`:`<div class="btnrow"><button onclick="S=blank();render()">학생 정보로</button></div>`}</div>`; }
   else if(v==='select'){
     const rounds=(MANIFEST.rounds||[]).filter(r=>r.course===courseTab);
     const hk=ChemEngine.studentKey(S.name,S.school);
@@ -907,6 +992,7 @@ function render(){
     h=`<div class="card"><h1>시험 출제 · 응시</h1><p class="lede">${S.round.title} · 60문항. 인쇄해서 종이로 보거나, 학생이 온라인으로 바로 응시할 수 있습니다.</p>
       <a id="pdfMunje" class="pdfbtn" href="${PDF_BASE+(m.munje_pdf||'#')}" target="_blank" rel="noopener"><span class="ic">시험</span><span>시험지 PDF<br><small>60문항 · 인쇄용</small></span></a>
       <a id="pdfHaeseol" class="pdfbtn" href="${PDF_BASE+(m.haeseol_pdf||'#')}" target="_blank" rel="noopener"><span class="ic">해설</span><span>해설·빠른정답 PDF<br><small>채점·복습용</small></span></a>
+      <div id="omrSlot">${omrBtnHTML(S.round.course,S.round.round)}</div>
       <div id="pdfChk" style="font-size:13px;margin:1px 0 5px;min-height:17px"></div>
       <div class="plink" style="background:var(--brass-soft)">
         <div class="pll"><b>온라인 응시</b><span class="muted"> · 학생이 화면에서 풀면 자동 채점·진단·시트 저장</span></div>
@@ -920,7 +1006,7 @@ function render(){
   else if(v==='report'){
     const g=S.graded,dx=S.dx,att=attName(S.attempts[S.attempts.length-1].attempt),col=g.pass?'var(--o)':'var(--x)';
     h=`<div class="card">
-      <h1>성적 진단 <span class="muted" style="font-weight:500">· ${att}</span></h1>
+      ${STU&&S.attemptNo>=2?stuPill(stuRetakeNo()):''}<h1>${STU?'결과':'성적 진단'} <span class="muted" style="font-weight:500">· ${att}</span></h1>
       <div class="scorewrap"><div class="big mono" style="color:${col}">${g.score}</div><div class="denom mono">/ ${g.max}</div>
         <div style="margin-left:auto"><span class="verdict ${g.pass?'p':'f'}">${g.pass?'통과':'미달'}</span></div></div>
       <div class="level"><i style="width:${g.score}%;background:${col}"></i><span class="pass" style="left:${g.passScore}%"></span></div>
@@ -931,14 +1017,17 @@ function render(){
       ${dx.byMisconception.slice(0,8).map(m=>`<div class="kv"><span>${m.mis}</span><span class="r">${m.unit} · <b class="mono">${m.count}</b></span></div>`).join('')||'<p class="muted">없음</p>'}
       <h2>단원별 정답률</h2>
       ${dx.byUnit.map(u=>`<div class="ubar"><span class="un">${u.unit}</span><div class="ut"><i style="width:${100-u.rate}%"></i></div><span class="uv mono">${u.total-u.wrong}/${u.total}</span></div>`).join('')}
-      <div class="btnrow">${g.pass?`<button class="ok" onclick="go('done')">통과 화면으로</button>`:`<button onclick="afterReport()">강의록 학습 후 재시 준비</button>`}<button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button></div>
-      <div class="plink">
+      <div class="btnrow">${g.pass?`<button class="ok" onclick="go('done')">통과 화면으로</button>`:`<button onclick="afterReport()">강의록 학습 후 재시 준비</button>`}${STU?'':`<button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button>`}</div>
+      ${STU?`<div class="plink">
+        <div id="saveStatusLine" class="savline" style="margin:0 0 9px;font-size:13px">${saveStatusHTML()}</div>
+        <a class="stulink" href="${stuReportHref()}">내 성적표 보기 →</a>
+      </div>`:`<div class="plink">
         <div class="pll">학부모 리포트 링크 <span class="muted">· 이 학생 전용, 회차 쌓이면 자동 갱신</span></div>
         <div class="plurl mono">${reportLink()}</div>
         <div id="saveStatusLine" class="savline" style="margin:7px 0 3px;font-size:13px">${saveStatusHTML()}</div>
         <div class="btnrow" style="margin-top:0">${g.pass?`<button class="ghost sm" onclick="copyReportLink(this)">링크 복사</button>`:`<button class="ghost sm" onclick="copyRetakeMsg(this)">재시 안내 메시지 복사</button><button class="ghost sm" onclick="copyReportLink(this)">링크만</button>`}</div>
         <p class="note" style="margin-top:9px">배포 주소가 바뀌어도 이 링크는 현재 주소에서 자동으로 만들어집니다.</p>
-      </div>
+      </div>`}
     </div>`;
   }
   else if(v==='gate'){
@@ -968,36 +1057,36 @@ function render(){
               ${g._wrong?`<div class="feedback"><b>다시 봅시다.</b> 정답은 <b>${c.a}</b> 입니다.${c.f?' 핵심: '+c.f:''}${c.w?'<br><span class="muted">'+c.w+'</span>':''}<div><button class="ghost sm" onclick="retryCheck(${i})">다시 풀기</button></div></div>`
                 :`<div class="oxbtns" style="max-width:240px"><button class="o" style="padding:11px 0;font-size:17px" onclick="answerCheck(${i},'O')">O</button><button class="x" style="padding:11px 0;font-size:17px" onclick="answerCheck(${i},'X')">X</button></div>`}`}
         </div>`; };
-    h=`<div class="card"><h1>강의록 확인</h1><p class="lede">틀린 개념의 강의록을 읽고, 확인 문제(개념에 따라 1~2문제)를 모두 맞히면 잠금이 풀립니다.${hasOpt?' 오개념이 많아, <b>핵심 '+reqG.length+'개</b>를 먼저 해제하면 재시를 볼 수 있고 나머지는 권장 학습입니다.':''}</p>
+    h=`<div class="card">${STU?stuPill(S.attemptNo||1).replace('재시 '+(S.attemptNo||1)+'차','다음: 재시 '+(S.attemptNo||1)+'차'):''}<h1>강의록 확인</h1><p class="lede">틀린 개념의 강의록을 읽고, 확인 문제(개념에 따라 1~2문제)를 모두 맞히면 잠금이 풀립니다.${hasOpt?' 오개념이 많아, <b>핵심 '+reqG.length+'개</b>를 먼저 해제하면 재시를 볼 수 있고 나머지는 권장 학습입니다.':''}</p>
       <div class="gprog"><div class="gpbar"><i style="width:${pct}%"></i></div><span class="gpt">${reqUnlocked}/${reqG.length} ${hasOpt?'핵심 ':''}개념 해제</span></div>
       ${(S.attemptNo||1)>=3?`<div class="gagain">재시는 통과할 때까지 이어집니다. 여기까지 온 것도 잘한 거예요. 틀린 개념을 강의록으로 한 번 더 다진 뒤 다음 재시를 봅시다.</div>`:''}
       ${S.gate._hasStems?`<div class="rootnote"><b>뿌리 먼저</b> 표시 개념부터 잡으면, 거기서 갈라진 개념들이 한결 쉽게 풀립니다.</div>`:''}
       ${reqG.length>2?`<div class="gencourage">${gateEncourage(reqUnlocked,reqG.length)}</div>`:''}
       ${reqG.map(gateHTML).join('')}
       ${hasOpt?`<div class="gatedivider"><span>추가 권장 학습</span>통과에 필수는 아니지만, 함께 보면 더 단단해집니다</div>${optG.map(gateHTML).join('')}`:''}
-      <div class="btnrow"><button ${allRequiredUnlocked()?'':'disabled'} onclick="startRetake()">${allRequiredUnlocked()?(ChemEngine.attemptName(S.attemptNo)+' 시작'):(hasOpt?'핵심 개념 해제 후 재시':'모든 개념 해제 후 재시')}</button><button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button></div></div>`;
+      <div class="btnrow"><button ${allRequiredUnlocked()?'':'disabled'} onclick="startRetake()">${allRequiredUnlocked()?(ChemEngine.attemptName(S.attemptNo)+' 시작'):(hasOpt?'핵심 개념 해제 후 재시':'모든 개념 해제 후 재시')}</button>${STU?'':`<button class="ghost" onclick="nextStudent()">다음 학생 채점 →</button>`}</div></div>`;
   }
   else if(v==='retake'){
     const lb=ChemEngine.attemptName(S.attemptNo-1);   // 재시 · 재재시 · 재시 3차 …
     /* 링크 재진입에서 이전 재시의 문항을 확인하지 못한 경우(_retakeSeenGuess) — 재구성한 문장을 피할 뿐이라
        «다른 문장» 을 약속하지 않는다. */
-    h=inputScreen(lb+' · 같은 범위의 새 문장',S._retakeSeenGuess
+    h=(STU?stuInputScreen:function(t,sub){ return inputScreen(t,sub,lb+' 제출','doGrade',true); })(lb+' · 같은 범위의 새 문장',S._retakeSeenGuess
       ?'강의록을 학습했으니 같은 범위를 다시 풉니다. 이전 재시의 문항 기록이 없어, 틀렸던 개념은 되도록 다른 문장으로 내되 일부는 겹칠 수 있습니다.'
-      :'강의록을 학습했으니 같은 범위를 다시 풉니다. 틀렸던 개념은 다른 문장으로 나옵니다.',lb+' 제출','doGrade',true);
+      :'강의록을 학습했으니 같은 범위를 다시 풉니다. 틀렸던 개념은 다른 문장으로 나옵니다.');
   }
   else if(v==='done'){
     const last=S.attempts[S.attempts.length-1];
     h=`<div class="card"><div class="hero"><div class="seal">✓</div><h1>통과했습니다</h1>
-      <p class="lede" style="margin:0">${S.name} · ${attName(last.attempt)} <b class="mono">${last.score}</b>점</p>
+      <p class="lede" style="margin:0">${S.name} · ${attName(last.attempt)} <b class="mono">${pt(last.score)}</b>점</p>
       <p style="margin:14px 0 4px">잘했습니다. 다음 수업에서 봅시다.</p>
-      <div class="ladder" style="justify-content:center">${S.attempts.map(a=>`<span class="lstep ${a.pass?'p':'f'}">${attName(a.attempt)} ${a.score}${a.pass?' ✓':''}</span>`).join('')}</div></div>
+      <div class="ladder" style="justify-content:center">${S.attempts.map(a=>`<span class="lstep ${a.pass?'p':'f'}">${attName(a.attempt)} ${pt(a.score)}${a.pass?' ✓':''}</span>`).join('')}</div></div>
       <!-- 회차를 같이 넘긴다. 안 넘기면 심화가 안 배운 단원까지 낸다. (화학Ⅰ 심화도 설계 9단계에 켰다.) -->
       <a class="challengebtn" href="challenge.html?course=${S.round.course}&amp;round=${S.round.round}"><span class="cbadge">A밴드</span>한 단계 위 심화 도전 →<small>통과한 지금, 배운 데까지에서 더 어려운 문제로 실력의 끝을 확인해 보세요</small></a>
-      <div style="max-width:340px;margin:16px auto 2px;padding-top:13px;border-top:1px solid #eee;text-align:center">
+      ${STU?`<div style="max-width:340px;margin:16px auto 0"><div id="saveStatusLine" class="savline" style="margin:0 0 9px;font-size:13px;text-align:center">${saveStatusHTML()}</div><a class="stulink" href="${stuReportHref()}">내 성적표 보기 →</a></div></div>`:`<div style="max-width:340px;margin:16px auto 2px;padding-top:13px;border-top:1px solid #eee;text-align:center">
         <div class="pll" style="justify-content:center">학부모에게 통과 소식 전달 <span class="muted">· 리포트 링크 포함</span></div>
         <div class="btnrow" style="margin-top:7px;justify-content:center"><button class="ghost sm" onclick="copyPassMsg(this)">통과 소식 + 링크 복사</button></div>
       </div>
-      <div class="btnrow" style="max-width:340px;margin:10px auto 0"><button onclick="nextStudent()">다음 학생 채점 →</button><button class="ghost" onclick="resetAll()">다른 회차·새 학생</button></div></div>`;
+      <div class="btnrow" style="max-width:340px;margin:10px auto 0"><button onclick="nextStudent()">다음 학생 채점 →</button><button class="ghost" onclick="resetAll()">다른 회차·새 학생</button></div></div>`}`;
   }
   $('#app').innerHTML=h;
   if(S.view==='grade'||S.view==='retake'){var fe=document.getElementById('entry'); if(fe) fe.focus();}
@@ -1035,7 +1124,8 @@ function adminGate(){
 (async function(){ var _q=new URLSearchParams(location.search);
   TESTMODE=(_q.get('test')==='1');   // 데모/점검용. 없으면 항상 실제 기록으로 저장
   var isRetake=!!_q.get('retake');
-  if(isRetake){ document.documentElement.classList.remove('adm-gating'); }   // 학생 재시는 비번 게이트 예외
+  if(isRetake){ document.documentElement.classList.remove('adm-gating');      // 학생 재시는 비번 게이트 예외
+    STU=true; document.documentElement.classList.add('stu'); try{ document.title='재시 · 화학 · 다원교육 · 조준모'; var _b=document.querySelector('.hd .brand'); if(_b) _b.innerHTML='화학 · 다원교육 · 조준모<small>재시 응시</small>'; }catch(e){} }
   else if(!adminGate()){ return; }
   S=blank(); await loadManifest();
   if(isRetake){ enterRetake(_q.get('retake'),_q.get('c'),_q.get('r')); return; } render(); })();

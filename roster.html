@@ -40,7 +40,7 @@ input{font-family:inherit;background:#10141a;border:1px solid var(--line);color:
   border-radius:8px;padding:8px 10px;font-size:14px;width:100%}
 input:focus{outline:none;border-color:var(--brass-d);box-shadow:0 0 0 3px rgba(133,104,47,.22)}
 input.rnd{width:88px;text-align:center}
-.badge{font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--brass-soft);
+.badge{font-size:13px;padding:2px 8px;border-radius:999px;background:var(--brass-soft);
   color:var(--brass);border:1px solid rgba(201,162,75,.3);white-space:nowrap}
 .badge.warn{background:var(--warnbg);color:var(--warn);border-color:rgba(217,164,65,.35)}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);
@@ -49,6 +49,10 @@ input.rnd{width:88px;text-align:center}
 .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
 .x{border:none;background:transparent;color:var(--muted);font-size:15px;line-height:1;padding:2px 5px;border-radius:50%;cursor:pointer}
 .x:hover{color:var(--bad);background:rgba(224,112,95,.15)}
+/* 손가락 44px — 학생 삭제 × 와 갈래 고르기는 휴대폰에서 누르는 자리다. */
+.srow .x{min-width:44px;min-height:44px;font-size:18px;border-radius:10px;flex:none}
+select.knd{min-height:44px;font-size:14px;font-family:inherit;background:#10141a;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:0 8px}
+.addrow .addBtn{min-height:44px;min-width:56px}
 .clscard{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 11px;margin:11px 0}
 .slist{display:flex;flex-direction:column;gap:6px;margin:10px 0 8px}
 .srow{display:flex;align-items:center;gap:7px}
@@ -58,7 +62,7 @@ input.rnd{width:88px;text-align:center}
 .srow.needsch .ssc{border-color:var(--x);background:var(--x-bg)}
 .warn.small{margin:8px 0 0;padding:8px 10px;border-radius:8px;
   background:var(--x-bg);border:1px solid var(--x);color:var(--ink);line-height:1.5}
-.srow .idx{color:var(--muted);font-size:11.5px;width:22px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.srow .idx{color:var(--muted);font-size:12px;width:22px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
 .addrow{display:flex;gap:7px;margin-top:6px}
 .note{font-size:12px;color:var(--muted);line-height:1.5}
 .banner{background:var(--brass-soft);border:1px solid rgba(201,162,75,.3);color:#e7cd92;
@@ -204,19 +208,23 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 var state={classes:[], load:'ok'};
 var $=function(s){return document.querySelector(s);};
 
+/* 반 이름 옆 과목 배지. 이름 칸을 떠날 때 **이 배지만** 바꾼다(아래 focusout). */
+function badgeHTML(k){
+  var kind=kindOf(k), co=courseOf(k.label);
+  /* 파이널 반은 DT 과목이 없는 것이 정상이다. 거기에 '과목 미인식' 을 띄우면
+     고쳐야 할 것처럼 보인다 — 고칠 것이 없다. */
+  return kind==='exam' ? '<span class="badge cbadge">파이널</span>'
+       : (co?('<span class="badge cbadge">'+COURSE_KO[co]+'</span>')
+            :('<span class="badge warn cbadge">과목 미인식</span>'));
+}
 function renderClasses(){
   var box=$('#classes'); var h='';
   state.classes.forEach(function(k,ci){
     var kind=kindOf(k);
-    var co=courseOf(k.label);
-    /* 파이널 반은 DT 과목이 없는 것이 정상이다. 거기에 '과목 미인식' 을 띄우면
-       고쳐야 할 것처럼 보인다 — 고칠 것이 없다. */
-    var badge = kind==='exam' ? '<span class="badge">파이널</span>'
-              : (co?('<span class="badge">'+COURSE_KO[co]+'</span>')
-                   :('<span class="badge warn">과목 미인식</span>'));
+    var badge = badgeHTML(k);
     h+='<div class="clscard" data-ci="'+ci+'">';
     h+='<div class="row between wrapline" style="gap:8px">';
-    h+='<input class="lab" data-ci="'+ci+'" value="'+esc(k.label)+'" placeholder="반 이름 (예: 화학2 토1:30-5:30)" style="flex:1;min-width:180px" aria-label="반 이름 (예: 화학2 토1:30-5:30)">';
+    h+='<input class="lab" data-ci="'+ci+'" value="'+esc(k.label)+'" placeholder="반 이름 (예: 화학1 심화 토1-5)" style="flex:1;min-width:180px" aria-label="반 이름 (예: 화학1 심화 토1-5 · 화학2 토1:30-5:30)">';
     h+=badge;
     h+='</div>';
     h+='<div class="row wrapline" style="margin-top:9px;gap:10px">';
@@ -455,8 +463,14 @@ cont.addEventListener('change',function(e){
   if(t.value==='exam') state.classes[ci].round=null;
   renderClasses();
 });
+/* 반 이름 칸을 떠나면 과목 배지만 바꾼다. 예전에는 renderClasses() 로 **전체를 다시 그려서**, 새 반 이름을
+   치고 바로 학생 추가칸을 누르면 그 칸이 새 칸으로 갈아 끼워져 초점과 친 글자가 사라졌다(QA 재현). */
 cont.addEventListener('focusout',function(e){
-  if(e.target.classList.contains('lab')) renderClasses(); // 과목 배지 갱신
+  var t=e.target; if(!t.classList.contains('lab')) return;
+  var ci=+t.getAttribute('data-ci'), card=t.closest('.clscard'), old=card&&card.querySelector('.cbadge');
+  if(!old||!state.classes[ci]) return;
+  var tmp=document.createElement('span'); tmp.innerHTML=badgeHTML(state.classes[ci]);
+  old.replaceWith(tmp.firstChild);
 });
 cont.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&e.target.classList.contains('addS')){ e.preventDefault(); addStudents(+e.target.getAttribute('data-ci'),e.target.value); e.target.value=''; }

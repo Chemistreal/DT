@@ -13,7 +13,11 @@
   var FORMS = null, MANIFEST = null, ROUNDS = {};
 
   function tokenFor(base) { var s = String(base || '') + '|' + LINK_SALT, a = 2166136261, b = 5381, i, c; for (i = 0; i < s.length; i++) { c = s.charCodeAt(i); a ^= c; a = (a * 16777619) >>> 0; b = ((b * 33) ^ c) >>> 0; } return ((a.toString(36) + '00000').slice(0, 5)) + ((b.toString(36) + '000').slice(0, 3)); }
-  function tokWith(k) { k = String(k || ''); var li = k.lastIndexOf('-'); if (li > 0 && /^[0-9a-z]{8}$/.test(k.slice(li + 1))) return k; return k + '-' + tokenFor(k); }
+  /* 서버에 물을 학생 표지. 성적표 링크는 이제 불투명 코드(?student=aihbhar53o8v06)라 학생키가 아니다 —
+     거기에 «-토큰» 을 붙이면 서버가 모르는 키가 되어 행 0개를 준다(종이 재시지 PDF·ZIP 이 모든 학생에게
+     실패하던 까닭). 불투명 코드(영숫자만 — 학생키는 늘 '학교-이름' 이라 '-' 가 있다)는 그대로 보낸다.
+     index.html enterRetake 와 같은 판단. */
+  function tokWith(k) { k = String(k || ''); if (/^[0-9a-z]+$/i.test(k)) return k; var li = k.lastIndexOf('-'); if (li > 0 && /^[0-9a-z]{8}$/.test(k.slice(li + 1))) return k; return k + '-' + tokenFor(k); }
   function pad2(n) { n = Number(n); return (n < 10 ? '0' : '') + n; }
 
   async function loadForms(base) {

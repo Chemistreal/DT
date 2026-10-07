@@ -1483,5 +1483,77 @@ console.log('[설문 진단] chemengine surveyRecord · surveyDiagnose (문항�
   T('판정 수: counts 가 목록과 같다', Object.keys(d.counts).reduce((a, k) => a + d.counts[k], 0) === con.length + bel.length);
 }
 
+console.log('[화학Ⅰ 심화 · 재응시] ch1s 저장 갈래 · 온라인 다시 풀기 · 통과 재시 재전송 · 미응시 · 문자');
+{
+  /* QA(개강 전)가 가짜 시트로 재현한 갈래. 학생은 가상 이름만 쓴다. */
+  const res = SHEETS['결과'], before = res._rows.length;
+  const rosterBefore = SHEETS['_roster']._rows[0][0];
+  const post = d => J(ctx.doPost({ postData: { contents: JSON.stringify(d) } }));
+  const now = new Date();
+  const body = (name, course, round, attempt, score, extra) => Object.assign({ name, school: '가상고', year: '2', course, round, attempt, score,
+    pass: score >= 80, correctCount: Math.round(score * .6), wrongCount: 60 - Math.round(score * .6), wrongMis: ['몰질량'],
+    answers: 'O'.repeat(60), units: [], axes: [], wrongAxes: {} }, extra || {});
+  const rowsOf = (key, course, round) => res._rows.filter(r => r[5] === key && r[8] === course && String(r[9]) === String(round));
+
+  /* ── 저장 · 통과 · 거부 ── */
+  res._rows.push(['가상갑', 'L', now, 90, '통과', '가상고-가상갑', '가상고', '2', 'ch1', 1, '정시', 54, 6, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
+  let r = post(body('가상갑', 'ch1s', 1, '정시', 72));
+  T('ch1s 1회 정시 72 저장 ok · 미달', r.ok === true && r.updated === false && rowsOf('가상고-가상갑', 'ch1s', 1)[0][4] === '미달', JSON.stringify(r));
+  r = post(body('가상갑', 'ch1s', 1, '재시', 85, { retakeCids: 'CH1S-012,CH1S-027', retakeKeys: 'OX' }));
+  T('ch1s 재시 85 저장 ok (ch1 1회 통과가 막지 않는다)', r.ok === true, JSON.stringify(r));
+  r = post(body('가상갑', 'ch1s', 1, '재시', 85, { retakeCids: 'CH1S-012,CH1S-027', retakeKeys: 'OX' }));
+  T('통과로 저장된 재시를 같은 라벨로 다시 보내면 멱등 ok (already_passed 아님)', r.ok === true && r.updated === true && rowsOf('가상고-가상갑', 'ch1s', 1).length === 2, JSON.stringify(r));
+  r = post(body('가상갑', 'ch1s', 1, '재재시', 90));
+  T('통과 뒤 다음 재시(재재시)는 already_passed · 성적표 주소를 같이 준다', r.ok === false && r.error === 'already_passed' && /report\.html\?student=/.test(r.reportLink || ''), JSON.stringify(r));
+  r = post(body('가상갑', 'ch1s', 1, '정시', 50));
+  T('재시 뒤 정시 재전송은 attempt_regress · 시트 불변', r.ok === false && r.error === 'attempt_regress' && rowsOf('가상고-가상갑', 'ch1s', 1).filter(x => x[10] === '정시')[0][3] === 72, JSON.stringify(r));
+  const mk = ctx.mapRow_(rowsOf('가상고-가상갑', 'ch1s', 1).filter(x => x[10] === '재시')[0]);
+  T('재시 행의 CH1S cid 가 읽기에서 살아남는다', mk.retakeCids === 'CH1S-012,CH1S-027' && mk.retakeKeys === 'OX', JSON.stringify(mk.retakeCids));
+
+  /* ── 온라인 응시(exam.html · src:'online')로 같은 회차를 다시 푼다 ── */
+  const A1 = 'OX'.repeat(30), A2 = 'XO'.repeat(30);
+  r = post(body('가상을', 'ch1s', 2, '첫 응시', 60, { src: 'online', answers: A1 }));
+  T('온라인 첫 응시 저장 ok', r.ok === true && r.updated === false, JSON.stringify(r));
+  r = post(body('가상을', 'ch1s', 2, '첫 응시', 60, { src: 'online', answers: A1 }));
+  T('같은 답 재전송(네트워크 재시도)은 멱등 ok · 한 줄', r.ok === true && r.updated === true && rowsOf('가상고-가상을', 'ch1s', 2).length === 1, JSON.stringify(r));
+  r = post(body('가상을', 'ch1s', 2, '첫 응시', 95, { src: 'online', answers: A2 }));
+  T('다른 답으로 다시 푼 온라인 응시는 already_taken · 첫 응시 그대로', r.ok === false && r.error === 'already_taken' && !!r.msg && /report\.html\?student=/.test(r.reportLink || '')
+    && rowsOf('가상고-가상을', 'ch1s', 2).length === 1 && rowsOf('가상고-가상을', 'ch1s', 2)[0][18] === A1 && rowsOf('가상고-가상을', 'ch1s', 2)[0][3] === 60, JSON.stringify(r));
+  r = post(body('가상을', 'ch1s', 2, '첫 응시', 70, { answers: A2 }));
+  T('선생님 채점 앱(src 없음)의 정정은 지금처럼 덮어쓴다', r.ok === true && r.updated === true && rowsOf('가상고-가상을', 'ch1s', 2)[0][18] === A2 && rowsOf('가상고-가상을', 'ch1s', 2)[0][3] === 70, JSON.stringify(r));
+  /* 종이 OMR 이 「정시」 라벨로 먼저 들어간 학생 */
+  res._rows.push(['가상병', 'L', now, 65, '미달', '가상고-가상병', '가상고', '2', 'ch1s', 3, '정시', 39, 21, '', '{}', '', '[]', '[]', A1]);
+  r = post(body('가상병', 'ch1s', 3, '첫 응시', 99, { src: 'online', answers: A2 }));
+  T('「정시」 라벨의 첫 응시가 있어도 다른 답 온라인 응시는 already_taken', r.ok === false && r.error === 'already_taken' && rowsOf('가상고-가상병', 'ch1s', 3).length === 1);
+  r = post(body('가상병', 'ch1s', 3, '첫 응시', 65, { src: 'online', answers: A1 }));
+  T('「정시」 행과 같은 답이면 새 줄 없이 그 행에 멱등', r.ok === true && r.updated === true && rowsOf('가상고-가상병', 'ch1s', 3).length === 1, JSON.stringify(rowsOf('가상고-가상병', 'ch1s', 3).map(x => x[10])));
+  r = post(body('가상병', 'ch1s', 4, '첫 응시', 88, { src: 'online', answers: A2 }));
+  T('다른 회차는 그대로 저장', r.ok === true && rowsOf('가상고-가상병', 'ch1s', 4).length === 1);
+
+  /* ── 재시 미응시 · 과목이 섞이지 않는다 ── */
+  res._rows.push(['가상정', 'L', now, 90, '통과', '가상고-가상정', '가상고', '2', 'ch1', 5, '정시', 54, 6, '', '{}', '', '[]', '[]', A1]);
+  res._rows.push(['가상정', 'L', now, 60, '미달', '가상고-가상정', '가상고', '2', 'ch1s', 5, '정시', 36, 24, '', '{}', '', '[]', '[]', A1]);
+  const P = ctx.computePending_(14);
+  const pJ = (P.active || []).filter(p => p.studentKey === '가상고-가상정');
+  T('ch1 5회 통과가 ch1s 5회 재시 미응시를 지우지 않는다', pJ.length === 1 && pJ[0].course === 'ch1s' && pJ[0].nextNeeded === '재시', JSON.stringify(pJ));
+  T('통과자(가상갑 ch1s 1회)는 재시 미응시에 없다', !(P.active || []).some(p => p.studentKey === '가상고-가상갑' && p.course === 'ch1s' && Number(p.round) === 1));
+
+  /* ── 반 명단 · 시험 미응시 ── */
+  T('courseOf_: 「화학1 심화」 「화1 심화」 「심화반」 → ch1s', ['화학1 심화 토1-5', '화1 심화', '심화반 토', '화학Ⅰ 심화'].every(x => ctx.courseOf_(x) === 'ch1s'));
+  ctx.setRoster_([{ label: '화학1 심화 토1-5', students: ['가상정', '가상무'] }]);
+  const AB = ctx.computeAbsentees_(8, {});
+  const ks = (AB.classes || []).filter(c => c.label === '화학1 심화 토1-5')[0] || {};
+  T('심화반 미응시: ch1s 회차로 센다 · 응시 안 한 가상무', ks.course === 'ch1s' && (ks.absent || []).indexOf('가상무') >= 0 && (ks.absent || []).indexOf('가상정') < 0, JSON.stringify(ks));
+
+  /* ── 문자 문구 ── */
+  const msgs = ctx.buildRowMessages_(res._rows.slice(1).filter(x => x[5] === '가상고-가상정'));
+  const mS = msgs.filter(m => m && m.course === 'ch1s')[0], m1 = msgs.filter(m => m && m.course === 'ch1')[0];
+  T('문자: ch1s 는 «화학Ⅰ 심화 5회» · ch1 은 «화학Ⅰ 5회» (안 섞임)', !!mS && mS.label === '화학Ⅰ 심화 5회' && mS.status === '재시 안내' && !!m1 && m1.label === '화학Ⅰ 5회',
+    JSON.stringify(msgs.map(m => m && [m.label, m.status])));
+
+  SHEETS['_roster']._rows[0][0] = rosterBefore;
+  res._rows.length = before;
+}
+
 console.log(`\n결과: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);

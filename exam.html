@@ -31,7 +31,7 @@ body{font-family:'Pretendard',system-ui,-apple-system,sans-serif; color:var(--in
 .logo{width:24px;height:24px;border-radius:7px;background:linear-gradient(150deg,var(--teal),var(--teal-d));position:relative;flex:none}
 .logo:after{content:"";position:absolute;inset:6px 6px auto auto;width:6px;height:6px;border-radius:50%;background:var(--brass)}
 .brand{font-weight:800;letter-spacing:-.01em;font-size:14.5px}
-.brand small{display:block;font-weight:500;color:var(--sub);font-size:11.5px;margin-top:-2px}
+.brand small{display:block;font-weight:500;color:var(--sub);font-size:13px;margin-top:-2px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin:14px;box-shadow:var(--shadow)}
 h1{font-size:20px;letter-spacing:-.02em;margin:.1em 0 .15em}
 .lede{color:var(--sub);font-size:13.5px;margin:.3em 0 1.1em}
@@ -53,7 +53,7 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .tabs button.sel{background:var(--surface);color:var(--teal);box-shadow:var(--shadow)}
 .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px}
 .rchip{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;font-weight:700;color:var(--ink);gap:2px}
-.rchip:hover{border-color:var(--teal);color:var(--teal)} .rchip .n{font-size:18px} .rchip .u{font-size:11.5px;color:var(--faint);font-weight:500}
+.rchip:hover{border-color:var(--teal);color:var(--teal)} .rchip .n{font-size:18px} .rchip .u{font-size:12px;color:var(--faint);font-weight:500}
 /* exam */
 .exhead{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:saturate(1.4) blur(8px);display:flex;align-items:center;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-top));border-bottom:1px solid var(--line)}
 .exhead .cnt{font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace}
@@ -70,17 +70,17 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .oxbig span{font-size:12.5px;font-weight:700}
 .oxbig.o.sel,.oxbig.o:hover{background:var(--o-bg);color:var(--o);border-color:var(--o)}
 .oxbig.x.sel,.oxbig.x:hover{background:var(--x-bg);color:var(--x);border-color:var(--x)}
-.hint{font-size:11.5px;color:var(--faint);text-align:center;margin:13px 0 4px}
-.hint kbd{font-family:'JetBrains Mono',monospace;background:var(--line2);border-radius:5px;padding:1px 6px;font-size:11.5px;color:var(--ink)}
+.hint{font-size:13px;color:var(--faint);text-align:center;margin:13px 0 4px}
+.hint kbd{font-family:'JetBrains Mono',monospace;background:var(--line2);border-radius:5px;padding:1px 6px;font-size:12px;color:var(--ink)}
 .navrow{display:flex;gap:10px;margin-top:8px}.navrow button{flex:1}
 .dotwrap{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;margin:0 14px 14px}
-.dotx{aspect-ratio:1;border-radius:7px;border:1px solid var(--line);background:var(--surface);font-size:11.5px;font-weight:700;color:var(--faint);padding:0;cursor:pointer}
+.dotx{aspect-ratio:1;border-radius:7px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:700;color:var(--faint);padding:0;cursor:pointer}
 .dotx.o{background:var(--o-bg);color:var(--o);border-color:var(--o-bg)}
 .dotx.x{background:var(--x-bg);color:var(--x);border-color:var(--x-bg)}
 .dotx.cur{outline:2px solid var(--teal);outline-offset:1px}
 .rvgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin:6px 0 4px}
 .rv{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 0;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);font-weight:800;cursor:pointer}
-.rv .rvn{font-size:11.5px;color:var(--faint);font-weight:600}
+.rv .rvn{font-size:13px;color:var(--faint);font-weight:600}
 .rv .rva{font-size:16px;font-family:'JetBrains Mono',monospace}
 .rv.o{background:var(--o-bg);color:var(--o);border-color:var(--o-bg)}
 .rv.x{background:var(--x-bg);color:var(--x);border-color:var(--x-bg)}
@@ -89,7 +89,7 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 .rsban.pass{background:var(--o-bg)} .rsban.fail{background:var(--x-bg)}
 .rss{font-size:46px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--ink)} .rss span{font-size:16px;margin-left:3px}
 .rsb{font-size:20px;font-weight:800} .rsban.pass .rsb{color:var(--o)} .rsban.fail .rsb{color:var(--x)}
-.rsrow{display:flex;margin:14px 0 6px;text-align:center} .rsrow>div{flex:1;display:flex;flex-direction:column;gap:1px} .rsrow b{font-size:22px} .rsrow span{font-size:11.5px;color:var(--faint)}
+.rsrow{display:flex;margin:14px 0 6px;text-align:center} .rsrow>div{flex:1;display:flex;flex-direction:column;gap:1px} .rsrow b{font-size:22px} .rsrow span{font-size:13px;color:var(--faint)}
 .weak{display:flex;flex-direction:column;gap:7px;margin:4px 0 2px}
 .wk{display:flex;align-items:center;justify-content:space-between;background:var(--x-bg);border-radius:9px;padding:9px 13px}
 .wk .wkm{font-size:13px;font-weight:600;color:var(--ink)} .wk .wkc{font-size:13px;font-weight:800;color:var(--x)}
@@ -129,25 +129,44 @@ button.ok{background:var(--o)} button:disabled{opacity:.38;cursor:not-allowed;tr
 @keyframes rtin{from{opacity:0}to{opacity:1}}
 .rtbox{background:var(--surface);border-radius:18px;max-width:430px;width:100%;max-height:92vh;overflow:auto;padding:22px 20px 18px;box-shadow:0 18px 50px rgba(16,32,46,.28);text-align:left}
 .rthd{display:flex;align-items:center;gap:10px;margin-bottom:3px}
-.rtbadge{background:var(--x-bg);color:var(--x);font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.02em}
+.rtbadge{background:var(--x-bg);color:var(--x);font-size:12px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.02em}
 .rtbox h2{margin:10px 0 6px;font-size:17px;color:var(--ink);letter-spacing:-.01em}
 .rtbox h2:before{display:none}
 .rtlede{color:var(--sub);font-size:13px;margin:0 0 14px}
 .rtsteps{list-style:none;padding:0;margin:0 0 6px;counter-reset:rt}
 .rtsteps li{counter-increment:rt;display:flex;gap:11px;padding:9px 0;border-top:1px solid var(--line2)}
 .rtsteps li:first-child{border-top:0}
-.rtsteps li:before{content:counter(rt);flex:none;width:22px;height:22px;border-radius:50%;background:var(--teal-soft);color:var(--teal);font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px;font-family:'JetBrains Mono',monospace}
+.rtsteps li:before{content:counter(rt);flex:none;width:22px;height:22px;border-radius:50%;background:var(--teal-soft);color:var(--teal);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px;font-family:'JetBrains Mono',monospace}
 /* ⚠ `b` 를 통째로 block 으로 잡으면 **설명문 안의 굵은 글씨까지** 줄이
    갈린다 — 「이번 회차에서 / 어떤 개념을 틀렸는지 / 가 정리돼 있습니다」
    처럼 읽힌다. 제목에만 건다. */
 .rtsteps .rtt{display:block;font-size:13.5px;margin-bottom:1px;font-weight:700}
 .rtsteps span{font-size:12.5px;color:var(--sub);line-height:1.5}
 .rtnote{background:var(--brass-soft);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--ink);margin:12px 0 0;line-height:1.55}
-.rtbox .go{width:100%;margin-top:15px}
+.rtbox .go{width:100%;margin-top:15px;position:sticky;bottom:0;box-shadow:0 -10px 14px var(--surface)}   /* 좁은 화면에서도 나가는 문이 늘 보이게 */
 .plink{margin-top:16px;padding:14px 15px;background:var(--teal-soft);border-radius:12px}
 .pll{font-size:12.5px;font-weight:700;color:var(--ink);margin-bottom:8px}.pll .muted{font-weight:400}
-.plurl{font-size:11.5px;color:var(--teal-d);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
+.plurl{font-size:13px;color:var(--teal-d);word-break:break-all;background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
 .rlbtn{display:block;text-align:center;background:var(--teal);color:#fff;border-radius:12px;font-weight:700;padding:13px 16px;text-decoration:none}
+/* 대비: 초록·금색 **글자**가 흰 바탕에서 4.5:1 에 못 미쳤다(#1B8A4C 4.39 · #A9853C). 테마 조각(ct-theme)이 :root 에
+   옛 값을 다시 적으므로 한 단 더 구체적인 html:root 로 덮는다(테마 조각은 손대지 않는다). */
+html:root{--o:#157A42;--brass:#8A6A2F}
+.qstmt,.rtbox,.hoff .step,.lede{word-break:keep-all}
+/* 손가락 44px — 문항 번호 칸·검토 단추·과목 탭·«바로 리포트 보기» */
+.dotwrap{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+.dotx{min-height:44px}
+.rvbtn{min-height:44px;padding:9px 14px;font-size:13px}
+.tabs button{min-height:44px}
+.rv{min-height:46px}
+.hoff .skip{min-height:44px;padding:10px 14px}
+.hoff .rlbtn{margin-top:12px}
+/* 이어서 풀기 */
+.resumebox{background:var(--brass-soft);border:1px solid #E9DCC0;border-radius:14px;padding:14px 15px;margin:14px}
+.resumebox b{color:var(--ink)}
+/* 반 명단에서 이름 고르기 */
+.rosterpick label{margin-top:0}
+.rosterpick select{min-height:44px;font-size:16px;font-family:inherit;color:var(--ink)}
+.rosterpick .row2{margin-top:6px}
 </style>
 <style>
 .rosterpick{margin:2px 0 14px;padding:10px 12px;border:1px dashed var(--line,#d8d2c6);border-radius:10px;background:rgba(11,110,110,.04)}
@@ -173,7 +192,7 @@ html{color-scheme:light;-webkit-text-size-adjust:100%}
 }</style>
 </head>
 <body>
-<div class="hd"><span class="logo"></span><span class="brand">Chemistreal<small>다원교육 영재관 · 온라인 응시</small></span></div>
+<div class="hd"><span class="logo"></span><span class="brand">Chemistreal<small>화학 · 다원교육 · 조준모</small></span></div>
 <div class="wrap"><div id="app"></div></div>
 
 <script>/* ENGINE-BEGIN — chemengine.js 의 사본. 여기부터 ENGINE-END 까지는 손으로 고치지 않는다: chemengine.js 를 고친 뒤 python3 tools/engine_sync.py --write */
@@ -549,8 +568,33 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
   // seenStatements: 이미 학생이 본 문장(중복 방지) · 갱신해서 반환
   // refLvl: (선택) 정시 문항 배열 [{c,lvl}] 또는 {cid: lvl} — 개념마다 정시 원래 문항의 난이도.
   //         후보를 쉬운 것부터 보는 기준(위 byLvl). 없으면 LVL_DEFAULT.
+  /* ── 재재시 이상에서 정시 문장이 다시 나오던 문제 (선생님 결정 2026-10-07) ─────────────────
+     문자와 화면은 «처음 본 문항과 겹치지 않습니다» 라고 약속한다. 재시(2)는 지켰는데, 재재시부터는
+     안 본 문장(nwFresh)이 떨어지면 nwUnused · subForm 이 **이미 본 문장**을 다시 허용했다 — 거기에
+     정시 문장이 섞였다(화학Ⅰ 심화 10회를 오답 두 무늬로 돌려 보니 재재시 0~5 · 재시 3차 2~12문장).
+     그래서 재재시 이상에서는 그 회차 정시 문장 전부를 후보에서 뺀다(틀린 문장 · 맞힌 문장 모두).
+     모자라면 그 회차 정시가 물은 개념(= 이미 배운 범위 · 누적 시험이라 앞 회차 단원이 다 들어 있다)으로
+     대체 후보를 넓힌다.
+     정시 문장은 부르는 쪽이 넘기는 refLvl(정시 문항 배열 · lvlOn 회차만)에서 읽는다 — 문항의 c 머리로 과목,
+     n 머리('4-01' → 4회)로 회차를 안다. ⚠ 이미 치른 회차의 재재시는 저장된 서명(retakeCids)과 다시 만든
+     문항이 같아야 대조·종이 채점이 맞는다(LVL_FROM 과 같은 까닭). 그래서 아직 시작 전인 화학Ⅰ 심화만
+     1회부터 켠다. 다른 과목은 아직 아무도 재재시를 안 본 회차 번호를 여기에 적으면 그 회차부터 켜진다. */
+  var REEXP_FROM = { ch1s: 1 };
+  var CODE_COURSE = [['CH1S-', 'ch1s'], ['CH1-', 'ch1'], ['CH2-', 'ch2'], ['GC-', 'gc']];
+  function jeongsiGuard(attemptNo, ref) {
+    if (!(Number(attemptNo) >= 3) || !Array.isArray(ref) || !ref.length) return null;
+    var x0 = ref[0] || {}, code = String(x0.c || ''), crs = null;
+    for (var i = 0; i < CODE_COURSE.length; i++) { if (code.indexOf(CODE_COURSE[i][0]) === 0) { crs = CODE_COURSE[i][1]; break; } }
+    var rd = parseInt(String(x0.n || '').split('-')[0], 10), from = crs ? REEXP_FROM[crs] : null;
+    if (from == null || !(rd >= from)) return null;
+    var J = {}, cs = [];
+    ref.forEach(function (x) { if (!x) return; if (x.s) J[norm(x.s)] = 1; if (x.c && cs.indexOf(x.c) < 0) cs.push(x.c); });
+    return { J: J, cs: cs };
+  }
   function buildRetake(attemptNo, cbandVersions, wrongCids, formsBank, seenStatements, wrongStmts, refLvl) {
     formsBank = formsBank || {}; seenStatements = seenStatements || {}; wrongStmts = wrongStmts || {};
+    var G = jeongsiGuard(attemptNo, refLvl);
+    function inJ(s) { return !!(G && G.J[norm(s)]); }
     var wrong = {};
     (Array.isArray(wrongCids) ? wrongCids : Object.keys(wrongCids || {})).forEach(function (c) { if (c) wrong[c] = 1; });
     if (!cbandVersions || !cbandVersions.length) return { items: [], seenStatements: seenStatements, n: 0 };
@@ -577,11 +621,15 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     var usedThis = {};                 // 이 시도에서 쓴 문장 → 한 시험 안 중복 절대 방지
     var subCids = base.map(function (it) { return it.c; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; }); // 대체용 범위 내 개념
     function avail(c, fn) { return formsOf(c).find(fn); }
-    function nwFresh(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !seenStatements[norm(fm.s)] && !wrongStmts[norm(fm.s)]; }); }
-    function nwUnused(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !wrongStmts[norm(fm.s)]; }); }
+    function nwFresh(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !seenStatements[norm(fm.s)] && !wrongStmts[norm(fm.s)] && !inJ(fm.s); }); }
+    function nwUnused(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !wrongStmts[norm(fm.s)] && !inJ(fm.s); }); }
     function subForm() {                // D9: 다른 범위 내 개념에서 안 본·안 틀린 form (재노출 0 보장)
       for (var i = 0; i < subCids.length; i++) { var ff = nwFresh(subCids[i]) || nwUnused(subCids[i]);
         if (ff) return withLvl({ c: subCids[i], a: ff.a, s: ff.s, f: ff.f, w: ff.w }, ff); }
+      /* 재재시 이상(G) — 재시 묶음의 개념이 다 떨어지면 그 회차 정시가 물은 다른 개념(이미 배운 범위)으로 넓힌다. */
+      if (G) for (var j = 0; j < G.cs.length; j++) { if (subCids.indexOf(G.cs[j]) >= 0) continue;
+        var gg = nwFresh(G.cs[j]) || nwUnused(G.cs[j]);
+        if (gg) return withLvl({ c: G.cs[j], a: gg.a, s: gg.s, f: gg.f, w: gg.w }, gg); }
       return null;
     }
     var items = base.map(function (it) {
@@ -604,7 +652,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
            (그다음 자리는 subForm 이 재노출 0 을 보장하고, 원본은 최후다.)
            원본도 후보 하나다 — 안 본 form 중에 원본보다 **쉬운**(lvl 이 낮은) 것이 있으면 그것을 낸다.
            같거나 lvl 이 없으면 원본이 먼저다(예전과 같다). */
-        var origFresh = !usedThis[norm(orig.s)] && !seenStatements[norm(orig.s)] && !wrongStmts[norm(orig.s)];
+        var origFresh = !usedThis[norm(orig.s)] && !seenStatements[norm(orig.s)] && !wrongStmts[norm(orig.s)] && !inJ(orig.s);
         p = nwFresh(it.c);
         if (origFresh && !(useLvl && p && lvlKey(p, refOf(it.c)) < lvlKey(it, refOf(it.c)))) pick = orig;
         else {
@@ -1128,7 +1176,42 @@ const $=s=>document.querySelector(s);
 function pad2(n){n=Number(n);return (n<10?'0':'')+n;}
 function esc(s){return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
-let M=null,R=null,A=[],cur=0,view='boot',info={name:'',school:'',grade:''},course=null,round=null,SAVE_STATE=null,RESULT=null,ctab='ch2',SERVER_LINK=null;
+let M=null,R=null,A=[],cur=0,view='boot',info={name:'',school:'',grade:''},course=null,round=null,SAVE_STATE=null,RESULT=null,ctab='ch2',SERVER_LINK=null,SAVE_REASON='',SAVE_NOTE='';
+
+/* ── 푸는 중인 답을 이 기기에 적어 둔다 ────────────────────────────────
+   응시 중에 새로고침하거나 앱을 오가다 쪽이 다시 열리면 답이 **전부** 사라졌다(QA 재현). 답을 고를 때마다
+   {과목·회차·학생·답·위치} 를 localStorage 에 두고, 다시 열면 «이어서 풀기» 를 내준다. 서버가 저장을
+   확인했거나(ok) 받지 않겠다고 답하면(refused) 지운다 — 그 뒤로는 이어서 풀 것이 없다.
+   (index.html 채점 앱의 saveSession 과 같은 방식 · 저장소를 못 쓰는 브라우저면 조용히 지금처럼) */
+var PKEY='dt_exam_progress_v1', PKEEP_MS=3*86400000;
+function saveProgress(){
+  if(!R) return;
+  try{ localStorage.setItem(PKEY, JSON.stringify({course:R.course||course, round:Number(R.round||round), info:info, A:A, cur:cur, t:Date.now()})); }catch(_e){}
+}
+function savedProgress(){
+  try{ var p=JSON.parse(localStorage.getItem(PKEY)||'null');
+    if(!p||!p.course||!p.round||!Array.isArray(p.A)||!p.A.some(function(a){return a==='O'||a==='X';})) return null;
+    if(!(Date.now()-(p.t||0)<PKEEP_MS)) return null;
+    return p; }catch(_e){ return null; }
+}
+function clearProgress(){ try{ localStorage.removeItem(PKEY); }catch(_e){} }
+async function resumeProgress(){
+  var p=savedProgress(); if(!p){ boot(); return; }
+  course=p.course; round=Number(p.round); ctab=p.course;
+  try{ await loadRound(course,round); }catch(e){ view='loadfail'; render(); return; }
+  info=Object.assign({name:'',school:'',grade:''}, p.info||{});
+  var n=R.jeongsi.items.length;
+  A=p.A.slice(0,n); while(A.length<n) A.push('');
+  cur=Math.max(0,Math.min(Number(p.cur)||0,n-1)); view='exam'; render();
+}
+function discardProgress(){ clearProgress(); boot(); }
+function resumeView(p){
+  var done=p.A.filter(function(a){return a==='O'||a==='X';}).length;
+  var tm=new Date(p.t||0), hm=('0'+tm.getHours()).slice(-2)+':'+('0'+tm.getMinutes()).slice(-2);
+  return '<div class="resumebox" role="region" aria-label="이어서 풀기"><h1 style="font-size:18px">풀던 시험이 있습니다</h1>'+
+    '<p class="lede" style="margin-bottom:12px"><b>'+esc((p.info&&p.info.name)||'')+'</b> · '+esc(COURSE[p.course]||p.course)+' '+Number(p.round)+'회 · 응답 <b>'+done+'</b>/'+p.A.length+' · '+hm+' 저장</p>'+
+    '<div class="btnrow" style="margin-top:0"><button class="ghost" onclick="discardProgress()">처음부터</button><button onclick="resumeProgress()">이어서 풀기 →</button></div></div>';
+}
 
 async function loadJSON(file){ const r=await fetch(DATA_BASE+file,{cache:'no-store'}); if(!r.ok) throw new Error('load fail '+file); return await r.json(); }
 async function loadManifest(){ if(M) return M; M=await loadJSON('app_manifest.json'); return M; }
@@ -1141,27 +1224,45 @@ function reportLink(){ if(SERVER_LINK) return SERVER_LINK; var k=ChemEngine.stud
 
 
 /* ---- 반 명단 드롭다운 (STUDENT_CODE 게이트, 실패 시 자유입력 그대로) ---- */
-var RP={classes:null};
+var RP={classes:null,busy:false};
 function stuCode(reset){ if(reset){ try{ localStorage.removeItem('dt_stucode'); }catch(_e){} }
   var c=''; try{ c=localStorage.getItem('dt_stucode')||''; }catch(_e){}
   if(!c){ c=(prompt('반 코드를 입력하세요 (선생님 공지)')||'').trim(); if(c){ try{ localStorage.setItem('dt_stucode',c); }catch(_e){} } }
   return (c||'').trim(); }
-async function rosterPick(){
-  var note=document.getElementById('rpnote'); if(note) note.textContent='명단 불러오는 중\u2026';
-  var code=stuCode(); if(!code){ if(note) note.textContent=''; return; }
+async function rosterPick(ask){
+  var note=document.getElementById('rpnote'); if(note&&ask) note.textContent='명단 불러오는 중\u2026';
+  if(RP.classes){ rpFill(); if(note) note.textContent=''; rpRow(); return; }
+  if(RP.busy && !ask) return; RP.busy=true;
+  /* 반 코드는 묻지 않고 먼저 물어본다(서버가 공개 모드면 그대로 열린다). 코드가 필요하다고 답할 때만 묻는다. */
+  var code=''; try{ code=localStorage.getItem('dt_stucode')||''; }catch(_e){}
+  if(ask){ code=stuCode(); if(!code){ if(note) note.textContent=''; return; } }
   try{
     var r=await fetch(SAVE_URL+'?action=names&code='+encodeURIComponent(code)+'&t='+Date.now(),{cache:'no-store'});
     var j=await r.json();
-    if(!j||j.ok===false){ stuCode(true);
-      if(note) note.textContent=(j&&j.error==='auth')?'반 코드가 올바르지 않습니다. 버튼을 눌러 다시 입력하세요.':'명단 기능이 아직 설정되지 않았습니다. 아래에 직접 입력하세요.';
+    if(!j||j.ok===false){ if(code) stuCode(true);
+      var bt=document.getElementById('rpbtn'); if(bt) bt.style.display=(j&&j.error==='auth')?'':'none';
+      if(note) note.textContent=(j&&j.error==='auth')?(ask?'반 코드가 올바르지 않습니다. 단추를 눌러 다시 입력하세요.':'반 코드를 넣으면 명단에서 이름을 고를 수 있습니다.'):'';
       return; }
-    RP.classes=j.classes||[];
-    var box=document.getElementById('rpsel'), cs=document.getElementById('rpc'), ss=document.getElementById('rps');
-    if(!box||!cs||!ss) return;
-    cs.innerHTML='<option value="">반 선택</option>'+RP.classes.map(function(k,i){return '<option value="'+i+'">'+esc(k.label)+'</option>';}).join('');
-    ss.innerHTML='<option value="">이름 선택</option>';
-    box.style.display='block'; if(note) note.textContent='';
-  }catch(_e){ if(note) note.textContent='명단을 불러오지 못했습니다. 아래에 직접 입력하세요.'; }
+    /* 학생이 고를 반만 — DT 반(파이널 반 제외), 이 시험 과목 반이 있으면 그 반들만. */
+    var all=(j.classes||[]).filter(function(k){ return k && k.kind!=='exam' && (k.students||[]).length; });
+    var mine=all.filter(function(k){ return k.course && k.course===(R&&R.course||course); });
+    RP.classes=mine.length?mine:all;
+    if(!RP.classes.length){ if(note) note.textContent=''; return; }
+    rpFill(); if(note) note.textContent='';
+  }catch(_e){ if(note) note.textContent=''; }
+  finally{ RP.busy=false; rpRow(); }
+}
+/* 안내 줄(반 코드 단추 · 알림)은 쓸 말이 있을 때만 자리를 차지한다. */
+function rpRow(){ var r=document.getElementById('rprow'), n=document.getElementById('rpnote'), b=document.getElementById('rpbtn');
+  if(r) r.style.display=((n&&n.textContent)||(b&&b.style.display!=='none'))?'':'none'; }
+function rpFill(){
+  var box=document.getElementById('rpsel'), cs=document.getElementById('rpc'), ss=document.getElementById('rps');
+  if(!box||!cs||!ss||!RP.classes||!RP.classes.length) return;
+  cs.innerHTML='<option value="">반 선택</option>'+RP.classes.map(function(k,i){return '<option value="'+i+'">'+esc(k.label)+'</option>';}).join('');
+  ss.innerHTML='<option value="">이름 선택</option>';
+  if(RP.classes.length===1){ cs.value='0'; rpClass(); }
+  box.style.display='block';
+  var bt=document.getElementById('rpbtn'); if(bt) bt.style.display='none';
 }
 function rpClass(){
   var ci=document.getElementById('rpc').value, sl=document.getElementById('rps');
@@ -1180,6 +1281,9 @@ function rpStudent(){
 async function boot(){
   const q=new URLSearchParams(location.search);
   const c=q.get('c')||q.get('course'); const r=q.get('r')||q.get('round');
+  /* 이 기기에서 풀던 시험(같은 회차 링크로 다시 왔거나, 회차 없이 열었을 때)이 있으면 먼저 묻는다. */
+  const pv=savedProgress();
+  if(pv && (!(c&&r) || (pv.course===c && Number(pv.round)===Number(r)))){ view='resume'; render(); return; }
   if(c && r){ course=c; round=Number(r); ctab=c;
     try{ await loadRound(c,r); view='id'; }catch(e){ view='loadfail'; }
     render(); return;
@@ -1191,9 +1295,9 @@ async function boot(){
 function setAns(v){ if(!R) return; A[cur]=v;
   const items=R.jeongsi.items;
   if(cur < items.length-1){ const nx=A.findIndex((a,j)=>j>cur && !a); cur = nx>=0?nx:cur+1; }
-  render();
+  saveProgress(); render();
 }
-function goItem(i){ cur=Math.max(0,Math.min(i,R.jeongsi.items.length-1)); render(); }
+function goItem(i){ cur=Math.max(0,Math.min(i,R.jeongsi.items.length-1)); saveProgress(); render(); }
 document.addEventListener('keydown',e=>{
   if(view!=='exam') return; const k=(e.key||'').toLowerCase();
   if(k==='o'||k==='1'||k==='ㅐ'){ setAns('O'); }
@@ -1207,8 +1311,11 @@ function startExam(){
   const nm=$('#nm'),sc=$('#sc'),gr=$('#gr');
   info.name=nm?nm.value.trim():''; info.school=sc?sc.value.trim():''; info.grade=gr?gr.value.trim():'';
   if(!info.name||!info.school){ alert('이름과 학교를 입력하세요.'); return; }
-  A=new Array(R.jeongsi.items.length).fill(''); cur=0; view='exam'; render();
+  A=new Array(R.jeongsi.items.length).fill(''); cur=0; view='exam'; saveProgress(); render();
 }
+/* 반 명단 드롭다운은 이름 칸 위에 있다. 학생키(학교-이름)가 «화학고/화학고등학교», «홍길동/홍 길동» 으로
+   갈라지면 성적표·재시가 두 사람이 된다 — 명단에서 고르면 선생님이 적어 둔 이름·학교 그대로 들어간다.
+   서버의 기존 읽기 창구(?action=names)만 쓴다. 못 받으면 아무것도 안 띄우고 지금처럼 직접 입력. */
 function toReview(){ view='review'; render(); }
 function backToExam(i){ if(i!=null) cur=i; view='exam'; render(); }
 function submitExam(){
@@ -1298,9 +1405,26 @@ function startHandoff(){
   handoffStep();
 }
 /* 셈과 저장 두 가지가 다 끝나야 넘어간다. 둘 중 뭘 기다리는지 화면이 말한다. */
+/* 서버가 «받지 않겠다» 고 답한 까닭(사유별 문구). 다시 보내도 같은 답이라 «다시 보내기» 를 주지 않는다. */
+function refusedText(){
+  if(SAVE_REASON==='already_taken') return {t:'이 회차는 이미 응시했습니다', b:'같은 회차를 다시 풀어도 처음 응시한 결과가 그대로 남습니다. 방금 푼 답안은 저장되지 않았습니다. 처음 결과와 재시는 성적표에서 이어 가세요.'};
+  if(SAVE_REASON==='attempt_regress') return {t:'이 회차는 이미 재시까지 진행했습니다', b:'온라인 응시는 첫 응시만 받습니다. 방금 푼 답안은 저장되지 않았습니다. 성적표에서 다음 재시를 이어 가세요.'};
+  if(SAVE_REASON==='already_passed') return {t:'이미 통과한 회차입니다', b:'방금 푼 답안은 저장되지 않았습니다. 결과는 성적표에서 확인하세요.'};
+  return {t:'이번 답안은 저장되지 않았습니다', b:SAVE_NOTE||'서버가 저장을 받지 않았습니다.'};
+}
 function handoffStep(){
   if(view!=='handoff' || HOFF.gone) return;
   var el=$('#hoffStep'); if(!el) return;
+  if(SAVE_STATE==='refused'){
+    var rt=refusedText();
+    el.innerHTML='<b style="color:var(--x)">'+esc(rt.t)+'</b><br><span class="muted" style="font-size:13px">'+esc(rt.b)+'</span>'+
+      '<a class="rlbtn" id="hoffReport" href="'+esc(reportLink())+'">내 성적표 보기 →</a>';
+    var sk=document.querySelector('.hoff .skip'); if(sk) sk.style.display='none';
+    var br=document.querySelector('.hoff .bar'); if(br) br.style.display='none';
+    var vd=document.querySelector('.hoff .vd'); if(vd){ vd.textContent='기록 안 됨'; vd.className='vd fail'; }
+    if(HOFF.timer) clearTimeout(HOFF.timer);
+    return;
+  }
   if(SAVE_STATE==='fail'){
     el.innerHTML='<b style="color:var(--x)">결과 저장이 확인되지 않았습니다.</b><br>'
       +'<span class="muted">지금 넘어가면 이번 회차가 리포트에 없을 수 있습니다.</span><br>'
@@ -1393,13 +1517,16 @@ function showRetakeModal(){
     '<button class="go" onclick="goReportFromRetake()">리포트에서 복습 시작 →</button>'+
   '</div>';
   document.body.appendChild(d);
-  var b=d.querySelector('.go'); if(b) b.focus();
+  /* 오른쪽 아래 주기율표 단추(z 9998)가 이 알림창(z 9990) 위에 떠서 «리포트에서 복습 시작» 을 가렸다.
+     알림창이 떠 있는 동안은 단추를 치운다(이 알림은 닫히지 않고 리포트로만 나간다). */
+  var cb=document.getElementById('cxpBtn'); if(cb) cb.style.display='none';
+  var b=d.querySelector('.go'); if(b){ try{ b.focus({preventScroll:true}); }catch(_e){ b.focus(); } }
   /* 바깥을 눌러 닫으면 «알림» 이 아니라 그냥 사라지는 것이 된다. 안 닫는다. */
 }
 function goReportFromRetake(){ location.href=reportLink(); }
 async function saveResult(g,dx){
   if(!SAVE_URL){ SAVE_STATE=null; updateSaveLine(); return; }
-  SAVE_STATE='saving'; SERVER_LINK=null; updateSaveLine();
+  SAVE_STATE='saving'; SERVER_LINK=null; SAVE_REASON=''; SAVE_NOTE=''; updateSaveLine();
   try{
     const payload={ studentKey:ChemEngine.studentKey(info.name,info.school), reportLink:reportLink(),
       name:info.name, school:info.school, year:info.grade,
@@ -1410,9 +1537,20 @@ async function saveResult(g,dx){
       units:(dx.byUnit||[]).map(u=>({u:u.unit,t:u.total,w:u.wrong})),
       axes:(dx.byAxis||[]).map(a=>({k:a.key,t:a.total,w:a.wrong})),
       isTest:false,
+      /* 출처 표지 — 서버는 이것으로 «온라인 응시로 같은 회차를 다른 답으로 다시 푼 것» 을 가려 첫 응시를 덮어쓰지 않는다
+         (already_taken). 선생님 채점 앱(표지 없음)의 정정 덮어쓰기는 그대로다. */
+      src:'online',
       answers:(A||[]).map(a=>a==='O'?'O':a==='X'?'X':'.').join('') };
     var _pr=await fetch(SAVE_URL,{method:'POST',body:JSON.stringify(payload)});
-    try{ var _pj=await _pr.json(); if(_pj&&_pj.reportLink){ SERVER_LINK=_pj.reportLink; if(view==='report'||view==='done') render(); } }catch(_e){}  // 같은 학생 연결 시 정규 코드 링크
+    var _pj=null;
+    try{ _pj=await _pr.json(); if(_pj&&_pj.reportLink){ SERVER_LINK=_pj.reportLink; if(view==='report'||view==='done') render(); } }catch(_e){}  // 같은 학생 연결 시 정규 코드 링크
+    /* 서버가 받기를 거부했다(이미 응시·이미 재시까지·이미 통과). 예전에는 확인 GET 이 답안을 못 찾아 «저장 확인 안 됨 ·
+       다시 보내기» 가 떴고, 다시 보내도 같은 거부라 끝이 없었다. 사유를 말하고 성적표로 보낸다. */
+    if(_pj && _pj.ok===false && /^(already_taken|attempt_regress|already_passed)$/.test(String(_pj.error||''))){
+      SAVE_STATE='refused'; SAVE_REASON=String(_pj.error); SAVE_NOTE=String(_pj.msg||'');
+      console.warn('[Chemistreal] 저장 거부:',_pj.error,_pj.msg);
+      clearProgress(); updateSaveLine(); return;
+    }
     var saved=false;
     try{
       // 서버가 반환한 정규 링크의 코드로 확인(같은 학생 연결·통합 후에도 정확). 없으면 기존 토큰으로.
@@ -1423,6 +1561,7 @@ async function saveResult(g,dx){
       saved=!!(vj&&vj.rows&&vj.rows.some(function(r){return String(r.course)===String(R.course)&&String(r.round)===String(R.round)&&String(r.answers||'')===payload.answers;}));
     }catch(_e){ saved=false; }
     SAVE_STATE=saved?'ok':'fail';
+    if(saved) clearProgress();          // 저장이 확인됐다 — 이어서 풀 것이 없다
   }catch(e){ SAVE_STATE='fail'; }
   updateSaveLine();
 }
@@ -1432,7 +1571,8 @@ function updateSaveLine(){ const el=$('#saveLine'); if(el) el.innerHTML=saveLine
   if(view==='handoff') handoffStep(); }
 function saveLineHTML(){
   if(SAVE_STATE==='saving') return '<span class="muted">결과 저장·확인 중...</span>';
-  if(SAVE_STATE==='ok') return '<span style="color:#1B8A4C;font-weight:600">결과가 저장되었습니다 · 리포트 확인 가능</span>';
+  if(SAVE_STATE==='ok') return '<span style="color:var(--o);font-weight:600">결과가 저장되었습니다 · 리포트 확인 가능</span>';
+  if(SAVE_STATE==='refused') return '<span style="color:var(--x);font-weight:600">'+esc(refusedText().t)+'</span> · <a href="'+esc(reportLink())+'">성적표 보기</a>';
   if(SAVE_STATE==='fail') return '<span style="color:#C0392B;font-weight:600">저장이 확인되지 않았습니다 · </span><button class="ghost" style="padding:4px 10px;font-size:12px;margin-left:4px" onclick="saveResult(RESULT.g,RESULT.dx)">재시도</button>';
   return '';
 }
@@ -1441,6 +1581,7 @@ function render(){
   let h='';
   if(view==='boot'){ h='<div class="card"><h1>불러오는 중…</h1></div>'; }
   else if(view==='loadfail'){ h='<div class="card"><h1>시험을 불러오지 못했습니다</h1><p class="lede">회차 데이터를 찾지 못했습니다. 링크를 확인하거나 아래에서 회차를 선택하세요.</p><div class="btnrow"><button onclick="course=null;round=null;loadManifest().then(()=>{view=\u0027select\u0027;render()})">회차 선택</button></div></div>'; }
+  else if(view==='resume'){ var _p=savedProgress(); if(!_p){ view='select'; return boot(); } h=resumeView(_p); }
   else if(view==='select'){ h=selectView(); }
   else if(view==='id'){ h=idView(); }
   else if(view==='exam'){ h=examView(); }
@@ -1448,6 +1589,7 @@ function render(){
   else if(view==='handoff'){ h=handoffView(); }
   else if(view==='result'){ h=resultView(); }
   $('#app').innerHTML=h;
+  if(view==='id') rosterPick(false);
 }
 
 function selectView(){
@@ -1462,6 +1604,10 @@ function idView(){
   const pass=(R.scoring&&R.scoring.pass)||80;
   return '<div class="card"><h1>'+esc(R.title)+'</h1>'+
     '<p class="lede">60문항 OX · 합격 '+pass+'점.</p>'+
+    '<div class="rosterpick" id="rpsel" style="display:none"><label for="rpc">반 명단에서 내 이름 고르기</label>'+
+      '<div class="row2"><div><select id="rpc" onchange="rpClass()" aria-label="반"></select></div><div><select id="rps" onchange="rpStudent()" aria-label="이름"></select></div></div>'+
+      '<p class="note" style="margin:6px 0 0">명단에서 고르면 이름·학교가 선생님 명단 그대로 들어갑니다(성적표가 한 사람으로 이어집니다). 명단에 없으면 아래에 직접 적으세요.</p></div>'+
+    '<p class="muted" id="rprow" style="margin:0 0 6px;display:none"><button type="button" class="rpbtn" id="rpbtn" style="display:none" onclick="rosterPick(true)">반 코드 넣고 명단에서 고르기</button><span class="rpnote" id="rpnote"></span></p>'+
     '<label for="nm">이름</label><input id="nm" value="'+esc(info.name)+'" placeholder="홍길동" autocomplete="off">'+
     '<div class="row2"><div><label for="sc">학교</label><input id="sc" value="'+esc(info.school)+'" placeholder="OO중학교" autocomplete="off"></div>'+
     '<div><label for="gr">학년</label><input id="gr" value="'+esc(info.grade)+'" placeholder="중2" autocomplete="off"></div></div>'+
@@ -1524,48 +1670,48 @@ boot();
 
 <!-- CXP: periodic table + constants modal (KMChC 2026 기준) -->
 <style>
-#cxpBtn{position:fixed;right:14px;bottom:14px;z-index:9998;background:#C9A227;color:#141414;border:none;border-radius:22px;padding:10px 16px;font-weight:800;font-size:13px;letter-spacing:.02em;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer;font-family:inherit;}
+#cxpBtn{position:fixed;right:14px;bottom:14px;z-index:9998;min-height:44px;background:#C9A227;color:#141414;border:none;border-radius:22px;padding:10px 16px;font-weight:800;font-size:13px;letter-spacing:.02em;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer;font-family:inherit;}
 #cxpModal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,10,14,.62);}
 #cxpModal.on{display:flex;align-items:center;justify-content:center;padding:14px;}
 .cxpCard{background:#fff;color:#131313;max-width:980px;width:100%;max-height:92vh;overflow:auto;border-radius:12px;padding:16px 16px 18px;font-family:inherit;}
 .cxpHd{display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #131313;padding-bottom:8px;margin-bottom:10px;}
 .cxpHd b{font-size:17px;letter-spacing:.02em;}
-.cxpHd small{color:#6c6c6c;font-size:11.5px;letter-spacing:.08em;}
+.cxpHd small{color:#6c6c6c;font-size:12px;letter-spacing:.08em;}
 .cxpHd button{margin-left:auto;white-space:nowrap;background:#131313;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;}
 .cxpScroll{overflow-x:auto;}
 /* 휴대폰에서 이 표는 610px 이 화면 밖에 있다. 그런데 잘렸다는 표시가 없어서,
    시험 중에 여는 학생은 1~6족만 보고 나머지가 있는 줄 모른다(실제로 그렇게
    보였다). 잘릴 때만 안내를 띄우고, 오른쪽 끝을 흐려 더 있다고 알린다. */
-.cxpHint{display:none;font-size:11.5px;color:#6B6B6B;margin:0 0 6px}
+.cxpHint{display:none;font-size:13px;color:#6B6B6B;margin:0 0 6px}
 .cxpCard.cut .cxpHint{display:block}
 .cxpCard.cut .cxpScroll{
   -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);
   mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);}
 .cxpCard.cut.end .cxpScroll{-webkit-mask-image:none;mask-image:none}
 .cxpGrid{display:grid;grid-template-columns:22px repeat(18,minmax(44px,1fr));grid-template-rows:auto repeat(7,48px) 12px repeat(2,48px);gap:1px;min-width:940px;}
-.cxg{font-size:11.5px;color:#6B6B6B;text-align:center;align-self:end;font-weight:700;}
+.cxg{font-size:12px;color:#6B6B6B;text-align:center;align-self:end;font-weight:700;}
 .cxe{position:relative;border:1px solid #1a1a1a;background:#fff;}
-.cxe b{position:absolute;top:2px;left:3px;font-size:11.5px;color:#555;font-weight:600;}
+.cxe b{position:absolute;top:2px;left:3px;font-size:12px;color:#555;font-weight:600;}
 .cxe span{position:absolute;left:0;right:0;top:50%;transform:translateY(-52%);text-align:center;font-size:16px;font-weight:800;color:#000;}
-.cxe i{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-style:normal;font-size:11.5px;color:#6B6B6B;}
+.cxe i{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-style:normal;font-size:12px;color:#6B6B6B;}
 .cxe.cxp span{transform:translateY(-70%);}
 .cxCst{border:1px solid #131313;margin-top:12px;}
-.cxCst .cxct{background:#131313;color:#fff;padding:6px 10px;font-size:11.5px;font-weight:700;letter-spacing:.04em;display:flex;justify-content:space-between;}
+.cxCst .cxct{background:#131313;color:#fff;padding:6px 10px;font-size:13px;font-weight:700;letter-spacing:.04em;display:flex;justify-content:space-between;}
 .cxCst .cxct small{color:#cfcfcf;font-weight:600;letter-spacing:.1em;}
 .cxcg{display:grid;grid-template-columns:repeat(2,1fr);}
 @media(min-width:760px){.cxcg{grid-template-columns:repeat(4,1fr);}}
 .cxci{padding:7px 10px;border-top:1px solid #e4e4e4;border-left:1px solid #e4e4e4;display:flex;flex-direction:column;gap:2px;}
-.cxci em{font-style:normal;font-size:11.5px;color:#6c6c6c;font-weight:700;}
-.cxci span{font-size:11.5px;}
+.cxci em{font-style:normal;font-size:13px;color:#6c6c6c;font-weight:700;}
+.cxci span{font-size:13px;}
 .cxci sup,.cxci sub{font-size:65%;}
-.cxNote{margin-top:8px;font-size:11.5px;color:#6c6c6c;line-height:1.5;}
+.cxNote{margin-top:8px;font-size:13px;color:#6c6c6c;line-height:1.5;}
 </style>
 <button id="cxpBtn" type="button">주기율표</button>
 <div id="cxpModal" role="dialog" aria-modal="true" aria-label="주기율표와 참고 데이터">
   <div class="cxpCard">
     <div class="cxpHd"><b>주기율표 · 참고 데이터</b><small>KMChC 2026 공식 기준</small><button id="cxpClose" type="button">닫기</button></div>
     <p class="cxpHint">옆으로 밀면 18족까지 보입니다 →</p>
-    <div class="cxpScroll"><div class="cxpGrid"><div class="cxg" style="grid-column:2;grid-row:1">1</div><div class="cxg" style="grid-column:3;grid-row:1">2</div><div class="cxg" style="grid-column:4;grid-row:1">3</div><div class="cxg" style="grid-column:5;grid-row:1">4</div><div class="cxg" style="grid-column:6;grid-row:1">5</div><div class="cxg" style="grid-column:7;grid-row:1">6</div><div class="cxg" style="grid-column:8;grid-row:1">7</div><div class="cxg" style="grid-column:9;grid-row:1">8</div><div class="cxg" style="grid-column:10;grid-row:1">9</div><div class="cxg" style="grid-column:11;grid-row:1">10</div><div class="cxg" style="grid-column:12;grid-row:1">11</div><div class="cxg" style="grid-column:13;grid-row:1">12</div><div class="cxg" style="grid-column:14;grid-row:1">13</div><div class="cxg" style="grid-column:15;grid-row:1">14</div><div class="cxg" style="grid-column:16;grid-row:1">15</div><div class="cxg" style="grid-column:17;grid-row:1">16</div><div class="cxg" style="grid-column:18;grid-row:1">17</div><div class="cxg" style="grid-column:19;grid-row:1">18</div><div class="cxg" style="grid-column:1;grid-row:2">1</div><div class="cxg" style="grid-column:1;grid-row:3">2</div><div class="cxg" style="grid-column:1;grid-row:4">3</div><div class="cxg" style="grid-column:1;grid-row:5">4</div><div class="cxg" style="grid-column:1;grid-row:6">5</div><div class="cxg" style="grid-column:1;grid-row:7">6</div><div class="cxg" style="grid-column:1;grid-row:8">7</div><div class="cxe" style="grid-column:2;grid-row:2"><b>1</b><span>H</span><i>1.008</i></div><div class="cxe" style="grid-column:19;grid-row:2"><b>2</b><span>He</span><i>4.003</i></div><div class="cxe" style="grid-column:2;grid-row:3"><b>3</b><span>Li</span><i>6.94</i></div><div class="cxe" style="grid-column:3;grid-row:3"><b>4</b><span>Be</span><i>9.01</i></div><div class="cxe" style="grid-column:14;grid-row:3"><b>5</b><span>B</span><i>10.81</i></div><div class="cxe" style="grid-column:15;grid-row:3"><b>6</b><span>C</span><i>12.01</i></div><div class="cxe" style="grid-column:16;grid-row:3"><b>7</b><span>N</span><i>14.01</i></div><div class="cxe" style="grid-column:17;grid-row:3"><b>8</b><span>O</span><i>16.00</i></div><div class="cxe" style="grid-column:18;grid-row:3"><b>9</b><span>F</span><i>19.00</i></div><div class="cxe" style="grid-column:19;grid-row:3"><b>10</b><span>Ne</span><i>20.18</i></div><div class="cxe" style="grid-column:2;grid-row:4"><b>11</b><span>Na</span><i>22.99</i></div><div class="cxe" style="grid-column:3;grid-row:4"><b>12</b><span>Mg</span><i>24.30</i></div><div class="cxe" style="grid-column:14;grid-row:4"><b>13</b><span>Al</span><i>26.98</i></div><div class="cxe" style="grid-column:15;grid-row:4"><b>14</b><span>Si</span><i>28.09</i></div><div class="cxe" style="grid-column:16;grid-row:4"><b>15</b><span>P</span><i>30.97</i></div><div class="cxe" style="grid-column:17;grid-row:4"><b>16</b><span>S</span><i>32.07</i></div><div class="cxe" style="grid-column:18;grid-row:4"><b>17</b><span>Cl</span><i>35.45</i></div><div class="cxe" style="grid-column:19;grid-row:4"><b>18</b><span>Ar</span><i>39.95</i></div><div class="cxe" style="grid-column:2;grid-row:5"><b>19</b><span>K</span><i>39.10</i></div><div class="cxe" style="grid-column:3;grid-row:5"><b>20</b><span>Ca</span><i>40.08</i></div><div class="cxe" style="grid-column:4;grid-row:5"><b>21</b><span>Sc</span><i>44.96</i></div><div class="cxe" style="grid-column:5;grid-row:5"><b>22</b><span>Ti</span><i>47.87</i></div><div class="cxe" style="grid-column:6;grid-row:5"><b>23</b><span>V</span><i>50.94</i></div><div class="cxe" style="grid-column:7;grid-row:5"><b>24</b><span>Cr</span><i>52.00</i></div><div class="cxe" style="grid-column:8;grid-row:5"><b>25</b><span>Mn</span><i>54.94</i></div><div class="cxe" style="grid-column:9;grid-row:5"><b>26</b><span>Fe</span><i>55.85</i></div><div class="cxe" style="grid-column:10;grid-row:5"><b>27</b><span>Co</span><i>58.93</i></div><div class="cxe" style="grid-column:11;grid-row:5"><b>28</b><span>Ni</span><i>58.69</i></div><div class="cxe" style="grid-column:12;grid-row:5"><b>29</b><span>Cu</span><i>63.55</i></div><div class="cxe" style="grid-column:13;grid-row:5"><b>30</b><span>Zn</span><i>65.38</i></div><div class="cxe" style="grid-column:14;grid-row:5"><b>31</b><span>Ga</span><i>69.72</i></div><div class="cxe" style="grid-column:15;grid-row:5"><b>32</b><span>Ge</span><i>72.63</i></div><div class="cxe" style="grid-column:16;grid-row:5"><b>33</b><span>As</span><i>74.92</i></div><div class="cxe" style="grid-column:17;grid-row:5"><b>34</b><span>Se</span><i>78.97</i></div><div class="cxe" style="grid-column:18;grid-row:5"><b>35</b><span>Br</span><i>79.90</i></div><div class="cxe" style="grid-column:19;grid-row:5"><b>36</b><span>Kr</span><i>83.80</i></div><div class="cxe" style="grid-column:2;grid-row:6"><b>37</b><span>Rb</span><i>85.47</i></div><div class="cxe" style="grid-column:3;grid-row:6"><b>38</b><span>Sr</span><i>87.62</i></div><div class="cxe" style="grid-column:4;grid-row:6"><b>39</b><span>Y</span><i>88.91</i></div><div class="cxe" style="grid-column:5;grid-row:6"><b>40</b><span>Zr</span><i>91.22</i></div><div class="cxe" style="grid-column:6;grid-row:6"><b>41</b><span>Nb</span><i>92.91</i></div><div class="cxe" style="grid-column:7;grid-row:6"><b>42</b><span>Mo</span><i>95.95</i></div><div class="cxe" style="grid-column:8;grid-row:6"><b>43</b><span>Tc</span><i></i></div><div class="cxe" style="grid-column:9;grid-row:6"><b>44</b><span>Ru</span><i>101.1</i></div><div class="cxe" style="grid-column:10;grid-row:6"><b>45</b><span>Rh</span><i>102.9</i></div><div class="cxe" style="grid-column:11;grid-row:6"><b>46</b><span>Pd</span><i>106.4</i></div><div class="cxe" style="grid-column:12;grid-row:6"><b>47</b><span>Ag</span><i>107.9</i></div><div class="cxe" style="grid-column:13;grid-row:6"><b>48</b><span>Cd</span><i>112.4</i></div><div class="cxe" style="grid-column:14;grid-row:6"><b>49</b><span>In</span><i>114.8</i></div><div class="cxe" style="grid-column:15;grid-row:6"><b>50</b><span>Sn</span><i>118.7</i></div><div class="cxe" style="grid-column:16;grid-row:6"><b>51</b><span>Sb</span><i>121.8</i></div><div class="cxe" style="grid-column:17;grid-row:6"><b>52</b><span>Te</span><i>127.6</i></div><div class="cxe" style="grid-column:18;grid-row:6"><b>53</b><span>I</span><i>126.9</i></div><div class="cxe" style="grid-column:19;grid-row:6"><b>54</b><span>Xe</span><i>131.3</i></div><div class="cxe" style="grid-column:2;grid-row:7"><b>55</b><span>Cs</span><i>132.9</i></div><div class="cxe" style="grid-column:3;grid-row:7"><b>56</b><span>Ba</span><i>137.3</i></div><div class="cxe" style="grid-column:5;grid-row:7"><b>72</b><span>Hf</span><i>178.5</i></div><div class="cxe" style="grid-column:6;grid-row:7"><b>73</b><span>Ta</span><i>180.9</i></div><div class="cxe" style="grid-column:7;grid-row:7"><b>74</b><span>W</span><i>183.8</i></div><div class="cxe" style="grid-column:8;grid-row:7"><b>75</b><span>Re</span><i>186.2</i></div><div class="cxe" style="grid-column:9;grid-row:7"><b>76</b><span>Os</span><i>190.2</i></div><div class="cxe" style="grid-column:10;grid-row:7"><b>77</b><span>Ir</span><i>192.2</i></div><div class="cxe" style="grid-column:11;grid-row:7"><b>78</b><span>Pt</span><i>195.1</i></div><div class="cxe" style="grid-column:12;grid-row:7"><b>79</b><span>Au</span><i>197.0</i></div><div class="cxe" style="grid-column:13;grid-row:7"><b>80</b><span>Hg</span><i>200.6</i></div><div class="cxe" style="grid-column:14;grid-row:7"><b>81</b><span>Tl</span><i>204.4</i></div><div class="cxe" style="grid-column:15;grid-row:7"><b>82</b><span>Pb</span><i>207.2</i></div><div class="cxe" style="grid-column:16;grid-row:7"><b>83</b><span>Bi</span><i>209.0</i></div><div class="cxe" style="grid-column:17;grid-row:7"><b>84</b><span>Po</span><i></i></div><div class="cxe" style="grid-column:18;grid-row:7"><b>85</b><span>At</span><i></i></div><div class="cxe" style="grid-column:19;grid-row:7"><b>86</b><span>Rn</span><i></i></div><div class="cxe" style="grid-column:2;grid-row:8"><b>87</b><span>Fr</span><i></i></div><div class="cxe" style="grid-column:3;grid-row:8"><b>88</b><span>Ra</span><i></i></div><div class="cxe" style="grid-column:5;grid-row:8"><b>104</b><span>Rf</span><i></i></div><div class="cxe" style="grid-column:6;grid-row:8"><b>105</b><span>Db</span><i></i></div><div class="cxe" style="grid-column:7;grid-row:8"><b>106</b><span>Sg</span><i></i></div><div class="cxe" style="grid-column:8;grid-row:8"><b>107</b><span>Bh</span><i></i></div><div class="cxe" style="grid-column:9;grid-row:8"><b>108</b><span>Hs</span><i></i></div><div class="cxe" style="grid-column:10;grid-row:8"><b>109</b><span>Mt</span><i></i></div><div class="cxe" style="grid-column:11;grid-row:8"><b>110</b><span>Ds</span><i></i></div><div class="cxe" style="grid-column:12;grid-row:8"><b>111</b><span>Rg</span><i></i></div><div class="cxe" style="grid-column:13;grid-row:8"><b>112</b><span>Cn</span><i></i></div><div class="cxe" style="grid-column:14;grid-row:8"><b>113</b><span>Nh</span><i></i></div><div class="cxe" style="grid-column:15;grid-row:8"><b>114</b><span>Fl</span><i></i></div><div class="cxe" style="grid-column:16;grid-row:8"><b>115</b><span>Mc</span><i></i></div><div class="cxe" style="grid-column:17;grid-row:8"><b>116</b><span>Lv</span><i></i></div><div class="cxe" style="grid-column:18;grid-row:8"><b>117</b><span>Ts</span><i></i></div><div class="cxe" style="grid-column:19;grid-row:8"><b>118</b><span>Og</span><i></i></div><div class="cxe" style="grid-column:5;grid-row:10"><b>57</b><span>La</span><i>138.9</i></div><div class="cxe" style="grid-column:6;grid-row:10"><b>58</b><span>Ce</span><i>140.1</i></div><div class="cxe" style="grid-column:7;grid-row:10"><b>59</b><span>Pr</span><i>140.9</i></div><div class="cxe" style="grid-column:8;grid-row:10"><b>60</b><span>Nd</span><i>144.2</i></div><div class="cxe" style="grid-column:9;grid-row:10"><b>61</b><span>Pm</span><i></i></div><div class="cxe" style="grid-column:10;grid-row:10"><b>62</b><span>Sm</span><i>150.4</i></div><div class="cxe" style="grid-column:11;grid-row:10"><b>63</b><span>Eu</span><i>152.0</i></div><div class="cxe" style="grid-column:12;grid-row:10"><b>64</b><span>Gd</span><i>157.3</i></div><div class="cxe" style="grid-column:13;grid-row:10"><b>65</b><span>Tb</span><i>158.9</i></div><div class="cxe" style="grid-column:14;grid-row:10"><b>66</b><span>Dy</span><i>162.5</i></div><div class="cxe" style="grid-column:15;grid-row:10"><b>67</b><span>Ho</span><i>164.9</i></div><div class="cxe" style="grid-column:16;grid-row:10"><b>68</b><span>Er</span><i>167.3</i></div><div class="cxe" style="grid-column:17;grid-row:10"><b>69</b><span>Tm</span><i>168.9</i></div><div class="cxe" style="grid-column:18;grid-row:10"><b>70</b><span>Yb</span><i>173.0</i></div><div class="cxe" style="grid-column:19;grid-row:10"><b>71</b><span>Lu</span><i>175.0</i></div><div class="cxe" style="grid-column:5;grid-row:11"><b>89</b><span>Ac</span><i></i></div><div class="cxe" style="grid-column:6;grid-row:11"><b>90</b><span>Th</span><i>232.0</i></div><div class="cxe" style="grid-column:7;grid-row:11"><b>91</b><span>Pa</span><i>231.0</i></div><div class="cxe" style="grid-column:8;grid-row:11"><b>92</b><span>U</span><i>238.0</i></div><div class="cxe" style="grid-column:9;grid-row:11"><b>93</b><span>Np</span><i></i></div><div class="cxe" style="grid-column:10;grid-row:11"><b>94</b><span>Pu</span><i></i></div><div class="cxe" style="grid-column:11;grid-row:11"><b>95</b><span>Am</span><i></i></div><div class="cxe" style="grid-column:12;grid-row:11"><b>96</b><span>Cm</span><i></i></div><div class="cxe" style="grid-column:13;grid-row:11"><b>97</b><span>Bk</span><i></i></div><div class="cxe" style="grid-column:14;grid-row:11"><b>98</b><span>Cf</span><i></i></div><div class="cxe" style="grid-column:15;grid-row:11"><b>99</b><span>Es</span><i></i></div><div class="cxe" style="grid-column:16;grid-row:11"><b>100</b><span>Fm</span><i></i></div><div class="cxe" style="grid-column:17;grid-row:11"><b>101</b><span>Md</span><i></i></div><div class="cxe" style="grid-column:18;grid-row:11"><b>102</b><span>No</span><i></i></div><div class="cxe" style="grid-column:19;grid-row:11"><b>103</b><span>Lr</span><i></i></div><div class="cxe cxp" style="grid-column:4;grid-row:7"><span style="font-size:11.5px">57-71</span><i>란타넘족</i></div><div class="cxe cxp" style="grid-column:4;grid-row:8"><span style="font-size:11.5px">89-103</span><i>악티늄족</i></div></div></div>
+    <div class="cxpScroll"><div class="cxpGrid"><div class="cxg" style="grid-column:2;grid-row:1">1</div><div class="cxg" style="grid-column:3;grid-row:1">2</div><div class="cxg" style="grid-column:4;grid-row:1">3</div><div class="cxg" style="grid-column:5;grid-row:1">4</div><div class="cxg" style="grid-column:6;grid-row:1">5</div><div class="cxg" style="grid-column:7;grid-row:1">6</div><div class="cxg" style="grid-column:8;grid-row:1">7</div><div class="cxg" style="grid-column:9;grid-row:1">8</div><div class="cxg" style="grid-column:10;grid-row:1">9</div><div class="cxg" style="grid-column:11;grid-row:1">10</div><div class="cxg" style="grid-column:12;grid-row:1">11</div><div class="cxg" style="grid-column:13;grid-row:1">12</div><div class="cxg" style="grid-column:14;grid-row:1">13</div><div class="cxg" style="grid-column:15;grid-row:1">14</div><div class="cxg" style="grid-column:16;grid-row:1">15</div><div class="cxg" style="grid-column:17;grid-row:1">16</div><div class="cxg" style="grid-column:18;grid-row:1">17</div><div class="cxg" style="grid-column:19;grid-row:1">18</div><div class="cxg" style="grid-column:1;grid-row:2">1</div><div class="cxg" style="grid-column:1;grid-row:3">2</div><div class="cxg" style="grid-column:1;grid-row:4">3</div><div class="cxg" style="grid-column:1;grid-row:5">4</div><div class="cxg" style="grid-column:1;grid-row:6">5</div><div class="cxg" style="grid-column:1;grid-row:7">6</div><div class="cxg" style="grid-column:1;grid-row:8">7</div><div class="cxe" style="grid-column:2;grid-row:2"><b>1</b><span>H</span><i>1.008</i></div><div class="cxe" style="grid-column:19;grid-row:2"><b>2</b><span>He</span><i>4.003</i></div><div class="cxe" style="grid-column:2;grid-row:3"><b>3</b><span>Li</span><i>6.94</i></div><div class="cxe" style="grid-column:3;grid-row:3"><b>4</b><span>Be</span><i>9.01</i></div><div class="cxe" style="grid-column:14;grid-row:3"><b>5</b><span>B</span><i>10.81</i></div><div class="cxe" style="grid-column:15;grid-row:3"><b>6</b><span>C</span><i>12.01</i></div><div class="cxe" style="grid-column:16;grid-row:3"><b>7</b><span>N</span><i>14.01</i></div><div class="cxe" style="grid-column:17;grid-row:3"><b>8</b><span>O</span><i>16.00</i></div><div class="cxe" style="grid-column:18;grid-row:3"><b>9</b><span>F</span><i>19.00</i></div><div class="cxe" style="grid-column:19;grid-row:3"><b>10</b><span>Ne</span><i>20.18</i></div><div class="cxe" style="grid-column:2;grid-row:4"><b>11</b><span>Na</span><i>22.99</i></div><div class="cxe" style="grid-column:3;grid-row:4"><b>12</b><span>Mg</span><i>24.30</i></div><div class="cxe" style="grid-column:14;grid-row:4"><b>13</b><span>Al</span><i>26.98</i></div><div class="cxe" style="grid-column:15;grid-row:4"><b>14</b><span>Si</span><i>28.09</i></div><div class="cxe" style="grid-column:16;grid-row:4"><b>15</b><span>P</span><i>30.97</i></div><div class="cxe" style="grid-column:17;grid-row:4"><b>16</b><span>S</span><i>32.07</i></div><div class="cxe" style="grid-column:18;grid-row:4"><b>17</b><span>Cl</span><i>35.45</i></div><div class="cxe" style="grid-column:19;grid-row:4"><b>18</b><span>Ar</span><i>39.95</i></div><div class="cxe" style="grid-column:2;grid-row:5"><b>19</b><span>K</span><i>39.10</i></div><div class="cxe" style="grid-column:3;grid-row:5"><b>20</b><span>Ca</span><i>40.08</i></div><div class="cxe" style="grid-column:4;grid-row:5"><b>21</b><span>Sc</span><i>44.96</i></div><div class="cxe" style="grid-column:5;grid-row:5"><b>22</b><span>Ti</span><i>47.87</i></div><div class="cxe" style="grid-column:6;grid-row:5"><b>23</b><span>V</span><i>50.94</i></div><div class="cxe" style="grid-column:7;grid-row:5"><b>24</b><span>Cr</span><i>52.00</i></div><div class="cxe" style="grid-column:8;grid-row:5"><b>25</b><span>Mn</span><i>54.94</i></div><div class="cxe" style="grid-column:9;grid-row:5"><b>26</b><span>Fe</span><i>55.85</i></div><div class="cxe" style="grid-column:10;grid-row:5"><b>27</b><span>Co</span><i>58.93</i></div><div class="cxe" style="grid-column:11;grid-row:5"><b>28</b><span>Ni</span><i>58.69</i></div><div class="cxe" style="grid-column:12;grid-row:5"><b>29</b><span>Cu</span><i>63.55</i></div><div class="cxe" style="grid-column:13;grid-row:5"><b>30</b><span>Zn</span><i>65.38</i></div><div class="cxe" style="grid-column:14;grid-row:5"><b>31</b><span>Ga</span><i>69.72</i></div><div class="cxe" style="grid-column:15;grid-row:5"><b>32</b><span>Ge</span><i>72.63</i></div><div class="cxe" style="grid-column:16;grid-row:5"><b>33</b><span>As</span><i>74.92</i></div><div class="cxe" style="grid-column:17;grid-row:5"><b>34</b><span>Se</span><i>78.97</i></div><div class="cxe" style="grid-column:18;grid-row:5"><b>35</b><span>Br</span><i>79.90</i></div><div class="cxe" style="grid-column:19;grid-row:5"><b>36</b><span>Kr</span><i>83.80</i></div><div class="cxe" style="grid-column:2;grid-row:6"><b>37</b><span>Rb</span><i>85.47</i></div><div class="cxe" style="grid-column:3;grid-row:6"><b>38</b><span>Sr</span><i>87.62</i></div><div class="cxe" style="grid-column:4;grid-row:6"><b>39</b><span>Y</span><i>88.91</i></div><div class="cxe" style="grid-column:5;grid-row:6"><b>40</b><span>Zr</span><i>91.22</i></div><div class="cxe" style="grid-column:6;grid-row:6"><b>41</b><span>Nb</span><i>92.91</i></div><div class="cxe" style="grid-column:7;grid-row:6"><b>42</b><span>Mo</span><i>95.95</i></div><div class="cxe" style="grid-column:8;grid-row:6"><b>43</b><span>Tc</span><i></i></div><div class="cxe" style="grid-column:9;grid-row:6"><b>44</b><span>Ru</span><i>101.1</i></div><div class="cxe" style="grid-column:10;grid-row:6"><b>45</b><span>Rh</span><i>102.9</i></div><div class="cxe" style="grid-column:11;grid-row:6"><b>46</b><span>Pd</span><i>106.4</i></div><div class="cxe" style="grid-column:12;grid-row:6"><b>47</b><span>Ag</span><i>107.9</i></div><div class="cxe" style="grid-column:13;grid-row:6"><b>48</b><span>Cd</span><i>112.4</i></div><div class="cxe" style="grid-column:14;grid-row:6"><b>49</b><span>In</span><i>114.8</i></div><div class="cxe" style="grid-column:15;grid-row:6"><b>50</b><span>Sn</span><i>118.7</i></div><div class="cxe" style="grid-column:16;grid-row:6"><b>51</b><span>Sb</span><i>121.8</i></div><div class="cxe" style="grid-column:17;grid-row:6"><b>52</b><span>Te</span><i>127.6</i></div><div class="cxe" style="grid-column:18;grid-row:6"><b>53</b><span>I</span><i>126.9</i></div><div class="cxe" style="grid-column:19;grid-row:6"><b>54</b><span>Xe</span><i>131.3</i></div><div class="cxe" style="grid-column:2;grid-row:7"><b>55</b><span>Cs</span><i>132.9</i></div><div class="cxe" style="grid-column:3;grid-row:7"><b>56</b><span>Ba</span><i>137.3</i></div><div class="cxe" style="grid-column:5;grid-row:7"><b>72</b><span>Hf</span><i>178.5</i></div><div class="cxe" style="grid-column:6;grid-row:7"><b>73</b><span>Ta</span><i>180.9</i></div><div class="cxe" style="grid-column:7;grid-row:7"><b>74</b><span>W</span><i>183.8</i></div><div class="cxe" style="grid-column:8;grid-row:7"><b>75</b><span>Re</span><i>186.2</i></div><div class="cxe" style="grid-column:9;grid-row:7"><b>76</b><span>Os</span><i>190.2</i></div><div class="cxe" style="grid-column:10;grid-row:7"><b>77</b><span>Ir</span><i>192.2</i></div><div class="cxe" style="grid-column:11;grid-row:7"><b>78</b><span>Pt</span><i>195.1</i></div><div class="cxe" style="grid-column:12;grid-row:7"><b>79</b><span>Au</span><i>197.0</i></div><div class="cxe" style="grid-column:13;grid-row:7"><b>80</b><span>Hg</span><i>200.6</i></div><div class="cxe" style="grid-column:14;grid-row:7"><b>81</b><span>Tl</span><i>204.4</i></div><div class="cxe" style="grid-column:15;grid-row:7"><b>82</b><span>Pb</span><i>207.2</i></div><div class="cxe" style="grid-column:16;grid-row:7"><b>83</b><span>Bi</span><i>209.0</i></div><div class="cxe" style="grid-column:17;grid-row:7"><b>84</b><span>Po</span><i></i></div><div class="cxe" style="grid-column:18;grid-row:7"><b>85</b><span>At</span><i></i></div><div class="cxe" style="grid-column:19;grid-row:7"><b>86</b><span>Rn</span><i></i></div><div class="cxe" style="grid-column:2;grid-row:8"><b>87</b><span>Fr</span><i></i></div><div class="cxe" style="grid-column:3;grid-row:8"><b>88</b><span>Ra</span><i></i></div><div class="cxe" style="grid-column:5;grid-row:8"><b>104</b><span>Rf</span><i></i></div><div class="cxe" style="grid-column:6;grid-row:8"><b>105</b><span>Db</span><i></i></div><div class="cxe" style="grid-column:7;grid-row:8"><b>106</b><span>Sg</span><i></i></div><div class="cxe" style="grid-column:8;grid-row:8"><b>107</b><span>Bh</span><i></i></div><div class="cxe" style="grid-column:9;grid-row:8"><b>108</b><span>Hs</span><i></i></div><div class="cxe" style="grid-column:10;grid-row:8"><b>109</b><span>Mt</span><i></i></div><div class="cxe" style="grid-column:11;grid-row:8"><b>110</b><span>Ds</span><i></i></div><div class="cxe" style="grid-column:12;grid-row:8"><b>111</b><span>Rg</span><i></i></div><div class="cxe" style="grid-column:13;grid-row:8"><b>112</b><span>Cn</span><i></i></div><div class="cxe" style="grid-column:14;grid-row:8"><b>113</b><span>Nh</span><i></i></div><div class="cxe" style="grid-column:15;grid-row:8"><b>114</b><span>Fl</span><i></i></div><div class="cxe" style="grid-column:16;grid-row:8"><b>115</b><span>Mc</span><i></i></div><div class="cxe" style="grid-column:17;grid-row:8"><b>116</b><span>Lv</span><i></i></div><div class="cxe" style="grid-column:18;grid-row:8"><b>117</b><span>Ts</span><i></i></div><div class="cxe" style="grid-column:19;grid-row:8"><b>118</b><span>Og</span><i></i></div><div class="cxe" style="grid-column:5;grid-row:10"><b>57</b><span>La</span><i>138.9</i></div><div class="cxe" style="grid-column:6;grid-row:10"><b>58</b><span>Ce</span><i>140.1</i></div><div class="cxe" style="grid-column:7;grid-row:10"><b>59</b><span>Pr</span><i>140.9</i></div><div class="cxe" style="grid-column:8;grid-row:10"><b>60</b><span>Nd</span><i>144.2</i></div><div class="cxe" style="grid-column:9;grid-row:10"><b>61</b><span>Pm</span><i></i></div><div class="cxe" style="grid-column:10;grid-row:10"><b>62</b><span>Sm</span><i>150.4</i></div><div class="cxe" style="grid-column:11;grid-row:10"><b>63</b><span>Eu</span><i>152.0</i></div><div class="cxe" style="grid-column:12;grid-row:10"><b>64</b><span>Gd</span><i>157.3</i></div><div class="cxe" style="grid-column:13;grid-row:10"><b>65</b><span>Tb</span><i>158.9</i></div><div class="cxe" style="grid-column:14;grid-row:10"><b>66</b><span>Dy</span><i>162.5</i></div><div class="cxe" style="grid-column:15;grid-row:10"><b>67</b><span>Ho</span><i>164.9</i></div><div class="cxe" style="grid-column:16;grid-row:10"><b>68</b><span>Er</span><i>167.3</i></div><div class="cxe" style="grid-column:17;grid-row:10"><b>69</b><span>Tm</span><i>168.9</i></div><div class="cxe" style="grid-column:18;grid-row:10"><b>70</b><span>Yb</span><i>173.0</i></div><div class="cxe" style="grid-column:19;grid-row:10"><b>71</b><span>Lu</span><i>175.0</i></div><div class="cxe" style="grid-column:5;grid-row:11"><b>89</b><span>Ac</span><i></i></div><div class="cxe" style="grid-column:6;grid-row:11"><b>90</b><span>Th</span><i>232.0</i></div><div class="cxe" style="grid-column:7;grid-row:11"><b>91</b><span>Pa</span><i>231.0</i></div><div class="cxe" style="grid-column:8;grid-row:11"><b>92</b><span>U</span><i>238.0</i></div><div class="cxe" style="grid-column:9;grid-row:11"><b>93</b><span>Np</span><i></i></div><div class="cxe" style="grid-column:10;grid-row:11"><b>94</b><span>Pu</span><i></i></div><div class="cxe" style="grid-column:11;grid-row:11"><b>95</b><span>Am</span><i></i></div><div class="cxe" style="grid-column:12;grid-row:11"><b>96</b><span>Cm</span><i></i></div><div class="cxe" style="grid-column:13;grid-row:11"><b>97</b><span>Bk</span><i></i></div><div class="cxe" style="grid-column:14;grid-row:11"><b>98</b><span>Cf</span><i></i></div><div class="cxe" style="grid-column:15;grid-row:11"><b>99</b><span>Es</span><i></i></div><div class="cxe" style="grid-column:16;grid-row:11"><b>100</b><span>Fm</span><i></i></div><div class="cxe" style="grid-column:17;grid-row:11"><b>101</b><span>Md</span><i></i></div><div class="cxe" style="grid-column:18;grid-row:11"><b>102</b><span>No</span><i></i></div><div class="cxe" style="grid-column:19;grid-row:11"><b>103</b><span>Lr</span><i></i></div><div class="cxe cxp" style="grid-column:4;grid-row:7"><span style="font-size:12px">57-71</span><i>란타넘족</i></div><div class="cxe cxp" style="grid-column:4;grid-row:8"><span style="font-size:12px">89-103</span><i>악티늄족</i></div></div></div>
     <div class="cxCst"><div class="cxct">참고 데이터<small>REFERENCE DATA</small></div><div class="cxcg"><div class="cxci"><em>기체 상수</em><span>R = 0.082 L·atm·K<sup>-1</sup>·mol<sup>-1</sup> = 8.314 J·K<sup>-1</sup>·mol<sup>-1</sup></span></div><div class="cxci"><em>플랑크 상수</em><span>h = 6.63 × 10<sup>-34</sup> J·s</span></div><div class="cxci"><em>빛의 속도</em><span>c = 3.00 × 10<sup>8</sup> m·s<sup>-1</sup></span></div><div class="cxci"><em>아보가드로 수</em><span>N<sub>A</sub> = 6.02 × 10<sup>23</sup> mol<sup>-1</sup></span></div><div class="cxci"><em>패러데이 상수</em><span>F = 96485 C·mol<sup>-1</sup></span></div><div class="cxci"><em>전자의 전하량</em><span>e = 1.60 × 10<sup>-19</sup> C</span></div><div class="cxci"><em>전자의 질량</em><span>m<sub>e</sub> = 9.11 × 10<sup>-31</sup> kg</span></div></div></div>
     <div class="cxNote">좌상단 원자번호 · 중앙 원소기호 · 하단 원자량 / 표준 원자량이 정해지지 않은 원소(방사성 등)는 원자량을 표기하지 않음</div>
   </div>

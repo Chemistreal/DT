@@ -184,15 +184,30 @@ function maxAttemptOrd_(sh, key, course, round, isTest) {
    isTest 쪽만 본다 — TEST 행과 실제 행은 서로 안 본다(maxAttemptOrd_·index.html enterRetake 와 같은 판단).
    예전에는 TEST 통과 행 하나가 실제 학생의 재시 저장을 already_passed 로 막았다(화면은 게이트·재시를 내주고
    서버만 거부해 «시트에 저장되지 않았습니다» 가 떴다). */
-function hasPassed_(sh, key, course, round, isTest) {
+function hasPassed_(sh, key, course, round, isTest, exceptAttempt) {
   if (!key) return false;
   var data = sh.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
     if (String(r[5]) === String(key) && String(r[8]) === String(course) &&
-        String(r[9]) === String(round) && ((r[15] === 'TEST') === !!isTest) && r[4] === '통과') return true;
+        String(r[9]) === String(round) && ((r[15] === 'TEST') === !!isTest) && r[4] === '통과' &&
+        !(exceptAttempt != null && String(r[10]) === String(exceptAttempt))) return true;   // 같은 라벨 행 = 이번 저장의 재전송 — 그것 때문에 거부하지 않는다
   }
   return false;
+}
+
+/* 같은 (학생키·과목·회차)의 첫 응시 행(시도 순서 0 — '첫 응시'·'정시' 어느 라벨이든). 없으면 -1.
+   isTest 쪽만 본다(hasPassed_·maxAttemptOrd_ 와 같은 판단). 온라인 응시의 «다른 답으로 다시 풀기» 를 가른다. */
+function firstAttemptRow_(sh, key, course, round, isTest) {
+  if (!key) return { row: -1, answers: '' };
+  var data = sh.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (String(r[5]) === String(key) && String(r[8]) === String(course) &&
+        String(r[9]) === String(round) && ((r[15] === 'TEST') === !!isTest) && attOrd_(r[10]) === 0)
+      return { row: i + 1, answers: String(r[18] == null ? '' : r[18]) };
+  }
+  return { row: -1, answers: '' };
 }
 
 /* 학생키(F열)가 있는 마지막 실데이터 행을 찾는다. T열 등 전체열 수식으로 getLastRow가
@@ -467,15 +482,26 @@ function doPost(e) {
     if (_key !== _selfKey && findRow_(sh, _key, d.course || '', d.round || '', d.attempt || '') > 0) {
       _key = _selfKey;
     }
-    // 이미 통과한 회차엔 재시(재 포함) 저장 거부 - 통과 학생은 재시 볼 필요 없음
-    if (attOrd_(d.attempt || '') >= 1 && !d.isTest && hasPassed_(sh, _key, d.course || '', d.round || '', !!d.isTest)) {
-      return json_({ ok: false, error: 'already_passed', msg: '이미 통과한 회차라 재시가 저장되지 않았습니다.' });
+    // 이미 통과한 회차엔 재시(재 포함) 저장 거부 - 통과 학생은 재시 볼 필요 없음.
+    // 단 **같은 라벨의 재전송**(통과로 저장된 그 재시를 네트워크 재시도로 다시 보냄)은 멱등 — 그 행 자신 때문에 거부하지 않는다.
+    if (attOrd_(d.attempt || '') >= 1 && !d.isTest && hasPassed_(sh, _key, d.course || '', d.round || '', !!d.isTest, d.attempt || '')) {
+      return json_({ ok: false, error: 'already_passed', msg: '이미 통과한 회차라 재시가 저장되지 않았습니다.', reportLink: linkOf_(_key) });
     }
     /* 더 나중 시도가 이미 있으면 낮은 시도는 안 받는다. 재시 링크로 다시 들어온 학생이 «재시» 부터
        다시 시작해 이전 재시 행을 덮어쓰던 일을 막는다. 같은 라벨의 재저장(네트워크 재시도)은 그대로
        멱등(덮어쓰기). TEST 행과 실제 행은 서로 안 본다. */
     if (maxAttemptOrd_(sh, _key, d.course || '', d.round || '', !!d.isTest) > attOrd_(d.attempt || '')) {
-      return json_({ ok: false, error: 'attempt_regress', msg: '이미 더 나중 시도가 저장돼 있어 이 시도는 저장하지 않았습니다.' });
+      return json_({ ok: false, error: 'attempt_regress', msg: '이미 더 나중 시도가 저장돼 있어 이 시도는 저장하지 않았습니다.', reportLink: linkOf_(_key) });
+    }
+    /* 온라인 응시(exam.html · src:'online')로 같은 회차를 **다른 답으로** 다시 푼 것은 첫 응시를 덮어쓰지 않는다.
+       예전에는 멱등 덮어쓰기가 이것까지 받아 줘서, 두 번째로 푼 점수가 조용히 첫 응시가 됐다.
+       · 같은 답의 재전송(네트워크 재시도) → 그대로 멱등 ok
+       · 선생님 채점 앱(index.html OMR 입력 · OX_grader 등, src 표지 없음) → 지금처럼 덮어쓴다(종이 채점 정정)
+       라벨이 '정시' 로 저장된 첫 응시도 같은 첫 응시로 본다. */
+    var _online1 = String(d.src || '') === 'online' && attOrd_(d.attempt || '') === 0;
+    var _fa = _online1 ? firstAttemptRow_(sh, _key, d.course || '', d.round || '', !!d.isTest) : null;
+    if (_fa && _fa.row > 0 && _fa.answers !== String(d.answers || '')) {
+      return json_({ ok: false, error: 'already_taken', msg: '이 회차는 이미 응시 기록이 있어 다시 푼 답안은 저장하지 않았습니다. 처음 응시한 결과가 성적표에 그대로 남아 있습니다.', reportLink: linkOf_(_key) });
     }
     var rowVals = [
       d.name || '', linkOf_(_key), new Date(), d.score || 0, d.pass ? '통과' : '미달', _key, normSchool_(d.school || ''), normGrade_(d.year || ''),
@@ -486,6 +512,7 @@ function doPost(e) {
       String(d.retakeCids || ''), String(d.retakeKeys || ''), String(d.retakeUnasked || '')   // 재시 행에만 값이 있다
     ];
     var existing = findRow_(sh, _key, d.course || '', d.round || '', d.attempt || '');
+    if (existing < 0 && _fa && _fa.row > 0) existing = _fa.row;   // 온라인 첫 응시 재전송: 라벨이 달라도('정시') 같은 행을 다시 쓴다(같은 답)
     if (existing > 0) { sh.getRange(existing, 1, 1, rowVals.length).setValues([rowVals]); } // 멱등: 덮어쓰기
     else { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, 1, rowVals.length).setValues([rowVals]); } // 유령 행 아래가 아니라 실데이터 바로 다음에 기록
     try { buildSendSheet(); } catch (errS) {}               // 실시간: 채점 저장 즉시 문자발송 탭 자동 갱신
