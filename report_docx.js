@@ -2,40 +2,28 @@
    DT 성적표 · Word(.docx) 저장 — exam 스타일
    ------------------------------------------------------------
    2026-08-11, 선생님 — *"인쇄규칙하지말고 워드파일로 다운받을수있게
-   exam스타일로"*.
+   exam스타일로"*. 학부모가 남겨 두는 것은 종이가 아니라 파일이다.
 
-   본디 물음은 "인쇄 규칙(@media print)이 없는 화면이 exam 39장 · DT 15장인데
-   학부모가 종이로 뽑으면 잘린다" 였다. 재어 보니 그 39장은 거의 다 **선생님·
-   R&D 화면**(admin · calibration · dashboard · data-import …)이었고, 학부모가
-   실제로 여는 화면에는 인쇄 규칙이 이미 있었다.
+   짜임 (2026-10-07 업그레이드)
+   ----------------------------
+       표지        상호 · DT 성적표 · 과목 회차 · 학생 · 결론 한 줄 · 발행일
+       한 장 요약  통과 · 점수 · 재시로 올린 점수 · 응시 회차 (· 석차 — 화학Ⅰ 심화는 안 넣는다)
+       [화학Ⅰ 심화] 첫 문단 · 숫자 타일 · ① 회차 진행 곡선(그림) · ② 화학1에서 이어 온 기록 ·
+                   ③ 재시로 잡은 개념 · ④ 되풀이되는 오개념 · ⑤ 다음 주 예습 · 부모님께
+       단원별      누적 정답률 (약한 순 · 단원 이름이 있으면 같이)
+       다시 볼 개념 (화학1 기록 합산 포함 · 화면과 같은 분모) · 강의 링크
+       [다른 과목] 화학1에서 이어 온 기록(있을 때) · 이번 주 처방
+       지금까지의 여정 · 오답노트 · 연락할 곳
+   머리글(상호) · 바닥글(상호 · 쪽 번호), 표 행은 쪽에서 안 쪼개지고(cantSplit) 제목은 다음 덩어리와
+   붙는다(keepNext).
 
-   선생님 답은 인쇄 규칙을 더 붙이는 쪽이 아니라 **워드로 받게 하는** 쪽이었다.
-   맞는 판단이다 — 인쇄는 브라우저·프린터마다 결과가 다르고, 학부모가 남겨
-   두는 것은 종이가 아니라 파일이다. exam 은 이미 그렇게 하고 있었고
-   (`성적표 Word 저장`), **DT 에만 없었다.**
-
-   exam 과 다른 점
-   ----------------
-   exam 의 Word 는 60쪽짜리 진단서다(개념 강의 교재까지 붙는다). DT 의 화면은
-   한 장짜리 리포트이므로 **그 한 장을 그대로 옮긴다.** 없는 것을 지어내
-   두껍게 만들지 않는다.
-
-       표지        이름 · 회차 · 결론 한 줄 · 발행일
-       한 장 요약  등급/통과 · 점수 · 회복 · 석차
-       단원별      누적 정답률 (약한 순)
-       다시 볼 개념
-       이번 주 처방
-       지금까지의 여정
-       연락할 곳
-
-   ⚠ **화면이 계산한 값을 그대로 쓴다.** 여기서 다시 계산하면 언젠가 화면과
-     Word 가 서로 다른 숫자를 말한다(파이널에서 그 일이 있었고, 그래서
-     `tests/docx-report.js` 가 두 쪽 숫자를 맞춰 본다). 여기서도 `A` ·
-     `latest` · `RANK` · `aggFromRows()` 를 그대로 빌린다.
-
-   ⚠ docx 는 **누를 때만** 받는다(1.1MB). 첫 그림을 막지 않는다.
-     그리고 저장소 안(`vendor/`)에서 받는다 — pdfgen.js 는 cdnjs 에서 받는데,
-     그쪽은 학원 망이 막으면 단추가 그냥 죽는다.
+   ⚠ **화면이 계산한 값을 그대로 쓴다.** 숫자·문장은 report.html 의 buildReportModel() 이 만든
+     RPT(window.__dtRpt.rpt)에서만 읽는다 — 여기서 다시 세면 언젠가 화면과 Word 가 서로 다른 숫자를
+     말한다(tests/docx-report.js 가 두 쪽 숫자를 맞춰 본다). 처방 코멘트와 오답노트는 아직 화면이 만든
+     것을 그대로 넘기는 예전 길(rxNarrCard · __wrongbook)이다.
+   ⚠ «**» 같은 표시 기호는 Word 에 글자로 나가면 안 된다 — RPT 조각에는 맨글만 있고, 예전 길에서 오는
+     글은 여기서 한 번 더 지운다(nostar).
+   ⚠ docx 는 **누를 때만** 받는다(1.1MB). 첫 그림을 막지 않는다 — 저장소 안(vendor/)에서 받는다.
    ============================================================ */
 (function () {
   'use strict';
@@ -43,9 +31,15 @@
   var LIB = 'vendor/docx.iife.js';
   var _loading = null;
 
-  /* 색은 화면과 같은 팔레트에서 가져온다(tools/theme.py 가 관리하는 값). */
-  var INK = '1C2530', EM = '0B6E6E', MUT = '61707F',
-      GOLD = 'A07E2B', RED = '9A2828', OK = '2E7D5B', LINE = 'E6DDC8';
+  /* 색은 화면과 같은 한 벌(report.html RPT_PAL). 못 읽으면 같은 값의 사본. */
+  function pal() {
+    return window.RPT_PAL || { g9: '0B3B30', g8: '0E5A4C', g6: '2E7D66', g2: 'CFE3DB', g1: 'E8F1EE', g0: 'F3F8F6', gold: 'A9853C',
+      goldInk: '8A6A38', goldSoft: 'F7F1E3', goldBd: 'E6D6B0', ink: '1F2A26', ink2: '4A5651', mut: '5E6A65', line: 'E3E0D6', line2: 'EFECE4',
+      ok: '17663F', okSoft: 'E5F3EB', rust: 'A6441F', rustSoft: 'FBF1EC', amber: '7F6118', amberSoft: 'FAF2DF', paper: 'FBFAF6' };
+  }
+  /* 글자 여섯 단(pt → docx half-point): 캡션 8 · 작은 글 9 · 본문 10 · 소제목 12 · 제목 15 · 타일 20 · 표지 28 */
+  var SZ = { cap: 16, sm: 18, body: 20, h3: 24, h2: 30, num: 40, cover: 56 };
+  var BRAND_FALLBACK = '화학 · 다원교육 · 조준모';
 
   function loadOnce(src) {
     if (_loading) return _loading;
@@ -58,374 +52,384 @@
     });
     return _loading;
   }
-
-  async function ensureLib() {
-    if (!window.docx) await loadOnce(LIB);
-    return window.docx;
-  }
+  async function ensureLib() { if (!window.docx) await loadOnce(LIB); return window.docx; }
 
   function saveBlob(blob, fn) {
     var url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = fn; document.body.appendChild(a); a.click();
     setTimeout(function () { try { URL.revokeObjectURL(url); a.remove(); } catch (e) {} }, 1500);
   }
-
   function say(msg) {
     var b = document.getElementById('docxBtn');
     if (!b) return;
     if (!b.dataset.label) b.dataset.label = b.textContent;
     b.textContent = msg || b.dataset.label;
   }
+  function nostar(t) { return String(t == null ? '' : t).replace(/\*\*/g, ''); }
 
-  /* 화면이 <b> 같은 태그를 섞어 쓰는 문장이 많다. Word 에는 태그를 넣을 수
-     없으므로 굵은 자리만 살려 조각으로 나눈다 — 통째로 지우면 선생님이 굵게
-     둔 자리가 사라진다(그 자리가 문장의 요지다). */
-  function richRuns(html, D, opt) {
-    opt = opt || {};
+  /* SVG 문자열 → PNG (survey_docx.js 와 같은 길). 실패하면 null — 그림 대신 표를 넣는다. */
+  function svgPng(svg, scale) {
+    if (!svg) return Promise.resolve(null);
+    var m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg); if (!m) return Promise.resolve(null);
+    var w = Number(m[1]), h = Number(m[2]);
+    if (svg.indexOf('xmlns=') < 0) svg = svg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+    return new Promise(function (res) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var cv = document.createElement('canvas'); cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
+          var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+          cv.toBlob(function (b) {
+            if (!b) return res(null);
+            b.arrayBuffer().then(function (ab) { res({ data: new Uint8Array(ab), w: w, h: h }); }, function () { res(null); });
+          }, 'image/png');
+        } catch (e) { res(null); }
+      };
+      img.onerror = function () { res(null); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+
+  /* 화면 HTML 의 <b> 만 살려 조각으로 (예전 길 · 처방 코멘트) */
+  function htmlFr(html) {
     var out = [], re = /<b>(.*?)<\/b>/gi, last = 0, m;
-    var plain = function (t) {
-      return String(t).replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    };
-    var push = function (t, bold) {
-      t = plain(t);
-      if (!t) return;
-      out.push(new D.TextRun({ text: t, bold: !!bold,
-        color: bold ? (opt.emColor || EM) : (opt.color || INK),
-        size: opt.size || 20 }));
-    };
+    var plain = function (t) { return nostar(String(t).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')); };
     html = String(html == null ? '' : html);
-    while ((m = re.exec(html))) { push(html.slice(last, m.index), false); push(m[1], true); last = re.lastIndex; }
-    push(html.slice(last), false);
-    return out.length ? out : [new D.TextRun({ text: '', size: opt.size || 20 })];
+    while ((m = re.exec(html))) { out.push({ t: plain(html.slice(last, m.index)) }); out.push({ t: plain(m[1]), b: true }); last = re.lastIndex; }
+    out.push({ t: plain(html.slice(last)) });
+    return out.filter(function (x) { return x.t; });
   }
 
   async function build() {
     var D = await ensureLib();
-    var Document = D.Document, Packer = D.Packer, Paragraph = D.Paragraph,
-        TextRun = D.TextRun, AlignmentType = D.AlignmentType,
+    var K = pal();
+    var Paragraph = D.Paragraph, TextRun = D.TextRun, AlignmentType = D.AlignmentType,
         Table = D.Table, TableRow = D.TableRow, TableCell = D.TableCell,
-        WidthType = D.WidthType, BorderStyle = D.BorderStyle,
-        PageBreak = D.PageBreak, Footer = D.Footer, PageNumber = D.PageNumber;
+        WidthType = D.WidthType, BorderStyle = D.BorderStyle, PageBreak = D.PageBreak,
+        Footer = D.Footer, Header = D.Header, PageNumber = D.PageNumber;
+
+    var R = window.__dtRpt;
+    if (!R) throw new Error('아직 리포트가 그려지지 않았습니다.');
+    var A = R.A, latest = R.latest, M = R.rpt;
+    if (!A || !A.trend || !A.trend.length || !latest || !M)
+      throw new Error('아직 리포트가 그려지지 않았습니다.');
 
     var NB = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-    var bdr = function (c, sz) { return { style: BorderStyle.SINGLE, size: sz || 4, color: c }; };
+    var bdr = function (c, sz, st) { return { style: st || BorderStyle.SINGLE, size: sz || 4, color: c }; };
     var CW = 9000;
+    var BRAND = M.brand || BRAND_FALLBACK;
+    var pt = window.pt || function (v) { return v; };
+    var nm = M.student.name, course = M.courseName;
 
     function run(t, o) {
       o = o || {};
-      return new TextRun({ text: String(t == null ? '' : t), bold: !!o.bold,
-        italics: !!o.i, color: o.color || INK, size: o.size || 20,
-        font: o.serif ? 'Batang' : undefined });
+      return new TextRun({ text: nostar(t), bold: !!o.bold, italics: !!o.i, color: o.color || K.ink, size: o.size || SZ.body,
+        shading: o.sh ? { fill: o.sh } : undefined });
     }
     function P(children, o) {
       o = o || {};
-      return new Paragraph({ children: children, alignment: o.align,
-        spacing: { before: o.before || 0, after: o.after == null ? 90 : o.after },
-        border: o.border });
+      return new Paragraph({ children: children, alignment: o.align, keepNext: !!o.kn, keepLines: true,
+        spacing: { before: o.before || 0, after: o.after == null ? 90 : o.after }, border: o.border, indent: o.indent });
     }
     function txt(t, o) { o = o || {}; return P([run(t, o)], o); }
+    /* 조각 [{t,b}] → TextRun */
+    function frRuns(fr, o) {
+      o = o || {};
+      return (fr || []).map(function (x) { return run(x.t, { bold: !!x.b, color: x.b ? (o.em || K.g8) : (o.color || K.ink), size: o.size || SZ.body }); });
+    }
+    function link(t, href, o) {
+      o = o || {};
+      if (!href || !D.ExternalHyperlink) return run(t, o);
+      return new D.ExternalHyperlink({ link: href, children: [new TextRun({ text: nostar(t), color: o.color || K.g8, size: o.size || SZ.sm, underline: {}, bold: !!o.bold })] });
+    }
+    function H(t, no) {      /* 절 제목 — 다음 덩어리와 붙는다 */
+      var kids = [];
+      if (no) kids.push(run(no + '  ', { bold: true, color: K.goldInk, size: SZ.sm }));
+      kids.push(run(t, { bold: true, color: K.g9, size: SZ.h3 }));
+      return P(kids, { kn: true, before: 260, after: 60, border: { bottom: bdr(K.gold, 4) } });
+    }
+    function sub(t) { return txt(t, { color: K.mut, size: SZ.sm, after: 110, kn: true }); }
+    function so(fr) {        /* 해석 상자 — 숫자 옆의 «그래서» 한 줄 */
+      if (!fr || !fr.length) return null;
+      return new Table({ columnWidths: [CW], width: { size: CW, type: WidthType.DXA },
+        borders: { top: NB, bottom: NB, right: NB, left: bdr(K.g6, 18), insideHorizontal: NB, insideVertical: NB },
+        rows: [new TableRow({ cantSplit: true, children: [new TableCell({ width: { size: CW, type: WidthType.DXA }, shading: { fill: K.g0 },
+          margins: { top: 80, bottom: 80, left: 160, right: 140 }, children: [P(frRuns(fr, { size: SZ.sm, color: K.ink2 }), { after: 0 })] })] })] });
+    }
     function cell(children, w, o) {
       o = o || {};
       return new TableCell({ children: children, width: { size: w, type: WidthType.DXA },
-        margins: { top: 70, bottom: 70, left: 110, right: 110 },
-        shading: o.bg ? { fill: o.bg } : undefined });
+        margins: { top: 70, bottom: 70, left: 110, right: 110 }, shading: o.bg ? { fill: o.bg } : undefined });
     }
-    function kv(k, v, o) {
+    function tbl(widths, rows, o) {
       o = o || {};
-      return new TableRow({ children: [
-        cell([txt(k, { size: 19, color: MUT, after: 0 })], Math.floor(CW * 0.32)),
-        cell([txt(v, { size: o.big ? 26 : 20, bold: true, color: o.color || EM, after: 0 })],
-             CW - Math.floor(CW * 0.32))] });
+      var trs = rows.map(function (r, i) {
+        return new TableRow({ cantSplit: true, tableHeader: !!(o.head && i === 0), children: r.map(function (c, j) {
+          var kids = Array.isArray(c) ? c : [txt(String(c), { size: SZ.sm, after: 0, bold: !!(o.head && i === 0), color: (o.head && i === 0) ? K.mut : K.ink })];
+          return cell(kids, widths[j], { bg: (o.head && i === 0) ? K.g0 : undefined });
+        }) });
+      });
+      return new Table({ columnWidths: widths, rows: trs, width: { size: CW, type: WidthType.DXA },
+        borders: { top: bdr(o.head ? K.g8 : K.line, o.head ? 8 : 4), bottom: bdr(K.line, 4), left: NB, right: NB,
+                   insideHorizontal: bdr(K.line2, 2), insideVertical: NB } });
     }
+    function badge(k, t) {  /* 색 + 기호 — 흑백 인쇄에서도 갈린다 */
+      var S = { no: ['✕', K.rust, K.rustSoft], ok: ['◐', K.ok, K.okSoft], good: ['✓', K.ok, K.okSoft], un: ['◇', K.amber, K.amberSoft] }[k] || ['◇', K.amber, K.amberSoft];
+      return run(' ' + S[0] + ' ' + t + ' ', { bold: true, color: S[1], sh: S[2], size: SZ.cap });
+    }
+    var ST_NAME = { no: '아직 남음', ok: '재시에서 고침', good: '최근 맞힘', un: '재시 확인 전' };
 
-    /* ── 화면이 이미 계산해 둔 것을 빌린다 ──────────────────────────────
-       ⚠ `window.A` 를 그대로 읽으면 안 된다 — 화면의 `A` · `latest` 는
-         `let` 이라 window 에 안 붙는다(읽어 보면 undefined 다). 파이널에서
-         `window.sel` 을 그렇게 읽다가 60문항을 "비운 60문항" 으로 적은 적이
-         있다. 그래서 화면이 다 그린 뒤 스스로 내놓는 자리를 쓴다. */
-    var R = window.__dtRpt;
-    if (!R) throw new Error('아직 리포트가 그려지지 않았습니다.');
-    var A = R.A, latest = R.latest, RANK = R.RANK;
-    if (!A || !A.trend || !A.trend.length || !latest)
-      throw new Error('아직 리포트가 그려지지 않았습니다.');
-
-    var nm = (A.info && A.info.name) || '학생';
-    var sch = (A.info && A.info.school) || '';
-    var CRSLBL = R.CRSLBL || {};
-    var course = CRSLBL[latest.course] || '화학';
-    var pt = window.pt || function (v) { return v; };
-    /* 단원 누적도 화면이 이미 셌다. 여기서 다시 세면 두 쪽이 달라진다 —
-       그리고 되짚어 세려 해도 `CU` · `CUM_UNITS` 역시 `let` 이라 못 읽는다. */
-    var agg = R.agg || { units: [], axes: {} };
-
-    var rec = (latest.finalScore != null && latest.jeongsiScore != null)
-      ? latest.finalScore - latest.jeongsiScore : null;
-    var band = latest.passed ? '성장 구간' : '다지기 단계';
-    var today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
-
+    var L = M.latest;
+    var band = L.passed ? '통과' : '재시 진행 중';
     var body = [];
 
-    /* ── 표지 ──
-       ⚠ 표지가 **결론 한 줄을 이미 말한다.** exam 에서 같은 것을 고쳤다(#9) —
-         학부모가 열어 처음 보는 장이 이름과 제목뿐이면, "그래서 어떻게 됐다는
-         건가" 를 들고 한 번 더 넘겨야 한다. */
-    body.push(P([], { before: 1400 }),
-      txt('Chemistreal · 다원교육 영재관', { align: AlignmentType.CENTER, color: MUT, size: 20, after: 120 }),
-      txt('성적 진단 리포트', { align: AlignmentType.CENTER, bold: true, size: 66, serif: true, after: 110 }),
-      txt(course + '  ·  ' + latest.round + '회', { align: AlignmentType.CENTER, color: EM, size: 28, serif: true, after: 80 }),
-      P([], { before: 2600 }),
-      txt(nm + ' 학생', { align: AlignmentType.CENTER, bold: true, size: 36, serif: true, after: 50 }),
-      txt(sch, { align: AlignmentType.CENTER, color: MUT, size: 20, after: 40 }),
-      txt([band,
-           (latest.finalScore != null ? latest.finalScore + '점' : null),
-           (latest.passed ? '통과' : '재시 진행 중')].filter(Boolean).join('      ·      '),
-          { align: AlignmentType.CENTER, bold: true, color: EM, size: 24, before: 40, after: 80 }),
-      txt('발행일  ' + today, { align: AlignmentType.CENTER, color: MUT, size: 16 }),
+    /* ── 화학1에서 이어 온 기록 — 화면 ②절과 같은 목록 · 같은 개수(RPT.carry) ── */
+    function carrySection(no) {
+      var C = M.carry, out = [];
+      out.push(H('화학1에서 이어 온 기록', no),
+        sub(C.fromName + ' ' + C.rounds[0] + '~' + C.rounds[C.rounds.length - 1] + '회 첫 응시에서 놓친 ' + C.total + '개 개념이 심화반에서 어떻게 됐는지입니다. 점 하나가 ' + C.fromName + ' 한 회차입니다(● 틀림 · ○ 맞힘 · · 안 물음).'));
+      var w4 = [Math.floor(CW * 0.27), Math.floor(CW * 0.2), Math.floor(CW * 0.33), CW - Math.floor(CW * 0.8)];
+      out.push(tbl(w4, [['개념', C.fromName, '심화반', '지금']].concat(C.show.map(function (r) {
+        return [[txt(r.m, { size: SZ.sm, bold: true, after: 0 })],
+                [P(r.dots.map(function (d) { return run(d.s === 'x' ? '●' : (d.s === 'o' ? '○' : '·'), { size: SZ.sm, color: d.s === 'x' ? K.rust : (d.s === 'o' ? K.ok : K.mut) }); }), { after: 0 })],
+                [txt(r.own, { size: SZ.cap, color: K.ink2, after: 0 })],
+                [P([badge(r.st.k, r.st.t)], { after: 0 })]]; })), { head: true }));
+      if (C.more) out.push(txt('그 밖에 ' + C.more + '개는 아래 합계에 함께 셌습니다.', { size: SZ.cap, color: K.mut, before: 60, after: 0 }));
+      out.push(P([run('심화에서 맞힘 ' + C.ok, { bold: true, color: K.ok, size: SZ.sm }), run('     다시 틀림 ' + C.again, { bold: true, color: K.rust, size: SZ.sm }),
+                  run('     아직 안 물음 ' + C.un, { bold: true, color: K.amber, size: SZ.sm }), run('     (모두 ' + C.total + '개)', { color: K.mut, size: SZ.sm })], { before: 100, after: 60 }));
+      var s = so(C.so); if (s) out.push(s);
+      out.push(P([], { after: 120 }));
+      return out;
+    }
+
+    /* ── 표지 ── 결론 한 줄을 이미 말한다(exam #9) */
+    body.push(P([], { before: 1300 }),
+      txt(BRAND, { align: AlignmentType.CENTER, color: K.goldInk, size: SZ.body, bold: true, after: 160 }),
+      txt('DT 성적표', { align: AlignmentType.CENTER, bold: true, size: SZ.cover + 10, color: K.g9, after: 110 }),
+      txt(course + '  ·  ' + L.round + '회' + (M.total ? '  (' + M.total + '회 중)' : ''), { align: AlignmentType.CENTER, color: K.g8, size: SZ.h2, after: 80 }),
+      P([], { before: 2400 }),
+      txt(nm + ' 학생', { align: AlignmentType.CENTER, bold: true, size: SZ.num, after: 50 }),
+      txt(M.student.school, { align: AlignmentType.CENTER, color: K.mut, size: SZ.body, after: 40 }),
+      txt([L.fs != null ? pt(L.fs) + '점' : null, band].filter(Boolean).join('      ·      '),
+          { align: AlignmentType.CENTER, bold: true, color: L.passed ? K.ok : K.amber, size: SZ.h3, before: 40, after: 80 }),
+      txt('발행일  ' + M.pub, { align: AlignmentType.CENTER, color: K.mut, size: SZ.cap }),
       new Paragraph({ children: [new PageBreak()] }));
 
     /* ── 한 장 요약 ── */
-    var rows = [kv('이번 회차', course + ' ' + latest.round + '회', { big: true }),
-                kv('상태', band + (latest.passed ? '  ·  통과' : '  ·  재시로 채우는 중'),
-                   { color: latest.passed ? OK : GOLD })];
-    if (latest.jeongsiScore != null) rows.push(kv('첫 응시', pt(latest.jeongsiScore) + '점'));
-    if (latest.finalScore != null) rows.push(kv('최종', pt(latest.finalScore) + '점'));
-    if (rec != null && rec > 0) rows.push(kv('재시로 회복', '+' + pt(rec) + '점', { color: OK }));
-    rows.push(kv('응시한 회차', A.trend.length + '회  ·  통과 ' + (A.passedRounds || 0) + '회'));
-    if (RANK && RANK.n) {
-      rows.push(kv('또래 중 위치',
-        '상위 ' + RANK.per100 + '%   ·   ' + RANK.n + '명 중' +
-        (RANK.avg != null ? '   (반 평균 ' + RANK.avg + '점)' : '')));
-    }
-
-    body.push(txt('❖  SUMMARY  ❖', { align: AlignmentType.CENTER, color: GOLD, size: 16, after: 60 }),
-      txt('한 장 요약', { align: AlignmentType.CENTER, bold: true, color: EM, size: 46, serif: true, after: 40 }),
-      txt('뒤에 이어지는 내용의 결론만 모았습니다. 시간이 없으시면 이 장만 보셔도 됩니다.',
-          { align: AlignmentType.CENTER, color: MUT, size: 18, after: 180 }),
-      new Table({ columnWidths: [Math.floor(CW * 0.32), CW - Math.floor(CW * 0.32)], rows: rows,
-        width: { size: CW, type: WidthType.DXA },
-        borders: { top: bdr(EM, 8), bottom: bdr(EM, 8), left: NB, right: NB,
-                   insideHorizontal: bdr(LINE, 2), insideVertical: NB } }),
+    var rows = [['이번 회차', course + ' ' + L.round + '회'], ['상태', L.passed ? '통과' : '재시로 채우는 중']];
+    if (L.js != null) rows.push(['첫 응시', pt(L.js) + '점']);
+    if (L.fs != null) rows.push(['최종', pt(L.fs) + '점']);
+    if (L.gain > 0) rows.push(['이번 회차 재시로 올린 점수', '+' + pt(L.gain) + '점']);
+    if (M.avgGain > 0 && M.taken > 1) rows.push(['재시로 올린 점수 · 회차 평균', '+' + pt(M.avgGain) + '점']);
+    rows.push(['응시한 회차', M.taken + '회  ·  통과 ' + M.passedN + '회']);
+    if (M.rank) rows.push(['반에서 위치', '상위 약 ' + M.rank.per100 + '%   ·   ' + M.rank.n + '명 기준' + (M.rank.avg != null ? '   (반 평균 ' + pt(M.rank.avg) + '점)' : '')]);
+    body.push(txt('한 장 요약', { align: AlignmentType.CENTER, bold: true, color: K.g9, size: SZ.h2, after: 40, kn: true }),
+      txt('뒤에 이어지는 내용의 결론만 모았습니다. 시간이 없으시면 이 장만 보셔도 됩니다.', { align: AlignmentType.CENTER, color: K.mut, size: SZ.sm, after: 180, kn: true }),
+      tbl([Math.floor(CW * 0.36), CW - Math.floor(CW * 0.36)], rows.map(function (r) {
+        return [[txt(r[0], { size: SZ.sm, color: K.mut, after: 0 })], [txt(r[1], { size: SZ.body, bold: true, color: K.g8, after: 0 })]]; })),
       P([], { after: 200 }));
 
-    /* ── 단원별 정답률 — 약한 순 ────────────────────────────────────────
-       ⚠⚠ **`u.w` 는 맞은 수가 아니라 틀린 수다.** 화면(unitHeat)이 이렇게 쓴다.
+    /* ── 화학Ⅰ 심화 새 절 (RPT.v2x) ── */
+    var X = M.v2x;
+    if (X) {
+      body.push(P(frRuns(X.lede, { size: SZ.body + 2 }), { before: 120, after: 160 }));
+      if (X.tiles.length) {
+        var tw = Math.floor(CW / X.tiles.length);
+        body.push(new Table({ columnWidths: X.tiles.map(function () { return tw; }), width: { size: tw * X.tiles.length, type: WidthType.DXA },
+          borders: { top: bdr(K.g8, 18), bottom: bdr(K.line, 4), left: NB, right: NB, insideHorizontal: NB, insideVertical: bdr(K.line, 4) },
+          rows: [new TableRow({ cantSplit: true, children: X.tiles.map(function (t) {
+            return new TableCell({ width: { size: tw, type: WidthType.DXA }, margins: { top: 90, bottom: 90, left: 120, right: 120 }, children: [
+              P([run(t.v, { bold: true, size: SZ.num, color: K.g9 }), run(t.u || '', { size: SZ.body, color: K.mut })], { after: 20 }),
+              txt(t.k, { bold: true, size: SZ.sm, after: 10 }), txt(t.m, { size: SZ.cap, color: K.mut, after: 0 })] }); }) })] }),
+          P([], { after: 120 }));
+      }
+      var no = 0, NO = function () { no++; return '0' + no; };
+      /* ① 회차 진행 곡선 — 화면과 같은 SVG 를 그림으로 */
+      body.push(H('회차 진행 곡선', NO()), sub(M.total + '회 과정 중 지금 위치입니다. 속 빈 점은 첫 응시, 꽉 찬 점은 재시까지 마친 최종 점수, 점선은 통과선 80입니다.'));
+      var png = null;
+      try { png = typeof window.curveSVG === 'function' ? await svgPng(window.curveSVG(X.curve, { W: 700, H: 236, fs: 12, ml: 40, mr: 12, mb: 42, titles: true, gainLab: true }), 3) : null; } catch (e) { png = null; }
+      if (png && D.ImageRun) {
+        var wpx = 600, hpx = Math.round(wpx * png.h / png.w);
+        body.push(new Paragraph({ keepNext: true, keepLines: true, alignment: AlignmentType.CENTER, spacing: { after: 60 },
+          children: [new D.ImageRun({ type: 'png', data: png.data, transformation: { width: wpx, height: hpx } })] }));
+      } else {
+        body.push(tbl([1800, 2400, 2400, CW - 6600], [['회차', '첫 응시', '최종', '결과']].concat(M.rounds.map(function (r) {
+          return [r.round + '회', r.js != null ? pt(r.js) + '점' : '-', r.fs != null ? pt(r.fs) + '점' : '-', r.passed ? '통과' : '재시']; })), { head: true }));
+      }
+      body.push(txt('— 최종(재시 포함)   - - 첫 응시   ····· 통과선   ▲ 재시로 올린 몫   ▒ 남은 회차', { size: SZ.cap, color: K.mut, align: AlignmentType.CENTER, after: 80 }));
+      var s1 = so(X.so1); if (s1) body.push(s1);
+      /* ② 화학1에서 이어 온 기록 */
+      if (M.carry) body = body.concat(carrySection(NO()));
+      /* ③ 재시로 잡은 개념 */
+      if (X.fix) {
+        var fx = X.fix;
+        body.push(H('재시로 잡은 개념 · ' + fx.round + '회', NO()), sub('첫 응시에서 틀린 ' + fx.total + '개 개념 가운데 재시에서 다시 물어 맞힌 것입니다.'),
+          P([run('재시에서 고침 ' + fx.fixed.length + ' (' + fx.pct + '%)', { bold: true, color: K.ok, size: SZ.sm }), run('     다시 확인할 것 ' + fx.open.length, { bold: true, color: K.rust, size: SZ.sm })], { after: 60, kn: true }));
+        if (fx.fixed.length) body.push(P(fx.fixed.map(function (x) { return run('✓ ' + x.m + '    ', { color: K.ok, size: SZ.sm }); }), { after: 40 }));
+        if (fx.open.length) body.push(P(fx.open.map(function (x) { return run((x.st === 'no' ? '✕ ' : '◇ ') + x.m + '    ', { color: K.rust, size: SZ.sm }); }), { after: 60 }));
+        var s3 = so(X.so3); if (s3) body.push(s3);
+      }
+      /* ④ 되풀이되는 오개념 */
+      if (X.chronic.length || M.taken >= 3) {
+        body.push(H('되풀이되는 오개념', NO()), sub('세 번 이상 나왔고 절반 이상 틀린 개념입니다. ● 틀림 · ○ 맞음.'));
+        if (!X.chronic.length) body.push(txt('아직 없습니다. 같은 개념을 세 번 이상 물어 절반 넘게 틀리면 여기에 섭니다.', { size: SZ.sm, color: K.mut }));
+        X.chronic.forEach(function (c) {
+          body.push(P([run(c.m + '   ', { bold: true, size: SZ.body }), badge(c.st, ST_NAME[c.st] + ' · ' + c.freq)], { kn: true, after: 30, before: 80 }),
+            P(c.tl.map(function (t) { return run(t.t + ' ' + (t.ok ? '○맞음' : '●틀림') + '   ', { size: SZ.cap, color: t.ok ? K.ok : K.rust }); }), { kn: !!c.one.length, after: 30 }));
+          if (c.one.length) body.push(P([run('핵심: ', { bold: true, size: SZ.sm, color: K.ink2 })].concat(frRuns(c.one, { size: SZ.sm, color: K.ink2, em: K.ink })), { after: 60 }));
+        });
+      }
+      /* ⑤ 다음 주 예습 */
+      if (X.preview) {
+        var pv = X.preview;
+        body.push(H('다음 주 ' + pv.round + '회 「' + pv.title + '」 예습', NO()),
+          sub(pv.round + '회에 처음 나오는 ' + pv.newN + '개 개념' + (pv.units.length ? '(' + pv.units.join(' · ') + ')' : '') + ' 가운데, ' + nm + ' 학생의 기록과 이어지는 것' + (pv.items.length ? '만 골랐습니다.' : '은 아직 없습니다.')));
+        pv.items.forEach(function (x, i) {
+          body.push(P([run((i + 1) + '.  ', { bold: true, color: K.goldInk }), run(x.m, { bold: true })], { kn: true, after: 20 }),
+            P(frRuns(x.why, { size: SZ.sm, color: K.ink2 }), { indent: { left: 360 }, after: x.lec ? 20 : 80, kn: !!x.lec }));
+          if (x.lec) body.push(P([link('▶ 개념 강의 보기', x.lec)], { indent: { left: 360 }, after: 80 }));
+        });
+      }
+      /* 부모님께 */
+      if (X.parent) {
+        var pa = X.parent;
+        var kids = [txt('부모님께', { bold: true, color: K.g9, size: SZ.h3, after: 60 }),
+          txt('이번 주에 한 번, 아래처럼 물어봐 주세요. 맞았는지보다 아이가 자기 말로 설명하는지를 들어 주시면 됩니다.', { size: SZ.sm, color: K.ink2, after: 80 }),
+          txt('“' + pa.q + '”', { bold: true, size: SZ.body, after: 80 })];
+        var tail = [];
+        if (pa.res) tail.push(run('막히면 ', { size: SZ.sm, color: K.ink2 }), link(pa.res.t, pa.res.abs, { size: SZ.sm, bold: true }), run('를 같이 펼쳐 주세요. ', { size: SZ.sm, color: K.ink2 }));
+        tail.push(run('성적표에 이상한 점은 조준모T 카카오톡 메시지로 알려 주세요.', { size: SZ.sm, color: K.ink2 }));
+        kids.push(P(tail, { after: 0 }));
+        body.push(P([], { after: 120 }), new Table({ columnWidths: [CW], width: { size: CW, type: WidthType.DXA },
+          borders: { top: bdr(K.goldBd, 4), bottom: bdr(K.goldBd, 4), left: bdr(K.goldBd, 4), right: bdr(K.goldBd, 4), insideHorizontal: NB, insideVertical: NB },
+          rows: [new TableRow({ cantSplit: true, children: [new TableCell({ width: { size: CW, type: WidthType.DXA }, shading: { fill: K.goldSoft },
+            margins: { top: 160, bottom: 160, left: 200, right: 200 }, children: kids })] })] }), P([], { after: 160 }));
+      }
+    }
 
-              맞은 수 = u.t - u.w
-              정답률  = (u.t - u.w) / u.t
-
-       처음에 이 자를 `u.w / u.t` 로 적었다. 그러면 88점으로 통과한 학생의
-       고체 단원이 **8/8 인데 0/8 · 0%** 로 찍힌다. 화면은 100% 라고 말하고
-       종이는 0% 라고 말하는데, **둘 다 그럴듯해 보인다** — 숫자를 안 맞춰
-       보면 아무도 모른다. 학부모가 그 종이를 들고 아이한테 무슨 말을 할지
-       생각하면, 이 저장소에서 가장 나쁜 갈래의 잘못이다.
-       (0%가 88점과 안 맞는 것이 눈에 띄어서 잡았다. 그래서 아래 검사가
-        화면과 종이의 숫자를 한 줄씩 맞춰 본다 — tests/docx-report.js 와 같다.)
-
-       차례는 **약한 단원이 위**다. 종이는 위에서부터 읽고 아래로 갈수록 안
-       읽으므로 손댈 곳이 위에 있어야 한다. 화면도 같은 차례다. */
-    var okRate = function (u) { return u.t ? (u.t - u.w) / u.t : 0; };
-    var units = (agg.units || []).slice()
-      .filter(function (u) { return u && u.t; })
-      .sort(function (a, b) { return okRate(a) - okRate(b) || b.t - a.t; });
-    if (units.length) {
-      body.push(txt('단원별 정답률', { bold: true, color: EM, size: 26, serif: true, before: 100, after: 60,
-                                   border: { bottom: bdr(GOLD, 4) } }),
-        txt('누적 기준입니다. 위에 있을수록 먼저 손댈 곳입니다.', { color: MUT, size: 18, after: 110 }));
-      var urows = [new TableRow({ children: [
-        cell([txt('단원', { bold: true, size: 19, color: MUT, after: 0 })], Math.floor(CW * 0.52), { bg: 'F6F2E8' }),
-        cell([txt('맞은/전체', { bold: true, size: 19, color: MUT, after: 0 })], Math.floor(CW * 0.24), { bg: 'F6F2E8' }),
-        cell([txt('정답률', { bold: true, size: 19, color: MUT, after: 0 })], CW - Math.floor(CW * 0.76), { bg: 'F6F2E8' })] })];
-      units.forEach(function (u) {
-        var got = u.t - u.w;                       // 맞은 수 (위 주석)
-        var r = Math.round(okRate(u) * 100);
-        /* ⚠ 문항 두 개 미만은 **판정하지 않는다**(선생님 규칙 · 화면의
-           UNIT_MIN_Q 와 같다). 한 문항으로 «100%» 라고 적으면 학부모는 그
-           단원이 탄탄한 줄 안다 — 실제로는 한 번 맞힌 것뿐이다.
-           숫자(1/1)는 그대로 적고, 백분율만 안 적는다. */
-        var thin = u.t < 2;
-        urows.push(new TableRow({ children: [
-          cell([txt(u.u, { size: 20, color: thin ? MUT : INK, after: 0 })], Math.floor(CW * 0.52)),
-          cell([txt(got + ' / ' + u.t, { size: 20, color: MUT, after: 0 })], Math.floor(CW * 0.24)),
-          cell([txt(thin ? '판정 안 함' : (r + '%'),
-                    { size: thin ? 17 : 20, bold: !thin, after: 0,
-                      color: thin ? MUT : (r >= 80 ? OK : (r >= 60 ? GOLD : RED)) })],
-               CW - Math.floor(CW * 0.76))] }));
-      });
-      body.push(new Table({ columnWidths: [Math.floor(CW * 0.52), Math.floor(CW * 0.24), CW - Math.floor(CW * 0.76)],
-        rows: urows, width: { size: CW, type: WidthType.DXA },
-        borders: { top: bdr(LINE, 4), bottom: bdr(LINE, 4), left: NB, right: NB,
-                   insideHorizontal: bdr(LINE, 2), insideVertical: NB } }),
+    /* ── 단원별 정답률 — 약한 순 · 화면(unitHeat)과 같은 이름표 ──
+       ⚠⚠ `u.w` 는 틀린 수다. 맞은 수 = t - w (RPT.units 의 got). 처음에 이것을 뒤집어 88점 학생의
+       8/8 단원을 0/8 · 0% 로 적은 적이 있다 — tests/docx-report.js 가 한 줄씩 맞대 본다.
+       ⚠ 문항 두 개 미만은 판정하지 않는다(화면 UNIT_MIN_Q). */
+    if (M.units.length) {
+      body.push(H('단원별 정답률'), sub('누적 기준입니다. 위에 있을수록 먼저 손댈 곳입니다.'));
+      var w3 = [Math.floor(CW * 0.52), Math.floor(CW * 0.24), CW - Math.floor(CW * 0.76)];
+      body.push(tbl(w3, [['단원', '맞은/전체', '정답률']].concat(M.units.map(function (u) {
+        return [[txt(u.label, { size: SZ.body, color: u.thin ? K.mut : K.ink, after: 0 })],
+                [txt(u.got + ' / ' + u.t, { size: SZ.body, color: K.mut, after: 0 })],
+                [txt(u.thin ? '판정 안 함' : (u.pct + '%'), { size: u.thin ? SZ.sm : SZ.body, bold: !u.thin, after: 0,
+                  color: u.thin ? K.mut : (u.pct >= 80 ? K.ok : (u.pct >= 60 ? K.amber : K.rust)) })]]; })), { head: true }),
         P([], { after: 180 }));
     }
 
-    /* ── 다시 볼 개념 ── */
-    var ch = (A.chronicMis || []);
-    if (ch.length) {
-      body.push(txt('다시 볼 개념', { bold: true, color: EM, size: 26, serif: true, before: 120, after: 60,
-                                 border: { bottom: bdr(GOLD, 4) } }),
-        txt('여러 회차에 걸쳐 반복해서 막힌 곳입니다. 여기부터 같이 보시면 가장 빨리 오릅니다.',
-            { color: MUT, size: 18, after: 110 }));
-      ch.slice(0, 8).forEach(function (m, i) {
-        body.push(P([run((i + 1) + '.  ', { bold: true, color: GOLD, size: 21 }),
-                     run(typeof window.misLabel === 'function' ? window.misLabel(m.mis, latest.course) : m.mis, { bold: true, color: INK, size: 21 }),   // 화면과 같은 이름(심화반은 심화반 이름)
-                     run(m.rounds ? ('    ' + m.rounds + '개 회차') : '', { color: MUT, size: 18 })],
-                    { after: 60 }));
+    /* ── 다시 볼 개념 — 화면 「반복해서 막히는 곳」 과 같은 이름 · 같은 분모(chronicFreqText) ── */
+    var CH = M.chronic, CC = (M.carry && M.carry.chronic) || [];
+    if (CH.length || CC.length) {
+      body.push(H('다시 볼 개념'), sub('여러 회차에 걸쳐 반복해서 막힌 곳입니다. 여기부터 같이 보시면 가장 빨리 오릅니다.'));
+      CH.slice(0, 8).forEach(function (m, i) {
+        var kids = [run((i + 1) + '.  ', { bold: true, color: K.goldInk }), run(m.label, { bold: true }), run('    ' + m.freq, { color: K.mut, size: SZ.sm })];
+        if (m.lec) kids.push(run('    '), link('개념 강의', m.lec));
+        body.push(P(kids, { after: 60 }));
       });
-      body.push(P([], { after: 160 }));
+      CC.forEach(function (x, i) {
+        body.push(P([run((Math.min(CH.length, 8) + i + 1) + '.  ', { bold: true, color: K.goldInk }), run(x.m, { bold: true }), run('    ' + x.freq, { color: K.mut, size: SZ.sm }),
+                     run('   화학1 기록 합산', { color: K.g8, size: SZ.cap, bold: true })], { after: 20, kn: true }),
+          txt(x.line, { size: SZ.cap, color: K.mut, after: 60, indent: { left: 360 } }));
+      });
+      body.push(P([], { after: 120 }));
     }
 
-    /* ── 이번 주 처방 ──
-       화면이 문장을 고르는 규칙(회차마다 다른 문단)을 **베끼지 않는다.**
-       베끼면 언젠가 종이와 화면이 서로 다른 말을 한다. 화면이 그린 것을
-       그대로 읽어 온다. */
-    try {
-      var rxHtml = window.rxNarrCard ? window.rxNarrCard() : '';
-      if (rxHtml) {
-        var box = document.createElement('div'); box.innerHTML = rxHtml;
-        var ps = [].slice.call(box.querySelectorAll('p'))
-          .map(function (e) { return e.innerHTML; })
-          .filter(function (t) { return t && t.replace(/<[^>]+>/g, '').trim().length > 10; });
-        if (ps.length) {
-          body.push(txt('이번 주 처방 코멘트', { bold: true, color: EM, size: 26, serif: true,
-                                          before: 120, after: 60, border: { bottom: bdr(GOLD, 4) } }));
-          ps.forEach(function (t) { body.push(P(richRuns(t, D, { size: 20 }), { after: 90 })); });
-          body.push(P([], { after: 160 }));
+    /* ── 화학1에서 이어 온 기록 (새 절이 아닌 과목에서 이어 온 기록이 있을 때) ── */
+    if (!X && M.carry) body = body.concat(carrySection(''));
+
+    /* ── 이번 주 처방 (예전 길 — 화면이 그린 문장을 그대로) ── */
+    if (!X) {
+      try {
+        var rxHtml = window.rxNarrCard ? window.rxNarrCard() : '';
+        if (rxHtml) {
+          var box = document.createElement('div'); box.innerHTML = rxHtml;
+          var ps = [].slice.call(box.querySelectorAll('p')).map(function (e) { return e.innerHTML; })
+            .filter(function (t) { return t && t.replace(/<[^>]+>/g, '').trim().length > 10; });
+          if (ps.length) {
+            body.push(H('이번 주 처방 코멘트'));
+            ps.forEach(function (t) { body.push(P(frRuns(htmlFr(t)), { after: 90 })); });
+            body.push(P([], { after: 160 }));
+          }
         }
-      }
-    } catch (e) { /* 처방이 없으면 그 장을 안 넣는다 — 빈 제목만 남기지 않는다 */ }
+      } catch (e) { /* 처방이 없으면 그 장을 안 넣는다 */ }
+    }
 
     /* ── 지금까지의 여정 ── */
-    if (A.trend.length > 1) {
-      body.push(txt('지금까지의 여정', { bold: true, color: EM, size: 26, serif: true, before: 120, after: 60,
-                                   border: { bottom: bdr(GOLD, 4) } }));
-      var trows = [new TableRow({ children: [
-        cell([txt('회차', { bold: true, size: 19, color: MUT, after: 0 })], Math.floor(CW * 0.28), { bg: 'F6F2E8' }),
-        cell([txt('첫 응시', { bold: true, size: 19, color: MUT, after: 0 })], Math.floor(CW * 0.22), { bg: 'F6F2E8' }),
-        cell([txt('최종', { bold: true, size: 19, color: MUT, after: 0 })], Math.floor(CW * 0.22), { bg: 'F6F2E8' }),
-        cell([txt('결과', { bold: true, size: 19, color: MUT, after: 0 })], CW - Math.floor(CW * 0.72), { bg: 'F6F2E8' })] })];
-      A.trend.forEach(function (t) {
-        trows.push(new TableRow({ children: [
-          cell([txt((CRSLBL[t.course] || '') + ' ' + t.round + '회', { size: 20, after: 0 })], Math.floor(CW * 0.28)),
-          cell([txt(t.jeongsiScore != null ? pt(t.jeongsiScore) + '점' : '-', { size: 20, color: MUT, after: 0 })], Math.floor(CW * 0.22)),
-          cell([txt(t.finalScore != null ? pt(t.finalScore) + '점' : '-', { size: 20, bold: true, after: 0 })], Math.floor(CW * 0.22)),
-          cell([txt(t.passed ? '통과' : '재시', { size: 20, bold: true, after: 0,
-                                              color: t.passed ? OK : GOLD })], CW - Math.floor(CW * 0.72))] }));
-      });
-      body.push(new Table({ columnWidths: [Math.floor(CW * 0.28), Math.floor(CW * 0.22), Math.floor(CW * 0.22), CW - Math.floor(CW * 0.72)],
-        rows: trows, width: { size: CW, type: WidthType.DXA },
-        borders: { top: bdr(LINE, 4), bottom: bdr(LINE, 4), left: NB, right: NB,
-                   insideHorizontal: bdr(LINE, 2), insideVertical: NB } }),
+    if (M.rounds.length > 1) {
+      body.push(H('지금까지의 여정'));
+      body.push(tbl([Math.floor(CW * 0.22), Math.floor(CW * 0.2), Math.floor(CW * 0.2), Math.floor(CW * 0.18), CW - Math.floor(CW * 0.8)],
+        [['회차', '첫 응시', '최종', '결과', '첫 응시 날']].concat(M.rounds.map(function (t) {
+          return [[txt(course + ' ' + t.round + '회', { size: SZ.sm, after: 0 })],
+                  [txt(t.js != null ? pt(t.js) + '점' : '-', { size: SZ.sm, color: K.mut, after: 0 })],
+                  [txt(t.fs != null ? pt(t.fs) + '점' : '-', { size: SZ.sm, bold: true, after: 0 })],
+                  [txt(t.passed ? '통과' : '재시', { size: SZ.sm, bold: true, after: 0, color: t.passed ? K.ok : K.amber })],
+                  [txt(t.date || '', { size: SZ.sm, color: K.mut, after: 0 })]]; })), { head: true }),
         P([], { after: 200 }));
     }
 
-    /* ══════════════════════════════════════════════════════════════
-       오답노트 (선생님 요청 2026-08-15)
-       --------------------------------------------------------------
-       *"exam에 오답노트 하듯이, DT 성적표에도 오답노트같이 보내주면 더
-       좋을거같아"*
-
-       재어 보니 **화면에는 이미 있었다** — 「문항별 정오」 와 「오개념 정리」
-       (틀린 문항마다 문장 · 정답 · 내 답 · 왜 틀렸나). 없던 것은 그것이
-       **받는 파일에 안 들어간 것**이다. 이 파일 373줄 어디에도 그 말이 한
-       번도 안 나왔다. 선생님이 «보내주면» 이라 하신 자리가 여기다.
-
-       학부모가 손에 쥐는 것은 화면이 아니라 이 파일이다. 화면에만 있으면
-       링크를 다시 열어야 보이고, 대개 다시 안 연다.
-
-       ⚠ **화면과 같은 자료에서 뽑는다.** 여기서 답안을 다시 맞춰 보지
-         않는다 — 두 곳이 따로 세면 언젠가 어긋나고, 어긋나면 종이와 화면이
-         다른 말을 한다(tests/docx-report.js 가 그것을 잰다).
-       ⚠ 못 읽으면 **이 칸을 통째로 접는다.** 틀린 문항이 없는데 «오답노트»
-         라는 빈 제목만 남으면, 읽는 쪽은 빠뜨린 줄 안다.
-       ══════════════════════════════════════════════════════════════ */
-    var WB = (typeof window !== 'undefined' && window.__wrongbook) || null;
+    /* ══ 오답노트 (선생님 요청 2026-08-15) — 화면 buildSolutions 가 만든 목록(__wrongbook)을 그대로.
+       ⚠ 여기서 답안을 다시 맞춰 보지 않는다. 틀린 것이 없으면 빈 제목을 안 남긴다. */
+    var WB = window.__wrongbook || null;
     if (WB && WB.items && WB.items.length) {
-      /* ── 화면이 다섯 칸(번호·개념·문장·정답·내 답·해설) 말고 더 실어 보내는
-           것 — **있으면 쓰고 없으면 그 줄만 뺀다.** 이름은 화면(report.html
-           buildSolutions)이 정한다. 여기서 CORE 사전을 다시 찾지 않는다 —
-           사전이 화면 안에 있어 못 읽고, 따로 들면 언젠가 어긋난다.
-
-             it.f              정답이 X 인 문항의 «바르게 고친 문장».
-                               정답이 X 면 s 는 **틀린 문장**이다. 해설(w)이
-                               f 를 되풀이한 것이면 «왜 거짓인가» 가 안 보였다.
-                               그래서 s 바로 아래에 f 를 둔다.
-             it.lvl            1·2·3 → 기본·표준·심화 (화면의 SEGLVL 과 같은 낱말).
-             it.core           개념 설명 맨글(굵게 표시 없음).
-             WB.cores[mis]     같은 것이 개념별로도 온다 — 둘 중 있는 쪽을 쓴다.
-                               개념 묶음마다 **한 번만** 적는다(문항마다 걸면 같은
-                               설명이 세 번 나란히 선다 — 화면과 같은 규칙). */
       var LVL_WORD = { 1: '기본', 2: '표준', 3: '심화' };
-      var coreOf = function (mis, it) {
-        var c = (it && it.core) || (WB.cores && mis != null && WB.cores[mis]) || '';
-        return String(c).replace(/\*\*/g, '').trim();
-      };
-      /* 정답이 X 이고 f 가 있고 s 와 다를 때만 — 화면의 solFix 와 같은 규칙.
-         정답이 O 인 문항은 f 가 s 와 같은 문장이라 «바르게 고치면» 이 말이 안 된다. */
-      var fixOf = function (it) {
-        return (it.a === 'X' && it.f && String(it.f) !== String(it.s || '')) ? String(it.f) : '';
-      };
-      body.push(txt('오답노트', { bold: true, color: EM, size: 26, serif: true,
-                                  before: 260, after: 40 }),
-        txt('이번 회차에서 틀린 ' + WB.items.length + '문항입니다. 개념이 같은 것끼리 묶었고, ' +
-            '문장 아래에 왜 틀렸는지를 적었습니다.',
-            { color: MUT, size: 18, after: 120 }));
+      var coreOf = function (mis, it) { return nostar((it && it.core) || (WB.cores && mis != null && WB.cores[mis]) || '').trim(); };
+      var fixOf = function (it) { return (it.a === 'X' && it.f && String(it.f) !== String(it.s || '')) ? String(it.f) : ''; };
+      body.push(H('오답노트'),
+        txt('이번 회차에서 틀린 ' + WB.items.length + '문항입니다. 개념이 같은 것끼리 묶었고, 문장 아래에 왜 틀렸는지를 적었습니다.', { color: K.mut, size: SZ.sm, after: 120 }));
       var seen = null;
-      WB.items.forEach(function (it, i) {
+      WB.items.forEach(function (it) {
         if (it.mis !== seen) {
           seen = it.mis;
-          body.push(txt('· ' + (it.mis || '기타'), { bold: true, color: EM, size: 19,
-                                                     before: 140, after: 40 }));
+          body.push(txt('· ' + (it.mis || '기타'), { bold: true, color: K.g8, size: SZ.body, before: 140, after: 40, kn: true }));
           var core = coreOf(it.mis, it);
-          if (core) body.push(txt(core, { color: INK, size: 17, after: 70 }));
+          if (core) body.push(txt(core, { color: K.ink, size: SZ.sm, after: 70, kn: true }));
         }
-        body.push(P([run(String(it.n) + '번  ', { bold: true, color: GOLD, size: 18 }),
-                     run(it.s || '', { size: 18 })], { after: 20 }));
+        body.push(P([run(String(it.n) + '번  ', { bold: true, color: K.goldInk, size: SZ.sm }), run(it.s || '', { size: SZ.sm })], { after: 20, kn: true }));
         var fix = fixOf(it);
-        if (fix) body.push(P([run('바르게 고치면: ', { bold: true, color: OK, size: 17 }),
-                              run(fix, { color: OK, size: 17 })], { after: 20 }));
+        if (fix) body.push(P([run('바르게 고치면: ', { bold: true, color: K.ok, size: SZ.sm }), run(fix, { color: K.ok, size: SZ.sm })], { after: 20, kn: true }));
         var lvlW = LVL_WORD[it.lvl] || '';
-        body.push(P([run('정답 ' + it.a + '  ·  내 답 ', { color: MUT, size: 16 }),
-                     run(it.mine || '–', { bold: true, color: 'B23B3B', size: 16 }),
-                     run(lvlW ? ('  ·  ' + lvlW) : '', { color: MUT, size: 16 })],
-                    { after: it.w ? 20 : 90 }));
-        if (it.w) body.push(txt('→ ' + it.w, { color: MUT, size: 16, i: true, after: 90 }));
+        body.push(P([run('정답 ' + it.a + '  ·  내 답 ', { color: K.mut, size: SZ.cap }), run(it.mine || '–', { bold: true, color: K.rust, size: SZ.cap }),
+                     run(lvlW ? ('  ·  ' + lvlW) : '', { color: K.mut, size: SZ.cap })], { after: it.w ? 20 : 90, kn: !!it.w }));
+        if (it.w) body.push(txt('→ ' + it.w, { color: K.mut, size: SZ.cap, i: true, after: 90 }));
       });
     }
 
-    /* ── 연락할 곳 ──
-       다 읽고 나서 "이상한데 어디로 묻지" 가 남으면 학부모는 아무 데도 안
-       묻는다 — 그러면 틀린 채로 굳는다. 파이널 성적표와 같은 창구를 적는다.
-       하나만 적는다(둘을 적으면 고른다). */
-    body.push(P([run('성적표에 이상한 점이 있거나 더 여쭐 것이 있으시면  ', { color: MUT, size: 18 }),
-                 run('조준모T 카카오톡 메시지', { bold: true, color: EM, size: 18 }),
-                 run('  로 연락 주세요.', { color: MUT, size: 18 })],
-                { align: AlignmentType.CENTER, before: 200, after: 60 }),
-      txt('이 리포트는 ' + nm + ' 학생을 위한 개인 맞춤 분석 자료입니다.  ·  Chemistreal · 조준모 화학',
-          { align: AlignmentType.CENTER, color: MUT, size: 16, i: true }));
+    /* ── 연락할 곳 — 하나만 적는다 ── */
+    body.push(P([run('성적표에 이상한 점이 있거나 더 여쭐 것이 있으시면  ', { color: K.mut, size: SZ.sm }),
+                 run('조준모T 카카오톡 메시지', { bold: true, color: K.g8, size: SZ.sm }), run('  로 연락 주세요.', { color: K.mut, size: SZ.sm })],
+                { align: AlignmentType.CENTER, before: 240, after: 60, kn: true }),
+      txt('이 성적표는 ' + nm + ' 학생을 위한 개인 맞춤 분석 자료입니다.  ·  ' + BRAND, { align: AlignmentType.CENTER, color: K.mut, size: SZ.cap, i: true }));
 
+    var mkHdr = function () {
+      return new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, border: { bottom: bdr(K.line, 4) }, spacing: { after: 120 },
+        children: [run(BRAND, { color: K.goldInk, size: SZ.cap, bold: true }), run('    DT 성적표 · ' + course + ' ' + L.round + '회 · ' + nm, { color: K.mut, size: SZ.cap })] })] });
+    };
     var ftr = new Footer({ children: [new Paragraph({ alignment: AlignmentType.CENTER,
-      children: [run('CHEMISTREAL · 조준모 화학       ', { color: '8C8266', size: 15 }),
-                 new TextRun({ children: [PageNumber.CURRENT], color: GOLD, size: 15, bold: true }),
-                 run('  /  ', { color: '8C8266', size: 15 }),
-                 new TextRun({ children: [PageNumber.TOTAL_PAGES], color: '8C8266', size: 15 })] })] });
+      children: [run(BRAND + '       ', { color: K.mut, size: SZ.cap }),
+                 new TextRun({ children: [PageNumber.CURRENT], color: K.goldInk, size: SZ.cap, bold: true }),
+                 run('  /  ', { color: K.mut, size: SZ.cap }),
+                 new TextRun({ children: [PageNumber.TOTAL_PAGES], color: K.mut, size: SZ.cap })] })] });
 
-    var doc = new Document({
-      creator: 'Chemistreal',
-      title: nm + ' ' + course + ' ' + latest.round + '회 성적 진단 리포트',
-      styles: { default: { document: { run: { font: 'Malgun Gothic', color: INK } } } },
+    var doc = new D.Document({
+      creator: BRAND,
+      title: nm + ' ' + course + ' ' + L.round + '회 DT 성적표',
+      styles: { default: { document: { run: { font: 'Malgun Gothic', color: K.ink } } } },
       sections: [{
         properties: { titlePage: true, page: {
           size: { width: 11906, height: 16838 },
-          margin: { top: 1200, right: 1080, bottom: 1200, left: 1080, footer: 560 } } },
+          margin: { top: 1200, right: 1080, bottom: 1200, left: 1080, header: 560, footer: 560 } } },
+        headers: { default: mkHdr(), first: new Header({ children: [new Paragraph({ children: [] })] }) },
         footers: { default: ftr, first: new Footer({ children: [new Paragraph({ children: [] })] }) },
         children: body }]
     });
 
-    return { doc: doc, Packer: Packer,
-             fn: (nm + '_' + course + '_' + latest.round + '회_성적표')
-                   .replace(/[\\/:*?"<>|]+/g, '') + '.docx' };
+    return { doc: doc, Packer: D.Packer,
+             fn: (nm + '_' + course + '_' + L.round + '회_성적표').replace(/[\\/:*?"<>|]+/g, '') + '.docx' };
   }
 
   async function save() {

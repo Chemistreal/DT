@@ -544,8 +544,33 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
   // seenStatements: 이미 학생이 본 문장(중복 방지) · 갱신해서 반환
   // refLvl: (선택) 정시 문항 배열 [{c,lvl}] 또는 {cid: lvl} — 개념마다 정시 원래 문항의 난이도.
   //         후보를 쉬운 것부터 보는 기준(위 byLvl). 없으면 LVL_DEFAULT.
+  /* ── 재재시 이상에서 정시 문장이 다시 나오던 문제 (선생님 결정 2026-10-07) ─────────────────
+     문자와 화면은 «처음 본 문항과 겹치지 않습니다» 라고 약속한다. 재시(2)는 지켰는데, 재재시부터는
+     안 본 문장(nwFresh)이 떨어지면 nwUnused · subForm 이 **이미 본 문장**을 다시 허용했다 — 거기에
+     정시 문장이 섞였다(화학Ⅰ 심화 10회를 오답 두 무늬로 돌려 보니 재재시 0~5 · 재시 3차 2~12문장).
+     그래서 재재시 이상에서는 그 회차 정시 문장 전부를 후보에서 뺀다(틀린 문장 · 맞힌 문장 모두).
+     모자라면 그 회차 정시가 물은 개념(= 이미 배운 범위 · 누적 시험이라 앞 회차 단원이 다 들어 있다)으로
+     대체 후보를 넓힌다.
+     정시 문장은 부르는 쪽이 넘기는 refLvl(정시 문항 배열 · lvlOn 회차만)에서 읽는다 — 문항의 c 머리로 과목,
+     n 머리('4-01' → 4회)로 회차를 안다. ⚠ 이미 치른 회차의 재재시는 저장된 서명(retakeCids)과 다시 만든
+     문항이 같아야 대조·종이 채점이 맞는다(LVL_FROM 과 같은 까닭). 그래서 아직 시작 전인 화학Ⅰ 심화만
+     1회부터 켠다. 다른 과목은 아직 아무도 재재시를 안 본 회차 번호를 여기에 적으면 그 회차부터 켜진다. */
+  var REEXP_FROM = { ch1s: 1 };
+  var CODE_COURSE = [['CH1S-', 'ch1s'], ['CH1-', 'ch1'], ['CH2-', 'ch2'], ['GC-', 'gc']];
+  function jeongsiGuard(attemptNo, ref) {
+    if (!(Number(attemptNo) >= 3) || !Array.isArray(ref) || !ref.length) return null;
+    var x0 = ref[0] || {}, code = String(x0.c || ''), crs = null;
+    for (var i = 0; i < CODE_COURSE.length; i++) { if (code.indexOf(CODE_COURSE[i][0]) === 0) { crs = CODE_COURSE[i][1]; break; } }
+    var rd = parseInt(String(x0.n || '').split('-')[0], 10), from = crs ? REEXP_FROM[crs] : null;
+    if (from == null || !(rd >= from)) return null;
+    var J = {}, cs = [];
+    ref.forEach(function (x) { if (!x) return; if (x.s) J[norm(x.s)] = 1; if (x.c && cs.indexOf(x.c) < 0) cs.push(x.c); });
+    return { J: J, cs: cs };
+  }
   function buildRetake(attemptNo, cbandVersions, wrongCids, formsBank, seenStatements, wrongStmts, refLvl) {
     formsBank = formsBank || {}; seenStatements = seenStatements || {}; wrongStmts = wrongStmts || {};
+    var G = jeongsiGuard(attemptNo, refLvl);
+    function inJ(s) { return !!(G && G.J[norm(s)]); }
     var wrong = {};
     (Array.isArray(wrongCids) ? wrongCids : Object.keys(wrongCids || {})).forEach(function (c) { if (c) wrong[c] = 1; });
     if (!cbandVersions || !cbandVersions.length) return { items: [], seenStatements: seenStatements, n: 0 };
@@ -572,11 +597,15 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
     var usedThis = {};                 // 이 시도에서 쓴 문장 → 한 시험 안 중복 절대 방지
     var subCids = base.map(function (it) { return it.c; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; }); // 대체용 범위 내 개념
     function avail(c, fn) { return formsOf(c).find(fn); }
-    function nwFresh(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !seenStatements[norm(fm.s)] && !wrongStmts[norm(fm.s)]; }); }
-    function nwUnused(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !wrongStmts[norm(fm.s)]; }); }
+    function nwFresh(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !seenStatements[norm(fm.s)] && !wrongStmts[norm(fm.s)] && !inJ(fm.s); }); }
+    function nwUnused(c) { return avail(c, function (fm) { return !usedThis[norm(fm.s)] && !wrongStmts[norm(fm.s)] && !inJ(fm.s); }); }
     function subForm() {                // D9: 다른 범위 내 개념에서 안 본·안 틀린 form (재노출 0 보장)
       for (var i = 0; i < subCids.length; i++) { var ff = nwFresh(subCids[i]) || nwUnused(subCids[i]);
         if (ff) return withLvl({ c: subCids[i], a: ff.a, s: ff.s, f: ff.f, w: ff.w }, ff); }
+      /* 재재시 이상(G) — 재시 묶음의 개념이 다 떨어지면 그 회차 정시가 물은 다른 개념(이미 배운 범위)으로 넓힌다. */
+      if (G) for (var j = 0; j < G.cs.length; j++) { if (subCids.indexOf(G.cs[j]) >= 0) continue;
+        var gg = nwFresh(G.cs[j]) || nwUnused(G.cs[j]);
+        if (gg) return withLvl({ c: G.cs[j], a: gg.a, s: gg.s, f: gg.f, w: gg.w }, gg); }
       return null;
     }
     var items = base.map(function (it) {
@@ -599,7 +628,7 @@ function normSchool(s) { s = (s || '').replace(/\s+/g, '').trim(); return s.repl
            (그다음 자리는 subForm 이 재노출 0 을 보장하고, 원본은 최후다.)
            원본도 후보 하나다 — 안 본 form 중에 원본보다 **쉬운**(lvl 이 낮은) 것이 있으면 그것을 낸다.
            같거나 lvl 이 없으면 원본이 먼저다(예전과 같다). */
-        var origFresh = !usedThis[norm(orig.s)] && !seenStatements[norm(orig.s)] && !wrongStmts[norm(orig.s)];
+        var origFresh = !usedThis[norm(orig.s)] && !seenStatements[norm(orig.s)] && !wrongStmts[norm(orig.s)] && !inJ(orig.s);
         p = nwFresh(it.c);
         if (origFresh && !(useLvl && p && lvlKey(p, refOf(it.c)) < lvlKey(it, refOf(it.c)))) pick = orig;
         else {

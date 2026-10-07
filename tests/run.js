@@ -1113,6 +1113,40 @@ async function assertNoOverflow(page, label) {
       '맞힌 개념에서 이미 본 문장을 다시 거른다는 조건이 사라졌다');
   });
 
+  /* 재재시 이상에서도 정시 문장이 다시 나오지 않는다 (2026-10-07). 재시(2)만 지키고 재재시부터는 안 본 문장이
+     떨어지면 이미 본 문장을 허용했다 — 화학Ⅰ 심화 10회를 오답 두 무늬로 돌리면 재재시 0~5 · 재시 3차 2~12문장이
+     정시 문장이었다. 화학Ⅰ 심화 1~10회 × 오답 두 무늬 × 재시~재시 5차(앞 재시는 20문항 오답)에서 정시 문장 0,
+     60문항 · 한 시험 안 중복 0. 다른 과목(이미 치른 회차의 재재시 서명)은 그대로인지 재시 2 를 맞대 본다. */
+  await test('재시 · 재재시 이상에서도 정시 문장이 다시 나오지 않는다 (화학Ⅰ 심화 10회 × 오답 두 무늬)', async () => {
+    const E = require(path.join(ROOT, 'chemengine.js'));
+    const BANK = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'forms_bank.json'), 'utf8'));
+    const RF = (c, n) => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_' + c + '_' + String(n).padStart(2, '0') + '.json'), 'utf8'));
+    const flip = a => (a === 'O' ? 'X' : 'O');
+    let checked = 0;
+    const bad = [];
+    for (let n = 1; n <= 10; n++) for (const [pk, wf] of [['3의 배수', i => i % 3 === 0], ['4로 나눠 1', i => i % 4 === 1]]) {
+      const R = RF('ch1s', n), items = R.jeongsi.items, seen = {}, ws = {};
+      let g = E.gradeAttempt(items.map((x, i) => wf(i) ? flip(x.a) : x.a), items, R.scoring), dx = E.diagnose(g, BANK);
+      items.forEach(x => { seen[E.norm(x.s)] = 1; }); g.perItem.forEach((p, i) => { if (!p.ok) ws[E.norm(items[i].s)] = 1; });
+      const J = new Set(items.map(x => E.norm(x.s)));
+      for (let att = 2; att <= 6; att++) {
+        E.buildGate(dx.wrongConcepts, BANK, seen);
+        const its = E.buildRetake(att, R.retakeC, dx.wrongConcepts.map(w => w.c).filter(Boolean), BANK, seen, ws, E.lvlOn('ch1s', n) ? items : false).items;
+        const re = its.filter(x => J.has(E.norm(x.s))).length, uq = new Set(its.map(x => E.norm(x.s))).size;
+        checked++;
+        if (re || its.length !== 60 || uq !== 60) bad.push(n + '회 ' + pk + ' ' + E.attemptName(att) + ': 정시 문장 ' + re + ' · ' + its.length + '문항 · 중복 ' + (its.length - uq));
+        g = E.gradeAttempt(its.map((x, i) => i < 20 ? flip(x.a) : x.a), its, R.scoring); dx = E.diagnose(g, BANK);
+        g.perItem.forEach((p, i) => { if (!p.ok) ws[E.norm(its[i].s)] = 1; });
+      }
+    }
+    console.log('  화학Ⅰ 심화 재시 ' + checked + '벌(재시~재시 5차) · 정시 문장 재노출 ' + bad.length + '벌');
+    assert(checked === 100, '돌린 벌 수가 다르다: ' + checked);
+    assert(bad.length === 0, bad.slice(0, 4).join(' / '));
+    /* 이미 치른 회차가 있는 과목은 켜지 않았다 — 같은 입력이면 예전과 같은 재시(서명 대조·종이 채점) */
+    const src = fs.readFileSync(path.join(ROOT, 'chemengine.js'), 'utf8');
+    assert(/var REEXP_FROM = \{ ch1s: 1 \};/.test(src), 'REEXP_FROM 이 바뀌었다 — 이미 치른 회차의 재재시 서명이 갈리지 않는지 먼저 확인할 것');
+  });
+
   /* 오답 뒤에 읽는 해설이 개념 이름만 던지면 도움이 안 된다. 고쳐 놓은 것이
      되돌아가지 않게 못 박는다(재어 보고 고른 것들이다). */
   await test('내용 · 해설이 정의를 되풀이하지 않는다', async () => {
@@ -1415,25 +1449,37 @@ async function assertNoOverflow(page, label) {
       return (Math.max(x,y)+0.05) / (Math.min(x,y)+0.05); };
     const v = n => (src.match(new RegExp('--' + n + ':(#[0-9A-Fa-f]{6})')) || [])[1];
 
-    /* 재어 보니 9~11px 이 서른여섯 군데였다. 바닥을 정하고 지킨다. */
-    const small = (src.match(/font-size:(\d+(?:\.\d+)?)px/g) || [])
-      .map(x => Number(x.replace(/[^\d.]/g, ''))).filter(n => n < 11.5);
-    assert(small.length === 0, '11.5px 미만 글씨 ' + small.length + '개: ' + small.slice(0,6).join(','));
+    /* 재어 보니 9~11px 이 서른여섯 군데였다. 바닥을 정하고 지킨다.
+       2026-10-07 — 글자 여섯 단(12·13·15·17·21·30 · 표지 34)으로 모았다. 정보 글자 11.5px 도 없앴다. */
+    const sizes = (src.match(/font-size:(\d+(?:\.\d+)?)px/g) || []).map(x => Number(x.replace(/[^\d.]/g, '')));
+    const small = sizes.filter(n => n < 12);
+    assert(small.length === 0, '12px 미만 글씨 ' + small.length + '개: ' + small.slice(0,6).join(','));
+    const offScale = sizes.filter(n => [12, 13, 15, 17, 21, 30, 34].indexOf(n) < 0);
+    assert(offScale.length === 0, '여섯 단 밖의 글씨 크기: ' + [...new Set(offScale)].join(','));
 
     const paper = v('paper'), sub = v('sub'), faint = v('faint');
     /* ⚠ 대비는 **글씨가 실제로 얹히는 바탕** 위에서 재야 한다. 종이색 위에서만
        재면 옅은 옥색·크림 카드 위에서 4.5 를 못 넘기는 것을 놓친다 —
-       실제로 그렇게 놓치고 있었다. */
-    const bgs = [paper, '#FFFFFF', '#E4F0EF', '#EEF0EA', '#FBEBE9'];
+       실제로 그렇게 놓치고 있었다. 바탕은 성적표 팔레트 한 벌(2026-10-07)의 옅은 칸들. */
+    const bgs = [paper, '#FFFFFF', v('g1'), v('g0'), v('line2'), v('rustSoft'), v('okSoft'), v('amberSoft'), v('goldSoft')];
     bgs.forEach(bg => {
       assert(ratio(sub, bg) >= 4.5, '--sub 가 ' + bg + ' 위에서 ' + ratio(sub,bg).toFixed(2) + ':1');
       assert(ratio(faint, bg) >= 4.5, '--faint 가 ' + bg + ' 위에서 ' + ratio(faint,bg).toFixed(2) + ':1');
     });
-    /* 놋쇠색은 두 가지로 쓰인다 — 흰 글씨를 얹는 바탕, 그리고 크림 위의 글씨. */
-    const brass = (src.match(/#85682F/) || [])[0];
-    assert(brass, '놋쇠색이 바뀌었다면 아래 두 조건을 다시 재세요');
-    assert(ratio('#FFFFFF', brass) >= 4.5, '놋쇠 바탕에 흰 글씨 ' + ratio('#FFFFFF',brass).toFixed(2) + ':1');
-    assert(ratio(brass, '#F5EEDF') >= 4.5, '크림 위 놋쇠 글씨 ' + ratio(brass,'#F5EEDF').toFixed(2) + ':1');
+    /* 글자색 토큰은 흰 카드 위 4.5 이상. 금색 선(--goldLine)은 글자에 안 쓴다 — 글자는 goldInk. */
+    ['g9', 'g8', 'g6', 'goldInk', 'ink', 'ink2', 'mut', 'ok', 'rust', 'amber'].forEach(k =>
+      assert(ratio(v(k), '#FFFFFF') >= 4.5, '--' + k + ' 글자가 흰 바탕 위에서 ' + ratio(v(k), '#FFFFFF').toFixed(2) + ':1'));
+    [['ok', 'okSoft'], ['rust', 'rustSoft'], ['amber', 'amberSoft'], ['g8', 'g1']].forEach(([f, b]) =>
+      assert(ratio(v(f), v(b)) >= 4.5, '배지 ' + f + '/' + b + ' ' + ratio(v(f), v(b)).toFixed(2) + ':1'));
+    assert(ratio('#FFFFFF', v('g8')) >= 4.5, '옥색 바탕에 흰 글씨 ' + ratio('#FFFFFF', v('g8')).toFixed(2) + ':1');
+    assert(!/color:var\(--goldLine\)/.test(src), '금색 선 색(--goldLine)을 글자색으로 썼다 — 글자는 --goldInk');
+    /* 팔레트는 한 벌 — theme.py 조각 뒤에서 옛 이름을 다시 묶는 #rpt-pal 과 Word(RPT_PAL)가 머리 :root 와 같은 값 */
+    const pal = (src.match(/<style id="rpt-pal">[\s\S]*?:root\{([^}]*)\}/) || [])[1] || '';
+    assert(pal, '#rpt-pal 이 없다');
+    pal.split(';').filter(Boolean).forEach(d => { const [k, val] = d.split(':'); assert(v(k.replace(/^--/, '')) === val, '#rpt-pal 의 ' + k + ' 가 머리 :root 와 다르다: ' + val + ' ≠ ' + v(k.replace(/^--/, ''))); });
+    const RP = new Function('return ' + (src.match(/var RPT_PAL=(\{[^}]*\})/) || [])[1])();
+    ['g9', 'g8', 'g6', 'g1', 'g0', 'goldInk', 'ink', 'ink2', 'mut', 'line', 'ok', 'okSoft', 'rust', 'rustSoft', 'amber', 'amberSoft'].forEach(k =>
+      assert('#' + RP[k] === v(k), 'Word 팔레트(RPT_PAL) ' + k + ' 가 화면과 다르다: #' + RP[k] + ' ≠ ' + v(k)));
     /* 반투명 머리는 밑으로 지나가는 내용에 따라 대비가 달라진다. 늘 같아야 한다. */
     assert(/header\{[^}]*background:var\(--paper\)/.test(src), '머리가 반투명으로 되돌아갔다');
   });
@@ -1456,11 +1502,103 @@ async function assertNoOverflow(page, label) {
     assert(r.few === false, '사람이 적은데 석차를 보여 준다');
     /* 상위 92% 인 아이에게 '평균 부근입니다' 는 사실이 아니고, 사실이 아닌 말은
        나머지 문장까지 못 믿게 만든다. */
-    assert(/아래쪽/.test(r.msgLow), '아래쪽 학생에게 사실대로 안 적는다: ' + r.msgLow);
+    /* 2026-10-07 선생님 결정 «전 과목 부드럽게» — 숫자(상위 약 N%)는 사실대로 두고, 자리를 깎는 말
+       («아래쪽 · 가운데 아래 · 최상위권 · 상위권»)은 안 쓰고, 문장은 다음에 할 것으로 끝난다. */
+    assert(/상위 약 92%/.test(r.msgLow), '아래쪽 학생에게 위치(숫자)를 사실대로 안 적는다: ' + r.msgLow);
+    assert(/상위 약 62%/.test(r.msgMid), '중간 학생에게 위치(숫자)를 안 적는다: ' + r.msgMid);
     assert(/평균 부근/.test(r.msgLow) === false, '틀린 말을 적는다: ' + r.msgLow);
-    assert(/가운데 아래/.test(r.msgMid), '중간 아래를 안 적는다: ' + r.msgMid);
+    const allMsg = await page.evaluate(() => [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 95].map(p => rankMsg({ score: 70, avg: 75, per100: p })));
+    allMsg.forEach(m => {
+      assert(!/아래쪽|가운데 아래|최상위권|상위권|위험|무너지/.test(m), '낙인·겁주기 표현이 남았다: ' + m);
+      assert(/(됩니다|줄어듭니다|이어집니다|올라갑니다)\.$/.test(m), '문장이 다음에 할 것으로 끝나지 않는다: ' + m);
+    });
     /* 가장 필요한 학생에게서 재시 단추가 사라지면 안 된다. */
     assert(/retakeCTA/.test(await page.evaluate(() => rankCard.toString())), '석차 카드에 재시 단추가 없다');
+  });
+
+  /* ── 성적표 업그레이드(2026-10-07) · 가짜 학생 유형마다 ───────────────────────────────────────────
+     화학Ⅰ 심화 여섯 유형(잘하는 · 중간 · 어려워하는 · 재시 여러 번 · 1회 직후 · 마지막 회차) + 화학1만 · 심화만 · 둘 다.
+     휴대폰 390 · 데스크톱 1280 에서 가로 넘침 0, «**» 0, 낙인·겁주기 낱말 0, 날짜 원문(…T06:00:00Z) 0, 옛 상호 0.
+     화학Ⅰ 심화는 새 절(첫 문단 · 숫자 타일 · ① · 부모님께)이 서고 석차 카드가 없다. 학생 이름은 가짜다. */
+  await test('report · 가짜 학생 9유형 — 가로 넘침 0 · «**» 0 · 낙인 낱말 0 · 날짜 원문 0 · 심화반 새 절', async page => {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const LINK = JSON.parse(fs.readFileSync(path.join(ROOT, 'courses', 'ch1s', 'link_ch1.json'), 'utf8'));
+    const RF = (c, n) => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_' + c + '_' + String(n).padStart(2, '0') + '.json'), 'utf8')).jeongsi.items;
+    const flip = a => (a === 'O' ? 'X' : 'O');
+    const ATT = ['첫 응시', '재시', '재재시', '재재재시'];
+    const mk = (K, nm, course, round, attempt, wrong, date, extra) => {
+      const items = RF(course, round), units = {};
+      items.forEach((it, i) => { const u = units[it.u] || (units[it.u] = { u: it.u, t: 0, w: 0 }); u.t++; if (wrong.indexOf(i) >= 0) u.w++; });
+      const score = Math.round(10000 * (items.length - wrong.length) / items.length) / 100;
+      return Object.assign({ studentKey: K, name: nm, school: '가상고', year: '2', course, round, attempt, score, pass: score >= 80, date,
+        answers: items.map((it, i) => wrong.indexOf(i) >= 0 ? flip(it.a) : it.a).join(''), wrongMis: wrong.map(i => items[i].mis), wrongAxes: {},
+        units: Object.keys(units).map(k => units[k]), axes: [], isTest: false }, extra || {});
+    };
+    const rt = (K, nm, course, round, att, w, miss, date) => { const items = RF(course, round), keys = w.map(i => items[i].a);
+      const score = Math.round(10000 * (60 - miss.length * 2) / 60) / 100;
+      return mk(K, nm, course, round, att, [], date, { answers: keys.map((a, k) => miss.indexOf(k) >= 0 ? flip(a) : a).join(''), retakeCids: w.map(i => items[i].c).join(','),
+        retakeKeys: keys.join(''), retakeUnasked: '', score, pass: score >= 80, wrongMis: miss.map(k => items[w[k]].mis), units: [] }); };
+    const pick = (n, r) => { const w = []; for (let i = 0; w.length < n && i < 600; i++) { const k = (i * 7 + r * 3) % 60; if (w.indexOf(k) < 0) w.push(k); } return w; };
+    const dS = r => new Date(Date.UTC(2026, 8, 7 + (r - 1) * 7, 1)).toISOString().replace('.000', '');
+    const build = (K, nm, spec) => { const rows = []; spec.forEach(sp => { const w = pick(sp.n, sp.r), d = dS(sp.r);
+      rows.push(mk(K, nm, 'ch1s', sp.r, '첫 응시', w, d));
+      (sp.re || []).forEach((m, i) => rows.push(rt(K, nm, 'ch1s', sp.r, ATT[i + 1], w, Array.from({ length: Math.min(m, w.length) }, (x, k) => k), d.replace('T01', 'T0' + (5 + i))))); }); return rows; };
+    const both = (K, nm, c1, c1s) => { const T = ['CH1S-012', 'CH1S-108', 'CH1S-027'], rows = [];
+      const wt = (c, r, set, also) => RF(c, r).map((x, i) => i).filter(i => { const x = RF(c, r)[i]; return set.indexOf(c === 'ch1' ? LINK.map[x.c] : x.c) >= 0 || also(i); });
+      if (c1) for (let r = 1; r <= 8; r++) { const w = wt('ch1', r, T, i => (i * 7 + r) % 11 === 4), d = '2026-04-' + String(r * 3).padStart(2, '0') + 'T01:00:00Z';
+        const f = mk(K, nm, 'ch1', r, '첫 응시', w, d); rows.push(f); if (!f.pass) rows.push(rt(K, nm, 'ch1', r, '재시', w, r % 3 === 0 ? [0, 1] : [], d.replace('T01', 'T05'))); }
+      if (c1s) for (let r = 1; r <= 4; r++) { const w = wt('ch1s', r, r <= 2 ? ['CH1S-012'] : [], i => (i * 5 + r) % (r % 2 === 0 ? 4 : 8) === 3), d = dS(r);
+        const f = mk(K, nm, 'ch1s', r, '첫 응시', w, d); rows.push(f); if (!f.pass) rows.push(rt(K, nm, 'ch1s', r, '재시', w, r === 4 ? [0, 2, 3, 5, 6] : [1], d.replace('T01', 'T06'))); }
+      return rows; };
+    const R5 = f => Array.from({ length: 5 }, (x, i) => f(i + 1));
+    const LOWRANK = { n: 14, per100: 86, avg: 78.4, score: 61.67, round: 5, dist: [0, 0, 0, 0, 0, 1, 3, 4, 4, 2] };
+    const P = {
+      '잘하는': { rank: { n: 14, per100: 7, avg: 78.4, score: 95, round: 5, dist: [0, 0, 0, 0, 0, 1, 3, 4, 4, 2] }, rows: K => build(K, '가람', R5(r => ({ r, n: [3, 2, 4, 2, 3][r - 1] }))) },
+      '중간': { rows: K => build(K, '나래', R5(r => ({ r, n: [9, 13, 8, 10, 14][r - 1], re: [[], [2], [], [], [3]][r - 1] }))) },
+      '어려워하는': { rank: LOWRANK, rows: K => build(K, '다온', R5(r => ({ r, n: [22, 20, 24, 19, 23][r - 1], re: [[8], [6, 0], [9, 4], [5], [9]][r - 1] }))) },
+      '재시 여러 번': { rows: K => build(K, '라온', R5(r => ({ r, n: [16, 18, 15, 17, 16][r - 1], re: [[7, 5, 0], [8, 6, 3, 0], [6, 0], [9, 7, 0], [8, 6]][r - 1] }))) },
+      '1회 직후': { rows: K => build(K, '마루', [{ r: 1, n: 14 }]) },
+      '마지막 회차': { rows: K => build(K, '바다', Array.from({ length: 10 }, (x, i) => ({ r: i + 1, n: [12, 10, 13, 9, 11, 8, 10, 7, 9, 8][i], re: i === 0 ? [0] : (i === 2 ? [2] : []) }))) },
+      '화학1만': { rank: LOWRANK, rows: K => both(K, '사랑', true, false) },
+      '심화만': { rows: K => both(K, '아라', false, true) },
+      '둘 다': { rows: K => both(K, '한빛', true, true) },
+    };
+    const BAN = /아래쪽|최상위권|상위권|안정권|위험|집중 관리|무너지|빚|Chemistreal|영재관|\d\dT\d\d:\d\d|📝/;
+    let rows = null, cur = null, rank = null;
+    await page.route('**/macros/s/**', route => {
+      const u = new URL(route.request().url()), c = u.searchParams.get('c') || '';
+      return route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: CE.cumulative(rows, c)[cur], rank, ranks: [], cohort: null, challenges: [] }) });
+    });
+    const fails = [];
+    for (const key of Object.keys(P)) {
+      cur = '가상고-' + key; rows = P[key].rows(cur); rank = P[key].rank || null;
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(BASE + 'report.html?student=x');
+      await page.waitForSelector('.ladder', { timeout: 30000 });
+      await page.waitForLoadState('networkidle'); await page.waitForTimeout(500);
+      for (const w of [390, 1280]) {
+        await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(150);
+        const r = await page.evaluate(() => ({ ovf: document.documentElement.scrollWidth - document.documentElement.clientWidth, txt: document.body.innerText,
+          course: latest.course, v2: !!document.querySelector('.v2lede'), tiles: document.querySelectorAll('.v2tile').length, curve: !!document.querySelector('#v2-curve svg'),
+          parent: !!document.querySelector('#v2-parent q'), rank: !!document.querySelector('.rankcard'), btn: !document.getElementById('footbtns').hidden,
+          zero: [].slice.call(document.querySelectorAll('.v2tile .v')).some(e => /^0(\D|$)/.test(e.textContent)) }));
+        if (r.ovf > 0) fails.push(key + ' ' + w + 'px 가로 넘침 ' + r.ovf + 'px');
+        if (/\*\*/.test(r.txt)) fails.push(key + ' «**» 가 글자로 보인다');
+        const ban = r.txt.match(BAN); if (ban) fails.push(key + ' 금지 표현 «' + ban[0] + '»');
+        if (!r.btn) fails.push(key + ' Word·인쇄 단추가 안 섰다');
+        if (r.course === 'ch1s') {
+          if (!r.v2 || !r.curve || !r.tiles) fails.push(key + ' 심화반 새 절이 없다');
+          if (r.rank) fails.push(key + ' 심화반에 석차 카드가 섰다');
+          if (r.zero) fails.push(key + ' 0 을 숫자 타일로 세웠다');
+        }
+      }
+    }
+    assert(fails.length === 0, fails.slice(0, 5).join(' / '));
+    /* 기록이 없는 화면에는 Word·인쇄 단추가 안 선다 */
+    rows = []; cur = '가상고-없음';
+    await page.goto(BASE + 'report.html?student=x'); await page.waitForTimeout(1500);
+    assert(await page.evaluate(() => document.getElementById('footbtns').hidden), '기록이 없는데 Word·인쇄 단추가 섰다');
   });
 
   await test('report · 틀린 것 옆에 고칠 자료를 둔다', async page => {
@@ -2653,11 +2791,12 @@ async function assertNoOverflow(page, label) {
     /* (c) 자료에 기대는 표시 셋 — 회차 파일에 있는 것을 성적표가 쓴다.
        ① 난이도 뱃지: 오답 묶음의 문항 줄에 출제 난이도 이름(기본·표준·심화). 문항의 lvl 그대로. */
     const LV = { 1: '기본', 2: '표준', 3: '심화' };
-    const badges = await page.evaluate(() => [].slice.call(document.querySelectorAll('.card.sols .sol .sol-h .freq')).map(e => e.textContent));
+    /* 출제 난이도는 판정이 아니라 빨간 «오답» 알약(.freq) 대신 중립 알약(.lvb)이다(2026-10-07). */
+    const badges = await page.evaluate(() => [].slice.call(document.querySelectorAll('.card.sols .sol .sol-h .lvb')).map(e => e.textContent));
     assert(badges.length === 3 && badges.every(t => /^(기본|표준|심화)$/.test(t)), '오답 문항 줄의 난이도 뱃지가 3개가 아니거나 이름이 아니다: ' + JSON.stringify(badges));
     const xBadge = await page.evaluate(s => {
       const row = [].slice.call(document.querySelectorAll('.card.sols .sol')).filter(e => (e.querySelector('.sol-s') || {}).textContent === s)[0];
-      return row ? (row.querySelector('.sol-h .freq') || {}).textContent : null;
+      return row ? (row.querySelector('.sol-h .lvb') || {}).textContent : null;
     }, xIt.s);
     assert(xBadge === LV[xIt.lvl], '뱃지가 문항의 lvl 과 다르다: ' + xBadge + ' ≠ ' + LV[xIt.lvl]);
     /* ② 고질 분모: 「출제 M회 중 N회 틀림」 — 같은 개념이 1·2·3회 다 나오고 1·3회에서 틀렸으니 3회 중 2회.
@@ -3504,9 +3643,11 @@ async function assertNoOverflow(page, label) {
       assert(got.todo === Y, '통과 전인데 목표가 재시가 묻는 개념(가장 많이 틀린 「' + Y + '」)이 아니다: ' + got.todo);
       assert(got.rx.indexOf('「' + Y + '」') >= 0, '처방 코멘트가 같은 개념을 말하지 않는다: ' + got.rx.slice(0, 200));
       assert(/이번 주 확인할 개념/.test(got.rx), '처방 코멘트가 카드 이름을 말하지 않는다');
-      assert(got.warn.indexOf('「이번 주 확인할 개념」 카드(「' + Y + '」)') >= 0, '「위험」 카드의 안내가 카드를 가리키지 않는다: ' + got.warn);
+      assert(got.warn.indexOf('「이번 주 확인할 개념」 카드(「' + Y + '」)') >= 0, '「먼저 챙길 것」 카드의 안내가 카드를 가리키지 않는다: ' + got.warn);
       assert(!/이번 주 처방을 우선 진행해 주세요/.test(got.app), '어느 카드인지 모르는 옛 문장이 남았다');
-      assert(got.chip === '추이' && got.band === '이번 회차' && got.warnLab === '위험', '판정 이름표가 없다: ' + JSON.stringify([got.chip, got.band, got.warnLab]));
+      /* 2026-10-07 «전 과목 부드럽게» — 「위험 · 지금 살펴볼 신호」 → 「이번 주 · 먼저 챙길 것」 */
+      assert(got.chip === '추이' && got.band === '이번 회차' && got.warnLab === '이번 주', '판정 이름표가 없다: ' + JSON.stringify([got.chip, got.band, got.warnLab]));
+      assert(!/위험|집중 관리|무너지/.test(got.app), '겁주는 낱말이 남았다');
       assert(got.tlab === '아이에게 이렇게 물어봐 주세요', '질문 칸 이름이 부모에게 하는 말이 아니다: ' + got.tlab);
       const q = got.q.slice(got.tlab.length);
       assert(q.charAt(0) === '“' && q.charAt(q.length - 1) === '”', '아이에게 건넬 말이 따옴표 안에 있지 않다: ' + q);
@@ -3523,7 +3664,7 @@ async function assertNoOverflow(page, label) {
 
     /* E — 오개념 뱃지. 재시가 다시 물어 또 틀림 → 확인됨, 물어 맞힘 → 바로잡음, 안 물음 → 미확인.
        서명 없는 옛 재시 행은 wrongMis 에 있으면 확인됨, 없으면 미확인(물었는지 모른다). */
-    await test('report · 오개념 뱃지(확인됨·바로잡음·미확인)는 재시가 다시 물었는지로 정한다', async page => {
+    await test('report · 오개념 뱃지(아직 남음·재시에서 고침·재시 확인 전)는 재시가 다시 물었는지로 정한다', async page => {
       const r2 = retake(1, '재시', [{ c: codeOf(1, X), ok: false }, { c: codeOf(1, X), ok: true }, { c: codeOf(1, Y), ok: true }, { c: codeOf(1, Y), ok: true }],
         [X], [Z, W], 90);
       await serve(page, [first(1, wrong1), r2]);
@@ -3534,7 +3675,8 @@ async function assertNoOverflow(page, label) {
         return { o, legend: !!document.querySelector('#main-sols .mslegend'),
           rv: [].slice.call(document.querySelectorAll('.rvrow')).map(e => [e.querySelector('.rvm').textContent, (e.querySelector('.misst') || {}).textContent]) };
       });
-      const want = {}; want[X] = '확인됨'; want[Y] = '바로잡음'; want[Z] = '미확인'; want[W] = '미확인';
+      /* 이름 바꿈(2026-10-07): 확인됨 → ✕ 아직 남음(재시에서도 틀림) · 바로잡음 → ◐ 재시에서 고침 · 미확인 → ◇ 재시 확인 전 */
+      const want = {}; want[X] = '✕ 아직 남음'; want[Y] = '◐ 재시에서 고침'; want[Z] = '◇ 재시 확인 전'; want[W] = '◇ 재시 확인 전';
       Object.keys(want).forEach(m => assert(b.o[m] === want[m], '「' + m + '」 뱃지가 ' + want[m] + ' 이 아니다: ' + b.o[m]));
       assert(b.legend, '뱃지 뜻풀이 한 줄이 없다');
       /* 「다시 볼 개념」 의 복습 목록에도 같은 뱃지 */
@@ -4018,7 +4160,7 @@ async function assertNoOverflow(page, label) {
         c1rx: [].slice.call(document.querySelectorAll('.rx.c1')).map(x => ({ nm: x.querySelector('.nm').textContent, tag: (x.querySelector('.c1tag') || {}).textContent, line: (x.querySelector('.c1line') || {}).textContent, ol: (x.querySelector('.ol') || {}).textContent || '' })),
       }));
       assert(r.latest === 'ch1s#2', '이번 회차가 심화반 2회가 아니다: ' + r.latest);
-      assert(r.tabs.join(',') === '화학 I,*화학 I 심화', '과목 고르기: ' + r.tabs.join(','));
+      assert(r.tabs.join(',') === '화학Ⅰ,*화학Ⅰ 심화', '과목 고르기: ' + r.tabs.join(','));   // 과목 이름 통일(2026-10-07)
       assert(r.text.indexOf('화학1에서 이어 온 기록') >= 0, '「화학1에서 이어 온 기록」 이 없다');
       assert(JSON.stringify(r.cv) === JSON.stringify(cv), '화면의 이어 온 기록이 엔진(carryOver·carryView)과 다르다');
       const nm = c => LINK.names[c];
@@ -4210,7 +4352,7 @@ async function assertNoOverflow(page, label) {
       }));
       const u1 = unitsOf('ch1'), u2 = unitsOf('ch2');
       let r = await read();
-      assert(r.latest === 'ch2#3' && /화학 II/.test(r.who), '이번 회차가 화학Ⅱ 3회가 아니다: ' + r.latest + ' ' + r.who);
+      assert(r.latest === 'ch2#3' && /화학 ?(II|Ⅱ)/.test(r.who), '이번 회차가 화학Ⅱ 3회가 아니다: ' + r.latest + ' ' + r.who);
       assert(r.trendN === 3 && r.rows.join(',') === 'ch2', '누적·행이 화학Ⅱ 만이 아니다: ' + r.trendN + ' ' + r.rows);
       assert(r.aggUnits.length && r.aggUnits.every(u => u2[u] && !u1[u]), '단원 누적에 화학Ⅰ 단원이 섞였다: ' + r.aggUnits.join(','));
       const m2 = {}; ROWS4.filter(x => x.course === 'ch2').forEach(x => x.wrongMis.forEach(m => { m2[CE.misCanon(m)] = 1; }));
@@ -4219,7 +4361,7 @@ async function assertNoOverflow(page, label) {
       /* 화학Ⅰ 단추 → 화학Ⅰ 로 정리(서버가 ?c= 를 받는다) */
       await page.goto(BASE + 'report.html?student=x&c=ch1'); await page.waitForSelector('.ladder', { timeout: 20000 }); await page.waitForTimeout(500);
       r = await read();
-      assert(r.latest === 'ch1#3' && /화학 I /.test(r.who + ' ') && r.rows.join(',') === 'ch1', '?c=ch1 이 화학Ⅰ 이 아니다: ' + r.latest + ' ' + r.rows);
+      assert(r.latest === 'ch1#3' && /화학 ?(I|Ⅰ) /.test(r.who + ' ') && r.rows.join(',') === 'ch1', '?c=ch1 이 화학Ⅰ 이 아니다: ' + r.latest + ' ' + r.rows);
       assert(r.aggUnits.every(u => u1[u] && !u2[u]), '화학Ⅰ 단원 누적에 화학Ⅱ 단원: ' + r.aggUnits.join(','));
       assert(/^\*.*c=ch1/.test(r.tabs[0]), '화학Ⅰ 단추가 눌린 상태가 아니다');
       await assertNoOverflow(page, 'report-two-courses');
@@ -4444,6 +4586,282 @@ async function assertNoOverflow(page, label) {
       await page.click('#resend');
       await page.waitForFunction(() => /고마워요/.test(document.body.innerText), null, { timeout: 5000 });
       assert(n === 2, '다시 보내기가 한 번 더 보내지 않았다: ' + n);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     화학Ⅰ 심화(ch1s) 개강 전 QA 가 재현한 결함 (2026-10-07)
+     종이 재시지 · 학생 재시 화면 · 응시 이어 풀기 · 같은 회차 다시 풀기 · 반 명단 ·
+     재시 알림창 · OMR 답안지 · 회차 고르기 — 가짜 시트 응답만 쓴다(실제 학생 이름 없음).
+     ══════════════════════════════════════════════════════════════ */
+  {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const FORMS = JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'forms_bank.json'), 'utf8'));
+    const RD = n => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_ch1s_' + String(n).padStart(2, '0') + '.json'), 'utf8'));
+    const flip = a => (a === 'O' ? 'X' : 'O');
+    const R1 = RD(1);
+    const ans1 = R1.jeongsi.items.map((it, i) => (i % 3 === 0 ? flip(it.a) : it.a));      // 20개 틀림 → 미달
+    const g1 = CE.gradeAttempt(ans1, R1.jeongsi.items, R1.scoring);
+    const CODE = 'aihbhar53o8v06', LINK = 'https://example.test/report.html?student=' + CODE;
+    const FIRST = { name: '가상심화', reportLink: LINK, date: '2026-10-05T01:00:00Z', score: g1.score, pass: g1.pass, studentKey: '가상고-가상심화',
+      school: '가상고', year: '2', course: 'ch1s', round: 1, attempt: '첫 응시', wrongMis: [], wrongAxes: {}, isTest: false, units: [], axes: [], answers: ans1.join('') };
+    const J = (route, obj) => {
+      const cb = new URL(route.request().url()).searchParams.get('callback') || '';
+      const j = JSON.stringify(obj);
+      return route.fulfill({ status: 200, contentType: cb ? 'application/javascript' : 'application/json', body: cb ? cb + '(' + j + ');' : j });
+    };
+
+    /* 1. 종이 재시지: 성적표 링크가 불투명 코드면 그 코드를 그대로 서버에 묻는다(«-토큰» 을 붙이면 행 0개). */
+    await test('ch1s · 종이 재시지: 불투명 코드 링크로 학생 기록을 묻고 재시 60문항을 만든다', async page => {
+      const asked = [];
+      await page.route('**/script.google.com/**', route => {
+        const u = decodeURIComponent(route.request().url());
+        if (/[?&]student=/.test(u)) { asked.push(u.match(/[?&]student=([^&]+)/)[1]); return J(route, { ok: true, rows: u.indexOf('student=' + CODE + '&') >= 0 ? [FIRST] : [] }); }
+        return J(route, { ok: true });
+      });
+      await page.goto(BASE + 'pending.html?demo'); await page.waitForTimeout(600);
+      const r = await page.evaluate(async link => {
+        const key = keyFromLink(link);
+        const rr = await DTRetake.items({ key: key, course: 'ch1s', round: 1, attemptNo: 2 });
+        return { key: key, n: rr && rr.items ? rr.items.length : 0, wrong: rr ? rr.wrongCids.length : 0, legacy: DTRetake.tokWith('가상고-가상심화') };
+      }, LINK);
+      assert(asked.length >= 1 && asked[0] === CODE, '불투명 코드를 그대로 묻지 않았다: ' + asked.join(' | '));
+      assert(r.n === 60 && r.wrong > 0, '재시 문항을 못 만들었다: ' + JSON.stringify(r));
+      assert(/^가상고-가상심화-[0-9a-z]{8}$/.test(r.legacy), '옛 학생키 링크는 예전처럼 토큰을 붙여야 한다: ' + r.legacy);
+    }, { adminGate: true });
+
+    /* 2. 학생이 재시 링크로 들어온 화면 — 선생님 단추·단계 없음 · 큰 O/X · 「재시 N차 · 남은 개념 K개」 */
+    const mockStudent = (page, posts) => page.route('**/script.google.com/**', route => {
+      const req = route.request(), u = req.url();
+      if (req.method() === 'POST') { try { posts && posts.push(JSON.parse(req.postData() || '{}')); } catch (e) {} return J(route, { ok: true, updated: false, reportLink: LINK }); }
+      if (u.includes('student=')) return J(route, { ok: true, student: 'x', rows: [FIRST], excluded: [], cumulative: null, rank: null, cohort: null });
+      return J(route, { ok: true, rows: [] });
+    });
+    await test('ch1s · 학생 재시 화면: 선생님 단추·단계가 없고 O/X 큰 단추 · 재시 차수와 남은 개념', async page => {
+      const posts = [];
+      await mockStudent(page, posts);
+      await page.goto(BASE + 'index.html?retake=' + CODE + '&c=ch1s&r=1');
+      await page.waitForFunction(() => typeof S !== 'undefined' && S && S.view === 'gate', null, { timeout: 20000 });
+      const teacherWords = /다음 학생 채점|재시 안내 메시지 복사|링크만|학부모에게|다른 회차·새 학생/;
+      let txt = await page.evaluate(() => document.body.innerText);
+      assert(!teacherWords.test(txt), '게이트에 선생님 단추·문구: ' + (txt.match(teacherWords) || [])[0]);
+      const steps = await page.$$eval('#steps .lb', l => l.map(x => x.textContent).join(','));
+      assert(steps === '강의록,재시,결과,통과', '단계 막대에 선생님 단계가 남았다: ' + steps);
+      const nConcepts = await page.evaluate(() => { const c = {}; S.dx.wrongConcepts.forEach(w => { c[w.c || w.mis] = 1; }); return Object.keys(c).length; });
+      const pill = await page.$eval('#stuPill', e => e.textContent);
+      assert(pill === '다음: 재시 1차 · 남은 개념 ' + nConcepts + '개', '게이트 진행 표시: ' + pill);
+      const rt = await page.$eval('.readtoggle', b => b.getBoundingClientRect().height);
+      assert(rt >= 44, '«강의록 덮고 풀기» 단추 높이 ' + rt);
+      await page.evaluate(() => { S.gate.gates.forEach(g => { g._unlocked = true; }); render(); });
+      await page.click('button:has-text("재시 시작")');
+      await page.waitForFunction(() => S.view === 'retake');
+      assert(!(await page.$('#entry')), '학생 재시에 숫자 1/2 입력칸이 있다');
+      assert((await page.$$('.focusq .oxbig')).length === 2, '큰 O/X 단추가 없다');
+      const pill2 = await page.$eval('#stuPill', e => e.textContent);
+      assert(pill2 === '재시 1차 · 남은 개념 ' + nConcepts + '개', '재시 진행 표시: ' + pill2);
+      const dot = await page.$eval('.dot2', d => { const b = d.getBoundingClientRect(); return Math.min(b.width, b.height); });
+      assert(dot >= 44, '문항 번호 칸이 ' + dot + 'px (44 미만)');
+      const stmtWb = await page.$eval('.focusq .stmt', e => getComputedStyle(e).wordBreak);
+      assert(stmtWb === 'keep-all', '재시 문장 word-break: ' + stmtWb);
+      await page.click('.focusq .oxbig.o');
+      assert(await page.evaluate(() => S.answers[0] === 'O' && S.cur === 1), 'O 단추가 답을 적고 다음 문항으로 가지 않는다');
+      const onVisible = await page.evaluate(() => { const on = document.querySelector('#steps .step.on'), bar = document.getElementById('steps'); const a = on.getBoundingClientRect(), b = bar.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1; });
+      assert(onVisible, '단계 막대에서 지금 단계(재시)가 잘려 안 보인다');
+      await page.evaluate(() => { S.answers = S.keyItems.map(x => x.a); render(); });
+      await page.evaluate(() => doGrade());
+      await page.waitForFunction(() => S.view === 'report');
+      await page.waitForFunction(() => typeof SAVE_STATE !== 'undefined' && SAVE_STATE === 'ok', null, { timeout: 8000 });
+      txt = await page.evaluate(() => document.body.innerText);
+      assert(!teacherWords.test(txt), '결과 화면에 선생님 단추·문구: ' + (txt.match(teacherWords) || [])[0]);
+      assert(/결과가 저장되었습니다/.test(txt), '학생에게 저장 확인을 말하지 않는다');
+      assert(posts.length === 1 && posts[0].attempt === '재시' && posts[0].course === 'ch1s', '재시 저장: ' + JSON.stringify(posts.map(p => [p.attempt, p.course])));
+      await page.click('button:has-text("통과 화면으로")');
+      txt = await page.evaluate(() => document.body.innerText);
+      assert(/통과했습니다/.test(txt) && !teacherWords.test(txt), '통과 화면에 선생님 단추·문구: ' + (txt.match(teacherWords) || [])[0]);
+      const href = await page.$eval('a.stulink', a => a.getAttribute('href'));
+      assert(href === LINK, '통과 화면 «내 성적표» 링크: ' + href);
+      await assertNoOverflow(page, 'stu-done');
+    });
+    await test('ch1s · 선생님 채점 앱(링크 아님)은 그대로 — 결과 화면에 «다음 학생 채점» · 숫자 입력', async page => {
+      await page.goto(BASE + 'index.html?test=1'); await page.waitForTimeout(800);
+      await page.evaluate(() => { courseTab = 'ch1s'; render(); });
+      await page.click('.rchip');
+      await page.waitForFunction(() => typeof S !== 'undefined' && S.round && S.round.course === 'ch1s', null, { timeout: 8000 });
+      await page.fill('#f_name', '가상채점'); await page.fill('#f_school', '가상고');
+      await page.click('.btnrow button:last-child'); await page.waitForTimeout(400);
+      const omr = await page.$eval('#pdfOmr', a => a.getAttribute('href')).catch(() => null);
+      assert(omr === './omr_ch1s_round01.pdf' || omr === 'omr_ch1s_round01.pdf', '시험지 화면에 OMR 답안지 PDF 가 없다: ' + omr);
+      await page.click('.btnrow button:last-child'); await page.waitForTimeout(300);
+      assert(await page.$('#entry'), '선생님 채점은 숫자 입력칸이어야 한다');
+      const steps = await page.$$eval('#steps .lb', l => l.length);
+      assert(steps === 8, '선생님 단계 막대가 바뀌었다: ' + steps);
+      await page.evaluate(() => { S.answers = S.answers.map(() => 'O'); render(); });
+      await page.evaluate(() => doGrade());
+      await page.waitForFunction(() => S.view === 'report');
+      const txt = await page.evaluate(() => document.body.innerText);
+      assert(/다음 학생 채점/.test(txt) && /학부모 리포트 링크/.test(txt), '선생님 결과 화면이 바뀌었다');
+    }, { adminGate: true });
+    await test('ch1s · 채점 앱 OMR 답안지 단추는 materials.json 에 PDF 가 있는 회차만', async page => {
+      await page.goto(BASE + 'index.html?test=1'); await page.waitForTimeout(800);
+      await page.evaluate(() => { courseTab = 'ch1'; render(); });
+      await page.click('.rchip');
+      await page.waitForFunction(() => typeof S !== 'undefined' && S.round && S.round.course === 'ch1', null, { timeout: 8000 });
+      await page.fill('#f_name', '가상채점'); await page.fill('#f_school', '가상고');
+      await page.click('.btnrow button:last-child'); await page.waitForTimeout(900);
+      assert(!(await page.$('#pdfOmr')), 'OMR PDF 가 없는 화학Ⅰ 회차에 OMR 단추가 생겼다');
+    }, { adminGate: true });
+
+    /* 3. 응시 중 새로고침 → 이어서 풀기 · 저장이 확인되면 지운다 */
+    await test('ch1s · 응시 중 새로고침해도 «이어서 풀기» · 저장 확인 뒤에는 지운다', async page => {
+      let lastAns = '';
+      await page.route('**/script.google.com/**', route => {
+        const req = route.request(), u = req.url();
+        if (req.method() === 'POST') { try { lastAns = JSON.parse(req.postData()).answers; } catch (e) {} return J(route, { ok: true, updated: false, reportLink: LINK }); }
+        if (u.includes('student=')) return J(route, { ok: true, rows: [{ course: 'ch1s', round: 2, attempt: '첫 응시', answers: lastAns }] });
+        return J(route, { ok: true });
+      });
+      await page.goto(BASE + 'exam.html?c=ch1s&r=2'); await page.waitForSelector('#nm');
+      await page.fill('#nm', '가상이어'); await page.fill('#sc', '가상고');
+      await page.click('button:has-text("시험 시작")');
+      for (let i = 0; i < 5; i++) await page.click('.oxbig.o');
+      await page.reload(); await page.waitForSelector('.resumebox', { timeout: 5000 });
+      const card = await page.$eval('.resumebox', e => e.innerText);
+      assert(/가상이어/.test(card) && /화학Ⅰ 심화 2회/.test(card) && /5\/60/.test(card), '이어서 풀기 안내: ' + card);
+      await page.click('button:has-text("이어서 풀기")');
+      await page.waitForFunction(() => view === 'exam' && R, null, { timeout: 5000 });
+      const st = await page.evaluate(() => ({ view, n: A.filter(a => a === 'O').length, cur, name: info.name, c: R.course, r: R.round }));
+      assert(st.view === 'exam' && st.n === 5 && st.cur === 5 && st.name === '가상이어' && st.c === 'ch1s' && st.r === 2, '답이 안 돌아왔다: ' + JSON.stringify(st));
+      await page.evaluate(() => { A = R.jeongsi.items.map(x => x.a); submitExam(); });
+      await page.waitForFunction(() => SAVE_STATE === 'ok', null, { timeout: 10000 });
+      assert(await page.evaluate(() => localStorage.getItem('dt_exam_progress_v1') === null), '저장이 확인됐는데 이어서 풀기 기록이 남았다');
+    });
+
+    /* 4. 같은 회차를 다른 답으로 다시 풀었다 — 서버가 already_taken. 사유와 성적표 링크, «다시 보내기» 없음. */
+    for (const [err, must] of [['already_taken', /이미 응시했습니다/], ['attempt_regress', /재시까지 진행했습니다/]]) {
+      await test('ch1s · 같은 회차 다시 풀기: 서버가 ' + err + ' 면 사유와 성적표 링크 · 다시 보내기 없음', async page => {
+        let posts = 0, src = '';
+        await page.route('**/script.google.com/**', route => {
+          const req = route.request();
+          if (req.method() === 'POST') { posts++; try { src = JSON.parse(req.postData()).src; } catch (e) {} return J(route, { ok: false, error: err, msg: '서버 문구', reportLink: LINK }); }
+          return J(route, { ok: true, rows: [] });
+        });
+        await page.goto(BASE + 'exam.html?c=ch1s&r=1'); await page.waitForSelector('#nm');
+        await page.fill('#nm', '가상재응'); await page.fill('#sc', '가상고');
+        await page.click('button:has-text("시험 시작")');
+        await page.evaluate(k => { A = k; submitExam(); }, R1.jeongsi.items.map(x => x.a));
+        await page.waitForFunction(() => SAVE_STATE === 'refused', null, { timeout: 8000 });
+        await page.waitForTimeout(5600);                                      // 5초 셈이 끝나도 넘어가지 않는다
+        const step = await page.$eval('#hoffStep', e => e.innerText);
+        assert(must.test(step), '사유 문구가 없다: ' + step);
+        assert(!/다시 보내기/.test(step) && !(await page.$('#hoffStep button')), '거부인데 «다시 보내기» 가 있다');
+        const href = await page.$eval('#hoffReport', a => a.getAttribute('href'));
+        assert(href === LINK, '성적표 링크가 서버가 준 주소가 아니다: ' + href);
+        assert(/exam\.html/.test(page.url()), '거부됐는데 다른 곳으로 넘어갔다: ' + page.url());
+        assert(posts === 1, '저장을 ' + posts + '번 보냈다');
+        assert(src === 'online', '온라인 응시 표지(src) 가 없다: ' + src);
+        assert(!(await page.$('#rtdim')), '거부됐는데 재시 알림창이 떴다');
+      });
+    }
+
+    /* 5. 이름 칸 위에 반 명단 — 학생키 갈라짐 예방. 묻지 않고 먼저 물어본다(prompt 없음). */
+    await test('ch1s · 응시 이름 칸에 반 명단 드롭다운(이 과목 반만) · 고르면 이름·학교가 채워진다', async page => {
+      let prompts = 0;
+      page.on('dialog', () => { prompts++; });
+      await page.route('**/script.google.com/**', route => {
+        const u = route.request().url();
+        if (u.includes('action=names')) return J(route, { ok: true, classes: [
+          { label: '화학1 심화 토1-5', course: 'ch1s', kind: 'dt', students: [{ name: '가상갑', school: '가상고', year: '2' }, { name: '가상을', school: '나라고', year: '1' }] },
+          { label: '화학1 일6-10', course: 'ch1', kind: 'dt', students: [{ name: '가상병', school: '가상고', year: '2' }] },
+          { label: '파이널 목7-10', course: '', kind: 'exam', students: [{ name: '가상정', school: '가상고', year: '3' }] }] });
+        return J(route, { ok: true });
+      });
+      await page.goto(BASE + 'exam.html?c=ch1s&r=1');
+      await page.waitForSelector('#rpsel', { state: 'visible', timeout: 6000 });
+      const cls = await page.$$eval('#rpc option', o => o.map(x => x.textContent));
+      assert(cls.join('|') === '반 선택|화학1 심화 토1-5', '반 목록(이 과목 반만): ' + cls.join('|'));
+      await page.selectOption('#rps', { label: '가상을' });
+      const v = await page.evaluate(() => [document.getElementById('nm').value, document.getElementById('sc').value, document.getElementById('gr').value].join('|'));
+      assert(v === '가상을|나라고|1', '고른 학생이 칸에 안 들어갔다: ' + v);
+      assert(prompts === 0, '반 코드를 묻는 창이 떴다');
+      const h = await page.$eval('#rps', e => e.getBoundingClientRect().height);
+      assert(h >= 44, '이름 고르기 칸 높이 ' + h);
+    });
+
+    /* 6. 재시 알림창 — 주기율표 단추가 알림창을 덮지 않는다 */
+    await test('ch1s · 재시 알림창이 뜨면 주기율표 단추가 비키고 나가는 단추가 보인다', async page => {
+      await page.route('**/script.google.com/**', route => {
+        const req = route.request();
+        if (req.method() === 'POST') return J(route, { ok: true, updated: false, reportLink: LINK });
+        return J(route, { ok: true, rows: [{ course: 'ch1s', round: 1, attempt: '첫 응시', answers: ans1.join('') }] });
+      });
+      await page.setViewportSize({ width: 360, height: 640 });
+      await page.goto(BASE + 'exam.html?c=ch1s&r=1'); await page.waitForSelector('#nm');
+      await page.fill('#nm', '가상알림'); await page.fill('#sc', '가상고');
+      await page.click('button:has-text("시험 시작")');
+      await page.evaluate(k => { A = k; submitExam(); }, ans1);
+      await page.waitForSelector('#rtdim', { timeout: 15000 }); await page.waitForTimeout(400);
+      const r = await page.evaluate(() => { const go = document.querySelector('#rtdim .go').getBoundingClientRect();
+        const top = document.elementFromPoint(go.left + go.width / 2, go.top + go.height / 2);
+        return { cxp: getComputedStyle(document.getElementById('cxpBtn')).display, onGo: !!(top && top.closest('.go')), inView: go.bottom <= innerHeight + 1 }; });
+      assert(r.cxp === 'none', '알림창 위에 주기율표 단추가 남았다');
+      assert(r.onGo && r.inView, '«리포트에서 복습 시작» 이 가려지거나 화면 밖이다: ' + JSON.stringify(r));
+    });
+
+    /* 7. 반 명단 — 새 반 이름을 치고 바로 학생 추가칸을 눌러도 초점·입력이 남는다 */
+    await test('roster · 새 반 이름 입력 직후 학생 추가칸을 눌러도 초점이 남고 배지만 바뀐다', async page => {
+      await page.route('**/script.google.com/**', route => J(route, { ok: true, classes: [{ label: '화학1 일6-10', course: 'ch1', students: ['가상일'] }], absentees: { classes: [] } }));
+      await page.goto(BASE + 'roster.html'); await page.waitForSelector('.clscard');
+      await page.click('#addC');
+      const ph = await page.$eval('.clscard:last-child .lab', e => e.placeholder);
+      assert(/화학1 심화/.test(ph), '새 반 예시에 «화학1 심화» 가 없다: ' + ph);
+      await page.keyboard.type('화학1 심화 토1-5');
+      await page.click('.clscard:last-child .addS');
+      await page.keyboard.type('가상가, 가상나');
+      const st = await page.evaluate(() => ({ f: document.activeElement && document.activeElement.className, v: document.querySelector('.clscard:last-child .addS').value, b: document.querySelector('.clscard:last-child .cbadge').textContent }));
+      assert(st.f === 'addS' && st.v === '가상가, 가상나', '학생 추가칸 초점·입력이 사라졌다: ' + JSON.stringify(st));
+      assert(st.b === '화학Ⅰ 심화', '과목 배지가 안 바뀌었다: ' + st.b);
+      await page.click('.clscard:last-child .addBtn');
+      assert(await page.evaluate(() => state.classes[state.classes.length - 1].students.length === 2), '학생 두 명이 안 들어갔다');
+      const x = await page.$eval('.clscard:last-child .delS', e => { const b = e.getBoundingClientRect(); return Math.min(b.width, b.height); });
+      const k = await page.$eval('.clscard:last-child .knd', e => e.getBoundingClientRect().height);
+      assert(x >= 44 && k >= 44, '삭제 ×(' + x + ') · 갈래(' + k + ') 가 44px 미만');
+    }, { adminGate: true });
+
+    /* 8. pending — 회차 고르기는 그 과목 회차까지 · OMR 답안지 · 점수 소수 둘째 자리 · 좁은 화면 단추 한 줄 */
+    await test('pending · 심화반 회차 고르기 10회까지 · OMR 답안지 · 점수 둘째 자리 · 카드 단추 한 줄', async page => {
+      await page.route('**/script.google.com/**', route => {
+        const u = new URL(route.request().url()), a = u.searchParams.get('action');
+        if (a === 'absentees') return J(route, { ok: true, absentees: { generatedAt: 'T', classes: [{ label: '화학1 심화 토1-5', course: 'ch1s', round: 1, total: 2, present: 1, absent: ['가상갑'] }, { label: '화학1 일6-10', course: 'ch1', round: 3, total: 1, present: 0, absent: ['가상병'] }] } });
+        if (a === 'pending') return J(route, { ok: true, pending: { active: [{ name: '가상을', school: '가상고', year: '2', course: 'ch1s', round: 1, lastAttempt: '정시', score: 66.66666666666667, nextNeeded: '재시', days: 1, lastDate: '10/6', reportLink: LINK, seen: ['정시 66.67'] }], stale: [], activeDays: 14, generatedAt: 'T' } });
+        if (a === 'passed') return J(route, { ok: true, passed: { passed: [{ name: '가상정', school: '가상고', year: '2', course: 'ch1s', round: 1, attempt: '정시', tries: 1, score: 80, date: '10/6', days: 1, reportLink: LINK }], days: 14 } });
+        return J(route, { ok: true });
+      });
+      await page.goto(BASE + 'pending.html'); await page.waitForSelector('.roundsel'); await page.waitForTimeout(1200);
+      const opts = await page.$$eval('.roundsel', ss => ss.map(s => s.options.length));
+      assert(opts[0] === 11 && opts[1] === 19, '회차 고르기 칸 수(자동+회차): ' + opts.join(','));
+      const omr = await page.$$eval('a.omrbtn', a => a.map(x => x.getAttribute('href')));
+      assert(omr.length === 1 && omr[0] === 'omr_ch1s_round01.pdf', 'OMR 답안지 링크: ' + omr.join(','));
+      const txt = await page.evaluate(() => document.body.innerText);
+      assert(/66\.67점 미통과/.test(txt) && !/66\.6666/.test(txt) && !/66\.7점/.test(txt), '재시 카드 점수 표기: ' + (txt.match(/66\.[0-9]+점?/g) || []).join(','));
+      assert(/80\.00점 통과/.test(txt), '통과 카드 점수 표기');
+      const one = await page.$$eval('.row .copybtn', b => b.every(x => x.getBoundingClientRect().height < 40));
+      assert(one, '«재시 필요» 카드 단추가 두 줄로 꺾였다');
+      await assertNoOverflow(page, 'pending-ch1s');
+    }, { adminGate: true });
+
+    /* 9. OMR 답안지·정답표 — 화학Ⅰ 심화 10회 정답은 회차 파일 정시 문항 그대로 */
+    await test('OMR 정답표 · 화학Ⅰ 심화 10회 정답이 회차 파일(jeongsi.items[k].a)과 같다', async page => {
+      await page.goto(BASE + 'OMR_answer_keys.html'); await page.waitForSelector('#sRound');
+      const vals = await page.$$eval('#sRound option', o => o.map(x => x.value).filter(v => /^ch1s-/.test(v)));
+      assert(vals.length === 10, '화학Ⅰ 심화 회차가 ' + vals.length + '개');
+      await page.click('#modeSeg button[data-m="key"]');
+      for (let n = 1; n <= 10; n++) {
+        await page.selectOption('#sRound', 'ch1s-' + n);
+        await page.waitForFunction(k => typeof document !== 'undefined' && document.querySelectorAll('.keygrid .kc').length === 60 && document.querySelector('.sheet-h .t').textContent.indexOf(' ' + k + '회') >= 0, n, { timeout: 5000 });
+        const got = await page.$$eval('.keygrid .kc .a', a => a.map(x => x.textContent).join(''));
+        const want = RD(n).jeongsi.items.map(x => (String(x.a).toUpperCase() === 'O' ? 'O' : 'X')).join('');
+        assert(got === want, n + '회 정답표가 회차 파일과 다르다');
+      }
     });
   }
 

@@ -64,6 +64,43 @@ const server = http.createServer((req, res) => {
 
 /* docx 안의 글자만 뽑는다. 표 칸은 붙어 나오므로 칸 경계를 공백으로 벌린다 —
    안 벌리면 `9/15분자간힘` 처럼 붙어서 숫자 맞추기가 못 쓰게 된다. */
+const BRAND = '화학 · 다원교육 · 조준모';
+const BAN = /아래쪽|최상위권|위험|집중 관리|무너지기|빚/;
+const CE = require(path.join(ROOT, 'chemengine.js'));
+/* 머리글 · 바닥글 · 본문 XML */
+function docxParts(file, tmp) {
+  const d = path.join(tmp, 'parts'); fs.rmSync(d, { recursive: true, force: true });
+  execFileSync('unzip', ['-o', '-q', file, 'word/*', '-d', d]);
+  const W = path.join(d, 'word'), rd = f => fs.readFileSync(path.join(W, f), 'utf8');
+  const fl = fs.readdirSync(W), strip = x => x.replace(/<[^>]+>/g, ' ');
+  const hdrX = fl.filter(f => /^header\d*\.xml$/.test(f)).map(rd).join(' '), ftrX = fl.filter(f => /^footer\d*\.xml$/.test(f)).map(rd).join(' ');
+  return { xml: rd('document.xml'), hdr: strip(hdrX), ftr: strip(ftrX), ftrXml: ftrX };
+}
+/* 화학1 8회 + 심화 4회 가짜 학생 — 화학1 에서 동위원소·루이스 구조·몰 질량을 거듭 놓쳤다(실제 학생 아님). */
+function fakeBoth(K, nm) {
+  const LINK = JSON.parse(fs.readFileSync(path.join(ROOT, 'courses', 'ch1s', 'link_ch1.json'), 'utf8'));
+  const RF = (c, n) => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_' + c + '_' + String(n).padStart(2, '0') + '.json'), 'utf8')).jeongsi.items;
+  const flip = a => (a === 'O' ? 'X' : 'O');
+  const mk = (course, round, attempt, wrong, date, extra) => {
+    const items = RF(course, round), units = {};
+    items.forEach((it, i) => { const u = units[it.u] || (units[it.u] = { u: it.u, t: 0, w: 0 }); u.t++; if (wrong.indexOf(i) >= 0) u.w++; });
+    const score = Math.round(10000 * (items.length - wrong.length) / items.length) / 100;
+    return Object.assign({ studentKey: K, name: nm, school: '가상고', year: '2', course, round, attempt, score, pass: score >= 80, date,
+      answers: items.map((it, i) => wrong.indexOf(i) >= 0 ? flip(it.a) : it.a).join(''), wrongMis: wrong.map(i => items[i].mis), wrongAxes: {},
+      units: Object.keys(units).map(k => units[k]), axes: [], isTest: false }, extra || {});
+  };
+  const rt = (course, round, att, w, miss, date) => { const items = RF(course, round), keys = w.map(i => items[i].a);
+    const score = Math.round(10000 * (60 - miss.length * 2) / 60) / 100;
+    return mk(course, round, att, [], date, { answers: keys.map((a, k) => miss.indexOf(k) >= 0 ? flip(a) : a).join(''), retakeCids: w.map(i => items[i].c).join(','),
+      retakeKeys: keys.join(''), retakeUnasked: '', score, pass: score >= 80, wrongMis: miss.map(k => items[w[k]].mis), units: [] }); };
+  const T = ['CH1S-012', 'CH1S-108', 'CH1S-027'], rows = [];
+  const wt = (c, r, set, also) => RF(c, r).map((x, i) => i).filter(i => { const x = RF(c, r)[i]; return set.indexOf(c === 'ch1' ? LINK.map[x.c] : x.c) >= 0 || also(i); });
+  for (let r = 1; r <= 8; r++) { const w = wt('ch1', r, T, i => (i * 7 + r) % 11 === 4), d = '2026-04-' + String(r * 3).padStart(2, '0') + 'T01:00:00Z';
+    const f = mk('ch1', r, '첫 응시', w, d); rows.push(f); if (!f.pass) rows.push(rt('ch1', r, '재시', w, r % 3 === 0 ? [0, 1] : [], d.replace('T01', 'T05'))); }
+  for (let r = 1; r <= 4; r++) { const w = wt('ch1s', r, r <= 2 ? ['CH1S-012'] : [], i => (i * 5 + r) % (r % 2 === 0 ? 4 : 8) === 3), d = '2026-09-' + String(r * 7).padStart(2, '0') + 'T01:00:00Z';
+    const f = mk('ch1s', r, '첫 응시', w, d); rows.push(f); if (!f.pass) rows.push(rt('ch1s', r, '재시', w, r === 4 ? [0, 2, 3, 5, 6] : [1], d.replace('T01', 'T06'))); }
+  return rows;
+}
 function docxText(file, tmp) {
   execFileSync('unzip', ['-o', '-q', file, 'word/document.xml', '-d', tmp]);
   const xml = fs.readFileSync(path.join(tmp, 'word', 'document.xml'), 'utf8');
@@ -297,13 +334,70 @@ function docxText(file, tmp) {
   console.log('\n── 학부모가 보는 것 ──');
   chk('한 장 요약이 있다', /한 장 요약/.test(txt), true);
   chk('표지가 결론을 이미 말한다',
-      new RegExp('성적 진단 리포트[\\s\\S]{0,400}' + (screen.passed ? '통과' : '재시')).test(txt), true);
+      new RegExp('DT 성적표[\\s\\S]{0,400}' + (screen.passed ? '통과' : '재시')).test(txt), true);
   if (screen.chronic.length) {
     chk('다시 볼 개념이 화면과 같다',
         screen.chronic.slice(0, 3).every(m => txt.includes(m)),
         screen.chronic.slice(0, 3).join(' · '));
   }
   chk('연락할 곳이 적혀 있다', /조준모T 카카오톡/.test(txt), true);
+
+  /* ── 상호 · 머리글/바닥글 · 표 행 · 표시 기호 (2026-10-07) ── */
+  const parts = docxParts(file, tmp);
+  chk('상호가 «화학 · 다원교육 · 조준모» 한 줄이다(본문 · 머리글 · 바닥글)',
+      txt.includes(BRAND) && parts.hdr.includes(BRAND) && parts.ftr.includes(BRAND) && !/Chemistreal|CHEMISTREAL|영재관/i.test(txt + parts.hdr + parts.ftr), true);
+  chk('바닥글에 쪽 번호가 있다', /PAGE/.test(parts.ftrXml) && /NUMPAGES/.test(parts.ftrXml), true);
+  chk('표 행은 쪽에서 안 쪼개진다(cantSplit) · 제목은 다음 덩어리와 붙는다(keepNext)', /<w:cantSplit/.test(parts.xml) && /<w:keepNext/.test(parts.xml), true);
+  chk('«**» 가 종이에 글자로 안 나간다', !/\*\*/.test(txt), true);
+  chk('겁주는 낱말이 없다', !BAN.test(txt), (txt.match(BAN) || []).join(' '));
+  await p.close();
+
+  /* ══ 화학Ⅰ 심화(새 절) — 화학1 8회 + 심화 4회 학생. 화면 RPT 와 종이가 같은 숫자인가 ══ */
+  console.log('\n── 화학Ⅰ 심화 · 화학1에서 이어 온 학생 ──');
+  const p2 = await ctx.newPage();
+  p2.on('pageerror', e => errs.push(String(e).slice(0, 120)));
+  const ROWS = fakeBoth('가상고-이음', '이음');
+  await p2.route('**/macros/s/**', route => {
+    const u = new URL(route.request().url()), c = u.searchParams.get('c') || '';
+    const A2 = CE.cumulative(ROWS, c)['가상고-이음'];
+    return route.fulfill({ status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, student: 'x', rows: ROWS, excluded: [], cumulative: A2, rank: { n: 14, per100: 86, avg: 78.4, score: 61.67, round: 4, dist: [] }, ranks: [], cohort: null, challenges: [] }) });
+  });
+  await p2.goto(`http://localhost:${PORT}/report.html?student=x`, { waitUntil: 'load', timeout: 40000 });
+  await p2.waitForFunction(() => !!(window.__dtRpt && window.__dtRpt.rpt && window.__dtRpt.rpt.v2x), null, { timeout: 30000 });
+  await p2.waitForTimeout(800);
+  const S2 = await p2.evaluate(() => {
+    const M = window.__dtRpt.rpt, q = s => [].slice.call(document.querySelectorAll(s));
+    return { M: JSON.parse(JSON.stringify(M)),
+      tiles: q('.v2tile').map(e => e.querySelector('.v').textContent + '|' + e.querySelector('.k').textContent),
+      carryRows: q('#v2-carry tbody tr').map(e => e.querySelector('td.c').textContent),
+      carryLab: (document.querySelector('#v2-carry .v2barlab') || {}).textContent || '',
+      chronicFreq: q('.rx .freq[data-mis]').map(e => e.textContent),
+      c1rx: q('.rx.c1 .freq').map(e => e.textContent),
+      rank: !!document.querySelector('.rankcard'), text: document.getElementById('app').innerText };
+  });
+  chk('화학Ⅰ 심화에는 석차 카드가 없다', !S2.rank && S2.M.rank === null, true);
+  chk('화면 타일이 RPT 와 같다', JSON.stringify(S2.tiles) === JSON.stringify(S2.M.v2x.tiles.map(t => t.v + t.u + '|' + t.k)), S2.tiles.join(' · '));
+  const C = S2.M.carry;
+  chk('이어 온 기록이 있다', !!C && C.total > 0, C ? C.total + '개' : '없음');
+  chk('화면 ②절 줄이 RPT 와 같다', JSON.stringify(S2.carryRows) === JSON.stringify(C.show.map(r => r.m)), S2.carryRows.length + '줄');
+  chk('화면 막대 숫자가 RPT 와 같다', S2.carryLab.includes('맞힘 ' + C.ok) && S2.carryLab.includes('틀림 ' + C.again) && S2.carryLab.includes('물음 ' + C.un), S2.carryLab);
+  chk('화면 «화학1 기록 합산» 분모가 RPT 와 같다', JSON.stringify(S2.c1rx) === JSON.stringify(C.chronic.map(x => x.freq)), S2.c1rx.join(' · '));
+  const [dl2] = await Promise.all([p2.waitForEvent('download', { timeout: 90000 }), p2.click('#docxBtn')]);
+  const f2 = path.join(tmp, 'v2.docx'); await dl2.saveAs(f2);
+  const t2 = docxText(f2, tmp), parts2 = docxParts(f2, tmp);
+  chk('종이에 「화학1에서 이어 온 기록」 이 있다', t2.includes('화학1에서 이어 온 기록'), true);
+  const rowsInDoc = C.show.filter(r => t2.includes(r.m));
+  chk('종이의 이어 온 기록 줄이 화면과 같다(같은 개념 · 같은 개수)', rowsInDoc.length === C.show.length && (C.more ? t2.includes('그 밖에 ' + C.more + '개') : true), rowsInDoc.length + ' / ' + C.show.length);
+  chk('종이의 합계가 화면과 같다', t2.includes('심화에서 맞힘 ' + C.ok) && t2.includes('다시 틀림 ' + C.again) && t2.includes('아직 안 물음 ' + C.un) && t2.includes('(모두 ' + C.total + '개)'), true);
+  chk('종이의 «화학1 기록 합산» 분모가 화면과 같다', C.chronic.every(x => new RegExp(x.m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+' + x.freq).test(t2)), C.chronic.length + '개');
+  chk('종이의 고질 분모가 화면과 같다', S2.M.chronic.every(m => t2.includes(m.freq)), S2.M.chronic.map(m => m.freq).join(' · '));
+  chk('종이에 타일 숫자가 같다', S2.M.v2x.tiles.every(t => t2.includes(t.k)), true);
+  chk('종이에 진행 곡선 그림이 들어간다', /<pic:pic|<w:drawing/.test(parts2.xml), true);
+  chk('종이에 석차 행이 없다(화학Ⅰ 심화)', !/반에서 위치|상위 약/.test(t2), true);
+  if (S2.M.v2x.preview && S2.M.v2x.preview.items.some(x => x.lec)) chk('종이에 강의 링크가 걸린다', /<w:hyperlink/.test(parts2.xml), true);
+  chk('종이에도 «**» · 겁주는 낱말이 없다', !/\*\*/.test(t2) && !BAN.test(t2), (t2.match(BAN) || []).join(' '));
+  chk('화면에도 «**» · 겁주는 낱말이 없다', !/\*\*/.test(S2.text) && !BAN.test(S2.text), (S2.text.match(BAN) || []).join(' '));
 
   console.log('\n' + (errs.length ? 'JS 오류: ' + errs.slice(0, 3).join(' | ') : 'JS 오류 없음'));
   if (errs.length) fail++;
