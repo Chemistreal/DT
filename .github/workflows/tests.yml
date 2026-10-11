@@ -48,6 +48,9 @@ jobs:
       # 화학Ⅱ 1·2회는 문항 세트가 통째로 뒤바뀌어 있어(선생님 확인 대기) 세기만 한다.
       - name: 해설지 HTML 이 회차 JSON 과 같은 말을 한다
         run: python3 tools/haeseol_sync.py --check
+      # 문제지 HTML 은 아무도 안 쟀다 — 화학Ⅱ 1·2회 문항이 통째로 뒤바뀌고 «M&#x₂₇;V&#x₂₇;» 가 찍혀 있었다(2026-10-11).
+      - name: 문제지 HTML 이 회차 JSON 과 같은 말을 한다
+        run: python3 tools/munje_sync.py --check
       # 강의가 없는 주제를 세어 보여 주는 장. 안 걸어 두면 자료가 바뀌어도
       # 장이 옛말을 하고, 그걸 아무도 모른다 — 걸지 않은 자는 없는 자와 같다.
       - name: 강의 없는 주제 목록이 자료와 일치

@@ -118,7 +118,7 @@ def render(text):
              먼저 위첨자로 돌린다. 지금 문항 목록에는 이런 글자가 없다(전수 확인)."""
     t = html.escape(text or '', quote=False)
     t = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', t)              # **용액** → 굵게
-    t = re.sub(r'\^\(([^)]*)\)', r'<sup>\1</sup>', t)                  # e^(-Ea/RT)
+    t = re.sub(r'\^\(((?:[^()]|\([^()]*\))*)\)', r'<sup>\1</sup>', t)  # e^(-Ea/RT) · e^(−10000/(8.314 × 300)) — 괄호 한 겹 안까지
     t = re.sub(r'\^([-+]?[0-9A-Za-zΔα-ω]+)', r'<sup>\1</sup>', t)       # 10^-3 · (RT)^Δn
     t = re.sub(r'(^|[^A-Za-z0-9])([1-7][spdf]|sp)([0-9]+)(?:(d)([0-9]+))?',   # 1s2 · sp3d2
                _orbital, t)

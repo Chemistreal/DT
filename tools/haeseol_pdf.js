@@ -33,6 +33,7 @@ const fs = require('fs');
 const PLAYWRIGHT = process.env.PLAYWRIGHT_MODULE || 'playwright';
 const CHROMIUM = process.env.CHROMIUM_PATH || undefined;
 const ROOT = path.join(__dirname, '..');
+const TYPESET = require('./print_typeset.js');
 const SKIP = new Set();   // 화학Ⅱ 1·2회 뒤바뀜은 2026-09-28 에 풀렸다
 
 const argv = process.argv.slice(2);
@@ -71,6 +72,7 @@ catch (e) {
     const before = fs.existsSync(dst) ? fs.statSync(dst).size : 0;
     try {
       await page.goto('file://' + src, { waitUntil: 'load' });
+      await TYPESET.apply(page);          // 글꼴(Sym·Noto CJK)·붙는 칸·Ka 아래첨자·띠 부제 — tools/print_typeset.js
       await page.pdf({ path: dst, format: 'A4', printBackground: true });
     } catch (e) {
       console.log(`  FAIL  ${f}  ${String(e.message || e).slice(0, 80)}`); fail++; continue;

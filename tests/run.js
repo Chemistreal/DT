@@ -4294,6 +4294,10 @@ async function assertNoOverflow(page, label) {
         await page.waitForSelector('.card.sols', { timeout: 30000 });
         await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
         const rep = await page.evaluate(() => document.getElementById('app').innerText);
+        /* SNAP_UPDATE=1 — 문항 원문을 고친 뒤(교정) 기준 글을 새로 받는다. 받은 뒤 tools 쪽에서 «띄어쓰기·부호만
+           달라졌는지» 따로 대조한다(2026-10-11 화학Ⅰ·Ⅱ·일반화학 전수 교정). */
+        const UPD = process.env.SNAP_UPDATE === '1';
+        if (UPD) S0.report = rep;
         if (rep !== S0.report) {
           const a = rep.split('\n'), b = S0.report.split('\n'); let i = 0; while (i < a.length && a[i] === b[i]) i++;
           throw new Error('성적표 글이 달라졌다 — ' + (i + 1) + '번째 줄: «' + (a[i] || '') + '» ≠ «' + (b[i] || '') + '»');
@@ -4302,11 +4306,13 @@ async function assertNoOverflow(page, label) {
         await page.waitForFunction(() => typeof S !== 'undefined' && S && S.view === 'gate', null, { timeout: 30000 });
         const gate = await page.evaluate(() => S.gate.gates.map(g => (g.c || g.mis || '') + '|' + g.checks.map(c => c.s + '=' + c.a).join(' / ')));
         const retake = await page.evaluate(() => { startRetake(); return S.keyItems.map(x => (x.c || '') + '|' + x.s + '=' + x.a); });
+        if (UPD) { S0.gate = gate; S0.retake = retake; }
         assert(JSON.stringify(gate) === JSON.stringify(S0.gate), '재시 링크 게이트가 달라졌다');
         assert(JSON.stringify(retake) === JSON.stringify(S0.retake), '재시 문항이 달라졌다');
         await page.goto(BASE + 'retake_entry.html');
         await page.waitForFunction(() => !!window.DTRetake, null, { timeout: 30000 });
         const paper = await page.evaluate(async a => { const r = await DTRetake.items({ key: a.key, course: a.course, round: 4, attemptNo: 2, rows: a.rows }); return r.items.map(x => (x.c || '') + '|' + x.s + '=' + x.a); }, { key, course: rows[0].course, rows });
+        if (UPD) { S0.paper = paper; fs.writeFileSync(path.join(ROOT, 'tests', 'fixtures', 'single_course_snapshot.json'), JSON.stringify(SNAP)); }
         assert(JSON.stringify(paper) === JSON.stringify(S0.paper), '종이 재시가 달라졌다');
       });
     }
