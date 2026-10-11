@@ -12,7 +12,7 @@
  "steps": [
   {
    "unit": "Ⅰ-3",
-   "tag": "계수맞추기",
+   "tag": "계수 맞추기",
    "title": "계수만 바꾼다",
    "trap": {
     "q": "물이 생기는 반응식은 H₂ + O₂ → H₂O₂로 써서 맞춘다.",
@@ -34,7 +34,7 @@
   },
   {
    "unit": "Ⅰ-3",
-   "tag": "계수맞추기",
+   "tag": "계수 맞추기",
    "title": "연소 반응과 미정계수법",
    "trap": {
     "q": "C₄H₁₀ 1 mol을 완전 연소시키려면 O₂ 13 mol이 필요하다.",
@@ -56,7 +56,7 @@
   },
   {
    "unit": "Ⅰ-3",
-   "tag": "계수맞추기",
+   "tag": "계수 맞추기",
    "title": "알짜 이온 반응식",
    "trap": {
     "q": "CaCO₃와 묽은 염산의 알짜 이온 반응식에는 CO₃²⁻을 쓴다.",
@@ -78,7 +78,7 @@
   },
   {
    "unit": "Ⅰ-3",
-   "tag": "양적관계",
+   "tag": "양적 관계",
    "title": "계수비 = 몰비 = 부피비",
    "trap": {
     "q": "2H₂ + O₂ → 2H₂O에서 반응하는 H₂와 O₂의 질량비는 2 : 1이다.",
@@ -93,14 +93,14 @@
    "fig": {
     "title": "같은 반응, 세 가지 비",
     "svg": "<svg viewBox='0 0 600 198' width='600' height='198'><text x='260' y='20' text-anchor='middle' font-size='15' fill='#222'>N₂ + 3H₂ → 2NH₃</text><rect x='30' y='38' width='56' height='70' fill='#555' stroke='#222' stroke-width='1.2'/><text x='58' y='70' text-anchor='middle' font-size='13' fill='#fff'>N₂</text><text x='58' y='90' text-anchor='middle' font-size='13' fill='#fff'>1 L</text><text x='103' y='78' text-anchor='middle' font-size='15' fill='#222'>+</text><rect x='120' y='38' width='168' height='70' fill='#fff' stroke='#222' stroke-width='1.2'/><text x='204' y='70' text-anchor='middle' font-size='13' fill='#222'>H₂</text><text x='204' y='90' text-anchor='middle' font-size='13' fill='#222'>3 L</text><line x1='300' y1='73' x2='347.2' y2='73' stroke='#222' stroke-width='1.5'/><polygon points='352,73 344.7,76.4 344.7,69.6' fill='#222' stroke='none'/><rect x='362' y='38' width='112' height='70' fill='#ccc' stroke='#222' stroke-width='1.2'/><text x='418' y='70' text-anchor='middle' font-size='13' fill='#222'>NH₃</text><text x='418' y='90' text-anchor='middle' font-size='13' fill='#222'>2 L</text><text x='58' y='135' text-anchor='middle' font-size='13' fill='#222'>1 mol</text><text x='204' y='135' text-anchor='middle' font-size='13' fill='#222'>3 mol</text><text x='418' y='135' text-anchor='middle' font-size='13' fill='#222'>2 mol</text><text x='490' y='135' text-anchor='start' font-size='13' fill='#555'>몰수 비 1 : 3 : 2</text><text x='58' y='161' text-anchor='middle' font-size='13' fill='#222'>28 g</text><text x='204' y='161' text-anchor='middle' font-size='13' fill='#222'>6 g</text><text x='418' y='161' text-anchor='middle' font-size='13' fill='#222'>34 g</text><text x='490' y='161' text-anchor='start' font-size='13' fill='#555'>질량 28 + 6 = 34</text><text x='490' y='78' text-anchor='start' font-size='13' fill='#555'>부피 비 1 : 3 : 2</text><text x='260' y='188' text-anchor='middle' font-size='13' fill='#555'>4 L → 2 L · 부피(몰수)는 줄어도 질량은 보존</text></svg>",
-    "cap": "같은 온도·압력의 기체 — 부피 비 = 몰수 비 = 계수 비"
+    "cap": "같은 온도·압력의 기체 — 부피비 = 몰비 = 계수비"
    },
    "deep": "양적 관계는 **몰로 바꾸기 → 계수비 → 되돌리기**의 세 걸음이다. CH₄ 8 g(0.5 mol)이 완전 연소하면 CO₂도 0.5 mol, 곧 22 g이 생긴다.",
    "next": "반응물이 계수비와 다르게 섞이면 다음 걸음, 한계 반응물이 나온다."
   },
   {
    "unit": "Ⅰ-3",
-   "tag": "양적관계",
+   "tag": "양적 관계",
    "title": "한계 반응물과 수득률",
    "trap": {
     "q": "N₂ 2 mol과 H₂ 3 mol을 반응시키면 몰수가 적은 N₂가 먼저 바닥난다.",
@@ -122,7 +122,7 @@
   },
   {
    "unit": "Ⅰ-3",
-   "tag": "양적관계",
+   "tag": "양적 관계",
    "title": "연소 분석",
    "trap": {
     "q": "연소 분석에서 시료 속 O의 질량은 생긴 CO₂와 H₂O에서 바로 구한다.",
@@ -144,7 +144,7 @@
   },
   {
    "unit": "Ⅰ-3",
-   "tag": "양적관계",
+   "tag": "양적 관계",
    "title": "기체 반응과 압력",
    "trap": {
     "q": "부피와 온도가 일정하면 기체 반응이 일어나도 전체 압력은 그대로다.",

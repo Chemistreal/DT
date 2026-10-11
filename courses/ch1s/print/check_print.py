@@ -10,6 +10,7 @@
   ④ Unifont        심화반 PDF(문제지·해설지·OMR·선수노트·합본)에 Unifont 글꼴이 들어 있음(ₗ 가 ₁ 처럼 찍힌다)
   ⑤ 정답 대조      해설지 1쪽 빠른 정답 · 해설 쪽 정답 칸 ↔ 회차 파일 appdata/round_ch1s_NN.json 정답
   ⑥ OMR           1~60 번호가 다 있고 한 쪽인지
+  ⑦ 빠진 글꼴      PDF 쪽 리소스에서 글꼴이 빠져 글자가 빈칸으로 찍히는 곳(pdftotext 경고)
 """
 import json
 import os
@@ -150,6 +151,16 @@ def main():
         uni = [n for n in fonts_of(fp) if 'unifont' in n.lower()]
         if uni:
             errs.append('%s: Unifont 글꼴 %s' % (p, ', '.join(sorted(uni))))
+        # ⑦ 빠진 글꼴: 합칠 때 Type3 글꼴이 엉키면 쪽 리소스에서 글꼴이 사라져 일부 보기 프로그램에서
+        #   글자가 빈칸으로 찍힌다(2026-10-11 합본 «기체 상수» → «체 상수»). poppler 가 그 자리를 짚어 준다.
+        try:
+            er = subprocess.run(['pdftotext', fp, os.devnull], capture_output=True, text=True).stderr
+        except FileNotFoundError:
+            er = ''
+            errs.append('pdftotext 없음 — 빠진 글꼴 검사를 못 했다')
+        nf = er.count('No font in show') + er.count('Unknown font tag') + er.count('font resource is not a dictionary')
+        if nf:
+            errs.append('%s: 쪽 리소스에서 빠진 글꼴 %d곳(글자가 빈칸으로 찍힌다)' % (p, nf))
     for e in errs:
         print('✗', e)
     print('인쇄 전 검사: 걸린 것 %d건 (PDF %d개)' % (len(errs), len(pdfs)))

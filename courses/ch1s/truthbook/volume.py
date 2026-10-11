@@ -37,7 +37,10 @@ if out.page_count != info['pages']:
     sys.exit('합본 쪽수 %d ≠ 조각 기록 %d' % (out.page_count, info['pages']))
 out.set_toc(toc)
 out.set_metadata({'title': '화학 Ⅰ 심화 선수노트 합본 · 1~10회차', 'author': '화학 · 다원교육 · 조준모',
-                  'subject': '누적 OX 화학1 심화 선수노트', 'creator': 'courses/ch1s/truthbook/volume.py'})
+                  'subject': '누적 OX 화학 Ⅰ 심화 선수노트', 'creator': 'courses/ch1s/truthbook/volume.py'})
 dst = os.path.join(DT, 'volumes', 'chem1s_volume_rounds1to10.pdf')
-out.save(dst, garbage=4, deflate=True)
+# ⚠ garbage=3 이상(같은 객체 합치기)은 열 권의 Type3 글꼴을 서로 엉키게 한다 — 2026-10-11 선생님이 «기체 상수»가
+#   «체 상수»로 보인다고 짚었다. 쪽 리소스에서 글꼴이 빠져(pdftotext «No font in show») 일부 보기 프로그램에서
+#   «화·회·기» 같은 글자가 빈칸으로 찍혔다. 쓰지 않는 객체만 지우는 2로 둔다(check_print.py 가 지킨다).
+out.save(dst, garbage=2, deflate=True)
 print('합본', out.page_count, '쪽 · 책갈피', len(toc), '→', os.path.relpath(dst, DT))

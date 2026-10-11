@@ -38,11 +38,12 @@ LOGO = os.path.join(CH, 'truthbook', 'logo.png')
 
 # 틀(화학1 12회) 머리 위에 얹는 덧칠. 마지막 <style> 이라 앞의 것을 이긴다.
 #  · Sym: 위·아래 첨자(ₗ ₛ ⁺ ⁻ ⁰ …)·⇌·−(U+2212)를 DejaVu Sans 로 — 없으면 Unifont 로 찍혀 ₗ 가 ₁ 처럼 보인다
+#    ²·³·¹(U+00B2·00B3·00B9)도 넣는다 — 빠지면 이 셋만 Noto 로 크게 찍혀 ²²⁶Ra·10²³ 처럼 한 표기 안에서 크기가 들쭉날쭉했다
 #  · 한국어는 낱말 중간에서 줄을 바꾸지 않는다(keep-all), 너무 긴 덩이(화학식 등)만 아무 데서나 끊는다
 #  · 흑백 인쇄 대비: 띠의 단원 표기 #555, 해설지 「옳은 문장」 줄은 검은 왼쪽 선 + 굵게
-SYM = ('@font-face{font-family:Sym;src:local("DejaVu Sans"),local("DejaVuSans");unicode-range:U+2070-209F,U+21CC,U+2212}\n'
+SYM = ('@font-face{font-family:Sym;src:local("DejaVu Sans"),local("DejaVuSans");unicode-range:U+00B2-00B3,U+00B9,U+2070-209F,U+21CC,U+2212}\n'
        '@font-face{font-family:Sym;font-weight:bold;src:local("DejaVu Sans Bold"),local("DejaVuSans-Bold");'
-       'unicode-range:U+2070-209F,U+21CC,U+2212}\n')
+       'unicode-range:U+00B2-00B3,U+00B9,U+2070-209F,U+21CC,U+2212}\n')
 CSS = SYM + """
 body{font-family:Sym,"Noto Sans CJK KR","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
   word-break:keep-all;overflow-wrap:anywhere}
@@ -76,8 +77,33 @@ td.bd .why b{color:#000}
 """
 
 
+# 줄바꿈이 «−191 / °C», «ΔH < / 0» 처럼 수와 단위, 부등식 사이를 가르지 않게 붙는 칸(U+00A0)으로 바꾼다.
+UNIT = r'(?:°C|kJ|J|mmol|mol|mL|L|kg|mg|g|atm|kPa|Pa|M|pm|nm|K|u|cm³|m³)(?![A-Za-z])'
+
+
+def nbsp(s):
+    s = re.sub(r'(\d) (?=' + UNIT + ')', '\\1\u00a0', s)
+    s = re.sub(r' ([<>≤≥]) ', '\u00a0\\1\u00a0', s)
+    s = re.sub(r'(\d) : (?=\d)', '\\1\u00a0:\u00a0', s)
+    return re.sub(r' − (?=[\d(])', '\u00a0−\u00a0', s)
+
+
+# 인쇄 활자 다듬기(원문은 그대로, 찍을 때만):
+#  · Ka·Kb·Kw·pKa 의 a·b·w 는 아래첨자로(유니코드에 아래첨자 w 가 없어 원문은 Ka 로 적는다), Ka₁ → Ka1 아래첨자
+#  · 기호·첨자·닫는 괄호 뒤에 붙은 조사(H₃O⁺이다, (F 4.0)이다)가 줄 첫머리로 떨어지지 않게 낱말 잇개(U+2060)
+#  · «브뢴스테드-로리» 처럼 한글-한글로 이은 말은 하이픈에서 끊지 않는다
+SUBN = str.maketrans('₁₂₃', '123')
+
+
+def typeset(h):
+    h = re.sub(r'(?<![A-Za-z])(p?)K([abw])([₁₂₃]?)(?![A-Za-z])',
+               lambda m: '%sK<sub>%s%s</sub>' % (m.group(1), m.group(2), m.group(3).translate(SUBN)), h)
+    h = re.sub(r'([)\]⁺⁻⁰¹²³⁴⁵⁶⁷⁸⁹₀-₉])(?=[가-힣])', '\\1\u2060', h)
+    return re.sub(r'([가-힣]+-[가-힣]+)', r'<span style="white-space:nowrap">\1</span>', h)
+
+
 def esc(s):
-    return re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html.escape(s or '', quote=False))
+    return typeset(re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html.escape(nbsp(s or ''), quote=False)))
 
 
 def read(p):
@@ -105,17 +131,18 @@ def bands(r, dz):
 
 def brand(r, kind):
     return ('<div class="brand"><div><div class="lab">%s</div>\n'
-            '<h1 class="tt">누적 OX 화학1 심화 %d회</h1></div>\n'
-            '<div class="rt"><span class="kind">%s</span><br>화학1 심화반</div></div>' % (BRAND, r, kind))
+            '<h1 class="tt">누적 OX 화학 Ⅰ 심화 %d회</h1></div>\n'
+            '<div class="rt"><span class="kind">%s</span><br>화학 Ⅰ 심화반</div></div>' % (BRAND, r, kind))
 
 
 def foot(r, kind):
-    return '<div class="foot">%s · 누적 OX 화학1 심화 %d회 %s</div>' % (BRAND, r, kind)
+    return '<div class="foot">%s · 누적 OX 화학 Ⅰ 심화 %d회 %s</div>' % (BRAND, r, kind)
 
 
 def munje_html(r, items, dz):
     tpl = read(os.path.join(DT, 'munje_ch1_round%02d.html' % TPL))
     meta = tpl[tpl.find('<table class="meta">'):tpl.find('<div class="inst">')]
+    meta = meta.replace('Nᴀ', '<i>N</i><sub>A</sub>')   # 틀의 «Nᴀ»(작은 대문자 U+1D00)는 아래첨자가 아니다
     body = [brand(r, '문제지'), meta]
     for i, (lab, sub, a, b) in enumerate(bands(r, dz)):
         rows = ''.join('<tr><td class="no">%d</td><td class="st">%s</td><td class="ox"><span class="m">O</span>'
@@ -125,7 +152,7 @@ def munje_html(r, items, dz):
         body.append('<div class="inst"%s><span class="sec">%s</span>%s<span class="s">%s</span></div>'
                     '<table class="q">%s</table>' % (brk, lab, INST, html.escape(sub), rows))
     body.append('\n' + foot(r, '문제지'))
-    return head(tpl, '누적 OX 화학1 심화 %d회 문제지' % r) + '<body>\n' + ''.join(body) + '\n</body></html>\n'
+    return head(tpl, '누적 OX 화학 Ⅰ 심화 %d회 문제지' % r) + '<body>\n' + ''.join(body) + '\n</body></html>\n'
 
 
 # ───────── 해설지 ─────────
@@ -134,7 +161,7 @@ TOK = re.compile(r'\s+|[0-9]+(?:\.[0-9]+)?|[^\s0-9]+')
 
 def mark_diff(s, f):
     """틀린 문장 s 와 옳은 문장 f 의 다른 낱말을 찾아 (s 쪽 HTML, f 쪽 HTML). 같은 부분은 그대로."""
-    a, b = TOK.findall(s), TOK.findall(f)
+    a, b = TOK.findall(nbsp(s)), TOK.findall(nbsp(f))
     sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
     oa, ob = [], []
     for op, i1, i2, j1, j2 in sm.get_opcodes():
@@ -145,7 +172,7 @@ def mark_diff(s, f):
             continue
         oa.append('<span class="wrong">%s</span>' % ta if ta.strip() else ta)
         ob.append('<span class="right">%s</span>' % tb if tb.strip() else tb)
-    return ''.join(oa), ''.join(ob)
+    return typeset(''.join(oa)), typeset(''.join(ob))
 
 
 def stars(lvl):
@@ -174,7 +201,7 @@ def haeseol_html(r, items, dz, bank):
                    % (items[k]['a'].lower(), k + 1, items[k]['a']) for k in order)
     nO = sum(1 for it in items if it['a'] == 'O')
     top = ''.join('<li><span class="rk">%d</span><span class="nm">%s<small>%s · %s번</small></span><span class="ol">%s</span></li>'
-                  % (i + 1, html.escape(name), html.escape(e['u']), '·'.join(map(str, e['nos'])), esc(ol))
+                  % (i + 1, typeset(html.escape(name)), html.escape(e['u']), '·'.join(map(str, e['nos'])), esc(ol))
                   for i, (name, e, ol) in enumerate(mis_top(items, bank)))
     out = [brand(r, '해설지'), meta,
            '<div class="qkwrap"><div class="qktitle">빠른 정답 · 60문항 (세로 채점)</div><div class="qklegend">정답 분포 '
@@ -215,7 +242,7 @@ def haeseol_html(r, items, dz, bank):
                % ''.join('<div class="ugroup"><div class="uhead">%s</div><ul class="s">%s</ul></div>'
                          % (html.escape(u), ''.join(groups[u])) for u in order_u))
     out.append('\n' + foot(r, '해설지'))
-    return head(tpl, '누적 OX 화학1 심화 %d회 해설지' % r) + '<body>\n' + ''.join(out) + '\n</body></html>\n'
+    return head(tpl, '누적 OX 화학 Ⅰ 심화 %d회 해설지' % r) + '<body>\n' + ''.join(out) + '\n</body></html>\n'
 
 
 # ───────── OMR ─────────
@@ -266,11 +293,11 @@ def omr_html(r):
             rows.append('<div class="%s"><span class="n">%d</span><span class="b">O</span><span class="b">X</span></div>'
                         % (' '.join(cls), c * 20 + i + 1))
         cols.append('<div class="col">%s</div>' % ''.join(rows))
-    title = '누적 OX 화학Ⅰ 심화 %d회' % r
+    title = '누적 OX 화학 Ⅰ 심화 %d회' % r
     return ('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             '<title>%s OMR 답안지</title><style>%s</style></head><body>'
-            '<div class="top"><img src="%s" alt="다원교육"><div class="rt"><b>%s</b><span>화학1 심화 %d회 · OMR 답안지</span></div></div>'
-            '<div class="ttl"><span class="k">OMR 답안지</span><h1>화학Ⅰ 심화 %d회</h1></div>'
+            '<div class="top"><img src="%s" alt="다원교육"><div class="rt"><b>%s</b><span>화학 Ⅰ 심화 %d회 · OMR 답안지</span></div></div>'
+            '<div class="ttl"><span class="k">OMR 답안지</span><h1>화학 Ⅰ 심화 %d회</h1></div>'
             '<div class="id"><div>소속 학교<i></i></div><div>성명<i></i></div><div>학년<i></i></div><div>날짜<i></i></div></div>'
             '<div class="sheet"><div class="hd">답안 표기란<span>해당 칸을 진하게 칠하시오 · O 또는 X</span></div>'
             '<div class="grid">%s</div></div>'
@@ -285,7 +312,7 @@ def cover_texts(r, dz):
     info = dz['rounds'][r - 1]
     ink, grey = '#131313', '#6b6b70'
     return [(0, '제 %d 회' % r, 15, 436, True, ink, 'c', 4), (0, info['title'], 11.5, 465, True, ink, 'c', 0),
-            (0, '화학1 심화반', 7.6, 788, False, ink, ('x', 73), 0), (0, '심화', 20, 374, True, ink, ('x', 388), 0),
+            (0, '화학 Ⅰ 심화반', 7.6, 788, False, ink, ('x', 73), 0), (0, '심화', 20, 374, True, ink, ('x', 388), 0),
             (0, BRAND, 10, 73, True, ink, ('r', 529), 1.2), (0, '화학 Ⅰ  심화반', 8.6, 262, False, grey, 'c', 3),
             (0, BRAND, 7.6, 788, False, ink, ('r', 530), 0),
             (1, BRAND, 9, 60, True, ink, ('r', 564), 1), (1, '참고용 주기율표', 7.6, 128, False, grey, ('r', 564), 0),
@@ -343,7 +370,7 @@ def pdf(files):
 
 
 def meta(doc, title):
-    doc.set_metadata({'title': title, 'author': BRAND, 'subject': '누적 OX 화학1 심화',
+    doc.set_metadata({'title': title, 'author': BRAND, 'subject': '누적 OX 화학 Ⅰ 심화',
                       'creator': 'courses/ch1s/print/make_print.py'})
 
 
@@ -368,13 +395,13 @@ def main():
         doc = cover(r, dz)
         doc.insert_pdf(g('munje'))
         doc.insert_pdf(g('omr'))
-        meta(doc, '누적 OX 화학1 심화 %d회 문제지' % r)
+        meta(doc, '누적 OX 화학 Ⅰ 심화 %d회 문제지' % r)
         doc.save(os.path.join(DT, 'munje_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
         h = g('haeseol')
-        meta(h, '누적 OX 화학1 심화 %d회 해설지' % r)
+        meta(h, '누적 OX 화학 Ⅰ 심화 %d회 해설지' % r)
         h.save(os.path.join(DT, 'haeseol_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
         o = g('omr')
-        meta(o, '누적 OX 화학1 심화 %d회 OMR 답안지' % r)
+        meta(o, '누적 OX 화학 Ⅰ 심화 %d회 OMR 답안지' % r)
         o.save(os.path.join(DT, 'omr_ch1s_round%02d.pdf' % r), garbage=4, deflate=True)
         print('%d회 문제지 %d쪽 · 해설지 %d쪽 · OMR %d쪽' % (r, doc.page_count, h.page_count, o.page_count))
 

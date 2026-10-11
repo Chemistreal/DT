@@ -20,17 +20,26 @@ const HERE = __dirname;
 const DT = path.resolve(HERE, '..', '..', '..');
 const CH = path.resolve(HERE, '..');
 const pad = n => String(n).padStart(2, '0');
-const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+/* 줄바꿈이 «−191 / °C», «ΔH < / 0» 처럼 수와 단위, 부등식 사이를 가르지 않게 붙는 칸(U+00A0)으로 (make_print.py nbsp 와 같다) */
+const UNIT = '(?:°C|kJ|J|mmol|mol|mL|L|kg|mg|g|atm|kPa|Pa|M|pm|nm|K|u|cm³|m³)(?![A-Za-z])';
+const nbsp = s => s.replace(new RegExp('(\\d) (?=' + UNIT + ')', 'g'), '$1\u00a0').replace(/ ([<>≤≥]) /g, '\u00a0$1\u00a0').replace(/ − (?=[\d(])/g, '\u00a0−\u00a0').replace(/(\d) : (?=\d)/g, '$1\u00a0:\u00a0');
+const esc = s => nbsp(String(s == null ? '' : s)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/* 인쇄 활자 다듬기(make_print.py typeset 와 같다): Ka·Kb·Kw·pKa 아래첨자 · 기호/첨자/닫는 괄호 뒤 조사에 낱말 잇개(U+2060) · 한글-한글 하이픈 말은 안 끊기 */
+const SUBN = { '₁': '1', '₂': '2', '₃': '3' };
+const typeset = h => h
+  .replace(/(^|[^A-Za-z])(p?)K([abw])([₁₂₃]?)(?![A-Za-z])/g, (m, pre, p, k, n) => `${pre}${p}K<sub>${k}${n ? SUBN[n] : ''}</sub>`)
+  .replace(/([)\]⁺⁻⁰¹²³⁴⁵⁶⁷⁸⁹₀-₉])(?=[가-힣])/g, '$1\u2060')
+  .replace(/([가-힣]+-[가-힣]+)/g, '<span style="white-space:nowrap">$1</span>');
+const md = s => typeset(esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'));
 const LOGO = 'data:image/png;base64,' + fs.readFileSync(path.join(HERE, 'logo.png')).toString('base64');
 const KNUM = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉'];
 
 function css() {
   /* 회색 단계: 글자 #000 · #444 · #767676 / 선 #999 · #bfbfbf / 바탕 #e6e6e6 (흑백 인쇄에서 단계가 뭉개지지 않게)
-     Sym: 위·아래 첨자·⇌·− 를 DejaVu Sans 로(없으면 Unifont 로 찍힌다) · 한글은 Noto CJK KR(화학1 선수노트와 같게) */
+     Sym: 위·아래 첨자·⇌·− 를 DejaVu Sans 로(없으면 Unifont 로 찍힌다) · ²³¹ 도 넣는다(빠지면 이 셋만 크게 찍힌다) · 한글은 Noto CJK KR(화학1 선수노트와 같게) */
   return `
-@font-face { font-family: Sym; src: local("DejaVu Sans"), local("DejaVuSans"); unicode-range: U+2070-209F, U+21CC, U+2212; }
-@font-face { font-family: Sym; font-weight: bold; src: local("DejaVu Sans Bold"), local("DejaVuSans-Bold"); unicode-range: U+2070-209F, U+21CC, U+2212; }
+@font-face { font-family: Sym; src: local("DejaVu Sans"), local("DejaVuSans"); unicode-range: U+00B2-00B3, U+00B9, U+2070-209F, U+21CC, U+2212; }
+@font-face { font-family: Sym; font-weight: bold; src: local("DejaVu Sans Bold"), local("DejaVuSans-Bold"); unicode-range: U+00B2-00B3, U+00B9, U+2070-209F, U+21CC, U+2212; }
 @page { size: A4; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: #fff; color: #000; }
@@ -217,11 +226,11 @@ function flowBlocks(R, D, items, bp) {
   items.forEach((it, k) => {
     const g = bp[k]['구획'] === '신규' ? '신규 · 이번 회차' : '복습 · 앞 회차';
     if (g !== last) { B.push({ html: `<div class="grp">${g}</div>`, keep: true }); last = g; }
-    B.push({ html: `<div class="it"><span class="k">${it.n.split('-')[1]}</span><span class="body">${esc(it.f)}</span></div>` });
+    B.push({ html: `<div class="it"><span class="k">${it.n.split('-')[1]}</span><span class="body">${typeset(esc(it.f))}</span></div>` });
   });
   const xs = items.filter(it => it.a === 'X');
   B.push({ head: true, html: `<div class="coll" style="margin-top:3mm"><h2 class="serif">흔한 함정 바로잡기</h2><div class="lead">이번 시험의 틀린 문장 ${xs.length}개와 바로잡은 문장이다. 어디를 고쳤는지 짚어 가며 읽어라.</div></div>`, keep: true });
-  xs.forEach(it => B.push({ html: `<div class="pair"><span class="lx">틀림</span><span class="x">${esc(it.s)}</span><span class="lo">맞음</span><span>${esc(it.f)}</span></div>` }));
+  xs.forEach(it => B.push({ html: `<div class="pair"><span class="lx">틀림</span><span class="x">${typeset(esc(it.s))}</span><span class="lo">맞음</span><span>${typeset(esc(it.f))}</span></div>` }));
   return B;
 }
 

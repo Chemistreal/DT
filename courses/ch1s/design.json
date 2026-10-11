@@ -3,10 +3,10 @@
  "name": "화학1 심화",
  "rounds": [
   {"round": 1, "title": "원자와 몰", "new_sections": ["Ⅰ-1 화학식량", "Ⅰ-2 몰"], "review_range": "없음 — 60문항 모두 신규", "lvl_target": {"1": 14, "2": 28, "3": 18}, "ox_target": {"O": 38, "X": 22}},
-  {"round": 2, "title": "반응식과 양적 관계", "new_sections": ["Ⅰ-3 양적관계"], "review_range": "1회 · Ⅰ-1 화학식량, Ⅰ-2 몰", "lvl_target": {"1": 13, "2": 28, "3": 19}, "ox_target": {"O": 37, "X": 23}},
+  {"round": 2, "title": "반응식과 양적 관계", "new_sections": ["Ⅰ-3 양적 관계"], "review_range": "1회 · Ⅰ-1 화학식량, Ⅰ-2 몰", "lvl_target": {"1": 13, "2": 28, "3": 19}, "ox_target": {"O": 37, "X": 23}},
   {"round": 3, "title": "원자핵·원자 모형·오비탈", "new_sections": ["Ⅱ-1 원자"], "review_range": "1~2회 · Ⅰ-1 화학식량 ~ Ⅰ-3 양적관계 · 직전 회차(2회) 비중 큼", "lvl_target": {"1": 12, "2": 27, "3": 21}, "ox_target": {"O": 38, "X": 22}},
   {"round": 4, "title": "전자 배치와 주기성", "new_sections": ["Ⅱ-2 전자 배치", "Ⅱ-3 주기적 성질"], "review_range": "1~3회 · Ⅰ-1 화학식량 ~ Ⅱ-1 원자 · 직전 회차(3회) 비중 큼", "lvl_target": {"1": 12, "2": 27, "3": 21}, "ox_target": {"O": 37, "X": 23}},
-  {"round": 5, "title": "화학 결합", "new_sections": ["Ⅲ-1 화학결합"], "review_range": "1~4회 · Ⅰ-1 화학식량 ~ Ⅱ-3 주기적 성질 · 직전 회차(4회) 비중 큼", "lvl_target": {"1": 12, "2": 27, "3": 21}, "ox_target": {"O": 38, "X": 22}},
+  {"round": 5, "title": "화학 결합", "new_sections": ["Ⅲ-1 화학 결합"], "review_range": "1~4회 · Ⅰ-1 화학식량 ~ Ⅱ-3 주기적 성질 · 직전 회차(4회) 비중 큼", "lvl_target": {"1": 12, "2": 27, "3": 21}, "ox_target": {"O": 38, "X": 22}},
   {"round": 6, "title": "분자 구조와 혼성", "new_sections": ["Ⅲ-2 분자의 구조"], "review_range": "1~5회 · Ⅰ-1 화학식량 ~ Ⅲ-1 화학결합 · 직전 회차(5회) 비중 큼", "lvl_target": {"1": 11, "2": 27, "3": 22}, "ox_target": {"O": 37, "X": 23}},
   {"round": 7, "title": "분자의 극성과 분자 사이 힘", "new_sections": ["Ⅲ-3 분자의 극성"], "review_range": "1~6회 · Ⅰ-1 화학식량 ~ Ⅲ-2 분자의 구조 · 직전 회차(6회) 비중 큼", "lvl_target": {"1": 11, "2": 27, "3": 22}, "ox_target": {"O": 38, "X": 22}},
   {"round": 8, "title": "열화학", "new_sections": ["Ⅳ-1 열화학"], "review_range": "1~7회 · Ⅰ-1 화학식량 ~ Ⅲ-3 분자의 극성 · 직전 회차(7회) 비중 큼", "lvl_target": {"1": 11, "2": 26, "3": 23}, "ox_target": {"O": 37, "X": 23}},
