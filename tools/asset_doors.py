@@ -50,7 +50,8 @@ KNOWN = {
     'supplements/chem_hwaol_truthlist.pdf',
     # 화학1 심화반 선수노트 합본(2026-10-03). 회차별 10권은 2026-10-03 에 materials.json(자료 화면)에 걸려
     # 여기서 지웠다. 합본은 화학1·2 합본처럼 걸 화면이 없어 ZIP 으로 직접 건넨다.
-    'volumes/chem1s_volume_rounds1to10.pdf',
+    'volumes/chem1s_volume1_rounds1to5.pdf',
+    'volumes/chem1s_volume2_rounds6to10.pdf',
 }
 
 

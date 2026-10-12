@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""화학1 심화 선수노트 10권을 한 권으로: volumes/chem1s_volume_rounds1to10.pdf
+"""화학1 심화 선수노트 10권을 두 권으로: volumes/chem1s_volume1_rounds1to5.pdf · chem1s_volume2_rounds6to10.pdf
+   (2026-10-12 선생님: 1~5회 · 6~10회 두 파일로 — 화학1 합본 1~9 · 10~18 과 같다)
    NODE_PATH=… node courses/ch1s/truthbook/render.js all   # 10권 + 합본 조각(tools/_stage/ch1s/volume/)
    python3 courses/ch1s/truthbook/volume.py
 
@@ -12,35 +13,44 @@ import sys
 import pymupdf
 
 DT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-VOL = os.path.join(DT, 'tools', '_stage', 'ch1s', 'volume')
+VOL0 = os.path.join(DT, 'tools', '_stage', 'ch1s', 'volume')
 HERE = os.path.dirname(os.path.abspath(__file__))
-info = json.load(open(os.path.join(VOL, 'vol.json'), encoding='utf-8'))
-out = pymupdf.open(os.path.join(VOL, 'vol_front.pdf'))
-toc = [[1, '표지', 1], [1, '차례', 2]]
-for row in info['rows']:
-    r = row['R']
-    p = os.path.join(VOL, 'vol_r%02d.pdf' % r)
-    if not os.path.exists(p):
-        sys.exit('%d회 합본 조각이 없다: %s — render.js all 부터' % (r, p))
-    d = pymupdf.open(p)
-    start = out.page_count + 1
-    if start != row['start']:
-        sys.exit('%d회 시작 쪽 %d ≠ 차례 %d' % (r, start, row['start']))
-    out.insert_pdf(d)
-    tb = json.load(open(os.path.join(HERE, 'round_%02d.json' % r), encoding='utf-8'))
-    toc.append([1, '%d회 · %s' % (r, tb['title']), start])
-    toc.append([2, '머리말', start + 1])
-    for i, s in enumerate(tb['steps']):
-        toc.append([2, '%d. %s' % (i + 1, s['title']), start + 2 + i])
-    toc.append([2, '옳은 문장집 · 낚시 문장집 · 심화 확장', start + 2 + len(tb['steps'])])
-if out.page_count != info['pages']:
-    sys.exit('합본 쪽수 %d ≠ 조각 기록 %d' % (out.page_count, info['pages']))
-out.set_toc(toc)
-out.set_metadata({'title': '화학 Ⅰ 심화 선수노트 합본 · 1~10회차', 'author': '화학 · 다원교육 · 조준모',
-                  'subject': '누적 OX 화학 Ⅰ 심화 선수노트', 'creator': 'courses/ch1s/truthbook/volume.py'})
-dst = os.path.join(DT, 'volumes', 'chem1s_volume_rounds1to10.pdf')
-# ⚠ garbage=3 이상(같은 객체 합치기)은 열 권의 Type3 글꼴을 서로 엉키게 한다 — 2026-10-11 선생님이 «기체 상수»가
-#   «체 상수»로 보인다고 짚었다. 쪽 리소스에서 글꼴이 빠져(pdftotext «No font in show») 일부 보기 프로그램에서
-#   «화·회·기» 같은 글자가 빈칸으로 찍혔다. 쓰지 않는 객체만 지우는 2로 둔다(check_print.py 가 지킨다).
-out.save(dst, garbage=2, deflate=True)
-print('합본', out.page_count, '쪽 · 책갈피', len(toc), '→', os.path.relpath(dst, DT))
+
+
+def build(n):
+    VOL = os.path.join(VOL0, 'v%d' % n)
+    info = json.load(open(os.path.join(VOL, 'vol.json'), encoding='utf-8'))
+    out = pymupdf.open(os.path.join(VOL, 'vol_front.pdf'))
+    toc = [[1, '표지', 1], [1, '차례', 2]]
+    for row in info['rows']:
+        r = row['R']
+        p = os.path.join(VOL, 'vol_r%02d.pdf' % r)
+        if not os.path.exists(p):
+            sys.exit('%d회 합본 조각이 없다: %s — render.js all 부터' % (r, p))
+        d = pymupdf.open(p)
+        start = out.page_count + 1
+        if start != row['start']:
+            sys.exit('%d회 시작 쪽 %d ≠ 차례 %d' % (r, start, row['start']))
+        out.insert_pdf(d)
+        tb = json.load(open(os.path.join(HERE, 'round_%02d.json' % r), encoding='utf-8'))
+        toc.append([1, '%d회 · %s' % (r, tb['title']), start])
+        toc.append([2, '머리말', start + 1])
+        for i, s in enumerate(tb['steps']):
+            toc.append([2, '%d. %s' % (i + 1, s['title']), start + 2 + i])
+        toc.append([2, '옳은 문장집 · 낚시 문장집 · 심화 확장', start + 2 + len(tb['steps'])])
+    if out.page_count != info['pages']:
+        sys.exit('합본 쪽수 %d ≠ 조각 기록 %d' % (out.page_count, info['pages']))
+    a, b = info['rows'][0]['R'], info['rows'][-1]['R']
+    out.set_toc(toc)
+    out.set_metadata({'title': '화학 Ⅰ 심화 선수노트 합본 %d · %d~%d회차' % (n, a, b), 'author': '화학 · 다원교육 · 조준모',
+                      'subject': '누적 OX 화학 Ⅰ 심화 선수노트', 'creator': 'courses/ch1s/truthbook/volume.py'})
+    dst = os.path.join(DT, 'volumes', 'chem1s_volume%d_rounds%dto%d.pdf' % (n, a, b))
+    # ⚠ garbage=3 이상(같은 객체 합치기)은 열 권의 Type3 글꼴을 서로 엉키게 한다 — 2026-10-11 선생님이 «기체 상수»가
+    #   «체 상수»로 보인다고 짚었다. 쪽 리소스에서 글꼴이 빠져(pdftotext «No font in show») 일부 보기 프로그램에서
+    #   «화·회·기» 같은 글자가 빈칸으로 찍혔다. 쓰지 않는 객체만 지우는 2로 둔다(check_print.py 가 지킨다).
+    out.save(dst, garbage=2, deflate=True)
+    print('합본 %d권' % n, out.page_count, '쪽 · 책갈피', len(toc), '→', os.path.relpath(dst, DT))
+
+
+for n in (1, 2):
+    build(n)

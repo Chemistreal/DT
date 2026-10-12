@@ -142,7 +142,7 @@ def main():
                 errs.append('%d회 선수노트 %d쪽 — 홀수' % (r, n))
         else:
             errs.append('%d회 선수노트 없음' % r)
-    pdfs.append(os.path.join('volumes', 'chem1s_volume_rounds1to10.pdf'))
+    pdfs += [os.path.join('volumes', 'chem1s_volume1_rounds1to5.pdf'), os.path.join('volumes', 'chem1s_volume2_rounds6to10.pdf')]
     for p in pdfs:
         fp = os.path.join(DT, p)
         if not os.path.exists(fp):

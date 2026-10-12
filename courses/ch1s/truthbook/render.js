@@ -317,24 +317,33 @@ async function render(browser, R, opt) {
 }
 
 /* 합본 앞쪽: 권 표지 · 차례(회차별 시작 쪽). 화학1 합본(volumes/chem1_volume1_rounds1to9.pdf)과 같은 짜임. */
-function volumeFront(rows) {
+/* 2026-10-12 선생님: 합본을 1~5회 · 6~10회 두 권으로(화학1 합본 1~9 · 10~18 처럼). */
+const VOLUMES = [
+  { n: 1, rounds: [1, 2, 3, 4, 5], sub: '원자에서 화학 결합까지',
+    units: [['Ⅰ', '화학식량 · 몰 · 양적 관계'], ['Ⅱ', '원자의 구조 · 전자 배치 · 주기성'], ['Ⅲ', '화학 결합']] },
+  { n: 2, rounds: [6, 7, 8, 9, 10], sub: '분자 구조에서 평형까지',
+    units: [['Ⅲ', '분자 구조 · 혼성 · 극성 · 분자 사이 힘'], ['Ⅳ', '열화학 · 산과 염기 · 평형과 중화 적정']] },
+];
+
+function volumeFront(rows, V) {
   const design = JSON.parse(fs.readFileSync(path.join(CH, 'design.json'), 'utf8'));
-  const units = [['Ⅰ', '화학식량 · 몰 · 양적 관계'], ['Ⅱ', '원자의 구조 · 전자 배치 · 주기성'], ['Ⅲ', '화학 결합 · 분자 구조 · 극성'], ['Ⅳ', '열화학 · 산과 염기 · 평형과 중화 적정']];
+  const units = V.units;
+  const span = V.rounds[0] + ' ~ ' + V.rounds[V.rounds.length - 1];
   const toc = rows.map(x => `<div class="row"><span class="n serif">${x.R}</span><span class="t">${esc(x.title)}<small>단원 ${esc(design.rounds[x.R - 1].new_sections.map(s => s.split(' ')[0]).join(' · '))}</small></span><span class="dots"></span><span class="pg">${x.start}</span></div>`).join('');
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>화학 Ⅰ 심화 선수노트 합본 · 1~10회차</title><style>${css()}</style></head><body>
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>화학 Ⅰ 심화 선수노트 합본 ${V.n} · ${V.rounds[0]}~${V.rounds[V.rounds.length - 1]}회차</title><style>${css()}</style></head><body>
 <section class="page cover"><div class="frame"></div><div class="inner"></div>
   <div class="brand"><img src="${LOGO}" alt="">${BRAND} · 옳은문장집</div>
   <svg class="hex" viewBox="0 0 150 150">${hexSvg()}</svg>
-  <div class="vol">합 본</div>
-  <div class="kicker">1 ~ 10 회차 · 누적 OX 선수노트</div>
+  <div class="vol">합 본 · ${V.n} 권</div>
+  <div class="kicker">${span} 회차 · 누적 OX 선수노트</div>
   <h1 class="serif">화학 Ⅰ<small>심화</small></h1>
-  <div class="sub">원자에서 평형까지</div>
+  <div class="sub">${esc(V.sub)}</div>
   <div class="rule"></div>
   <div class="units">${units.map(u => `<div><span class="serif">${u[0]}</span>${esc(u[1])}</div>`).join('')}</div>
   <div class="who"><strong>${BRAND}</strong><br>화학 Ⅰ 심화반</div>
   <div class="lec">선수노트 · 한 번 제대로 읽는 책</div></section>
-<section class="page vtoc"><div class="hd"><img src="${LOGO}" alt=""><span>화학 Ⅰ 심화 · 1 ~ 10 회차 합본</span></div>
-  <h2 class="serif">차 례</h2><div class="sub">화학 Ⅰ 심화 · 1 ~ 10 회차</div>${toc}
+<section class="page vtoc"><div class="hd"><img src="${LOGO}" alt=""><span>화학 Ⅰ 심화 · ${span} 회차 합본 ${V.n}</span></div>
+  <h2 class="serif">차 례</h2><div class="sub">화학 Ⅰ 심화 · ${span} 회차</div>${toc}
   <div class="foot">각 회차는 누적 OX 선수노트다 · 쪽 번호는 합본 쪽 번호 · 시험 전 옳은 문장집과 낚시 문장집을 함께 보라</div><div class="ft">2</div></section>
 </body></html>`;
 }
@@ -354,23 +363,26 @@ function volumeFront(rows) {
     }
     if (arg === 'all') {
       /* 합본 조각: 권 표지(1)·차례(2) 다음에 회차를 잇고, 쪽 번호를 합본 쪽 번호로 다시 찍는다 */
-      const VOL = path.join(DT, 'tools', '_stage', 'ch1s', 'volume');
-      fs.mkdirSync(VOL, { recursive: true });
-      let at = 3; const rows = [];
-      for (const R of rounds) {
-        const D = JSON.parse(fs.readFileSync(path.join(HERE, 'round_' + pad(R) + '.json'), 'utf8'));
-        rows.push({ R, title: D.title, start: at });
-        const r = await render(browser, R, { startNo: at + 1, out: path.join(VOL, 'vol_r' + pad(R) + '.pdf') });
-        if (r.pages !== counts[R]) throw new Error(R + '회 합본 조각 쪽수가 한 권과 다르다');
-        at += r.pages;
+      for (const V of VOLUMES) {
+        const VOL = path.join(DT, 'tools', '_stage', 'ch1s', 'volume', 'v' + V.n);
+        fs.mkdirSync(VOL, { recursive: true });
+        let at = 3; const rows = [];
+        for (const R of V.rounds) {
+          const D = JSON.parse(fs.readFileSync(path.join(HERE, 'round_' + pad(R) + '.json'), 'utf8'));
+          rows.push({ R, title: D.title, start: at });
+          const r = await render(browser, R, { startNo: at + 1, out: path.join(VOL, 'vol_r' + pad(R) + '.pdf') });
+          if (r.pages !== counts[R]) throw new Error(R + '회 합본 조각 쪽수가 한 권과 다르다');
+          at += r.pages;
+        }
+        const page = await browser.newPage();
+        await page.setContent(volumeFront(rows, V), { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        await page.pdf({ path: path.join(VOL, 'vol_front.pdf'), format: 'A4', printBackground: true, preferCSSPageSize: true });
+        await page.close();
+        fs.writeFileSync(path.join(VOL, 'vol.json'), JSON.stringify({ n: V.n, rows, pages: at - 1 }, null, 1));
+        console.log('합본', V.n, '권 조각', path.relative(DT, VOL));
       }
-      const page = await browser.newPage();
-      await page.setContent(volumeFront(rows), { waitUntil: 'load' });
-      await page.evaluate(() => document.fonts.ready);
-      await page.pdf({ path: path.join(VOL, 'vol_front.pdf'), format: 'A4', printBackground: true, preferCSSPageSize: true });
-      await page.close();
-      fs.writeFileSync(path.join(VOL, 'vol.json'), JSON.stringify({ rows, pages: at - 1 }, null, 1));
-      console.log('합본 조각', path.relative(DT, VOL), '· 이어서 python3 courses/ch1s/truthbook/volume.py');
+      console.log('이어서 python3 courses/ch1s/truthbook/volume.py');
     }
   } finally { await browser.close(); }
 })().catch(e => { console.error('✗', e.message); process.exit(1); });
