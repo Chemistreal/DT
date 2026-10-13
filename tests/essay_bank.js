@@ -19,7 +19,7 @@ const E = require(path.join(ROOT, 'essay.js'));
 
 /* 손으로 본 예외 — 긴 key 가 짧은 key 를 맞게 품는다(둘 다 맞는 말) · 뜻 있는 한 글자 기호 */
 const SUB_OK = new Set(['CH1-029#0', 'CH2-030#1', 'CH2-081#1', 'CH2-395#0', 'CH2-397#0']);
-const ONE_OK = new Set(['⇌']);
+const ONE_OK = new Set(['⇌', '철']);   // 원소 이름 한 글자(철 = Fe)도 뜻이 선다
 
 let bad = 0, total = 0;
 const fail = (f, w, m) => { bad++; if (bad <= 60) console.log('  FAIL  ' + f + ' ' + w + ' — ' + m); };
