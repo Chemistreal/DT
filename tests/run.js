@@ -4290,6 +4290,9 @@ async function assertNoOverflow(page, label) {
           const body = u.includes('student=') ? { ok: true, student: key, rows, excluded: [], cumulative: A, rank: S0.rank, ranks: [], cohort: null, challenges: [] } : { ok: true };
           return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
         });
+        /* 서술형 연습(2026-10-13)은 기준 글이 찍힌 뒤 생긴 구역이고, 그 글은 은행 문구에 따라 바뀐다 — 여기서는 빼고 맞댄다
+           (서술형은 아래 «서술형 연습» 시험들이 따로 잰다) */
+        await page.route('**/appdata/essay_*.json', route => route.fulfill({ status: 404, body: 'no' }));
         await page.goto(BASE + 'report.html?student=x');
         await page.waitForSelector('.card.sols', { timeout: 30000 });
         await page.waitForLoadState('networkidle'); await page.waitForTimeout(800);
@@ -4869,6 +4872,283 @@ async function assertNoOverflow(page, label) {
         assert(got === want, n + '회 정답표가 회차 파일과 다르다');
       }
     });
+  }
+
+  /* ══ 서술형 연습 · 나에게 맞춘 5문항 (선생님 결정 2026-10-13) ════════════════════════════════════
+     성적표가 은행(appdata/essay_<과목>.json)에서 그 학생이 이번 회차에 틀린 개념으로 다섯 문항을 고른다.
+     실제 은행은 집필 중이라 tests/fixtures/essay_<과목>.json(가상 문항)을 그 자리에 대신 넣는다.
+     잴 것: 고르는 차례(되풀이 오개념 → 앞 회차에도 틀림 → 번호) · 보충(앞 회차 미해결 → 심화) · 같은 입력이면 같은 문항 ·
+     «답 확인» 전에는 모범 답안이 DOM 에 없다 · 핵심 낱말 대조(공백·첨자·빼기 부호) · 새로고침해도 쓴 답이 남는다 ·
+     은행이 없으면 구역이 조용히 빠진다(네 과목). 학생은 가상이다. */
+  {
+    const CE = require(path.join(ROOT, 'chemengine.js'));
+    const ESX = require(path.join(ROOT, 'essay.js'));
+    const FIX = c => JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'essay_' + c + '.json'), 'utf8'));
+    const RFE = (c, n) => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_' + c + '_' + String(n).padStart(2, '0') + '.json'), 'utf8')).jeongsi.items;
+    const flipE = a => (a === 'O' ? 'X' : 'O');
+    const rowE = (K, course, r, wrong) => {
+      const items = RFE(course, r), units = {};
+      items.forEach((it, i) => { const u = units[it.u] || (units[it.u] = { u: it.u, t: 0, w: 0 }); u.t++; if (wrong.indexOf(i) >= 0) u.w++; });
+      const score = Math.round(10000 * (items.length - wrong.length) / items.length) / 100;
+      return { studentKey: K, name: '서술', school: '가상고', year: '2', course, round: r, attempt: '첫 응시', score, pass: score >= 80,
+        date: '2026-09-0' + r + 'T01:00:00Z', answers: items.map((it, i) => wrong.indexOf(i) >= 0 ? flipE(it.a) : it.a).join(''),
+        wrongMis: wrong.map(i => items[i].mis), wrongAxes: {}, units: Object.keys(units).map(k => units[k]), axes: [], isTest: false };
+    };
+    /* 학생 기록(시트)과 은행(가상)을 흉내 낸다. bank=false 면 은행 자리에 404 를 낸다. */
+    const serveE = async (page, rows, bank) => {
+      await page.route('**/macros/s/**', route => {
+        const u = new URL(route.request().url()), c = u.searchParams.get('c') || '';
+        const cum = CE.cumulative(rows, c);
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: cum[Object.keys(cum)[0]], rank: null, ranks: [], cohort: null, challenges: [] }) });
+      });
+      /* bank=false 면 실제 은행 파일이 저장소에 있어도 404 를 낸다(은행이 없는 배포 · 아직 안 올린 과목을 흉내) */
+      if (!bank) await page.route('**/appdata/essay_*.json', route => route.fulfill({ status: 404, body: 'no' }));
+      if (bank) await page.route('**/appdata/essay_*.json', route => {
+        const c = (/essay_(\w+)\.json/.exec(route.request().url()) || [])[1];
+        const f = path.join(ROOT, 'tests', 'fixtures', 'essay_' + c + '.json');
+        if (!fs.existsSync(f)) return route.fulfill({ status: 404, body: 'no' });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: fs.readFileSync(f, 'utf8') });
+      });
+    };
+    const openE = async page => {
+      await page.goto(BASE + 'report.html?student=x');
+      await page.waitForFunction(() => !!window.__dtRpt, null, { timeout: 30000 });
+      await page.waitForLoadState('networkidle'); await page.waitForTimeout(300);
+    };
+    const shot = page => page.evaluate(() => ({
+      items: [].slice.call(document.querySelectorAll('.esq')).map(q => ({ m: q.querySelector('.esm').textContent, why: q.querySelector('.eswhy').textContent,
+        kind: q.querySelector('.eswhy').className.replace('eswhy', '').trim(), q: q.querySelector('.esqq').textContent })),
+      rpt: window.__dtRpt.rpt && window.__dtRpt.rpt.essay ? window.__dtRpt.rpt.essay.items.map(x => ({ c: x.c, kind: x.kind, why: x.why, idx: x.idx, q: x.item.q, a: x.item.a, key: x.item.key })) : null }));
+    /* 은행에 문항이 있는 개념인가 */
+    const inBank = (B, c) => !!(B.concepts[c] && B.concepts[c].items.length);
+
+    /* ── 고르기 — 순수 함수(essay.js)를 손으로 지은 입력으로. 기대값을 손으로 적는다(구현으로 기대값을 만들지 않는다). ── */
+    await test('서술형 연습 · 고르기(순수 함수) — 되풀이 오개념 → 앞 회차에도 틀림 → 번호 · 보충(미해결 → 심화) · 같은 입력 같은 문항', async () => {
+      const I = (c, mis, lvl) => ({ c, mis: mis || ('개념 ' + c), a: 'O', lvl: lvl || 2 });
+      const two = m => ({ m, first_round: 1, items: [{ q: m + ' 가', a: m + ' 답가', key: ['가'], lvl: 2 }, { q: m + ' 나', a: m + ' 답나', key: ['나'], lvl: 3 }] });
+      const bank = { course: 't', concepts: {} };
+      ['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K10', 'K11', 'K13', 'K14'].forEach(c => { bank.concepts[c] = two('이름' + c); });
+      bank.concepts.K9 = { m: '빈 개념', first_round: 1, items: [] };                     /* 문항 0개 — 건너뛴다 */
+      bank.concepts.K12 = Object.assign(two('뒤 회차'), { first_round: 9 });              /* 뒤 회차 개념 — 안 낸다 */
+      const R1i = [I('K1'), I('K13'), I('K14'), I('K6')], R2i = [I('K1'), I('K14'), I('K2')];
+      const R3i = [I('K1'), I('K2'), I('K3'), I('K4', 'CHR'), I('K5'), I('K6'), I('K7'), I('K8'), I('K9'), I('K10', null, 3), I('K11', null, 3), I('K12', null, 3)];
+      const ans = (its, wrong) => its.map(it => wrong.indexOf(it.c) >= 0 ? 'X' : 'O').join('');
+      const R1 = { round: 1, items: R1i, answers: ans(R1i, ['K13', 'K14', 'K6']) }, R2 = { round: 2, items: R2i, answers: ans(R2i, []) };
+      const run3 = (wrong, extra) => ESX.pick(Object.assign({ bank, course: 't', round: 3, rounds: [R1, R2, { round: 3, items: R3i, answers: ans(R3i, wrong) }],
+        chronic: ['CHR'], canon: CE.misCanon, seed: '가상-학생' }, extra || {}));
+      /* (1) 틀린 개념 8개(K8 은 은행에 없다 · K9 는 문항 0개) → 5문항 · K4(되풀이) → K6(1회에도 틀림) → 번호 순 */
+      const a = run3(['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K8', 'K9']);
+      assert(JSON.stringify(a.items.map(x => x.c)) === '["K4","K6","K1","K2","K3"]', '차례가 다르다: ' + a.items.map(x => x.c).join(','));
+      assert(a.items[0].why === '이번 회차 4번에서 틀림 · 되풀이되는 오개념', '되풀이 까닭: ' + a.items[0].why);
+      assert(a.items[1].why === '이번 회차 6번에서 틀림 · 1회에도 틀림', '앞 회차 까닭: ' + a.items[1].why);
+      assert(a.items[2].why === '이번 회차 1번에서 틀림', '번호 까닭: ' + a.items[2].why);
+      /* 문항 하나 = 앞 회차들에서 틀린 횟수 % 문항 수 — K6 은 1회에 한 번 틀렸으니 둘째 문항, 나머지는 첫째 */
+      assert(a.items[1].idx === 1 && a.items[0].idx === 0 && a.items[2].idx === 0, '틀린 횟수로 문항을 안 골랐다: ' + a.items.map(x => x.idx).join(','));
+      assert(JSON.stringify(run3(['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K8', 'K9'])) === JSON.stringify(a), '같은 입력에 다른 답');
+      /* (2) 틀린 개념 2개 → 2 + 보충: K13(1회 틀림 · 그 뒤 안 맞힘) → 심화(이번 회차에서 맞힌 lvl 3 · K12 는 뒤 회차라 뺀다).
+             K14 는 2회에 맞혀서, K6 은 이번 회차에 맞혀서 고친 것이다. 심화는 은행의 lvl 3 문항을 고른다. */
+      const b = run3(['K2', 'K3']);
+      assert(JSON.stringify(b.items.map(x => x.c + ':' + x.kind)) === '["K2:wrong","K3:wrong","K13:carry","K10:deep","K11:deep"]', '보충 차례: ' + b.items.map(x => x.c + ':' + x.kind).join(','));
+      assert(b.items[2].why === '1회에 틀리고 아직 안 고쳐짐', '미해결 까닭: ' + b.items[2].why);
+      assert(b.items[3].why === '이번 회차 10번 심화 문항을 맞혀서 한 단계 더' && b.items[3].item.lvl === 3, '심화 까닭·문항: ' + b.items[3].why);
+      /* 1회 재시에서 K13 을 다시 물어 맞혔으면 고친 것이다 → 보충에서 빠진다 */
+      const R1r = Object.assign({}, R1, { retakes: [{ cids: 'K13,K14', keys: 'OO', answers: 'OX' }] });
+      const b2 = ESX.pick({ bank, course: 't', round: 3, rounds: [R1r, R2, { round: 3, items: R3i, answers: ans(R3i, ['K2', 'K3']) }], chronic: [], canon: CE.misCanon, seed: 's' });
+      assert(b2.items.map(x => x.c).join(',') === 'K2,K3,K10,K11', '재시에서 고친 개념이 보충에 남았다: ' + b2.items.map(x => x.c).join(','));
+      /* (3) 다 맞힘(앞 회차에 남은 것도 없음) → 심화만. 앞 회차에 남은 것이 있으면 그것이 먼저다(위 (2)). */
+      const R1ok = { round: 1, items: R1i, answers: ans(R1i, []) };
+      const c = ESX.pick({ bank, course: 't', round: 3, rounds: [R1ok, R2, { round: 3, items: R3i, answers: ans(R3i, []) }], chronic: [], canon: CE.misCanon, seed: 's' });
+      assert(c.items.length === 2 && c.items.every(x => x.kind === 'deep' && x.why === '이번 회차를 다 맞혀서 한 단계 더'), '다 맞힌 학생: ' + JSON.stringify(c.items.map(x => x.why)));
+      /* (4) 앞 회차 답안을 못 받으면 «틀린 횟수» 를 셀 수 없다 → 학생키+회차+코드 해시로 고정(새로고침마다 안 바뀐다) */
+      const d = ESX.pick({ bank, course: 't', round: 3, rounds: [R1, { round: 2, items: R2i, answers: '' }, { round: 3, items: R3i, answers: ans(R3i, ['K6']) }], chronic: [], canon: CE.misCanon, seed: '가상-학생' });
+      assert(d.items[0].c === 'K6' && d.items[0].idx === ESX.hash('가상-학생|t|3|K6') % 2, '셀 수 없을 때 해시로 고정하지 않았다');
+      /* (5) 이번 회차 문항을 못 받으면 고르지 않는다(구역이 빠진다) */
+      assert(ESX.pick({ bank, course: 't', round: 3, rounds: [R1], chronic: [], canon: CE.misCanon, seed: 's' }) === null, '이번 회차 문항 없이 골랐다');
+      /* 저장 칸 이름에 학생 이름이 아니라 해시가 들어간다 */
+      assert(/^[0-9a-f]{8}$/.test(a.sk) && a.sk !== '가상-학생', '학생키가 해시가 아니다: ' + a.sk);
+      /* (6) 이름 겹침 — 화학Ⅰ 은행은 코드 여럿이 한 이름(«오비탈 마디·양자수» 24개)을 쓴다. 한 이름은 먼저 두 칸까지,
+             남는 칸은 다른 이름(미해결 · 심화 포함)으로 채우고, 그래도 모자랄 때만 같은 이름을 더 넣는다. 차례는 후보 차례. */
+      const nb = JSON.parse(JSON.stringify(bank));
+      ['K1', 'K2', 'K3', 'K5'].forEach(c => { nb.concepts[c].m = '같은 이름'; });
+      const e = ESX.pick({ bank: nb, course: 't', round: 3, rounds: [R1, R2, { round: 3, items: R3i, answers: ans(R3i, ['K1', 'K2', 'K3', 'K5']) }], chronic: [], canon: CE.misCanon, seed: 's' });
+      assert(e.items.map(x => x.c).join(',') === 'K1,K2,K13,K10,K11', '한 이름이 두 칸을 넘었다: ' + e.items.map(x => x.c).join(','));
+      assert(e.items.map(x => x.no).join(',') === '1,2,3,4,5', '번호: ' + e.items.map(x => x.no).join(','));
+      const nb2 = JSON.parse(JSON.stringify(nb)); ['K13', 'K10', 'K11'].forEach(c => { delete nb2.concepts[c]; });
+      const f = ESX.pick({ bank: nb2, course: 't', round: 3, rounds: [R1, R2, { round: 3, items: R3i, answers: ans(R3i, ['K1', 'K2', 'K3', 'K5']) }], chronic: [], canon: CE.misCanon, seed: 's' });
+      assert(f.items.map(x => x.c).join(',') === 'K1,K2,K3,K5', '다른 이름이 없으면 같은 이름이라도 채워야 한다: ' + f.items.map(x => x.c).join(','));
+    });
+
+    /* ── 핵심 낱말 대조 — 키보드로 치는 글을 기준으로(공백 · 첨자 · 빼기 부호 · °C · 대소문자) ── */
+    await test('서술형 연습 · 핵심 낱말 대조 — 공백 무시 · «|» 동의어 · 2s1↔2s¹ · -1/2↔−1/2 · n-1↔n − 1 · ℃ · H2O↔H₂O', async () => {
+      const hit = (t, k) => ESX.keyCheck(t, [k]).got === 1;
+      const CASES = [['2s1 오비탈', '2s¹'], ['스핀 -1/2', '−1/2'], ['n-1 개', 'n − 1'], ['n–1', 'n − 1'], ['25 ℃에서', '25 °C'], ['h2o 분자', 'H₂O'],
+        ['na+ 이온', 'Na⁺'], ['so42-', 'SO₄²⁻'], ['1.0x10-14', '1.0×10⁻¹⁴'], ['전자를내놓는다', '전자를 잃|전자를 내놓'], ['Kw 는 일정', 'kw'], ['10 의 -7', '10의 −7']];
+      CASES.forEach(([t, k]) => assert(hit(t, k), '«' + t + '» 가 «' + k + '» 에 안 걸린다'));
+      [['2s2', '2s¹'], ['산화', '환원'], ['', '전자']].forEach(([t, k]) => assert(!hit(t, k), '«' + t + '» 가 «' + k + '» 에 잘못 걸린다'));
+      /* 낱말 경계 — 뜻이 거꾸로인 말(불·비·무·반 + 낱말)과 라틴 글자 이어짐(12 mol ↔ 12 M)에는 안 걸린다.
+         띄어 쓴 앞 낱말의 끝 글자(«질량비 일정»)와 숫자 이어짐(pH7)은 걸린다. */
+      [['불안정하다', '안정'], ['비공유 전자쌍', '공유 전자쌍'], ['반비례한다', '비례'], ['무극성 분자', '극성 분자'], ['불연속', '연속'],
+        ['반지름', '지름'], ['12 mol', '12 M'], ['NaClO', 'NaCl'], ['불안정해진다', '안정해지'], ['크기가 큰지', '크다']].forEach(([t, k]) => assert(!hit(t, k), '«' + t + '» 가 «' + k + '» 에 잘못 걸린다'));
+      [['안정하다', '안정'], ['정비례', '비례'], ['질량비 일정', '일정'], ['12 M이다', '12 M'], ['pH7', 'pH'], ['극성 분자', '극성'], ['비공유 전자쌍', '비공유'],
+        /* 어미가 붙어 끝 글자에 받침이 생겨도 같은 낱말이다 */
+        ['부피가 커진다', '커지'], ['몰수로 나눈다', '나누'], ['작아짐', '작아지'], ['안정해진 상태', '안정해지']]
+        .forEach(([t, k]) => assert(hit(t, k), '«' + t + '» 가 «' + k + '» 에 안 걸린다'));
+      const ck = ESX.keyCheck('알파원리와 감마 조건', ['알파 원리', '베타 조건|감마 조건', '델타 결과', '엡실론']);
+      assert(ck.n === 4 && ck.got === 2 && ck.missing.join(',') === '델타 결과,엡실론', '대조: ' + JSON.stringify(ck));
+      assert(ESX.selfLine(ck) === '핵심 낱말 4개 중 2개를 썼어요. 빠진 것: 델타 결과, 엡실론', '자기 점검: ' + ESX.selfLine(ck));
+      assert(!/틀렸|점수|정답/.test(ESX.selfLine(ck) + ESX.selfLine(ESX.keyCheck('a', ['a']))), '자기 점검이 판정을 내린다');
+    });
+
+    /* ── 화학Ⅰ · 틀린 개념 7개(되풀이 오개념 하나 포함) — 화면 전체 흐름 ── */
+    await test('report · 서술형 연습 — 틀린 개념 7개: 5문항 · 되풀이 오개념 먼저 · 답 확인 전 모범 답안 DOM 에 없음 · 대조 · 새로고침 · 360px · 종이', async page => {
+      const B = FIX('ch1'), I1 = RFE('ch1', 1), I2 = RFE('ch1', 2), I3 = RFE('ch1', 3);
+      /* 세 회차에 다 나오고 은행에 있는 개념 하나를 고른다 — 1회 · 3회에 틀리면(3번 중 2번) 되풀이 오개념이다 */
+      const inM = {}; I2.forEach(it => { inM[CE.misCanon(it.mis)] = 1; });
+      const k3 = I3.findIndex(it => inBank(B, it.c) && CE.misCanon(it.mis) === it.mis && inM[it.mis] && I1.some(x => x.mis === it.mis));
+      assert(k3 >= 0, '세 회차에 같이 나오는 은행 개념을 못 골랐다');
+      const chronic = I3[k3].mis, k1 = I1.findIndex(x => x.mis === chronic);
+      const w3 = [k3], seen = { [I3[k3].c]: 1 };
+      /* 다른 여섯은 은행에 있고, 1회에 안 틀렸고, 개념이 서로 다른 것 — 그래야 차례가 «번호 순» 으로 정해진다 */
+      I3.forEach((it, i) => { if (w3.length < 7 && inBank(B, it.c) && !seen[it.c] && CE.misCanon(it.mis) !== chronic) { seen[it.c] = 1; w3.push(i); } });
+      const rows = [rowE('가상고-서술', 'ch1', 1, [k1]), rowE('가상고-서술', 'ch1', 2, []), rowE('가상고-서술', 'ch1', 3, w3)];
+      await serveE(page, rows, true);
+      await page.setViewportSize({ width: 360, height: 800 });
+      await openE(page);
+      const s = await shot(page);
+      assert((await page.evaluate(() => (window.__dtRpt.A.chronicMis || []).map(m => m.mis))).indexOf(chronic) >= 0, '되풀이 오개념이 안 만들어졌다: ' + chronic);
+      assert(s.items.length === 5, '문항이 5개가 아니다: ' + s.items.length);
+      assert(await page.$eval('#essay h2', e => e.textContent) === '서술형 연습 · 나에게 맞춘 5문항', '제목');
+      assert(s.rpt && s.rpt.length === 5 && s.rpt.every((x, i) => x.q === s.items[i].q), '화면과 RPT.essay 가 다르다');
+      assert(s.rpt[0].c === I3[k3].c && /되풀이되는 오개념/.test(s.items[0].why), '되풀이 오개념이 먼저가 아니다: ' + s.items[0].why);
+      assert(s.items[0].why.indexOf('이번 회차 ' + (k3 + 1) + '번에서 틀림') === 0, '번호가 다르다: ' + s.items[0].why);
+      const rest = w3.slice(1).map(i => I3[i].c).filter(c => c !== I3[k3].c).sort((x, y) => I3.findIndex(it => it.c === x) - I3.findIndex(it => it.c === y)).slice(0, 4);
+      assert(JSON.stringify(s.rpt.slice(1).map(x => x.c)) === JSON.stringify(rest), '나머지가 번호 순이 아니다: ' + s.rpt.map(x => x.c).join(','));
+      assert(s.rpt.every(x => x.kind === 'wrong'), '오답 다섯이 있는데 보충이 섰다');
+      /* 자리: 「문항별 정오 · 오개념 정리」 바로 뒤 */
+      await page.waitForSelector('.card.sols', { timeout: 15000 });
+      assert(await page.evaluate(() => document.getElementById('main-sols').nextElementSibling === document.getElementById('essay')), '오개념 정리 바로 뒤가 아니다');
+      /* «답 확인» 전 — 모범 답안 글자가 DOM 어디에도 없다 · 단추는 한 글자 이상 써야 눌린다 · 44px */
+      const html0 = await page.evaluate(() => document.documentElement.outerHTML);
+      const leak = s.rpt.filter(x => html0.indexOf(x.a) >= 0);
+      assert(!leak.length, '답 확인 전에 모범 답안이 DOM 에 있다: ' + (leak[0] || {}).c);
+      assert(await page.$eval('.esbtn[data-es="0"]', b => b.disabled), '빈 칸인데 답 확인이 눌린다');
+      const bh = await page.$eval('.esbtn[data-es="0"]', b => b.getBoundingClientRect().height);
+      assert(bh >= 44, '단추 높이 ' + bh);
+      assert(await page.$eval('label[for="es-a-0"]', l => !!l && l.textContent.indexOf('내 답') >= 0), '입력 칸에 label 이 안 이어졌다');
+      await page.fill('#es-a-0', '   ');
+      assert(await page.$eval('.esbtn[data-es="0"]', b => b.disabled), '공백만 썼는데 답 확인이 눌린다');
+      /* 첫 문항의 핵심 낱말 가운데 첫째는 공백 없이, 둘째는 동의어로 쓴다 → ✓ 둘 · ○ 나머지 */
+      const key = s.rpt[0].key, alt1 = String(key[1]).split('|');
+      const typed = String(key[0]).replace(/\s+/g, '') + '이고 ' + alt1[alt1.length - 1] + ' 때문이다';
+      await page.fill('#es-a-0', typed);
+      assert(await page.$eval('#es-c-0', e => e.textContent.indexOf(String(e.closest('.esq').querySelector('textarea').value.length) + '자') === 0), '글자 수가 안 따라온다');
+      await page.click('.esbtn[data-es="0"]');
+      const rev = await page.evaluate(() => { const r = document.getElementById('es-r-0');
+        return { hidden: r.hidden, model: (r.querySelector('.esmodel') || {}).textContent, hit: [].slice.call(r.querySelectorAll('.eskw.hit')).map(e => e.textContent),
+          miss: [].slice.call(r.querySelectorAll('.eskw.miss')).map(e => e.textContent), self: (r.querySelector('.esself') || {}).textContent, rub: r.querySelectorAll('.esrub dt').length,
+          other: !!document.querySelector('#es-r-1 .esmodel') }; });
+      assert(!rev.hidden && rev.model === s.rpt[0].a, '답 확인 뒤 모범 답안이 안 나온다');
+      assert(rev.hit.length === 2 && rev.miss.length === key.length - 2, '핵심 낱말 대조가 다르다: ✓' + rev.hit.join(',') + ' ○' + rev.miss.join(','));
+      assert(rev.self === '핵심 낱말 ' + key.length + '개 중 2개를 썼어요. 빠진 것: ' + key.slice(2).map(k => String(k).split('|')[0]).join(', '), '자기 점검: ' + rev.self);
+      assert(rev.rub === 3, '채점 기준 3/2/1 이 없다');
+      assert(!rev.other, '누르지 않은 문항의 모범 답안까지 열렸다');
+      assert(!/틀렸습니다|오답입니다|\d+점/.test(await page.$eval('#essay', e => e.innerText)), '서술형에 점수·판정 말이 섰다');
+      await page.fill('#es-a-1', '둘째 문항에 써 둔 답');
+      await assertNoOverflow(page, 'essay-360');
+      /* 새로고침해도 쓴 답이 남고, 확인했던 문항은 다시 열려 있다 · 같은 입력이면 같은 문항 */
+      await page.reload(); await page.waitForFunction(() => !!window.__dtRpt, null, { timeout: 30000 }); await page.waitForTimeout(300);
+      const s2 = await shot(page);
+      assert(JSON.stringify(s2.rpt.map(x => x.c + '#' + x.idx)) === JSON.stringify(s.rpt.map(x => x.c + '#' + x.idx)), '새로고침하니 문항이 바뀌었다');
+      assert(await page.$eval('#es-a-0', t => t.value) === typed && await page.$eval('#es-a-1', t => t.value) === '둘째 문항에 써 둔 답', '새로고침하니 쓴 답이 사라졌다');
+      assert(await page.evaluate(() => !document.getElementById('es-r-0').hidden && !!document.querySelector('#es-r-0 .esmodel') && document.getElementById('es-r-1').hidden), '확인 상태가 안 남았다');
+      const store = await page.evaluate(() => Object.keys(localStorage));
+      assert(store.length === 1 && store[0] === 'dt_essay_v1', '저장 칸이 하나가 아니다: ' + store.join(','));
+      assert((await page.evaluate(() => localStorage.getItem('dt_essay_v1'))).indexOf('서술') < 0, '저장 칸에 학생 이름이 들어갔다');
+      /* 종이 — 단추 숨김 · 칸은 쓴 글(없으면 줄) · 모범 답안 모음은 문서 맨 끝, 인쇄가 끝나면 걷힌다 */
+      await page.emulateMedia({ media: 'print' });
+      await page.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
+      const pr = await page.evaluate(() => { const w = document.querySelector('.wrap'), bk = document.getElementById('esbook'), cs = e => getComputedStyle(e).display;
+        return { last: !!bk && w.lastElementChild === bk, bk: bk ? cs(bk) : 'none', h2: bk ? bk.querySelector('h2').textContent : '', n: bk ? bk.querySelectorAll('.esbq').length : 0,
+          btn: cs(document.querySelector('.esbtn[data-es="1"]')), ta: cs(document.getElementById('es-a-0')), paper0: document.querySelectorAll('.espaper')[0].textContent,
+          lines2: document.querySelectorAll('.espaper')[2].querySelectorAll('.esline').length, rev: cs(document.getElementById('es-r-0')) }; });
+      assert(pr.last && pr.bk !== 'none' && pr.h2 === '서술형 모범 답안' && pr.n === 5, '종이 맨 끝에 모범 답안 모음이 없다: ' + JSON.stringify(pr));
+      assert(pr.btn === 'none' && pr.ta === 'none' && pr.rev === 'none', '종이에 단추·입력 칸·펼친 답이 남았다');
+      assert(pr.paper0 === typed && pr.lines2 >= 3, '종이 칸이 쓴 글/빈 줄이 아니다');
+      await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+      await page.emulateMedia({ media: 'screen' });
+      assert(!(await page.$('#esbook')), '인쇄가 끝났는데 모범 답안 모음이 화면에 남았다');
+    });
+
+    /* ── 화학Ⅱ · 틀린 개념 2개 → 2 + 보충(앞 회차 미해결 → 심화) · 일반화학 · 다 맞힘 → 심화만 ── */
+    await test('report · 서술형 연습 — 틀린 개념 2개는 2 + 보충 3(앞 회차 미해결 → 심화) · 다 맞히면 심화만', async page => {
+      const B = FIX('ch2'), I1 = RFE('ch2', 1), I2 = RFE('ch2', 2), I3 = RFE('ch2', 3);
+      const later = {}; I2.concat(I3).forEach(it => { later[it.c] = 1; });
+      /* 1회에 틀리고 뒤 회차에 다시 안 나온 개념 둘 — 그 뒤 맞힌 적이 없다 */
+      const w1 = []; I1.forEach((it, i) => { if (w1.length < 2 && inBank(B, it.c) && !later[it.c] && !w1.some(k => I1[k].c === it.c)) w1.push(i); });
+      assert(w1.length === 2, '1회에만 나오는 은행 개념이 둘이 안 된다');
+      const w3 = []; I3.forEach((it, i) => { if (w3.length < 2 && inBank(B, it.c) && Number(it.lvl) !== 3 && !w3.some(k => I3[k].c === it.c)) w3.push(i); });
+      await serveE(page, [rowE('가상고-보충', 'ch2', 1, w1), rowE('가상고-보충', 'ch2', 2, []), rowE('가상고-보충', 'ch2', 3, w3)], true);
+      await openE(page);
+      const s = await shot(page);
+      assert(JSON.stringify(s.rpt.map(x => x.kind)) === '["wrong","wrong","carry","carry","deep"]', '차례: ' + s.rpt.map(x => x.kind).join(','));
+      assert(s.rpt.slice(0, 2).every((x, i) => x.c === I3[w3[i]].c), '이번 회차 오답이 먼저가 아니다');
+      assert(s.rpt.slice(2, 4).every(x => w1.some(k => I1[k].c === x.c)) && s.rpt[2].why === '1회에 틀리고 아직 안 고쳐짐', '보충(미해결): ' + s.rpt[2].why);
+      assert(/심화 문항을 맞혀서 한 단계 더$/.test(s.rpt[4].why), '심화 까닭: ' + s.rpt[4].why);
+      assert(s.items.map(x => x.kind).join(',') === 'wrong,wrong,carry,carry,deep', '화면 까닭 색(종류)이 RPT 와 다르다');
+      assert(/앞 회차에 남은 개념·심화 문항으로 채웠습니다/.test(await page.$eval('#essay .note', e => e.textContent)), '안내가 고른 까닭을 사실대로 안 말한다');
+    });
+    await test('report · 서술형 연습 — 일반화학 · 다 맞힌 학생은 «다 맞혀서 한 단계 더» 심화만', async page => {
+      await serveE(page, [rowE('가상고-만점', 'gc', 1, []), rowE('가상고-만점', 'gc', 2, [])], true);
+      await openE(page);
+      const s = await shot(page);
+      assert(s.rpt && s.rpt.length >= 1 && s.rpt.every(x => x.kind === 'deep' && x.why === '이번 회차를 다 맞혀서 한 단계 더'), '다 맞힌 학생: ' + JSON.stringify(s.rpt && s.rpt.map(x => x.why)));
+      assert(/틀린 개념이 없어/.test(await page.$eval('#essay .note', e => e.textContent)), '다 맞힌 학생 안내');
+    });
+
+    /* ── 화학Ⅰ 심화(새 절) — renderV2 안 번호 절, ④ 되풀이되는 오개념 다음 · ⑤ 예습 앞 ── */
+    await test('report · 서술형 연습 — 화학Ⅰ 심화는 새 절 안(④ 다음 · 예습/부모님께 앞)', async page => {
+      const B = FIX('ch1s'), I3 = RFE('ch1s', 3);
+      const w3 = []; I3.forEach((it, i) => { if (w3.length < 3 && inBank(B, it.c)) w3.push(i); });
+      await serveE(page, [rowE('가상고-심화', 'ch1s', 1, [0, 1]), rowE('가상고-심화', 'ch1s', 2, [2]), rowE('가상고-심화', 'ch1s', 3, w3)], true);
+      await openE(page);
+      const r = await page.evaluate(() => { const e = document.getElementById('v2-essay'); if (!e) return null;
+        const after = id => { const x = document.getElementById(id); return !x || !!(e.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING); };
+        const before = id => { const x = document.getElementById(id); return !x || !!(x.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING); };
+        return { n: e.querySelectorAll('.esq').length, h2: e.querySelector('h2').textContent, card: !!document.getElementById('essay'),
+          ok: before('v2-curve') && before('v2-chronic') && after('v2-preview') && after('v2-parent') }; });
+      assert(r && r.n === 5, '심화반 새 절에 서술형이 없다: ' + JSON.stringify(r));
+      assert(r.ok, '새 절 안 자리가 다르다');
+      assert(!r.card, '심화반에 서술형이 두 번 섰다');
+      assert(/서술형 연습 · 나에게 맞춘 5문항$/.test(r.h2), '제목: ' + r.h2);
+      await assertNoOverflow(page, 'essay-v2');
+    });
+
+    /* ── 은행 파일이 없으면(집필 중) 구역이 없고 오류도 없다 — 네 과목 모두 ── */
+    for (const cc of ['ch1', 'ch1s', 'ch2', 'gc']) {
+      await test('report · 서술형 연습 — 은행이 없으면 구역 없음 · 콘솔 오류 없음 (' + cc + ')', async page => {
+        const errs = [];
+        page.on('console', m => { if (m.type() !== 'error') return;
+          /* 은행 파일 404 는 브라우저가 스스로 적는 줄이다(파일이 아직 없다는 사실) — 화면 코드의 오류가 아니다 */
+          /* 바깥 글꼴(CDN)은 검사 망이 일부러 끊는다(controlNetwork) — 그 줄도 화면 코드의 오류가 아니다 */
+          const lu = (m.location() || {}).url || '';
+          if (/Failed to load resource/.test(m.text()) && (/essay_/.test(lu) || lu.indexOf(BASE) !== 0)) return;
+          errs.push(m.text() + ' @' + ((m.location() || {}).url || '')); });
+        await serveE(page, [rowE('가상고-없음', cc, 1, [0, 3, 7]), rowE('가상고-없음', cc, 2, [1, 4])], false);
+        await openE(page);
+        const r = await page.evaluate(() => ({ q: document.querySelectorAll('.esq').length, sec: !!document.getElementById('essay') || !!document.getElementById('v2-essay'),
+          txt: document.body.innerText, rpt: window.__dtRpt.rpt ? window.__dtRpt.rpt.essay : 'no-rpt' }));
+        assert(!r.q && !r.sec && !/서술형/.test(r.txt), '은행이 없는데 서술형 구역이 섰다');
+        assert(r.rpt === null, 'RPT.essay 가 null 이 아니다: ' + JSON.stringify(r.rpt).slice(0, 60));
+        assert(!errs.length, '콘솔 오류: ' + errs[0]);
+        /* 같은 학생에게 은행을 넣으면 선다 — 위 «없음» 이 과목 탓이 아님을 같이 본다 */
+        await serveE(page, [rowE('가상고-없음', cc, 1, [0, 3, 7]), rowE('가상고-없음', cc, 2, [1, 4])], true);
+        await openE(page);
+        const n = await page.$$eval('.esq', e => e.length);
+        assert(n >= 1 && n <= 5, '은행을 넣었는데 서술형이 ' + n + '문항');
+        assert(!errs.length, '콘솔 오류: ' + errs[0]);
+      });
+    }
   }
 
   await BROWSER.close();

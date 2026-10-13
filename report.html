@@ -633,6 +633,60 @@ details.misfold[open]>summary .misgrp-h:after{content:'접기 ▴'}
   .cv-d{display:none}.cv-m{display:block}
 }
 @media print{ .v2sec,.v2tile,.v2mc,.v2tbl tr{break-inside:avoid} .v2sec h2{break-after:avoid} .cv-m{display:none!important} .cv-d{display:block!important} }
+
+/* ── 서술형 연습 · 나에게 맞춘 5문항 (선생님 결정 2026-10-13) ──────────────────────────
+   학생이 화면에 먼저 써 보고 «답 확인» 을 눌러야 모범 답안이 열린다. 모범 답안은 누르기 전에는
+   DOM 에도 없다(늦게 그린다) — 숨김(hidden)으로 두면 «소스 보기» 한 번에 다 보인다.
+   색은 성적표 한 벌(:root)만 쓴다. 판정이 아니라 «대조» 라 빨강을 안 쓴다 — 쓴 낱말은 초록 ✓,
+   빠진 낱말은 호박색 점선 ○(흑백으로 뽑아도 실선/점선 · 기호로 갈린다). 단추는 44px. */
+.card.essay{border-left:4px solid var(--g8)}
+.esq{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:12px;background:var(--surface)}
+@media (max-width:560px){ .esq{padding:12px} }
+.esh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.esn{width:24px;height:24px;border-radius:50%;background:var(--g8);color:#fff;font-weight:800;font-size:13px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.esm{font-weight:800;font-size:15px;color:var(--g9)}
+.eswhy{font-size:12px;font-weight:700;margin-top:6px;line-height:1.5;color:var(--rust)}
+.eswhy.carry{color:var(--amber)}.eswhy.deep{color:var(--ok)}
+.esqq{font-size:15px;line-height:1.65;color:var(--ink);margin:8px 0 12px}
+.eslab{display:flex;justify-content:space-between;align-items:baseline;gap:4px 10px;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.eslab .eslen{font-size:12px;font-weight:600;color:var(--mut)}
+.esta{display:block;width:100%;min-height:120px;font:inherit;font-size:15px;line-height:1.6;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;resize:vertical}
+.esta:focus-visible{outline:2px solid var(--g8);outline-offset:1px}
+.esbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;flex-wrap:wrap}
+.escnt{font-size:12px;color:var(--mut);font-variant-numeric:tabular-nums}
+.esbtn{min-height:44px;min-width:44px;padding:0 18px;border:0;border-radius:10px;background:var(--g8);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.esbtn:disabled{background:var(--line2);color:var(--mut);cursor:not-allowed}
+.esbtn:focus-visible{outline:2px solid var(--g8);outline-offset:2px}
+.esrev{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.esrev .tlab{color:var(--g9)}
+.eskeys{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.eskw{font-size:13px;font-weight:700;line-height:1.5;padding:1px 10px;border-radius:999px;border:1px solid}
+.eskw.hit{color:var(--ok);background:var(--okSoft);border-color:var(--okBd)}
+.eskw.miss{color:var(--amber);background:var(--amberSoft);border-color:var(--amberBd);border-style:dashed}
+.esself{font-size:13px;color:var(--ink);background:var(--g0);border-radius:9px;padding:9px 12px;margin:0 0 10px;line-height:1.55}
+.esmodel{font-size:15px;line-height:1.7;color:var(--ink);background:var(--g0);border-left:3px solid var(--g6);border-radius:0 9px 9px 0;padding:10px 12px;margin-bottom:10px}
+.esrub{display:grid;grid-template-columns:28px 1fr;gap:6px 10px;margin:0;font-size:13px;line-height:1.55;color:var(--ink2)}
+.esrub dt{font-weight:800;color:var(--g9);text-align:center;border:1px solid var(--g2);border-radius:7px;background:var(--g0);height:24px;line-height:22px}
+.esrub dd{margin:0}
+.esnote{font-size:12px;color:var(--mut);margin:10px 0 0;line-height:1.55}
+.espaper,.esprt{display:none}
+.esbook{display:none}
+@media print{
+  .esbtn,.escnt,.esta,.esrev,.esscr{display:none!important}
+  .esprt{display:inline}
+  .esq{break-inside:avoid;border-color:#ccc}
+  /* 입력 칸은 쓴 글 그대로, 비었으면 줄 그은 빈칸 — 종이에 손으로 쓸 수 있게 */
+  .espaper{display:block;font-size:15px;line-height:1.7;color:var(--ink);white-space:pre-wrap;border:1px solid #bbb;border-radius:8px;padding:8px 12px;min-height:60px}
+  .espaper .esline{display:block;height:30px;border-bottom:1px solid #999}
+  .esbook{display:block;break-before:page}
+  .esbook .esbq{break-inside:avoid;padding:10px 0;border-top:1px solid #ccc}
+  .esbook .esbq:first-of-type{border-top:0}
+}
+.esbook h2{margin-bottom:6px}
+.esbq .esh{margin-bottom:4px}
+.esbq .esqq{margin:4px 0 8px;font-size:13px;color:var(--ink2)}
+.esbq .esbk{font-size:13px;color:var(--ink2);margin:0 0 8px}
+.esbq .esbk b{color:var(--ink)}
 </style><style id="hwcss">
 .card.hwq{padding:14px 16px}
 .hwqbtn{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:2px 0;cursor:pointer;font:inherit;color:var(--ink)}
@@ -1712,6 +1766,8 @@ const CUM_AXES_HARD={"A1": {"t": 0, "w": 0}, "A2": {"t": 24, "w": 9}, "A3": {"t"
 const DEMO_ITEMS=[{"n": "7-01", "u": "분자간힘", "mis": "수소 결합 조건", "a": "O", "s": "수소 결합은 F, O, N에 결합한 수소 원자가 관여한다.", "f": "수소 결합은 F, O, N에 결합한 수소 원자가 관여한다.", "w": "전기음성도가 큰 원자와 H 사이에서 형성.", "lvl": 1, "c": "CH2-006"}, {"n": "7-02", "u": "분자간힘", "mis": "수소 결합 예", "a": "X", "s": "메테인(CH₄)은 수소 결합을 한다.", "f": "메테인(CH₄)은 수소 결합을 하지 않는다.", "w": "C-H는 수소 결합을 형성하지 못한다.", "lvl": 2, "c": "CH2-013"}, {"n": "7-03", "u": "분자간힘", "mis": "증기압 관계", "a": "O", "s": "분자 간 힘이 강할수록 증기 압력이 작다.", "f": "분자 간 힘이 강할수록 증기 압력이 작다.", "w": "분자가 잘 빠져나오지 못해 증기압이 작다.", "lvl": 2, "c": "CH2-020"}, {"n": "7-04", "u": "분자간힘", "mis": "분산력 보편성", "a": "X", "s": "He 원자 사이에는 분자 간 힘이 전혀 작용하지 않는다.", "f": "He 원자 사이에도 분산력이 작용한다.", "w": "He도 분산력으로 액화된다.", "lvl": 2, "c": "CH2-003"}, {"n": "7-05", "u": "분자간힘", "mis": "무극성 분자 힘", "a": "O", "s": "무극성 분자에서는 분산력만 작용한다.", "f": "무극성 분자에서는 분산력만 작용한다.", "w": "영구 쌍극자가 없어 분산력만 작용.", "lvl": 1, "c": "CH2-012"}, {"n": "7-06", "u": "이상기체", "mis": "상태 방정식", "a": "O", "s": "이상 기체 상태 방정식은 PV = nRT이다.", "f": "이상 기체 상태 방정식은 PV = nRT이다.", "w": "압력·부피·몰수·온도의 관계.", "lvl": 1, "c": "CH2-036"}, {"n": "7-07", "u": "이상기체", "mis": "분자량과 속력", "a": "X", "s": "같은 온도에서 분자량이 작을수록 평균 속력이 느리다.", "f": "같은 온도에서 분자량이 작을수록 평균 속력이 빠르다.", "w": "속력은 분자량의 제곱근에 반비례한다.", "lvl": 2, "c": "CH2-045"}, {"n": "7-08", "u": "이상기체", "mis": "운동 에너지와 온도", "a": "O", "s": "기체 분자의 평균 운동 에너지는 절대 온도에 비례한다.", "f": "기체 분자의 평균 운동 에너지는 절대 온도에 비례한다.", "w": "평균 운동 에너지 ∝ T(K).", "lvl": 2, "c": "CH2-043"}, {"n": "7-09", "u": "이상기체", "mis": "그레이엄 법칙", "a": "O", "s": "기체의 확산 속도는 분자량의 제곱근에 반비례한다.", "f": "기체의 확산 속도는 분자량의 제곱근에 반비례한다.", "w": "그레이엄의 확산 법칙.", "lvl": 3, "c": "CH2-048"}, {"n": "7-10", "u": "이상기체", "mis": "이상 기체 가정", "a": "X", "s": "이상 기체는 분자 사이에 인력이 있다고 가정한다.", "f": "이상 기체는 분자 사이에 인력이 없다고 가정한다.", "w": "분자 간 힘을 무시하는 것이 가정이다.", "lvl": 2, "c": "CH2-042"}, {"n": "7-11", "u": "실제기체", "mis": "압축 인자", "a": "O", "s": "압축 인자 Z = PV/nRT이며 이상 기체는 Z = 1이다.", "f": "압축 인자 Z = PV/nRT이며 이상 기체는 Z = 1이다.", "w": "이상 기체는 PV=nRT라 Z=1.", "lvl": 3, "c": "CH2-057"}, {"n": "7-12", "u": "분압", "mis": "돌턴 법칙", "a": "O", "s": "전체 압력은 각 성분 기체의 분압의 합이다.", "f": "전체 압력은 각 성분 기체의 분압의 합이다.", "w": "돌턴 분압 법칙.", "lvl": 2, "c": "CH2-062"}, {"n": "7-13", "u": "분압", "mis": "분압-몰분율", "a": "X", "s": "분압은 전체 압력에 몰분율을 곱한 값과 다르다.", "f": "분압은 전체 압력에 몰분율을 곱한 값과 같다.", "w": "분압 = 전체 압력 × 몰분율.", "lvl": 2, "c": "CH2-064"}, {"n": "7-14", "u": "실제기체", "mis": "이상 기체 편차", "a": "X", "s": "실제 기체는 고압에서 이상 기체와 잘 맞는다.", "f": "실제 기체는 고압에서 이상 기체에서 많이 벗어난다.", "w": "고압에서 분자 자체 부피의 영향이 커진다.", "lvl": 2, "c": "CH2-054"}, {"n": "7-15", "u": "실제기체", "mis": "반데르발스 상수", "a": "O", "s": "반데르발스 상수 a는 분자 간 인력을 반영하는 항이다.", "f": "반데르발스 상수 a는 분자 간 인력을 반영하는 항이다.", "w": "a는 인력 보정, b는 부피 보정.", "lvl": 3, "c": "CH2-056"}, {"n": "7-16", "u": "액체", "mis": "증기압과 온도", "a": "O", "s": "증기 압력은 온도가 높을수록 커진다.", "f": "증기 압력은 온도가 높을수록 커진다.", "w": "고온에서 증발하는 분자가 많아진다.", "lvl": 1, "c": "CH2-071"}, {"n": "7-17", "u": "액체", "mis": "끓는점 정의", "a": "O", "s": "끓는점은 액체의 증기 압력이 외부 압력과 같아지는 온도이다.", "f": "끓는점은 액체의 증기 압력이 외부 압력과 같아지는 온도이다.", "w": "끓는점의 정의.", "lvl": 1, "c": "CH2-078"}, {"n": "7-18", "u": "액체", "mis": "압력과 끓는점", "a": "X", "s": "외부 압력이 높으면 끓는점이 낮아진다.", "f": "외부 압력이 높으면 끓는점이 높아진다.", "w": "더 높은 증기압이 필요해 끓는점이 높아진다.", "lvl": 2, "c": "CH2-080"}, {"n": "7-19", "u": "액체", "mis": "증기압 세기 성질", "a": "X", "s": "증기 압력은 액체의 양이 많을수록 커진다.", "f": "증기 압력은 액체의 양과 관계없이 일정하다.", "w": "증기압은 양에 무관한 세기 성질이다.", "lvl": 2, "c": "CH2-074"}, {"n": "7-20", "u": "액체", "mis": "증발과 에너지", "a": "O", "s": "증발은 에너지를 흡수하는 흡열 과정이다.", "f": "증발은 에너지를 흡수하는 흡열 과정이다.", "w": "분자가 탈출하려면 에너지를 흡수해야 한다.", "lvl": 2, "c": "CH2-090"}, {"n": "7-21", "u": "고체", "mis": "이온 결정 전도성", "a": "O", "s": "이온 결정은 고체 상태에서 전기를 통하지 않는다.", "f": "이온 결정은 고체 상태에서 전기를 통하지 않는다.", "w": "이온이 고정되어 이동하지 못한다.", "lvl": 2, "c": "CH2-095"}, {"n": "7-22", "u": "고체", "mis": "분자 결정 녹는점", "a": "O", "s": "분자 결정은 녹는점이 낮다.", "f": "분자 결정은 녹는점이 낮다.", "w": "분자 간 힘이 약해 녹는점이 낮다.", "lvl": 1, "c": "CH2-098"}, {"n": "7-23", "u": "고체", "mis": "공유 결정 녹는점", "a": "O", "s": "공유(원자) 결정은 녹는점이 매우 높다.", "f": "공유(원자) 결정은 녹는점이 매우 높다.", "w": "강한 공유 결합 그물을 끊어야 한다.", "lvl": 2, "c": "CH2-101"}, {"n": "7-24", "u": "고체", "mis": "금속 전도성", "a": "X", "s": "금속은 전기와 열을 모두 잘 통하지 않는다.", "f": "금속은 전기와 열을 모두 잘 통한다.", "w": "자유 전자가 전하와 열을 잘 운반한다.", "lvl": 1, "c": "CH2-107"}, {"n": "7-25", "u": "고체", "mis": "다이아몬드 전도성", "a": "X", "s": "다이아몬드는 전기를 잘 통한다.", "f": "다이아몬드는 전기를 통하지 않는다(절연체).", "w": "모든 원자가 결합에 참여해 자유 전자가 없다.", "lvl": 2, "c": "CH2-103"}, {"n": "7-26", "u": "농도", "mis": "몰랄 농도 정의", "a": "O", "s": "몰랄 농도(m)는 용매 1 kg에 녹아 있는 용질의 몰수이다.", "f": "몰랄 농도(m)는 용매 1 kg에 녹아 있는 용질의 몰수이다.", "w": "몰랄 농도 = 용질 mol / 용매 kg.", "lvl": 1, "c": "CH2-112"}, {"n": "7-27", "u": "농도", "mis": "몰농도 온도", "a": "O", "s": "몰농도는 온도가 변하면 달라진다.", "f": "몰농도는 온도가 변하면 달라진다.", "w": "부피 기준이라 온도에 따라 부피가 변한다.", "lvl": 2, "c": "CH2-117"}, {"n": "7-28", "u": "농도", "mis": "몰분율 단위", "a": "O", "s": "몰분율은 단위가 없는(무차원) 양이다.", "f": "몰분율은 단위가 없는(무차원) 양이다.", "w": "몰수의 비라서 단위가 없다.", "lvl": 1, "c": "CH2-120"}, {"n": "7-29", "u": "농도", "mis": "몰랄 농도 온도", "a": "O", "s": "몰랄 농도는 온도가 변해도 일정하다.", "f": "몰랄 농도는 온도가 변해도 일정하다.", "w": "질량 기준이라 온도에 무관하다.", "lvl": 2, "c": "CH2-116"}, {"n": "7-30", "u": "농도", "mis": "퍼센트 농도 온도", "a": "X", "s": "퍼센트 농도는 온도가 변하면 달라진다.", "f": "퍼센트 농도는 온도가 변해도 일정하다.", "w": "질량 기준이라 온도에 무관하다.", "lvl": 2, "c": "CH2-121"}, {"n": "7-31", "u": "총괄성", "mis": "총괄성 정의", "a": "O", "s": "총괄성은 용질 입자의 수에만 의존하고 용질의 종류와는 무관하다.", "f": "총괄성은 용질 입자의 수에만 의존하고 용질의 종류와는 무관하다.", "w": "입자 수가 같으면 총괄성이 같다.", "lvl": 2, "c": "CH2-136"}, {"n": "7-32", "u": "총괄성", "mis": "증기압 내림", "a": "O", "s": "비휘발성 용질을 녹이면 용매의 증기 압력이 내려간다.", "f": "비휘발성 용질을 녹이면 용매의 증기 압력이 내려간다.", "w": "표면에서 용매 분자의 증발이 방해받는다.", "lvl": 2, "c": "CH2-137"}, {"n": "7-33", "u": "총괄성", "mis": "라울 법칙", "a": "O", "s": "라울 법칙에 따르면 용액의 증기압은 용매의 몰분율에 순용매의 증기압을 곱한 값이다.", "f": "라울 법칙에 따르면 용액의 증기압은 용매의 몰분율에 순용매의 증기압을 곱한 값이다.", "w": "용액 증기압 = 용매 몰분율 × 순용매 증기압.", "lvl": 3, "c": "CH2-138"}, {"n": "7-34", "u": "총괄성", "mis": "증기압 내림", "a": "O", "s": "증기압 내림의 크기는 용질의 몰분율에 비례한다.", "f": "증기압 내림의 크기는 용질의 몰분율에 비례한다.", "w": "증기압 내림 = 용질 몰분율 × 순용매 증기압.", "lvl": 3, "c": "CH2-137"}, {"n": "7-35", "u": "총괄성", "mis": "증기압 내림", "a": "X", "s": "비휘발성 용질을 녹이면 용매의 증기 압력이 올라간다.", "f": "비휘발성 용질을 녹이면 용매의 증기 압력이 내려간다.", "w": "용매의 증발이 방해받아 증기압이 내려간다.", "lvl": 2, "c": "CH2-137"}, {"n": "7-36", "u": "총괄성", "mis": "끓는점 오름", "a": "O", "s": "끓는점 오름은 ΔTb = Kb·m(몰랄 농도)로 나타낸다.", "f": "끓는점 오름은 ΔTb = Kb·m(몰랄 농도)로 나타낸다.", "w": "끓는점 오름은 몰랄 농도에 비례한다.", "lvl": 2, "c": "CH2-139"}, {"n": "7-37", "u": "총괄성", "mis": "어는점 내림", "a": "O", "s": "어는점 내림은 ΔTf = Kf·m로 나타낸다.", "f": "어는점 내림은 ΔTf = Kf·m로 나타낸다.", "w": "어는점 내림은 몰랄 농도에 비례한다.", "lvl": 2, "c": "CH2-140"}, {"n": "7-38", "u": "총괄성", "mis": "몰랄 오름 상수", "a": "X", "s": "Kb, Kf는 용질의 종류에 따라 정해지는 값이다.", "f": "Kb, Kf는 용매의 종류에 따라 정해지는 고유 상수이다.", "w": "용매마다 고유한 값이다.", "lvl": 3, "c": "CH2-141"}, {"n": "7-39", "u": "총괄성", "mis": "끓는점 오름", "a": "O", "s": "비휘발성 용질을 녹이면 용액의 끓는점이 순용매보다 높아진다.", "f": "비휘발성 용질을 녹이면 용액의 끓는점이 순용매보다 높아진다.", "w": "증기압이 내려가 더 높은 온도에서 끓는다.", "lvl": 1, "c": "CH2-139"}, {"n": "7-40", "u": "총괄성", "mis": "어는점 내림", "a": "O", "s": "용질을 녹이면 용액의 어는점이 순용매보다 낮아진다.", "f": "용질을 녹이면 용액의 어는점이 순용매보다 낮아진다.", "w": "어는 것을 방해해 어는점이 내려간다.", "lvl": 1, "c": "CH2-140"}, {"n": "7-41", "u": "총괄성", "mis": "어는점 내림", "a": "X", "s": "용질을 녹이면 용액의 어는점이 올라간다.", "f": "용질을 녹이면 용액의 어는점이 내려간다.", "w": "어는점 내림이 일어난다.", "lvl": 1, "c": "CH2-140"}, {"n": "7-42", "u": "총괄성", "mis": "총괄성 정의", "a": "X", "s": "총괄성은 용질의 종류에 따라 달라진다.", "f": "총괄성은 용질 입자의 수에만 의존한다.", "w": "입자 수가 같으면 종류와 무관하게 같다.", "lvl": 2, "c": "CH2-136"}, {"n": "7-43", "u": "총괄성", "mis": "전해질", "a": "O", "s": "전해질은 물에서 이온화하여 입자 수가 늘어난다.", "f": "전해질은 물에서 이온화하여 입자 수가 늘어난다.", "w": "이온으로 나뉘어 입자 수가 증가한다.", "lvl": 2, "c": "CH2-142"}, {"n": "7-44", "u": "총괄성", "mis": "반트호프 인자", "a": "X", "s": "NaCl은 물에서 이온화하지 않아 입자 수가 그대로이다.", "f": "NaCl은 물에서 Na⁺과 Cl⁻로 나뉘어 입자 수가 약 2배가 된다(i≈2).", "w": "완전 이온화하면 입자 수가 2배가 된다.", "lvl": 2, "c": "CH2-143"}, {"n": "7-45", "u": "총괄성", "mis": "반트호프 인자", "a": "O", "s": "CaCl₂는 물에서 입자 수가 약 3배가 된다(i≈3).", "f": "CaCl₂는 물에서 입자 수가 약 3배가 된다(i≈3).", "w": "Ca²⁺ 1개와 Cl⁻ 2개로 나뉜다.", "lvl": 3, "c": "CH2-143"}, {"n": "7-46", "u": "총괄성", "mis": "반트호프 인자", "a": "X", "s": "포도당은 전해질이라 물에서 이온화한다.", "f": "포도당은 비전해질이라 이온화하지 않는다(i≈1).", "w": "분자 상태로 녹아 입자 수가 늘지 않는다.", "lvl": 2, "c": "CH2-143"}, {"n": "7-47", "u": "총괄성", "mis": "전해질 총괄성", "a": "O", "s": "같은 몰랄 농도라면 전해질 용액이 비전해질 용액보다 총괄성이 크다.", "f": "같은 몰랄 농도라면 전해질 용액이 비전해질 용액보다 총괄성이 크다.", "w": "이온화로 입자 수가 더 많기 때문.", "lvl": 3, "c": "CH2-144"}, {"n": "7-48", "u": "총괄성", "mis": "반트호프 인자", "a": "O", "s": "반트호프 인자 i는 용질 1개가 내놓는 입자 수를 반영한다.", "f": "반트호프 인자 i는 용질 1개가 내놓는 입자 수를 반영한다.", "w": "이온화 정도를 나타내는 인자.", "lvl": 3, "c": "CH2-143"}, {"n": "7-49", "u": "총괄성", "mis": "전해질 계산", "a": "O", "s": "전해질 용액의 끓는점 오름은 ΔTb = i·Kb·m로 계산한다.", "f": "전해질 용액의 끓는점 오름은 ΔTb = i·Kb·m로 계산한다.", "w": "반트호프 인자 i를 곱해 입자 수를 반영한다.", "lvl": 3, "c": "CH2-145"}, {"n": "7-50", "u": "총괄성", "mis": "전해질 비교", "a": "O", "s": "같은 몰랄 농도면 NaCl 용액이 포도당 용액보다 어는점이 더 많이 내려간다.", "f": "같은 몰랄 농도면 NaCl 용액이 포도당 용액보다 어는점이 더 많이 내려간다.", "w": "NaCl은 i≈2라 입자 수가 더 많다.", "lvl": 3, "c": "CH2-146"}, {"n": "7-51", "u": "총괄성", "mis": "응용", "a": "O", "s": "겨울철 도로에 소금을 뿌리는 것은 어는점 내림을 이용한 것이다.", "f": "겨울철 도로에 소금을 뿌리는 것은 어는점 내림을 이용한 것이다.", "w": "물의 어는점을 낮춰 얼지 않게 한다.", "lvl": 2, "c": "CH2-147"}, {"n": "7-52", "u": "총괄성", "mis": "응용", "a": "O", "s": "자동차 부동액은 어는점 내림과 끓는점 오름을 이용한다.", "f": "자동차 부동액은 어는점 내림과 끓는점 오름을 이용한다.", "w": "냉각수가 얼거나 끓는 것을 막는다.", "lvl": 2, "c": "CH2-147"}, {"n": "7-53", "u": "총괄성", "mis": "총괄성 관계", "a": "X", "s": "증기압 내림이 클수록 끓는점 오름은 작아진다.", "f": "증기압 내림이 클수록 끓는점 오름도 커진다.", "w": "증기압이 더 내려가면 끓는점이 더 올라간다.", "lvl": 2, "c": "CH2-148"}, {"n": "7-54", "u": "총괄성", "mis": "증기압 내림", "a": "X", "s": "비휘발성 용질 용액은 순용매보다 같은 온도에서 증기 압력이 높다.", "f": "비휘발성 용질 용액은 순용매보다 같은 온도에서 증기 압력이 낮다.", "w": "용질이 증발을 방해해 증기압이 낮다.", "lvl": 2, "c": "CH2-137"}, {"n": "7-55", "u": "총괄성", "mis": "총괄성 크기", "a": "X", "s": "총괄성은 녹아 있는 용질 입자 수가 많을수록 작아진다.", "f": "총괄성은 녹아 있는 용질 입자 수가 많을수록 커진다.", "w": "입자 수에 비례하기 때문.", "lvl": 2, "c": "CH2-149"}, {"n": "7-56", "u": "총괄성", "mis": "라울 법칙", "a": "O", "s": "라울 법칙에서 용매의 몰분율이 작아지면 용액의 증기압도 작아진다.", "f": "라울 법칙에서 용매의 몰분율이 작아지면 용액의 증기압도 작아진다.", "w": "증기압 = 용매 몰분율 × 순용매 증기압.", "lvl": 3, "c": "CH2-138"}, {"n": "7-57", "u": "총괄성", "mis": "비전해질 비교", "a": "X", "s": "0.1 m 포도당 용액과 0.1 m 설탕 용액의 어는점 내림은 서로 다르다.", "f": "0.1 m 포도당 용액과 0.1 m 설탕 용액의 어는점 내림은 서로 같다.", "w": "둘 다 비전해질(i≈1)이라 입자 수가 같다.", "lvl": 3, "c": "CH2-150"}, {"n": "7-58", "u": "총괄성", "mis": "전해질 비교", "a": "X", "s": "0.1 m NaCl 용액과 0.1 m 포도당 용액의 끓는점 오름은 같다.", "f": "0.1 m NaCl 용액의 끓는점 오름이 포도당 용액보다 크다.", "w": "NaCl은 i≈2라 입자 수가 2배다.", "lvl": 3, "c": "CH2-146"}, {"n": "7-59", "u": "총괄성", "mis": "총괄성 관계", "a": "O", "s": "끓는점 오름과 어는점 내림은 모두 몰랄 농도에 비례한다.", "f": "끓는점 오름과 어는점 내림은 모두 몰랄 농도에 비례한다.", "w": "ΔTb=Kb·m, ΔTf=Kf·m.", "lvl": 2, "c": "CH2-148"}, {"n": "7-60", "u": "총괄성", "mis": "몰랄 상수", "a": "O", "s": "어는점 내림 상수 Kf는 용매에 따라 물보다 더 클 수도 있다.", "f": "어는점 내림 상수 Kf는 용매에 따라 물보다 더 클 수도 있다.", "w": "Kf는 용매마다 다른 고유 상수이다.", "lvl": 3, "c": "CH2-151"}];
 const PREREQ={"gc": {"기초지식": [], "원자": ["기초지식"], "양자수": ["원자"], "전자배치": ["양자수"], "주기성": ["전자배치"], "분자": ["전자배치", "주기성"], "물질의상태": ["분자"], "열역학": ["기초지식"], "화학평형": ["열역학"], "산염기평형": ["화학평형"], "산화환원평형": ["화학평형", "전자배치"], "반응속도론": ["기초지식"], "배위화학": ["전자배치", "분자"], "핵화학": ["원자"]}, "ch2": {"분자간힘": [], "이상기체": [], "실제기체": ["이상기체", "분자간힘"], "분압": ["이상기체"], "액체": ["분자간힘"], "고체": ["분자간힘"], "농도": [], "총괄성": ["농도", "액체"], "삼투압": ["총괄성"], "엔탈피": [], "엔트로피": [], "자발성": ["엔탈피", "엔트로피"], "용해": ["분자간힘", "자발성"], "반응속도": ["농도"], "산염기세기": [], "완충": ["산염기세기"], "적정": ["산염기세기", "완충", "농도"], "산화수": [], "전기화학": ["산화수", "자발성"], "탄소화합물": []}, "ch1": {"Ⅰ-1": [], "Ⅰ-2": ["Ⅰ-1"], "Ⅰ-3": ["Ⅰ-1"], "Ⅰ-4": ["Ⅰ-3"], "Ⅱ-1": ["Ⅰ-1"], "Ⅱ-2": ["Ⅱ-1"], "Ⅱ-3": ["Ⅱ-2"], "Ⅱ-4": ["Ⅱ-3"], "Ⅱ-5": ["Ⅱ-3", "Ⅱ-4"], "Ⅱ-6a": ["Ⅱ-5"], "Ⅱ-6b": ["Ⅱ-6a", "Ⅱ-4"], "엔탈피": ["Ⅰ-4"], "Ⅲ-1": ["Ⅰ-4"], "Ⅲ-2": ["Ⅲ-1", "엔탈피"], "Ⅲ-3": ["Ⅲ-1"], "Ⅳ-1": ["Ⅰ-3"], "Ⅳ-2": ["Ⅲ-1", "Ⅳ-1"], "Ⅳ-3": ["Ⅳ-2", "Ⅰ-4"], "부록": ["Ⅰ-3"]}, "ch1s": {"Ⅰ-1": [], "Ⅰ-2": ["Ⅰ-1"], "Ⅰ-3": ["Ⅰ-2"], "Ⅱ-1": ["Ⅰ-1"], "Ⅱ-2": ["Ⅰ-1", "Ⅱ-1"], "Ⅱ-3": ["Ⅰ-1", "Ⅱ-2"], "Ⅲ-1": ["Ⅰ-2", "Ⅱ-2", "Ⅱ-3"], "Ⅲ-2": ["Ⅱ-1", "Ⅱ-3", "Ⅲ-1"], "Ⅲ-3": ["Ⅱ-3", "Ⅲ-1", "Ⅲ-2"], "Ⅳ-1": ["Ⅰ-2", "Ⅲ-1"], "Ⅳ-2": ["Ⅰ-2", "Ⅰ-3", "Ⅱ-3", "Ⅲ-1", "Ⅳ-1"], "Ⅳ-3": ["Ⅳ-2"], "Ⅳ-4": ["Ⅳ-1", "Ⅳ-2", "Ⅳ-3"]}};
 </script>
+<!-- 서술형 연습 — 문항 고르기(순수 함수 · Node 에서도 같은 답). 화면 · Word 가 같은 고른 것을 쓴다. -->
+<script src="essay.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const PASS=80;
@@ -3161,6 +3217,8 @@ function render(commit){
      맨 아래에 있을 때는 거기까지 내려간 학생이 드물었다. 내용은 render 뒤에
      fillMainSolutions 가 채운다(회차 문항 파일을 읽어야 해서 비동기). */
   if(!_EMBED) h+='<div id="main-sols"></div>';
+  /* 서술형 연습 — 틀린 문장을 본 바로 뒤에 «왜» 를 써 보게 한다(화학Ⅰ 심화는 새 절 안 · essayV2HTML). */
+  if(!V2) h+=essayCardHTML();
 
   // 추이 (새 절에서는 ① 회차 진행 곡선이 대신한다)
   if(!V2) h+=`<div class="card"><h2>점수 추이 · 응시한 회차</h2>
@@ -3278,6 +3336,7 @@ function render(commit){
 
   if(commit===false){return h;}
   $('#app').innerHTML=h;
+  try{ essayHydrate(); }catch(e){}     /* 이 기기에 남은 서술형 답을 칸에 되돌린다 */
   /* Word·인쇄 단추는 그린 기록이 있을 때만 선다(2026-10-07) — 기록이 없는 화면에서 눌러도 빈 종이다. */
   var _fb=document.getElementById('footbtns'); if(_fb) _fb.hidden=false;
 
@@ -4144,6 +4203,8 @@ async function boot(){
   try{ await loadCarry(); }catch(e){ CARRY=null; CARRYV=null; }
   try{ await loadPlan(latest.course); }catch(e){ PLAN=null; }
   await computeQuad(isDemo);
+  /* 서술형 연습 은행 · 이 과목 앞 회차 문항 — render 전에 골라 둔다(화면과 RPT 가 같은 것을 쓴다). 은행이 없으면 null. */
+  try{ await loadEssay(); }catch(e){ ESSAY=null; }
   render();
   try{ await fillMainSolutions(); }catch(e){}
   try{ await fillChronicDenom(); }catch(e){}
@@ -4256,6 +4317,8 @@ function buildReportModel(){
     rank:(RANK&&showRank(RANK)&&!REPORT_V2[course])?{per100:RANK.per100, n:RANK.n, avg:RANK.avg}:null,
     carry:null, v2x:null};
   M.carry=carryModel(Number(latest.round), total);
+  /* 서술형 연습 — boot 가 고른 것(ESSAY) 그대로. Word 는 이것만 읽고 다시 고르지 않는다. */
+  M.essay=(typeof essayOn==='function'&&essayOn())?ESSAY:null;
   if(M.v2) M.v2x=buildV2(M);
   return M;
 }
@@ -4471,6 +4534,8 @@ function renderV2(M){
         +(X.chronicMore?'<p class="note" style="margin:8px 0 0">그 밖에 '+X.chronicMore+'개는 아래 「다시 볼 개념」에 함께 적었습니다.</p>':'')
         :'<p class="note" style="margin:0">아직 없습니다. 같은 개념을 세 번 이상 물어 절반 넘게 틀리면 여기에 섭니다.</p>')+'</section>';
   }
+  /* 서술형 연습 — 되풀이되는 오개념 바로 뒤(고르기도 그 개념부터다) */
+  h+=essayV2HTML(NO);
   /* ⑤ */
   if(X.preview){ var pv=X.preview;
     h+='<section class="v2sec" id="v2-preview"><h2>'+NO()+'다음 주 '+pv.round+'회 「'+_esc(pv.title)+'」 예습</h2>'
@@ -4489,6 +4554,189 @@ function renderV2(M){
   h+='<div class="v2more">자세히 보기 · 이번 회차 문항과 단원 기록</div>';
   return h;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   서술형 연습 · 나에게 맞춘 5문항 (선생님 결정 2026-10-13)
+   ──────────────────────────────────────────────────────────────────────────────────
+   O/X 는 «무엇이 맞나» 까지만 묻는다. 틀린 개념을 «왜» 로 한 번 더 써 보게 한다 — 은행
+   (appdata/essay_<과목>.json)에서 이 학생이 이번 회차에 틀린 개념으로 다섯 문항을 고른다.
+     · 고르기는 essay.js(DTEssay.pick · 순수 함수)가 한다. 여기서는 회차 파일·시트 기록을 모아 넘기고,
+       고른 것(ESSAY)을 화면 · RPT.essay · Word 가 **같이** 쓴다(Word 가 다시 고르지 않는다).
+     · 은행 파일이 없으면(아직 집필 중인 과목) 구역을 **조용히 뺀다** — 빈 상자나 오류 문구를 세우지 않는다.
+     · 모범 답안은 «답 확인» 을 누른 뒤에야 그린다(DOM 에도 없다). 인쇄할 때만 문서 맨 끝에 모아 붙이고
+       인쇄가 끝나면 걷는다 — 종이는 «먼저 쓰고, 뒤쪽에서 맞대 보기» 다.
+     · 쓴 답은 이 브라우저에만 남긴다(ESSAY_STORE 한 칸 · 서버로 안 보낸다). 칸 안의 이름은 학생 이름이
+       아니라 학생키 해시다 — 같은 기기를 형제가 같이 써도 서로의 답이 섞이지 않고, 이름은 남지 않는다.
+     · 점수를 매기거나 «틀렸다» 고 하지 않는다. 핵심 낱말이 글자로 들어갔는지만 대조한다(서술형 채점은 선생님 몫).
+   회차 시점 상세(_EMBED)·회차 시점 화면(_VR)·구간 보고서에는 세우지 않는다 — 대상은 이 성적표의 최신 회차 하나다. */
+var ESSAY=null;
+var ESSAY_STORE='dt_essay_v1';
+var ES_LVL={1:'기본',2:'적용',3:'심화'};   /* 은행 lvl(집필 명세) — O/X 문항의 기본·표준·심화와 다른 자다 */
+async function loadEssay(){
+  ESSAY=null;
+  if(!latest||typeof DTEssay==='undefined'||typeof ChemEngine==='undefined') return;
+  var course=String(latest.course||''), round=Number(latest.round);
+  if(!/^[a-z0-9]{1,8}$/.test(course)||!round) return;
+  var bank=null;
+  try{ var r=await fetch('appdata/essay_'+course+'.json',{cache:'no-cache'}); if(r.ok) bank=await r.json(); }catch(e){ bank=null; }
+  if(!bank||typeof bank!=='object'||!bank.concepts||typeof bank.concepts!=='object') return;
+  if(bank.course&&bank.course!==course) return;                    /* 다른 과목 은행이 잘못 놓였으면 안 쓴다 */
+  /* 이 과목에서 본 회차(이번 회차까지)의 문항 — «앞 회차에서도 틀렸나 · 그 뒤 맞혔나 · 몇 번 틀렸나» 를 센다 */
+  var tr=((A&&A.trend)||[]).filter(function(t){ return t.course===course&&Number(t.round)<=round; });
+  await Promise.all(tr.map(function(t){ return loadRoundItems(course, t.round).catch(function(){ return null; }); }));
+  var rounds=tr.map(function(t){
+    var atts=roundAtts(course, t.round), f=(atts[0]&&(ORD[atts[0].attempt]||0)===0)?atts[0]:null;
+    return {round:Number(t.round), items:_ROUND_ITEMS[course+'#'+t.round]||null,
+            answers:(f&&typeof f.answers==='string')?f.answers:'', wrongMis:(f&&f.wrongMis)||[],
+            retakes:atts.filter(function(a){ return (ORD[a.attempt]||0)>0; }).map(function(a){ return {cids:a.retakeCids, keys:a.retakeKeys, answers:a.answers}; })};
+  });
+  try{
+    ESSAY=DTEssay.pick({bank:bank, course:course, round:round, rounds:rounds,
+      chronic:(A.chronicMis||[]).map(function(m){ return m.mis; }), canon:ChemEngine.misCanon, seed:dxSeedKey()});
+  }catch(e){ ESSAY=null; }
+  if(!ESSAY||!ESSAY.items||!ESSAY.items.length) ESSAY=null;
+}
+function essayOn(){
+  return !!(ESSAY&&ESSAY.items&&ESSAY.items.length&&latest&&ESSAY.course===latest.course&&ESSAY.round===Number(latest.round)
+            &&!_EMBED&&!(typeof _VR!=='undefined'&&_VR));
+}
+function essayTitle(){ return '서술형 연습 · 나에게 맞춘 '+ESSAY.items.length+'문항'; }
+/* 안내 한 줄 — 무엇으로 골랐는지를 사실대로(전부 오답 · 보충이 섞임 · 다 맞혀서 심화만) */
+/* Word 도 이 한 줄을 그대로 쓴다(종이에는 «답 확인» 대신 «맨 끝 쪽에서 맞대 보기»). */
+function essayWhyLine(E){
+  var K={}; ((E||ESSAY).items||[]).forEach(function(x){ K[x.kind]=1; });
+  return (!K.wrong)?'이번 회차에 틀린 개념이 없어 맞힌 심화 문항의 개념으로 한 단계 더 묻습니다.'
+    :((K.carry||K.deep)?'이번 회차에 틀린 개념부터 골랐고, 모자란 자리는 앞 회차에 남은 개념·심화 문항으로 채웠습니다.'
+    :'이번 회차에 틀린 개념으로 골랐습니다.');
+}
+function essayIntro(){
+  /* 종이에는 누를 단추가 없다 — 인쇄용 문장을 따로 둔다(.esprt · 화면에서는 숨는다). */
+  return essayWhyLine(ESSAY)+' <span class="esscr">먼저 자기 말로 써 보고 <b>«답 확인»</b>을 누르세요 — 모범 답안과 채점 기준은 그다음에 열립니다. '
+    +'점수는 매기지 않고, 쓴 답은 이 기기에만 남습니다.</span>'
+    +'<span class="esprt">먼저 칸에 자기 말로 써 보고, 맨 끝 «서술형 모범 답안» 쪽에서 맞대 보세요. 점수는 매기지 않습니다.</span>';
+}
+function esLen(it){ var L=it&&it.len; return (Array.isArray(L)&&L.length===2&&isFinite(L[0])&&isFinite(L[1]))?[Number(L[0]),Number(L[1])]:null; }
+function essayQHTML(x, i){
+  var it=x.item, L=esLen(it), lv=ES_LVL[it.lvl];
+  return '<div class="esq" data-es="'+i+'">'
+    +'<div class="esh"><span class="esn">'+(i+1)+'</span><span class="esm">'+_esc(x.m||x.c)+'</span>'+(lv?'<span class="lvb">'+lv+'</span>':'')+'</div>'
+    +'<div class="eswhy '+_esc(x.kind)+'">'+_esc(x.why)+'</div>'
+    +'<div class="esqq" id="es-q-'+i+'">'+_esc(it.q)+'</div>'
+    +'<label class="eslab" id="es-l-'+i+'" for="es-a-'+i+'"><span>'+(i+1)+'번 내 답</span>'+(L?'<span class="eslen">권장 '+L[0]+'~'+L[1]+'자</span>':'')+'</label>'
+    +'<textarea class="esta" id="es-a-'+i+'" data-es="'+i+'" rows="4" aria-labelledby="es-l-'+i+'" aria-describedby="es-q-'+i+' es-c-'+i+'"></textarea>'
+    +'<div class="espaper" aria-hidden="true">'+esPaperHTML('', it)+'</div>'
+    +'<div class="esbar"><span class="escnt" id="es-c-'+i+'">'+esCount('', it)+'</span>'
+    +'<button type="button" class="esbtn" data-es="'+i+'" disabled>답 확인</button></div>'
+    +'<div class="esrev" id="es-r-'+i+'" aria-live="polite" hidden></div></div>';
+}
+/* 종이용 사본 — 쓴 글은 그대로, 비었으면 손으로 쓸 줄(권장 길이만큼 · 3~6줄) */
+function esPaperHTML(t, it){
+  if(String(t||'').trim()) return _esc(t);
+  var L=esLen(it), n=L?Math.max(3,Math.min(6,Math.ceil(L[1]/35))):4, s='';
+  for(var k=0;k<n;k++) s+='<span class="esline"></span>';
+  return s;
+}
+function esCount(t, it){ var L=esLen(it), n=String(t||'').replace(/\n/g,'').length; return n+'자'+(L?' / 권장 '+L[0]+'~'+L[1]+'자':''); }
+function essayCardHTML(){
+  if(!essayOn()) return '';
+  return '<div class="card essay" id="essay"><h2>'+_esc(essayTitle())+'</h2>'
+    +'<p class="note" style="margin:-4px 0 0">'+essayIntro()+'</p>'
+    +ESSAY.items.map(essayQHTML).join('')+'</div>';
+}
+/* 화학Ⅰ 심화(새 절) — 번호 절 하나로(④ 되풀이되는 오개념 다음). 다른 과목은 「문항별 정오 · 오개념 정리」 바로 뒤의 카드다. */
+function essayV2HTML(NO){
+  if(!essayOn()) return '';
+  return '<section class="v2sec essay" id="v2-essay"><h2>'+NO()+_esc(essayTitle())+'</h2>'
+    +'<p class="sub">'+essayIntro()+'</p>'+ESSAY.items.map(essayQHTML).join('')+'</section>';
+}
+/* «답 확인» 뒤 — 핵심 낱말 대조 · 한 줄 자기 점검 · 모범 답안 · 채점 기준. 쓴 글이 바뀌면 다시 그린다. */
+function essayRevealHTML(x, text){
+  var it=x.item, chk=DTEssay.keyCheck(text, it.key), rub=(it.rubric&&typeof it.rubric==='object')?it.rubric:{};
+  var lv=['3','2','1'].filter(function(k){ return rub[k]; });
+  return (chk.n?'<span class="tlab">핵심 낱말 대조</span><div class="eskeys">'+chk.rows.map(function(r){
+        return '<span class="eskw '+(r.hit?'hit':'miss')+'">'+(r.hit?'✓ ':'○ ')+_esc(r.label)+'</span>'; }).join('')+'</div>'
+      +'<p class="esself">'+_esc(DTEssay.selfLine(chk))+'</p>':'')
+    +'<span class="tlab">모범 답안</span><div class="esmodel">'+_esc(it.a)+'</div>'
+    +(lv.length?'<span class="tlab">채점 기준</span><dl class="esrub">'+lv.map(function(k){ return '<dt>'+k+'</dt><dd>'+_esc(rub[k])+'</dd>'; }).join('')+'</dl>':'')
+    +'<p class="esnote">핵심 낱말은 글자로만 맞대 본 것입니다. 낱말이 다 들어가도 까닭이 이어지는지는 모범 답안과 견주어 보고, 헷갈리면 선생님께 보여 주세요.</p>';
+}
+/* 질문 글의 해시까지 넣는다 — 은행을 고쳐 문항 차례·글이 바뀌면 옛 답이 다른 질문 칸에 붙지 않게 */
+function esKey(i){ var x=ESSAY.items[i]; return ESSAY.sk+'|'+ESSAY.course+'|'+ESSAY.round+'|'+x.c+'|'+x.idx+'|'+DTEssay.hashHex(x.item.q); }
+/* 저장 칸 하나(dt_essay_v1) — {v:1, s:{'<학생키 해시>|과목|회차|개념|문항|질문 해시': {t:쓴 글, r:답 확인함, at:시각}}}.
+   오래된 것부터 지워 300칸을 넘기지 않는다(한 과목 18회 × 5문항 = 90칸이라 넉넉하다). */
+function esLoad(){
+  try{ var v=JSON.parse(localStorage.getItem(ESSAY_STORE)||'null'); if(v&&typeof v==='object'&&v.s&&typeof v.s==='object') return v; }catch(e){}
+  return {v:1, s:{}};
+}
+function esSave(i, patch){
+  try{
+    var all=esLoad(), k=esKey(i), rec=Object.assign({}, all.s[k]||{}, patch, {at:Date.now()});
+    if(!String(rec.t||'').trim()&&!rec.r) delete all.s[k]; else all.s[k]=rec;
+    var ks=Object.keys(all.s); if(ks.length>300) ks.sort(function(a,b){ return (all.s[a].at||0)-(all.s[b].at||0); }).slice(0,ks.length-300).forEach(function(z){ delete all.s[z]; });
+    localStorage.setItem(ESSAY_STORE, JSON.stringify(all));
+  }catch(e){}
+}
+function esSync(i){
+  var ta=document.getElementById('es-a-'+i), x=ESSAY&&ESSAY.items[i]; if(!ta||!x) return;
+  var t=ta.value, q=ta.closest('.esq');
+  var b=q&&q.querySelector('.esbtn'); if(b) b.disabled=!t.trim();
+  var c=document.getElementById('es-c-'+i); if(c) c.textContent=esCount(t, x.item);
+  var p=q&&q.querySelector('.espaper'); if(p) p.innerHTML=esPaperHTML(t, x.item);
+  var r=document.getElementById('es-r-'+i); if(r&&!r.hidden) r.innerHTML=essayRevealHTML(x, t);
+}
+function esReveal(i){
+  var ta=document.getElementById('es-a-'+i), r=document.getElementById('es-r-'+i), x=ESSAY&&ESSAY.items[i];
+  if(!ta||!r||!x||!ta.value.trim()) return;
+  r.innerHTML=essayRevealHTML(x, ta.value); r.hidden=false;
+  var b=ta.closest('.esq').querySelector('.esbtn'); if(b) b.hidden=true;    /* 연 뒤에는 쓰는 대로 대조가 따라온다 */
+  esSave(i, {t:ta.value, r:1});
+}
+/* render 뒤 — 이 기기에 남은 답을 칸에 되돌리고, 확인했던 문항은 다시 연다 */
+function essayHydrate(){
+  if(!essayOn()) return;
+  var all=esLoad();
+  ESSAY.items.forEach(function(x, i){
+    var ta=document.getElementById('es-a-'+i); if(!ta) return;
+    var rec=all.s[esKey(i)];
+    if(rec&&typeof rec.t==='string') ta.value=rec.t;
+    esSync(i);
+    if(rec&&rec.r&&ta.value.trim()) esReveal(i);
+  });
+}
+/* Word 가 칸에 넣을 글 — 지금 화면의 칸, 없으면 이 기기에 남은 것 */
+function essayTexts(){
+  if(!ESSAY||!ESSAY.items) return [];
+  var all=esLoad();
+  return ESSAY.items.map(function(x, i){ var ta=document.getElementById('es-a-'+i); if(ta) return ta.value; var rec=all.s[esKey(i)]; return (rec&&rec.t)||''; });
+}
+document.addEventListener('input', function(e){
+  var t=e.target; if(!t||!t.classList||!t.classList.contains('esta')) return;
+  var i=Number(t.getAttribute('data-es')); esSync(i); esSave(i, {t:t.value});
+});
+document.addEventListener('click', function(e){
+  var b=e.target&&e.target.closest?e.target.closest('.esbtn'):null; if(!b||b.disabled) return;
+  esReveal(Number(b.getAttribute('data-es')));
+});
+/* 종이 — 모범 답안 모음은 문서 맨 끝 «서술형 모범 답안» 절로. 인쇄 직전에 붙이고 끝나면 걷는다(화면 DOM 에는 안 남는다). */
+function essayBookHTML(){
+  return '<section class="card esbook" id="esbook"><h2>서술형 모범 답안</h2>'
+    +'<p class="note" style="margin:-4px 0 4px">번호는 앞의 «서술형 연습» 문항 번호와 같습니다. 먼저 써 본 뒤에 맞대 보세요. 핵심 낱말이 들어갔는지보다 까닭이 이어지는지가 먼저입니다.</p>'
+    +ESSAY.items.map(function(x, i){ var it=x.item, rub=(it.rubric&&typeof it.rubric==='object')?it.rubric:{}, lv=['3','2','1'].filter(function(k){ return rub[k]; });
+      /* 종이에는 첫 낱말만 — «|» 뒤 동의어(자판 대안 «H2», «-0.93» 등)는 화면 대조용이다 */
+      var keys=(Array.isArray(it.key)?it.key:[]).map(function(k){ return String(k).split('|').map(function(s){ return s.trim(); }).filter(Boolean)[0]||''; }).filter(Boolean);
+      return '<div class="esbq"><div class="esh"><span class="esn">'+(i+1)+'</span><span class="esm">'+_esc(x.m||x.c)+'</span></div>'
+        +'<div class="esqq">'+_esc(it.q)+'</div>'
+        +'<div class="esmodel">'+_esc(it.a)+'</div>'
+        +(keys.length?'<p class="esbk"><b>핵심 낱말</b> '+_esc(keys.join(' · '))+'</p>':'')
+        +(lv.length?'<dl class="esrub">'+lv.map(function(k){ return '<dt>'+k+'</dt><dd>'+_esc(rub[k])+'</dd>'; }).join('')+'</dl>':'')+'</div>'; }).join('')
+    +'</section>';
+}
+window.addEventListener('beforeprint', function(){
+  if(!essayOn()||!document.querySelector('.esq')||document.getElementById('esbook')) return;
+  ESSAY.items.forEach(function(x, i){ esSync(i); });
+  var w=document.querySelector('.wrap'); if(w) w.insertAdjacentHTML('beforeend', essayBookHTML());
+});
+window.addEventListener('afterprint', function(){ var b=document.getElementById('esbook'); if(b) b.remove(); });
 
 /* ==================== 숙제(조준모의고사 화학 I, course=jm1) 패널 ==================== */
 var HWROWS=[], HWMETA=null, HWOPEN=false, HWTAB=null;

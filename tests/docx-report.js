@@ -399,6 +399,55 @@ function docxText(file, tmp) {
   chk('종이에도 «**» · 겁주는 낱말이 없다', !/\*\*/.test(t2) && !BAN.test(t2), (t2.match(BAN) || []).join(' '));
   chk('화면에도 «**» · 겁주는 낱말이 없다', !/\*\*/.test(S2.text) && !BAN.test(S2.text), (S2.text.match(BAN) || []).join(' '));
 
+  /* ══ 서술형 연습 (선생님 결정 2026-10-13) — 종이가 화면과 같은 다섯 문항을 싣는가 ══
+     실제 은행은 집필 중이라 tests/fixtures/essay_ch1.json(가상 문항)을 appdata 자리에 넣는다. 학생은 가상이다.
+     잴 것: 문항 다섯이 화면(RPT.essay)과 같은 차례로 · 화면에 써 둔 답이 그 칸에 · 모범 답안은 본문에 없고
+     맨 끝 새 쪽 «서술형 모범 답안» 에만 · 핵심 낱말 · 채점 기준. */
+  console.log('\n── 서술형 연습 · 화면에 쓴 답이 종이 칸에 ──');
+  const p3 = await ctx.newPage();
+  p3.on('pageerror', e => errs.push(String(e).slice(0, 120)));
+  const RFE = n => JSON.parse(fs.readFileSync(path.join(ROOT, 'appdata', 'round_ch1_' + String(n).padStart(2, '0') + '.json'), 'utf8')).jeongsi.items;
+  const BANK = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'essay_ch1.json'), 'utf8'));
+  const mkE = (r, wrong) => { const items = RFE(r), units = {};
+    items.forEach((it, i) => { const u = units[it.u] || (units[it.u] = { u: it.u, t: 0, w: 0 }); u.t++; if (wrong.indexOf(i) >= 0) u.w++; });
+    const score = Math.round(10000 * (items.length - wrong.length) / items.length) / 100;
+    return { studentKey: '가상고-글씨', name: '글씨', school: '가상고', year: '2', course: 'ch1', round: r, attempt: '첫 응시', score, pass: score >= 80,
+      date: '2026-09-0' + r + 'T01:00:00Z', answers: items.map((it, i) => wrong.indexOf(i) >= 0 ? (it.a === 'O' ? 'X' : 'O') : it.a).join(''),
+      wrongMis: wrong.map(i => items[i].mis), wrongAxes: {}, units: Object.keys(units).map(k => units[k]), axes: [], isTest: false }; };
+  const I2e = RFE(2), w2 = [];
+  I2e.forEach((it, i) => { if (w2.length < 7 && BANK.concepts[it.c] && BANK.concepts[it.c].items.length && !w2.some(k => I2e[k].c === it.c)) w2.push(i); });
+  const ROWS3 = [mkE(1, [2, 9]), mkE(2, w2)];
+  await p3.route('**/macros/s/**', route => route.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify({ ok: true, student: 'x', rows: ROWS3, excluded: [], cumulative: CE.cumulative(ROWS3)['가상고-글씨'], rank: null, ranks: [], cohort: null, challenges: [] }) }));
+  await p3.route('**/appdata/essay_ch1.json', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(BANK) }));
+  await p3.goto(`http://localhost:${PORT}/report.html?student=x`, { waitUntil: 'load', timeout: 40000 });
+  await p3.waitForFunction(() => !!(window.__dtRpt && window.__dtRpt.rpt), null, { timeout: 30000 });
+  await p3.waitForTimeout(500);
+  const ESM = await p3.evaluate(() => { const E = window.__dtRpt.rpt.essay; return E ? E.items.map(x => ({ c: x.c, m: x.m, why: x.why, q: x.item.q, a: x.item.a, key: x.item.key, rub: x.item.rubric })) : null; });
+  chk('화면이 서술형 다섯 문항을 RPT 로 넘긴다', !!ESM && ESM.length === 5, ESM ? ESM.length + '문항' : '없음');
+  if (ESM && ESM.length) {
+    const MINE = '가상 학생이 화면에 써 둔 첫째 답 — 알파원리 때문이다';
+    await p3.fill('#es-a-0', MINE);
+    await p3.fill('#es-a-2', '셋째 칸 줄 하나\n둘째 줄');
+    const [dl3] = await Promise.all([p3.waitForEvent('download', { timeout: 90000 }), p3.click('#docxBtn')]);
+    const f3 = path.join(tmp, 'essay.docx'); await dl3.saveAs(f3);
+    const t3 = docxText(f3, tmp), x3 = docxParts(f3, tmp).xml;
+    const iH = t3.indexOf('서술형 연습 · 나에게 맞춘 5문항'), iB = t3.lastIndexOf('서술형 모범 답안');
+    chk('종이에 «서술형 연습 · 나에게 맞춘 5문항» 이 있다', iH > 0, true);
+    const qAt = ESM.map(x => t3.indexOf(x.q, iH));
+    chk('문항 다섯이 화면과 같은 차례로 본문에 있다', qAt.every((v, i) => v > iH && v < iB && (i === 0 || v > qAt[i - 1])), qAt.join(' < '));
+    chk('왜 골랐나 한 줄도 같다', ESM.every(x => t3.indexOf(x.why, iH) > 0), true);
+    chk('화면에 쓴 답이 그 문항의 칸에 들어간다', t3.indexOf(MINE) > qAt[0] && t3.indexOf(MINE) < qAt[1], '');
+    chk('여러 줄 답도 줄째로 들어간다', t3.indexOf('셋째 칸 줄 하나') > qAt[2] && t3.indexOf('둘째 줄') > qAt[2] && t3.indexOf('둘째 줄') < qAt[3], true);
+    chk('모범 답안 모음이 맨 끝(연락할 곳 뒤)에 있다', iB > t3.lastIndexOf('조준모T 카카오톡') && iB > qAt[4], true);
+    const brAt = x3.lastIndexOf('<w:br w:type="page"/>'), bkAt = x3.lastIndexOf('서술형 모범 답안');
+    chk('모범 답안 모음은 새 쪽에서 시작한다', brAt > 0 && brAt < bkAt && x3.slice(brAt, bkAt).indexOf('<w:t') === x3.slice(brAt, bkAt).lastIndexOf('<w:t'), true);
+    chk('모범 답안은 본문에 없고 맨 끝에만 있다', ESM.every(x => t3.indexOf(x.a) > iB && t3.indexOf(x.a) === t3.lastIndexOf(x.a)), true);
+    chk('맨 끝에 핵심 낱말 · 채점 기준이 있다', ESM.every(x => t3.indexOf(String(x.key[0]), iB) > 0) && ['3', '2', '1'].every(k => t3.indexOf(ESM[0].rub[k], iB) > 0), true);
+    chk('서술형에도 «**» · 겁주는 낱말이 없다', !/\*\*/.test(t3) && !BAN.test(t3), (t3.match(BAN) || []).join(' '));
+  }
+  await p3.close();
+
   console.log('\n' + (errs.length ? 'JS 오류: ' + errs.slice(0, 3).join(' | ') : 'JS 오류 없음'));
   if (errs.length) fail++;
 

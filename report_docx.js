@@ -13,7 +13,8 @@
        단원별      누적 정답률 (약한 순 · 단원 이름이 있으면 같이)
        다시 볼 개념 (화학1 기록 합산 포함 · 화면과 같은 분모) · 강의 링크
        [다른 과목] 화학1에서 이어 온 기록(있을 때) · 이번 주 처방
-       지금까지의 여정 · 오답노트 · 연락할 곳
+       지금까지의 여정 · 오답노트 · 서술형 연습(RPT.essay · 쓸 칸) · 연락할 곳
+      [새 쪽] 서술형 모범 답안 (모범 답안 · 핵심 낱말 · 채점 기준 — 문서 맨 끝)
    머리글(상호) · 바닥글(상호 · 쪽 번호), 표 행은 쪽에서 안 쪼개지고(cantSplit) 제목은 다음 덩어리와
    붙는다(keepNext).
 
@@ -399,11 +400,61 @@
       });
     }
 
+    /* ══ 서술형 연습 (선생님 결정 2026-10-13) — 화면이 고른 다섯 문항(RPT.essay)을 그대로.
+       ⚠ 여기서 다시 고르지 않는다 — 종이와 화면이 다른 문항을 내밀면 학생은 어느 쪽에 써야 할지 모른다.
+       본문에는 문항 · 왜 골랐나 · 쓸 칸만 두고, 모범 답안은 문서 맨 끝 새 쪽에 모은다(«먼저 쓰고, 뒤에서 맞대 보기»).
+       화면에 써 둔 답이 있으면(essayTexts — 칸 · 이 기기에 남은 것) 그 칸에 넣는다. */
+    var ES = M.essay && M.essay.items && M.essay.items.length ? M.essay : null;
+    var ES_LVL = { 1: '기본', 2: '적용', 3: '심화' };
+    var esTexts = [];
+    if (ES) {
+      try { esTexts = typeof window.essayTexts === 'function' ? (window.essayTexts() || []) : []; } catch (e) { esTexts = []; }
+      body.push(H('서술형 연습 · 나에게 맞춘 ' + ES.items.length + '문항'),
+        sub((typeof window.essayWhyLine === 'function' ? window.essayWhyLine(ES) + ' ' : '') + '먼저 자기 말로 써 보고, 모범 답안은 맨 끝 «서술형 모범 답안» 쪽에서 맞대 보세요. 점수는 매기지 않습니다.'));
+      ES.items.forEach(function (x, i) {
+        var it = x.item || {}, L = (Array.isArray(it.len) && it.len.length === 2) ? it.len : null;
+        var mine = String(esTexts[i] || '').replace(/\r/g, '');
+        body.push(P([run((i + 1) + '.  ', { bold: true, color: K.goldInk }), run(x.m || x.c, { bold: true }),
+                     run(ES_LVL[it.lvl] ? '    ' + ES_LVL[it.lvl] : '', { color: K.mut, size: SZ.sm })], { kn: true, before: 160, after: 20 }),
+          txt(x.why || '', { size: SZ.cap, color: x.kind === 'deep' ? K.ok : (x.kind === 'carry' ? K.amber : K.rust), bold: true, after: 40, kn: true }),
+          txt(it.q || '', { size: SZ.body, after: 60, kn: true }),
+          txt('내 답' + (L ? '   (권장 ' + L[0] + '~' + L[1] + '자)' : ''), { size: SZ.cap, color: K.mut, after: 30, kn: true }));
+        /* 쓸 칸 — 한 칸짜리 표. 쓴 답이 있으면 그 글, 없으면 손으로 쓸 줄(권장 길이만큼 · 3~6줄) */
+        var lines = L ? Math.max(3, Math.min(6, Math.ceil(Number(L[1]) / 35))) : 4, kids = [];
+        if (mine.trim()) mine.split('\n').forEach(function (ln) { kids.push(txt(ln, { size: SZ.body, after: 40 })); });
+        else for (var k = 0; k < lines; k++) kids.push(P([run(' ')], { after: 0, before: 160, border: { bottom: bdr(K.line, 4) } }));
+        body.push(new Table({ columnWidths: [CW], width: { size: CW, type: WidthType.DXA },
+          borders: { top: bdr(K.line, 6), bottom: bdr(K.line, 6), left: bdr(K.line, 6), right: bdr(K.line, 6), insideHorizontal: NB, insideVertical: NB },
+          rows: [new TableRow({ cantSplit: true, children: [new TableCell({ width: { size: CW, type: WidthType.DXA },
+            margins: { top: 100, bottom: 120, left: 160, right: 160 }, children: kids })] })] }));
+      });
+      body.push(P([], { after: 160 }));
+    }
+
     /* ── 연락할 곳 — 하나만 적는다 ── */
     body.push(P([run('성적표에 이상한 점이 있거나 더 여쭐 것이 있으시면  ', { color: K.mut, size: SZ.sm }),
                  run('조준모T 카카오톡 메시지', { bold: true, color: K.g8, size: SZ.sm }), run('  로 연락 주세요.', { color: K.mut, size: SZ.sm })],
                 { align: AlignmentType.CENTER, before: 240, after: 60, kn: true }),
       txt('이 성적표는 ' + nm + ' 학생을 위한 개인 맞춤 분석 자료입니다.  ·  ' + BRAND, { align: AlignmentType.CENTER, color: K.mut, size: SZ.cap, i: true }));
+
+    /* ── 서술형 모범 답안 — 문서 맨 끝 새 쪽. 번호는 앞 «서술형 연습» 과 같다. ── */
+    if (ES) {
+      body.push(new Paragraph({ children: [new PageBreak()] }),
+        H('서술형 모범 답안'),
+        sub('번호는 앞의 «서술형 연습» 문항 번호와 같습니다. 먼저 써 본 뒤에 맞대 보세요. 핵심 낱말이 들어갔는지보다 까닭이 이어지는지가 먼저입니다.'));
+      ES.items.forEach(function (x, i) {
+        var it = x.item || {}, rub = (it.rubric && typeof it.rubric === 'object') ? it.rubric : {};
+        /* 핵심 낱말은 첫 낱말만 싣는다 — «|» 뒤 동의어(«H2가 한계», «-0.93» 같은 자판 대안)는 화면 대조용이라 종이에는 군말이다 */
+        var keys = (Array.isArray(it.key) ? it.key : []).map(function (k) { return String(k).split('|').map(function (z) { return z.trim(); }).filter(Boolean)[0] || ''; }).filter(Boolean);
+        body.push(P([run((i + 1) + '.  ', { bold: true, color: K.goldInk }), run(x.m || x.c, { bold: true })], { kn: true, before: 160, after: 30 }),
+          txt(it.q || '', { size: SZ.sm, color: K.ink2, after: 60, kn: true }),
+          P([run('모범 답안  ', { bold: true, color: K.g8, size: SZ.sm }), run(it.a || '', { size: SZ.body })], { after: 60, kn: true, indent: { left: 200 }, border: { left: bdr(K.g6, 12) } }));
+        if (keys.length) body.push(P([run('핵심 낱말  ', { bold: true, color: K.g8, size: SZ.sm }), run(keys.join('  ·  '), { size: SZ.sm })], { after: 60, kn: true }));
+        var lv = ['3', '2', '1'].filter(function (k) { return rub[k]; });
+        if (lv.length) body.push(tbl([700, CW - 700], [['점', '채점 기준']].concat(lv.map(function (k) {
+          return [[txt(k, { size: SZ.sm, bold: true, color: K.g9, after: 0, align: AlignmentType.CENTER })], [txt(rub[k], { size: SZ.sm, after: 0 })]]; })), { head: true }));
+      });
+    }
 
     var mkHdr = function () {
       return new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, border: { bottom: bdr(K.line, 4) }, spacing: { after: 120 },
