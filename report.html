@@ -634,6 +634,24 @@ details.misfold[open]>summary .misgrp-h:after{content:'접기 ▴'}
 }
 @media print{ .v2sec,.v2tile,.v2mc,.v2tbl tr{break-inside:avoid} .v2sec h2{break-after:avoid} .cv-m{display:none!important} .cv-d{display:block!important} }
 
+/* ── 기다리는 동안 성적 분석 단계(repWait*) — 맞춘 단계는 초록 ✓, 지금 단계는 도는 점, 남은 단계는 옅게 ── */
+.rw h1{margin:0}
+.rwh{display:flex;align-items:center;gap:10px}
+.rwsp{width:18px;height:18px;border-radius:50%;border:2px solid var(--g2);border-top-color:var(--g8);animation:rwspin .9s linear infinite;flex:none}
+@keyframes rwspin{to{transform:rotate(360deg)}}
+.rwsub{margin:6px 0 12px;color:var(--mut);font-size:13px}
+.rwbar{height:6px;border-radius:999px;background:var(--g1);overflow:hidden;margin-bottom:12px}
+.rwbar i{display:block;height:100%;width:0;background:var(--g8);transition:width .5s ease}
+.rwlist{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px}
+.rwlist li{display:flex;align-items:center;gap:8px;color:var(--mut);opacity:.55}
+.rwlist li.ok{opacity:1;color:var(--ink2)}
+.rwlist li.on{opacity:1;color:var(--ink);font-weight:700}
+.rwi{width:16px;height:16px;flex:none;border-radius:50%;border:1.5px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1}
+.rwlist li.ok .rwi{border-color:var(--okBd);background:var(--okSoft);color:var(--ok)}
+.rwlist li.ok .rwi::after{content:'✓'}
+.rwlist li.on .rwi{border-color:var(--g2);border-top-color:var(--g8);animation:rwspin .9s linear infinite}
+@media (prefers-reduced-motion:reduce){ .rwsp,.rwlist li.on .rwi{animation:none} .rwbar i{transition:none} }
+@media print{ .rw{display:none} }
 /* ── 서술형 연습 · 나에게 맞춘 5문항 (선생님 결정 2026-10-13) ──────────────────────────
    학생이 화면에 먼저 써 보고 «답 확인» 을 눌러야 모범 답안이 열린다. 모범 답안은 누르기 전에는
    DOM 에도 없다(늦게 그린다) — 숨김(hidden)으로 두면 «소스 보기» 한 번에 다 보인다.
@@ -3379,6 +3397,58 @@ async function askReport(student, tries, c){
   }
   return null;
 }
+/* ══ 기다리는 동안 — 성적 분석 단계 (선생님 2026-10-17) ═════════════════════════════
+   «기다리는 동안 네가 하는 모든 작업을 있어 보이게 · OOO 학생 n회차 성적 분석 중부터 20개쯤 · 시간을 짧게 느끼게».
+   단계 이름은 이 성적표가 실제로 하는 일이다(기록 → 대조 → 단원·난이도 → 오개념 → 진단 → 추천 → 정리).
+   · 서버 답을 기다리는 동안 앞 단계부터 하나씩 넘어간다. 간격은 처음에 짧고 갈수록 길어지며, 답이 오기 전에는
+     끝에서 세 단계 앞에서 멈춰 기다린다(다 끝났다고 말하지 않는다).
+   · 학생 링크에는 이름이 없다(코드뿐) — 이름·회차는 서버 답이 온 순간 머리에 넣고, 남은 단계를 빠르게 넘긴 뒤
+     성적표가 덮어 그린다(성적표를 늦추지 않는다).
+   · 20초가 지나면 아래 한 줄을 «서버가 붐벼 평소보다 오래 걸립니다 · 링크에는 문제가 없습니다» 로 바꾼다.
+   · 움직임 줄이기 설정이면 도는 표시 없이 글자만 바뀐다. */
+var REP_STEPS=['학생 기록 찾기','응시한 회차 확인','회차별 첫 응시 답안 불러오기','정답과 한 문항씩 대조','재시 기록 맞대기',
+  '단원별 정답률 계산','기본·표준·심화 난이도별 정답률','틀린 문장의 오개념 분류','되풀이되는 오개념 찾기','바로잡은 개념 세기',
+  '근본 원인 진단','회차별 점수 추이 그리기','반 평균·석차 맞대기','이번 주 확인할 개념 고르기','복습 시점 계산 (1 · 3 · 7회차 간격)',
+  '다시 볼 개념 정리','강의록·자료 연결','서술형 연습 문항 고르기','부모님께 드릴 질문 고르기','성적표 정리'];
+var REPW=null;
+function repWaitStart(){
+  var app=document.getElementById('app'); if(!app||app.children.length) return;
+  app.innerHTML='<div class="card rw" id="repWait" aria-live="polite"><div class="rwh"><span class="rwsp" aria-hidden="true"></span>'
+    +'<h1 id="rwTitle">성적 분석 중</h1></div><p class="rwsub" id="rwSub">보통 10초 안팎 걸립니다. 창을 닫지 말고 기다려 주세요.</p>'
+    +'<div class="rwbar" aria-hidden="true"><i id="rwBar"></i></div>'
+    +'<ol class="rwlist">'+REP_STEPS.map(function(t,i){ return '<li id="rw'+i+'"'+(i?'':' class="on"')+'><span class="rwi" aria-hidden="true"></span>'+_esc(t)+'</li>'; }).join('')+'</ol></div>';
+  REPW={i:0, t0:Date.now(), done:false, timer:null};
+  (function tick(){
+    if(!REPW||REPW.done) return;
+    var cap=REP_STEPS.length-3;                       /* 답이 오기 전에는 여기서 멈춘다 */
+    if(REPW.i<cap){ repWaitStep(REPW.i+1); }
+    var el=(Date.now()-REPW.t0)/1000, gap=REPW.i<6?700:REPW.i<11?1300:REPW.i<15?2400:4200;
+    if(el>20){ var sb=document.getElementById('rwSub'); if(sb&&!sb.dataset.slow){ sb.dataset.slow=1;
+      sb.innerHTML='서버가 붐벼 평소보다 오래 걸리고 있습니다. <b>링크에는 문제가 없습니다.</b> 조금만 더 기다려 주세요.'; } }
+    REPW.timer=setTimeout(tick, gap);
+  })();
+}
+function repWaitStep(n){
+  if(!REPW) return;
+  for(var k=REPW.i;k<n&&k<REP_STEPS.length;k++){ var li=document.getElementById('rw'+k); if(li){ li.className='ok'; } }
+  REPW.i=Math.min(n, REP_STEPS.length);
+  var cur=document.getElementById('rw'+REPW.i); if(cur) cur.className='on';
+  var bar=document.getElementById('rwBar'); if(bar) bar.style.width=Math.round(100*REPW.i/REP_STEPS.length)+'%';
+}
+function repWaitDone(j){
+  if(!REPW) return;
+  clearTimeout(REPW.timer);
+  if(!j||!j.cumulative){ REPW=null; return; }                 /* 못 받았으면 오류 안내가 이 자리를 덮는다 */
+  REPW.done=true;
+  try{
+    var rows=(j.rows||[]).filter(function(r){ return r&&r.course!=='jm1'; }), nm=rows.length?justNameRep(rows[0].name):'';
+    var tr=(j.cumulative.trend||[]), last=tr.length?tr[tr.length-1]:null;
+    var t=document.getElementById('rwTitle');
+    if(t&&nm) t.textContent=nm+' 학생'+(last?' · '+(CRSLBL[last.course]||'')+' '+last.round+'회':'')+' 성적 분석 중';
+    var sb=document.getElementById('rwSub'); if(sb) sb.textContent='기록을 받았습니다. 마무리하고 있습니다.';
+  }catch(e){}
+  (function fin(){ if(!REPW||!document.getElementById('repWait')) return; if(REPW.i<REP_STEPS.length){ repWaitStep(REPW.i+1); setTimeout(fin, 45); } })();
+}
 /* ══ 과목 고르기 단추(2026-10-17) ══════════════════════════════════════
    선생님 — «화1심화 듣는 학생이 화2 성적표 단추를 눌렀더니 '잠시 후 다시 열어 주세요'».
    단추가 ?c= 를 바꾼 새 주소로 페이지를 다시 열면서 앱스크립트를 한 번 더 불렀고, 그 한 번이 줄에 걸려
@@ -4182,19 +4252,15 @@ async function boot(){
     var want=wantCourse(), j=repCached(student, want);
     if(!j){
       /* 기다리는 동안 빈 화면이면 멈춘 줄 안다(선생님 2026-10-17 «이런식으로 멈춰있어» — 1분쯤 뒤에 열렸다).
-         서버(앱스크립트)는 보통 5~10초지만, 선생님 화면·자동 작업과 줄이 겹치면 1분 가까이 걸린다. */
-      var app0=document.getElementById('app');
-      if(app0 && !app0.children.length){
-        app0.innerHTML='<div class="card" id="repWait" aria-live="polite"><h1>성적표를 불러오는 중입니다</h1>'
-          +'<p class="lede">보통 10초 안팎 걸립니다. 서버가 붐비면 1분 가까이 걸릴 수 있으니 창을 닫지 말고 기다려 주세요.</p></div>';
-        setTimeout(function(){ var w=document.getElementById('repWait'); if(w) w.querySelector('.lede').innerHTML=
-          '서버가 붐벼 평소보다 오래 걸리고 있습니다. <b>링크에는 문제가 없습니다.</b> 조금만 더 기다려 주세요.'; }, 20000);
-      }
+         서버(앱스크립트)는 보통 5~10초지만 줄이 겹치면 1분 가까이 걸린다. 그동안 성적표가 실제로 하는 분석 단계를
+         하나씩 넘기며 보여 준다(선생님 같은 날 «기다리는 시간을 짧게 느끼게») — 아래 repWait* 참고. */
+      repWaitStart();
       j=await askReport(student, 4);
       /* 과목을 골라 물었는데 못 받았으면 과목 없이 한 번 더 — 서버는 어느 쪽이든 그 학생의 모든 과목 행을
          주므로, 고른 과목은 여기서 다시 센다(viewCourse). 석차·반 응답만 그 과목 것이 아니라 싣지 않는다. */
       if(!j && want) j=await askReport(student, 2, '');
       if(j && j.cumulative) repKeep(student, j, want);
+      repWaitDone(j);
     }
     if(!j) LOAD_FAIL=true;                       // 물어보지 못했다(기록이 없는 것과 다르다)
     else if(j.cumulative){ j=JSON.parse(JSON.stringify(j));     /* 다시 그릴 때 받은 원본을 건드리지 않게 사본으로 */

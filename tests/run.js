@@ -931,7 +931,7 @@ async function assertNoOverflow(page, label) {
     await page.goto(BASE + 'report.html?student=abc');
     /* 기다리는 동안 빈 화면이 아니다 — 멈춘 줄 안다(2026-10-17) */
     await page.waitForSelector('#repWait', { timeout: 5000 });
-    assert(/불러오는 중/.test(await page.$eval('#repWait', e => e.textContent)), '기다리는 동안 안내가 없다');
+    assert(/성적 분석 중/.test(await page.$eval('#repWait', e => e.textContent)), '기다리는 동안 안내가 없다');
     /* 네 번 묻는다(0.8 · 1.6 · 2.4 · 3.2 초 쉬며 — 2026-10-17 과목 단추 오류 뒤 세 번에서 늘림) */
     await page.waitForFunction(() => !!document.getElementById('retryRep'), null, { timeout: 15000 }).catch(() => {});
     /* 한 번 실패했다고 포기하면 줄이 빠진 뒤에도 못 연다. */
@@ -5130,6 +5130,29 @@ async function assertNoOverflow(page, label) {
     });
 
     /* ── 은행 파일이 없으면(집필 중) 구역이 없고 오류도 없다 — 네 과목 모두 ── */
+    /* ── 기다리는 동안 — 성적 분석 단계(2026-10-17 선생님 «20개쯤 작업하는 느낌 · 시간을 짧게») ──
+       서버가 늦게 답해도 단계가 넘어가고(다 끝났다고는 안 한다), 답이 오면 «이름 학생 · 과목 N회 성적 분석 중» 으로
+       바뀌었다가 성적표가 덮어 그린다. */
+    await test('report · 기다리는 동안 분석 단계가 넘어가고, 답이 오면 이름·회차가 서고 성적표로 바뀐다', async page => {
+      const rows = [rowE('가상고-기다림', 'ch1', 1, [0, 3]), rowE('가상고-기다림', 'ch1', 2, [1])];
+      let release; const gate = new Promise(r => { release = r; });
+      await page.route('**/macros/s/**', async route => { await gate; const cum = CE.cumulative(rows, '');
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: cum[Object.keys(cum)[0]], rank: null, ranks: [], cohort: null, challenges: [] }) }); });
+      await page.route('**/appdata/essay_*.json', route => route.fulfill({ status: 404, body: 'no' }));
+      await page.goto(BASE + 'report.html?student=x');
+      await page.waitForSelector('#repWait');
+      await page.waitForTimeout(4000);
+      const w = await page.evaluate(() => ({ n: document.querySelectorAll('#repWait .rwlist li').length, ok: document.querySelectorAll('#repWait li.ok').length,
+        on: document.querySelectorAll('#repWait li.on').length, t: document.getElementById('rwTitle').textContent }));
+      assert(w.n === 20 && w.ok >= 3 && w.ok <= 17 && w.on === 1 && w.t === '성적 분석 중', '기다리는 동안 단계: ' + JSON.stringify(w));
+      await assertNoOverflow(page, 'report-wait');
+      release();
+      await page.waitForFunction(() => { const t = document.getElementById('rwTitle'); return (t && /기다림 학생 · 화학Ⅰ 2회 성적 분석 중/.test(t.textContent)) || document.querySelector('.card.closing'); }, null, { timeout: 15000 });
+      await page.waitForSelector('.card.closing', { timeout: 30000 });
+      assert(!(await page.$('#repWait')), '성적표가 선 뒤에도 기다림 카드가 남았다');
+    });
+
     /* ── 과목 고르기 단추(2026-10-17 선생님 — «화1심화 학생이 화2 단추를 눌렀더니 '잠시 후 다시 열어 주세요'») ──
        단추는 서버를 다시 기다리지 않고 이미 받은 행(모든 과목)으로 그 과목을 그린다. 서버가 그 과목 질문에 실패해도
        오류 화면이 아니다. ?c= 주소로 바로 열었는데 그 질문이 실패하면 과목 없이 한 번 더 물어 그린다.
