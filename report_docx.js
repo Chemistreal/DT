@@ -207,7 +207,7 @@
     body.push(P([], { before: 1300 }),
       txt(BRAND, { align: AlignmentType.CENTER, color: K.goldInk, size: SZ.body, bold: true, after: 160 }),
       txt('DT 성적표', { align: AlignmentType.CENTER, bold: true, size: SZ.cover + 10, color: K.g9, after: 110 }),
-      txt(course + '  ·  ' + L.round + '회' + (M.total ? '  (' + M.total + '회 중)' : ''), { align: AlignmentType.CENTER, color: K.g8, size: SZ.h2, after: 80 }),
+      txt(course + '  ·  ' + L.round + '회', { align: AlignmentType.CENTER, color: K.g8, size: SZ.h2, after: 80 }),
       P([], { before: 2400 }),
       txt(nm + ' 학생', { align: AlignmentType.CENTER, bold: true, size: SZ.num, after: 50 }),
       txt(M.student.school, { align: AlignmentType.CENTER, color: K.mut, size: SZ.body, after: 40 }),
@@ -246,7 +246,7 @@
       }
       var no = 0, NO = function () { no++; return '0' + no; };
       /* ① 회차 진행 곡선 — 화면과 같은 SVG 를 그림으로 */
-      body.push(H('회차 진행 곡선', NO()), sub(M.total + '회 과정 중 지금 위치입니다. 속 빈 점은 첫 응시, 꽉 찬 점은 재시까지 마친 최종 점수, 점선은 통과선 80입니다.'));
+      body.push(H('회차 진행 곡선', NO()), sub('지금까지의 위치입니다. 속 빈 점은 첫 응시, 꽉 찬 점은 재시까지 마친 최종 점수, 점선은 통과선 80입니다.'));
       var png = null;
       try { png = typeof window.curveSVG === 'function' ? await svgPng(window.curveSVG(X.curve, { W: 700, H: 236, fs: 12, ml: 40, mr: 12, mb: 42, titles: true, gainLab: true }), 3) : null; } catch (e) { png = null; }
       if (png && D.ImageRun) {
@@ -410,7 +410,7 @@
     if (ES) {
       try { esTexts = typeof window.essayTexts === 'function' ? (window.essayTexts() || []) : []; } catch (e) { esTexts = []; }
       body.push(H('서술형 연습 · 나에게 맞춘 ' + ES.items.length + '문항'),
-        sub((typeof window.essayWhyLine === 'function' ? window.essayWhyLine(ES) + ' ' : '') + '먼저 자기 말로 써 보고, 모범 답안은 맨 끝 «서술형 모범 답안» 쪽에서 맞대 보세요. 점수는 매기지 않습니다.'));
+        sub('필요한 학생이 더 해 보는 추가 학습입니다. ' + (typeof window.essayWhyLine === 'function' ? window.essayWhyLine(ES) + ' ' : '') + '먼저 자기 말로 써 보고, 모범 답안은 맨 끝 «서술형 모범 답안» 쪽에서 맞대 보세요. 점수는 매기지 않습니다.'));
       ES.items.forEach(function (x, i) {
         var it = x.item || {}, L = (Array.isArray(it.len) && it.len.length === 2) ? it.len : null;
         var mine = String(esTexts[i] || '').replace(/\r/g, '');

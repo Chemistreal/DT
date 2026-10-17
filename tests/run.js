@@ -929,7 +929,8 @@ async function assertNoOverflow(page, label) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
     });
     await page.goto(BASE + 'report.html?student=abc');
-    await page.waitForTimeout(6000);
+    /* 네 번 묻는다(0.8 · 1.6 · 2.4 · 3.2 초 쉬며 — 2026-10-17 과목 단추 오류 뒤 세 번에서 늘림) */
+    await page.waitForFunction(() => !!document.getElementById('retryRep'), null, { timeout: 15000 }).catch(() => {});
     /* 한 번 실패했다고 포기하면 줄이 빠진 뒤에도 못 연다. */
     assert(asked >= 2, '한 번만 묻고 포기했다 (' + asked + '회)');
     const text = await page.$eval('#app', e => e.textContent).catch(() => '');
@@ -5025,9 +5026,10 @@ async function assertNoOverflow(page, label) {
       const rest = w3.slice(1).map(i => I3[i].c).filter(c => c !== I3[k3].c).sort((x, y) => I3.findIndex(it => it.c === x) - I3.findIndex(it => it.c === y)).slice(0, 4);
       assert(JSON.stringify(s.rpt.slice(1).map(x => x.c)) === JSON.stringify(rest), '나머지가 번호 순이 아니다: ' + s.rpt.map(x => x.c).join(','));
       assert(s.rpt.every(x => x.kind === 'wrong'), '오답 다섯이 있는데 보충이 섰다');
-      /* 자리: 「문항별 정오 · 오개념 정리」 바로 뒤 */
       await page.waitForSelector('.card.sols', { timeout: 15000 });
-      assert(await page.evaluate(() => document.getElementById('main-sols').nextElementSibling === document.getElementById('essay')), '오개념 정리 바로 뒤가 아니다');
+      /* 자리: 맨 아래 — 마무리 인사(.card.closing) 바로 위(선생님 2026-10-17 «맨 밑쪽에서 필요한 학생 추가학습») */
+      assert(await page.evaluate(() => document.getElementById('essay').nextElementSibling === document.querySelector('.card.closing')), '서술형이 맨 아래(마무리 인사 바로 위)가 아니다');
+      assert(/추가 학습/.test(await page.$eval('#essay .note', e => e.textContent)), '«추가 학습» 안내가 없다');
       /* «답 확인» 전 — 모범 답안 글자가 DOM 어디에도 없다 · 단추는 한 글자 이상 써야 눌린다 · 44px */
       const html0 = await page.evaluate(() => document.documentElement.outerHTML);
       const leak = s.rpt.filter(x => html0.indexOf(x.a) >= 0);
@@ -5106,25 +5108,58 @@ async function assertNoOverflow(page, label) {
       assert(/틀린 개념이 없어/.test(await page.$eval('#essay .note', e => e.textContent)), '다 맞힌 학생 안내');
     });
 
-    /* ── 화학Ⅰ 심화(새 절) — renderV2 안 번호 절, ④ 되풀이되는 오개념 다음 · ⑤ 예습 앞 ── */
-    await test('report · 서술형 연습 — 화학Ⅰ 심화는 새 절 안(④ 다음 · 예습/부모님께 앞)', async page => {
+    /* ── 화학Ⅰ 심화 — 새 절(①~⑤·부모님께) 다음, 맨 아래 마무리 인사 바로 위에 같은 카드로 ── */
+    await test('report · 서술형 연습 — 화학Ⅰ 심화도 맨 아래(새 절 다 지나 · 마무리 인사 바로 위)', async page => {
       const B = FIX('ch1s'), I3 = RFE('ch1s', 3);
       const w3 = []; I3.forEach((it, i) => { if (w3.length < 3 && inBank(B, it.c)) w3.push(i); });
       await serveE(page, [rowE('가상고-심화', 'ch1s', 1, [0, 1]), rowE('가상고-심화', 'ch1s', 2, [2]), rowE('가상고-심화', 'ch1s', 3, w3)], true);
       await openE(page);
-      const r = await page.evaluate(() => { const e = document.getElementById('v2-essay'); if (!e) return null;
-        const after = id => { const x = document.getElementById(id); return !x || !!(e.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING); };
+      const r = await page.evaluate(() => { const e = document.getElementById('essay'); if (!e) return null;
         const before = id => { const x = document.getElementById(id); return !x || !!(x.compareDocumentPosition(e) & Node.DOCUMENT_POSITION_FOLLOWING); };
-        return { n: e.querySelectorAll('.esq').length, h2: e.querySelector('h2').textContent, card: !!document.getElementById('essay'),
-          ok: before('v2-curve') && before('v2-chronic') && after('v2-preview') && after('v2-parent') }; });
-      assert(r && r.n === 5, '심화반 새 절에 서술형이 없다: ' + JSON.stringify(r));
-      assert(r.ok, '새 절 안 자리가 다르다');
-      assert(!r.card, '심화반에 서술형이 두 번 섰다');
+        return { n: e.querySelectorAll('.esq').length, h2: e.querySelector('h2').textContent, v2: !!document.getElementById('v2-essay'),
+          last: e.nextElementSibling === document.querySelector('.card.closing'),
+          ok: before('v2-curve') && before('v2-chronic') && before('v2-preview') && before('v2-parent') }; });
+      assert(r && r.n === 5, '심화반에 서술형이 없다: ' + JSON.stringify(r));
+      assert(r.ok && r.last, '심화반 서술형 자리가 맨 아래가 아니다: ' + JSON.stringify(r));
+      assert(!r.v2, '심화반에 서술형이 두 번 섰다');
       assert(/서술형 연습 · 나에게 맞춘 5문항$/.test(r.h2), '제목: ' + r.h2);
       await assertNoOverflow(page, 'essay-v2');
     });
 
     /* ── 은행 파일이 없으면(집필 중) 구역이 없고 오류도 없다 — 네 과목 모두 ── */
+    /* ── 과목 고르기 단추(2026-10-17 선생님 — «화1심화 학생이 화2 단추를 눌렀더니 '잠시 후 다시 열어 주세요'») ──
+       단추는 서버를 다시 기다리지 않고 이미 받은 행(모든 과목)으로 그 과목을 그린다. 서버가 그 과목 질문에 실패해도
+       오류 화면이 아니다. ?c= 주소로 바로 열었는데 그 질문이 실패하면 과목 없이 한 번 더 물어 그린다.
+       «N회 중 M회째» 처럼 전체 회차 수를 단정하는 말이 없다(실제 수업 회차를 미리 모른다). */
+    await test('report · 과목 단추 — 서버가 그 과목 질문에 실패해도 화면이 바뀐다 · ?c= 로 바로 열어도 · «N회 중» 없음', async page => {
+      const rows = [rowE('가상고-탭', 'ch1s', 1, [0, 3]), rowE('가상고-탭', 'ch1s', 2, [1]), rowE('가상고-탭', 'ch2', 1, [2, 5])];
+      rows[2].date = '2026-09-01T00:00:00Z';                 /* 화학Ⅱ 가 앞 날짜 → 처음에는 심화반이 선다 */
+      const asked = [];
+      await page.route('**/macros/s/**', route => {
+        const u = new URL(route.request().url()), c = u.searchParams.get('c') || ''; asked.push(c || '-');
+        if (c === 'ch2') return route.fulfill({ status: 500, contentType: 'text/html', body: '<html>error</html>' });
+        const cum = CE.cumulative(rows, c);
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: cum[Object.keys(cum)[0]], rank: null, ranks: [], cohort: null, challenges: [] }) });
+      });
+      await page.route('**/appdata/essay_*.json', route => route.fulfill({ status: 404, body: 'no' }));
+      await openE(page);
+      assert(await page.$eval('.crstabs a[aria-current="page"]', a => a.textContent) === '화학Ⅰ 심화', '처음 과목');
+      assert(!/회 중 \d+회째|\/ ?10회|10회 가운데|회 과정 중/.test(await page.$eval('#app', e => e.innerText)), '전체 회차 수를 단정하는 말이 섰다');
+      await page.evaluate(() => { window.__sameDoc = 1; });   /* 페이지를 새로 열면 사라진다 */
+      await page.click('.crstabs a:not([aria-current])');
+      await page.waitForFunction(() => { const a = document.querySelector('.crstabs a[aria-current="page"]'); return a && a.textContent === '화학Ⅱ'; }, null, { timeout: 15000 });
+      const t = await page.$eval('#app', e => e.innerText);
+      assert(!/잠시 후 다시 열어 주세요/.test(t) && /화학Ⅱ/.test(t), '화학Ⅱ 로 안 바뀌었다');
+      assert(await page.evaluate(() => window.__sameDoc === 1) && /c=ch2/.test(page.url()), '페이지를 새로 열었거나 주소가 안 바뀌었다: ' + page.url());
+      /* 주소로 바로 열기 — 그 과목 질문이 다 실패하면 과목 없이 물어 그린다 */
+      asked.length = 0;
+      await page.goto(BASE + 'report.html?student=x&c=ch2');
+      await page.waitForFunction(() => { const a = document.querySelector('.crstabs a[aria-current="page"]'); return a && a.textContent === '화학Ⅱ'; }, null, { timeout: 30000 });
+      assert(asked.indexOf('-') > 0 && asked[0] === 'ch2', '과목 없이 다시 묻지 않았다: ' + asked.join(','));
+      assert(!/잠시 후 다시 열어 주세요/.test(await page.$eval('#app', e => e.innerText)), '바로 열기에서 오류 화면');
+    });
+
     for (const cc of ['ch1', 'ch1s', 'ch2', 'gc']) {
       await test('report · 서술형 연습 — 은행이 없으면 구역 없음 · 콘솔 오류 없음 (' + cc + ')', async page => {
         const errs = [];

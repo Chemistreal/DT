@@ -3217,8 +3217,6 @@ function render(commit){
      맨 아래에 있을 때는 거기까지 내려간 학생이 드물었다. 내용은 render 뒤에
      fillMainSolutions 가 채운다(회차 문항 파일을 읽어야 해서 비동기). */
   if(!_EMBED) h+='<div id="main-sols"></div>';
-  /* 서술형 연습 — 틀린 문장을 본 바로 뒤에 «왜» 를 써 보게 한다(화학Ⅰ 심화는 새 절 안 · essayV2HTML). */
-  if(!V2) h+=essayCardHTML();
 
   // 추이 (새 절에서는 ① 회차 진행 곡선이 대신한다)
   if(!V2) h+=`<div class="card"><h2>점수 추이 · 응시한 회차</h2>
@@ -3327,6 +3325,9 @@ function render(commit){
   h+=matsCardHTML();
   // 마감 · 서명 + 다음 점검 + 관계
   h+=roundCardsHTML();
+  /* 서술형 연습 — 맨 아래(마무리 인사 바로 위). 필요한 학생이 더 해 보는 추가 학습이다(선생님 2026-10-17:
+     «맨 밑쪽에서 필요한 학생들은 추가학습하도록 시키는 목적»). 화학Ⅰ 심화도 같은 자리 · 같은 카드. */
+  h+=essayCardHTML();
   if(!_EMBED) h+=`<div class="card closing">
     <p class="closetext"><b>한 번의 점수가 아니라, 끝까지 채워 가는 과정을 봅니다.</b> ${isLastRound()
         ?'아이가 약한 곳을 만나도 다시 잡아 통과까지 간 이 걸음을, 마지막 회차까지 함께 기록했습니다. 남은 개념은 위 「다시 볼 개념」 에 정리해 두었습니다.'
@@ -3363,11 +3364,14 @@ var LOAD_FAIL=false;
 /* 서버가 함께 주는 심화 도전 기록(최근 것 먼저, 최대 20판)과 최근 3회차 문항(boot 가 채운다). */
 var CHALLENGES=[], RECENTJ=null;
 /* 성적표 주소의 ?c= (보고 싶은 과목) — 서버가 누적·석차·반 응답을 그 과목으로 정리한다. 없으면 붙이지 않는다(예전 주소 그대로). */
-function wantCourseQ(){ var c=(new URLSearchParams(location.search).get('c')||'').trim(); return /^[a-z0-9]{1,8}$/.test(c)?'&c='+c:''; }
-async function askReport(student, tries){
+function wantCourse(){ var c=(new URLSearchParams(location.search).get('c')||'').trim(); return /^[a-z0-9]{1,8}$/.test(c)?c:''; }
+function wantCourseQ(){ var c=wantCourse(); return c?'&c='+c:''; }
+/* c 를 주면 그 과목으로 묻는다('' 면 과목 없이). 안 주면 주소의 ?c= 그대로. */
+async function askReport(student, tries, c){
+  var cq=(c===undefined)?wantCourseQ():(c?'&c='+c:'');
   for(var i=0;i<(tries||3);i++){
     try{
-      var r=await fetch(REPORT_URL+'?student='+encodeURIComponent(student)+wantCourseQ()+'&t='+Date.now(), {cache:'no-store'});
+      var r=await fetch(REPORT_URL+'?student='+encodeURIComponent(student)+cq+'&t='+Date.now(), {cache:'no-store'});
       var j=await r.json();
       if(j && typeof j==='object') return j;
     }catch(e){}
@@ -3375,6 +3379,39 @@ async function askReport(student, tries){
   }
   return null;
 }
+/* ══ 과목 고르기 단추(2026-10-17) ══════════════════════════════════════
+   선생님 — «화1심화 듣는 학생이 화2 성적표 단추를 눌렀더니 '잠시 후 다시 열어 주세요'».
+   단추가 ?c= 를 바꾼 새 주소로 페이지를 다시 열면서 앱스크립트를 한 번 더 불렀고, 그 한 번이 줄에 걸려
+   실패하면 멀쩡한 성적표 대신 오류 화면이 섰다. 그런데 서버는 처음부터 그 학생의 **모든 과목 행**을 준다 —
+   다른 과목 화면에 필요한 것은 이미 손에 있다. 그래서
+     · 받은 응답을 이 페이지 메모리에만 둔다(학생·과목별 · 저장소에는 안 남긴다 — 성적은 시트에만).
+     · 단추는 주소만 바꾸고(history) 같은 응답으로 그 과목을 다시 그린다. 서버를 기다리지 않는다.
+     · 그 과목의 석차·반 응답은 뒤에서 조용히 물어 받으면 다시 그린다. 못 받으면 석차 카드만 빠진다. */
+var REP_CACHE={};
+function repKeep(student, j, c){ REP_CACHE[student+'|'+(c||'')]=j; if(!REP_CACHE[student+'|*']) REP_CACHE[student+'|*']=j; }
+function repCached(student, c){ return REP_CACHE[student+'|'+(c||'')]||null; }
+function repAny(student){ return REP_CACHE[student+'|*']||null; }
+async function switchCourse(href){
+  var sp0=new URLSearchParams(location.search), student=sp0.get('student');
+  try{ history.pushState({crs:1}, '', href); }catch(e){ location.href=href; return; }
+  var want=wantCourse();
+  if(student && !repCached(student, want) && repAny(student)){
+    /* 그 과목 응답이 아직 없으면 손에 있는 응답(모든 과목 행)으로 먼저 그린다 — viewCourse 가 그 과목으로 다시 센다 */
+    REP_CACHE[student+'|'+want]=repAny(student);
+    askReport(student, 2, want).then(function(j){
+      if(j&&j.cumulative){ REP_CACHE[student+'|'+want]=j; if(wantCourse()===want) return boot(); }
+    }).catch(function(){});
+  }
+  window.scrollTo(0,0);
+  await boot();
+}
+document.addEventListener('click', function(e){
+  var a=e.target&&e.target.closest?e.target.closest('.crstabs a'):null;
+  if(!a||e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
+  if(a.getAttribute('aria-current')==='page'){ e.preventDefault(); return; }
+  e.preventDefault(); switchCourse(a.getAttribute('href'));
+});
+window.addEventListener('popstate', function(){ if(document.querySelector('.crstabs')) boot(); });
 /* ══ 구간 종합 보고서 (?seg=1-4) ══════════════════════════════════════
    선생님 결정 둘로 모양이 정해졌다.
    ① 구간은 **회차 번호로 고정**한다(1~4 · 5~8 · 9~12). '응시한 네 회차'로
@@ -4140,10 +4177,19 @@ async function boot(){
   await loadSeeds();
   await loadMats();          // 정적 파일이라 앱스크립트 줄에 안 선다
   var sp=new URLSearchParams(location.search), student=sp.get('student');
+  LOAD_FAIL=false; A=null; allRows=[]; RANK=null; RANKS=[]; COHORT=null; CHALLENGES=[];
   if(REPORT_URL && student){
-    var j=await askReport(student, 3);
+    var want=wantCourse(), j=repCached(student, want);
+    if(!j){
+      j=await askReport(student, 4);
+      /* 과목을 골라 물었는데 못 받았으면 과목 없이 한 번 더 — 서버는 어느 쪽이든 그 학생의 모든 과목 행을
+         주므로, 고른 과목은 여기서 다시 센다(viewCourse). 석차·반 응답만 그 과목 것이 아니라 싣지 않는다. */
+      if(!j && want) j=await askReport(student, 2, '');
+      if(j && j.cumulative) repKeep(student, j, want);
+    }
     if(!j) LOAD_FAIL=true;                       // 물어보지 못했다(기록이 없는 것과 다르다)
-    else if(j.cumulative){ A=j.cumulative; allRows=j.rows||[]; RANK=j.rank||null; RANKS=j.ranks||[]; COHORT=j.cohort||null;
+    else if(j.cumulative){ j=JSON.parse(JSON.stringify(j));     /* 다시 그릴 때 받은 원본을 건드리지 않게 사본으로 */
+      A=j.cumulative; allRows=j.rows||[]; RANK=j.rank||null; RANKS=j.ranks||[]; COHORT=j.cohort||null;
       CHALLENGES=Array.isArray(j.challenges)?j.challenges:[]; }
   }
   var demoHard=(new URLSearchParams(location.search).get('demo')==='hard');
@@ -4392,19 +4438,19 @@ function buildV2(M){
                               :[F('지금 '+pt(L.fs)+'점으로, 통과선까지 '),F(pt(PASS-L.fs)+'점',true),F(' 남아 재시로 채우는 중이고')];
   if(stage==='first'){
     if(origin==='carry') lede.push(F(nm+' 학생은 '+M.carry.fromName+' '+M.carry.rounds.length+'개 회차 기록을 이어 받아 '+CN+' 1회를 마쳤습니다. '));
-    else lede.push(F(nm+' 학생은 '+CN+' '+total+'회 가운데 첫 회를 마쳤습니다. '));
+    else lede.push(F(nm+' 학생은 '+CN+' 첫 회를 마쳤습니다. '));
     lede=lede.concat([F('1회는 ')].concat(res1)).concat([F(', 이 점수는 출발점입니다. ')]);
     if(origin==='carry') lede.push(F(M.carry.fromName+' 때 놓친 개념 '+M.carry.total+'개를 심화반에서 다시 묻는 대로 이 성적표가 하나씩 옮겨 적습니다. '));
     else lede.push(F('이 성적표는 회차마다 무엇을 새로 잡았는지를 기록해 갑니다. '));
   } else if(stage==='last'){
-    lede.push(F(nm+' 학생은 '+CN+' '+total+'회를 모두 마쳤습니다. '));
+    lede.push(F(nm+' 학생은 '+CN+' '+cur+'회까지 마쳤습니다. '));
     if(M.passedN===M.taken){ lede.push(F(kCount(M.taken)+' 회차를 모두 통과',true)); }
     else { lede.push(F(M.taken+'개 회차 가운데 ')); lede.push(F(M.passedN+'개 회차를 통과',true)); }
     lede.push(F('했고, 마지막 '+cur+'회는 ')); lede=lede.concat(res1); lede.push(F('. '));
     var _chN=(A.chronicMis||[]).length;
     lede.push(F(_chN?'되풀이해서 막힌 개념 '+_chN+'개 가운데 먼저 볼 '+Math.min(_chN,4)+'개를 아래 «되풀이되는 오개념»에 정리했습니다. 하나씩 강의록으로 닫으면 됩니다.':'되풀이해서 막힌 개념 없이 과정을 마쳤습니다. 아래 기록은 다음 과정에서도 그대로 이어 봅니다.'));
   } else {
-    lede.push(F(nm+' 학생은 '+CN+' '+total+'회 가운데 '+cur+'회를 마쳤습니다. '+cur+'회는 ')); lede=lede.concat(res1);
+    lede.push(F(nm+' 학생은 '+CN+' '+cur+'회를 마쳤습니다. '+cur+'회는 ')); lede=lede.concat(res1);
     if(fix&&fix.isLatest&&fix.total){ lede.push(F(', 틀린 '+fix.total+'개 개념 중 ')); lede.push(F(fix.fixed.length+'개를 재시에서 고쳤습니다',true)); lede.push(F('. ')); }
     else lede.push(F('. '));
     if(prev&&prev.items.length){ var p0=prev.items[0];
@@ -4417,7 +4463,7 @@ function buildV2(M){
   /* 숫자 타일 — 0 은 타일로 세우지 않는다 */
   var tiles=[];
   var unp=M.rounds.filter(function(r){ return !r.passed; });
-  tiles.push({v:String(cur), u:' / '+total+'회', k:'진행', m:unp.length?(unp.map(function(r){ return r.round; }).join('·')+'회 재시 진행 중'):(M.taken===1?'첫 회차 통과':kCount(M.taken)+' 회차 모두 통과')});
+  tiles.push({v:String(cur), u:'회', k:'진행', m:unp.length?(unp.map(function(r){ return r.round; }).join('·')+'회 재시 진행 중'):(M.taken===1?'첫 회차 통과':kCount(M.taken)+' 회차 모두 통과')});
   if(fix&&fix.fixed.length) tiles.push({v:String(fix.fixed.length), u:' / '+fix.total, k:'재시로 고친 개념', m:fix.round+'회'+(fix.open.length?' · '+fix.open.length+'개는 다음에 다시 확인':' · 틀린 개념 모두')});
   if(M.carry&&M.carry.ok) tiles.push({v:String(M.carry.ok), u:' / '+(M.carry.ok+M.carry.again), k:M.carry.fromName+' 약점, 심화에서 맞힘', m:'다시 물은 '+(M.carry.ok+M.carry.again)+'개 기준'});
   if(prev&&prev.items.length) tiles.push({v:String(prev.items.length), u:'', k:'이번 주 예습', m:prev.round+'회에 처음 나오는 개념'});
@@ -4486,7 +4532,7 @@ function renderV2(M){
   var X=M&&M.v2x; if(!X) return '';
   var h='', cur=M.latest.round;
   h+='<header class="v2mast"><div><div class="t">DT 성적표 · '+_esc(M.courseName)+' '+cur+'회</div></div>'
-    +'<div class="m">'+_esc(M.student.name)+' 학생'+(M.student.school?' · '+_esc(M.student.school):'')+'<br>'+_esc(M.pub)+' · '+M.total+'회 중 '+cur+'회째</div></header>';
+    +'<div class="m">'+_esc(M.student.name)+' 학생'+(M.student.school?' · '+_esc(M.student.school):'')+'<br>'+_esc(M.pub)+' · '+cur+'회째</div></header>';
   h+='<p class="v2lede">'+frHTML(X.lede)+'</p>';
   if(X.tiles.length) h+='<div class="v2tiles n'+X.tiles.length+'">'+X.tiles.map(function(t){
     return '<div class="v2tile"><div class="v">'+_esc(t.v)+(t.u?'<small>'+_esc(t.u)+'</small>':'')+'</div><div class="k">'+_esc(t.k)+'</div><div class="m">'+_esc(t.m)+'</div></div>'; }).join('')+'</div>';
@@ -4495,7 +4541,7 @@ function renderV2(M){
   var no=0, NO=function(){ no++; return '<span class="no">0'+no+'</span>'; };
   /* ① */
   h+='<section class="v2sec" id="v2-curve"><h2>'+NO()+'회차 진행 곡선</h2>'
-    +'<p class="sub">'+M.total+'회 과정 중 지금 위치입니다. 속 빈 점은 첫 응시, 꽉 찬 점은 재시까지 마친 최종 점수입니다.</p>'
+    +'<p class="sub">지금까지의 위치입니다. 속 빈 점은 첫 응시, 꽉 찬 점은 재시까지 마친 최종 점수입니다.</p>'
     +'<div class="cv-d">'+curveSVG(X.curve,{W:700,H:236,fs:12,ml:40,mr:12,mb:42,titles:true,gainLab:true})+'</div>'
     +'<div class="cv-m">'+curveSVG(X.curve,{W:360,H:250,fs:13,ml:30,mr:6,mb:28,titles:false,gainLab:false})+'</div>'
     +curveLegendHTML()+(X.so1.length?'<div class="v2so">'+frHTML(X.so1)+'</div>':'')+'</section>';
@@ -4534,8 +4580,6 @@ function renderV2(M){
         +(X.chronicMore?'<p class="note" style="margin:8px 0 0">그 밖에 '+X.chronicMore+'개는 아래 「다시 볼 개념」에 함께 적었습니다.</p>':'')
         :'<p class="note" style="margin:0">아직 없습니다. 같은 개념을 세 번 이상 물어 절반 넘게 틀리면 여기에 섭니다.</p>')+'</section>';
   }
-  /* 서술형 연습 — 되풀이되는 오개념 바로 뒤(고르기도 그 개념부터다) */
-  h+=essayV2HTML(NO);
   /* ⑤ */
   if(X.preview){ var pv=X.preview;
     h+='<section class="v2sec" id="v2-preview"><h2>'+NO()+'다음 주 '+pv.round+'회 「'+_esc(pv.title)+'」 예습</h2>'
@@ -4611,7 +4655,7 @@ function essayWhyLine(E){
 }
 function essayIntro(){
   /* 종이에는 누를 단추가 없다 — 인쇄용 문장을 따로 둔다(.esprt · 화면에서는 숨는다). */
-  return essayWhyLine(ESSAY)+' <span class="esscr">먼저 자기 말로 써 보고 <b>«답 확인»</b>을 누르세요 — 모범 답안과 채점 기준은 그다음에 열립니다. '
+  return '필요한 학생이 더 해 보는 <b>추가 학습</b>입니다. '+essayWhyLine(ESSAY)+' <span class="esscr">먼저 자기 말로 써 보고 <b>«답 확인»</b>을 누르세요 — 모범 답안과 채점 기준은 그다음에 열립니다. '
     +'점수는 매기지 않고, 쓴 답은 이 기기에만 남습니다.</span>'
     +'<span class="esprt">먼저 칸에 자기 말로 써 보고, 맨 끝 «서술형 모범 답안» 쪽에서 맞대 보세요. 점수는 매기지 않습니다.</span>';
 }
@@ -4642,12 +4686,6 @@ function essayCardHTML(){
   return '<div class="card essay" id="essay"><h2>'+_esc(essayTitle())+'</h2>'
     +'<p class="note" style="margin:-4px 0 0">'+essayIntro()+'</p>'
     +ESSAY.items.map(essayQHTML).join('')+'</div>';
-}
-/* 화학Ⅰ 심화(새 절) — 번호 절 하나로(④ 되풀이되는 오개념 다음). 다른 과목은 「문항별 정오 · 오개념 정리」 바로 뒤의 카드다. */
-function essayV2HTML(NO){
-  if(!essayOn()) return '';
-  return '<section class="v2sec essay" id="v2-essay"><h2>'+NO()+_esc(essayTitle())+'</h2>'
-    +'<p class="sub">'+essayIntro()+'</p>'+ESSAY.items.map(essayQHTML).join('')+'</section>';
 }
 /* «답 확인» 뒤 — 핵심 낱말 대조 · 한 줄 자기 점검 · 모범 답안 · 채점 기준. 쓴 글이 바뀌면 다시 그린다. */
 function essayRevealHTML(x, text){
