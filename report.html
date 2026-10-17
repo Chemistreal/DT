@@ -4181,6 +4181,15 @@ async function boot(){
   if(REPORT_URL && student){
     var want=wantCourse(), j=repCached(student, want);
     if(!j){
+      /* 기다리는 동안 빈 화면이면 멈춘 줄 안다(선생님 2026-10-17 «이런식으로 멈춰있어» — 1분쯤 뒤에 열렸다).
+         서버(앱스크립트)는 보통 5~10초지만, 선생님 화면·자동 작업과 줄이 겹치면 1분 가까이 걸린다. */
+      var app0=document.getElementById('app');
+      if(app0 && !app0.children.length){
+        app0.innerHTML='<div class="card" id="repWait" aria-live="polite"><h1>성적표를 불러오는 중입니다</h1>'
+          +'<p class="lede">보통 10초 안팎 걸립니다. 서버가 붐비면 1분 가까이 걸릴 수 있으니 창을 닫지 말고 기다려 주세요.</p></div>';
+        setTimeout(function(){ var w=document.getElementById('repWait'); if(w) w.querySelector('.lede').innerHTML=
+          '서버가 붐벼 평소보다 오래 걸리고 있습니다. <b>링크에는 문제가 없습니다.</b> 조금만 더 기다려 주세요.'; }, 20000);
+      }
       j=await askReport(student, 4);
       /* 과목을 골라 물었는데 못 받았으면 과목 없이 한 번 더 — 서버는 어느 쪽이든 그 학생의 모든 과목 행을
          주므로, 고른 과목은 여기서 다시 센다(viewCourse). 석차·반 응답만 그 과목 것이 아니라 싣지 않는다. */

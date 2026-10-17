@@ -929,6 +929,9 @@ async function assertNoOverflow(page, label) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
     });
     await page.goto(BASE + 'report.html?student=abc');
+    /* 기다리는 동안 빈 화면이 아니다 — 멈춘 줄 안다(2026-10-17) */
+    await page.waitForSelector('#repWait', { timeout: 5000 });
+    assert(/불러오는 중/.test(await page.$eval('#repWait', e => e.textContent)), '기다리는 동안 안내가 없다');
     /* 네 번 묻는다(0.8 · 1.6 · 2.4 · 3.2 초 쉬며 — 2026-10-17 과목 단추 오류 뒤 세 번에서 늘림) */
     await page.waitForFunction(() => !!document.getElementById('retryRep'), null, { timeout: 15000 }).catch(() => {});
     /* 한 번 실패했다고 포기하면 줄이 빠진 뒤에도 못 연다. */
