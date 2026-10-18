@@ -1,0 +1,41 @@
+{
+ "savedAt": "2026-10-18T12:04:53.892Z",
+ "classes": [
+  {
+   "label": "화학1 토1-5",
+   "course": "ch1",
+   "n": 8,
+   "students": [
+    "s280s1p583b0",
+    "s0e3p1b2b0c5",
+    "s0m1c2r3a3d3",
+    "s1s5y1c3n3b4",
+    "s2l381b3j4t0",
+    "s4r0l3173292",
+    "s6h5m2l0x1z3",
+    "s03371h723g7"
+   ]
+  },
+  {
+   "label": "화학1심화반",
+   "course": "ch1s",
+   "n": 14,
+   "students": [
+    "s711g20301x0",
+    "s6b3k3k5i692",
+    "s474m2q4t1a3",
+    "s4v14323h030",
+    "s4g3x6b1q0v3",
+    "s02381z2r1f4",
+    "s1p5e4b355b3",
+    "s6f16226q4m1",
+    "s395v680x3a5",
+    "s066k2t3x495",
+    "s3g2z4q3h2w1",
+    "s711m3o4o4q7",
+    "s371p4j1v1m6",
+    "s6g0y634f0p6"
+   ]
+  }
+ ]
+}
