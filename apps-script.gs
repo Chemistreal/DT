@@ -2558,6 +2558,16 @@ function feePer_() {
   try { var v = Number(PropertiesService.getScriptProperties().getProperty('FEE_PER_STUDENT')); if (isFinite(v) && v > 0) return v; } catch (e) {}
   return FEE_DEFAULT;
 }
+/* 단가는 4시간 반 기준이다. 3시간 반(토6-9)은 4분의 3(12만원) — 선생님 2026-10-25.
+   시간은 반 이름에서 읽는다. 셸(exam/hub.html classHours·feeOf)과 같은 규칙. */
+function classHours_(label) {
+  var m = String(label || '').match(/[월화수목금토일]\s*(\d{1,2})(?::(\d{2}))?\s*[-~]\s*(\d{1,2})(?::(\d{2}))?/);
+  if (!m) return 0;
+  var h = (+m[3] + (+m[4] || 0) / 60) - (+m[1] + (+m[2] || 0) / 60);
+  if (h <= 0) h += 12;
+  return h > 0 && h <= 8 ? h : 0;
+}
+function feeFor_(label, per) { return classHours_(label) === 3 ? Math.round(per * 3 / 4) : per; }
 function feeSheet_() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var sh = ss.getSheetByName(FEE_TAB);
@@ -2566,18 +2576,18 @@ function feeSheet_() {
 }
 function incomeNow_() {
   var classes = getRoster_() || [];
-  var per = feePer_(), seats = 0, names = {}, rows = [];
+  var per = feePer_(), seats = 0, monthly = 0, names = {}, rows = [];
   classes.forEach(function (c) {
-    var st = c.students || [], n = st.length;
-    seats += n;
+    var st = c.students || [], n = st.length, fee = feeFor_(c.label, per);
+    seats += n; monthly += n * fee;
     st.forEach(function (x) {
       var nm = norm_(stuName_(x));
       if (nm) names[nm] = 1;
     });
-    rows.push({ label: c.label, course: c.course, n: n, amount: n * per });
+    rows.push({ label: c.label, course: c.course, n: n, fee: fee, amount: n * fee });
   });
   var heads = 0; for (var k in names) heads++;
-  return { per: per, seats: seats, heads: heads, monthly: seats * per, classes: rows };
+  return { per: per, seats: seats, heads: heads, monthly: monthly, classes: rows };
 }
 /* 매달 1일에 그날의 숫자를 한 줄. 같은 달을 두 번 적지 않는다(손으로 다시
    돌려도 덮어쓴다) — 안 그러면 한 달이 두 번 세어져 추이가 거짓말을 한다. */
