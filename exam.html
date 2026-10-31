@@ -1429,7 +1429,7 @@ function handoffStep(){
   }
   if(SAVE_STATE==='fail'){
     el.innerHTML='<b style="color:var(--x)">결과 저장이 확인되지 않았습니다.</b><br>'
-      +'<span class="muted">지금 넘어가면 이번 회차가 리포트에 없을 수 있습니다.</span><br>'
+      +'<span class="muted">지금 넘어가면 이번 회차가 리포트에 없을 수 있습니다.</span>'+failNote()+'<br>'
       +'<button class="ghost" style="margin-top:9px;padding:8px 14px;font-size:13px" '
       +'onclick="saveResult(RESULT.g,RESULT.dx)">다시 보내기</button>';
     return;
@@ -1553,6 +1553,10 @@ async function saveResult(g,dx){
       console.warn('[Chemistreal] 저장 거부:',_pj.error,_pj.msg);
       clearProgress(); updateSaveLine(); return;
     }
+    /* 실패 까닭을 화면에 작게 남긴다. 예전에는 «저장이 확인되지 않았습니다» 만 떠서 학생 화면을 받아도
+       서버가 무엇 때문에 못 받았는지 알 수 없었다(2026-10-31 · 한 주 동안 저장 고장). */
+    if(_pj && _pj.ok===false) SAVE_NOTE='서버 응답: '+String(_pj.error||_pj.msg||'ok:false').slice(0,160);
+    else if(!_pj) SAVE_NOTE='서버 응답을 읽지 못함 (HTTP '+_pr.status+')';
     var saved=false;
     try{
       // 서버가 반환한 정규 링크의 코드로 확인(같은 학생 연결·통합 후에도 정확). 없으면 기존 토큰으로.
@@ -1561,12 +1565,14 @@ async function saveResult(g,dx){
       var vj=await vr.json();
       // 이 회차·이 답안이 실제로 저장됐는지까지 확인(같은 회차 옛 기록만 있어도 통과 처리되는 오탐 방지)
       saved=!!(vj&&vj.rows&&vj.rows.some(function(r){return String(r.course)===String(R.course)&&String(r.round)===String(R.round)&&String(r.answers||'')===payload.answers;}));
-    }catch(_e){ saved=false; }
+    }catch(_e){ saved=false; if(!SAVE_NOTE) SAVE_NOTE='확인 조회 실패: '+String((_e&&_e.message)||_e).slice(0,120); }
+    if(!saved && !SAVE_NOTE) SAVE_NOTE='서버는 받았다고 했지만 확인 조회에서 이 답안을 찾지 못함';
     SAVE_STATE=saved?'ok':'fail';
     if(saved) clearProgress();          // 저장이 확인됐다 — 이어서 풀 것이 없다
-  }catch(e){ SAVE_STATE='fail'; }
+  }catch(e){ SAVE_STATE='fail'; SAVE_NOTE='보내기 실패(네트워크): '+String((e&&e.message)||e).slice(0,120); }
   updateSaveLine();
 }
+function failNote(){ return SAVE_NOTE?'<br><span class="muted" style="font-size:12px">'+esc(SAVE_NOTE)+'</span>':''; }
 function updateSaveLine(){ const el=$('#saveLine'); if(el) el.innerHTML=saveLineHTML();
   /* 저장 상태가 바뀌는 곳은 여기 하나다. 넘겨주는 화면도 그것을 보고 움직인다
      — 따로 물어보게 두면 두 자가 다른 것을 알고 있게 된다. */
@@ -1575,7 +1581,7 @@ function saveLineHTML(){
   if(SAVE_STATE==='saving') return '<span class="muted">결과 저장·확인 중...</span>';
   if(SAVE_STATE==='ok') return '<span style="color:var(--o);font-weight:600">결과가 저장되었습니다 · 리포트 확인 가능</span>';
   if(SAVE_STATE==='refused') return '<span style="color:var(--x);font-weight:600">'+esc(refusedText().t)+'</span> · <a href="'+esc(reportLink())+'">성적표 보기</a>';
-  if(SAVE_STATE==='fail') return '<span style="color:#C0392B;font-weight:600">저장이 확인되지 않았습니다 · </span><button class="ghost" style="padding:4px 10px;font-size:12px;margin-left:4px" onclick="saveResult(RESULT.g,RESULT.dx)">재시도</button>';
+  if(SAVE_STATE==='fail') return '<span style="color:#C0392B;font-weight:600">저장이 확인되지 않았습니다 · </span>'+failNote()+'<button class="ghost" style="padding:4px 10px;font-size:12px;margin-left:4px" onclick="saveResult(RESULT.g,RESULT.dx)">재시도</button>';
   return '';
 }
 
