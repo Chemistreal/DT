@@ -283,6 +283,26 @@ console.log('[9] 성적표를 열어 봤는가');
     JSON.stringify(v.views));
 }
 
+console.log('[9b] 맨 아래 빈 행이 없는 시트에도 저장된다');
+{
+  /* 진짜 시트의 getRange 는 격자 밖이면 예외를 던진다(appendRow 처럼 늘려 주지 않는다).
+     위의 흉내 시트는 늘 50행 이상이고 저절로 늘어나서 이 사고를 못 봤다. 여기서는 진짜처럼 군다. */
+  const real = SHEETS['결과'];
+  const strict = makeSheet('결과', real._rows.map(r => r.slice()));
+  strict._max = strict._rows.length;                          // 마지막 데이터 행 = 시트 끝(빈 행 0)
+  strict.getMaxRows = function () { return this._max; };
+  strict.insertRowsAfter = function (after, n) { this._max += n; return this; };
+  const gr = strict.getRange.bind(strict);
+  strict.getRange = function (row, col, nr) { if (row + (nr || 1) - 1 > this._max) throw new Error('범위 좌표가 시트 크기를 벗어납니다'); return gr.apply(null, arguments); };
+  SHEETS['결과'] = strict;
+  const n0 = strict._rows.length;
+  const p = { name: '가상을', school: '가상중학교', year: '중2', course: 'ch1', round: 1, attempt: '첫 응시', isTest: false, src: 'online',
+    score: 80, pass: true, correctCount: 48, wrongCount: 12, wrongMis: [], wrongAxes: {}, units: [], axes: [], answers: 'O'.repeat(60) };
+  const r9 = J(ctx.doPost({ postData: { contents: JSON.stringify(p) } }));
+  T('빈 행 없는 시트 · 온라인 첫 응시 저장 ok', r9.ok === true && strict._rows.length === n0 + 1, JSON.stringify(r9));
+  SHEETS['결과'] = real;
+}
+
 console.log('[10] 반별 인원 · 수입');
 {
   const d = ctx.incomeNow_();

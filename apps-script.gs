@@ -212,6 +212,13 @@ function firstAttemptRow_(sh, key, course, round, isTest) {
 
 /* 학생키(F열)가 있는 마지막 실데이터 행을 찾는다. T열 등 전체열 수식으로 getLastRow가
    부풀려져도, 새 응시가 유령 빈 행 아래가 아니라 실데이터 바로 다음에 붙게 한다. */
+/* 쓸 자리가 시트 격자 안에 있어야 한다. getRange 는 appendRow 와 달리 시트를 늘려 주지 않아서,
+   맨 아래 빈 행이 하나도 없으면(정리 함수·손으로 빈 행 삭제) **모든 저장이 예외로 실패한다** —
+   읽기 창구는 멀쩡해 아무도 모른다(2026-10-26~31, 한 주 내내 한 줄도 안 들어왔다). 모자라면 늘린다. */
+function ensureRows_(sh, lastRowNeeded) {
+  var mx = sh.getMaxRows();
+  if (lastRowNeeded > mx) sh.insertRowsAfter(mx, Math.max(lastRowNeeded - mx, 50));
+}
 function lastDataRow_(sh) {
   var last = sh.getLastRow();
   if (last < 2) return 1;                                   // 헤더만 있으면 헤더 다음(2행)에 기록
@@ -514,7 +521,7 @@ function doPost(e) {
     var existing = findRow_(sh, _key, d.course || '', d.round || '', d.attempt || '');
     if (existing < 0 && _fa && _fa.row > 0) existing = _fa.row;   // 온라인 첫 응시 재전송: 라벨이 달라도('정시') 같은 행을 다시 쓴다(같은 답)
     if (existing > 0) { sh.getRange(existing, 1, 1, rowVals.length).setValues([rowVals]); } // 멱등: 덮어쓰기
-    else { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, 1, rowVals.length).setValues([rowVals]); } // 유령 행 아래가 아니라 실데이터 바로 다음에 기록
+    else { var lr = lastDataRow_(sh); ensureRows_(sh, lr + 1); sh.getRange(lr + 1, 1, 1, rowVals.length).setValues([rowVals]); } // 유령 행 아래가 아니라 실데이터 바로 다음에 기록
     try { buildSendSheet(); } catch (errS) {}               // 실시간: 채점 저장 즉시 문자발송 탭 자동 갱신
     return json_({ ok: true, updated: existing > 0, reportLink: linkOf_(_key) });
   } catch (err) {
@@ -852,7 +859,7 @@ function svMigrate_(sh) {
     add.push(svRowVals_(key, String(r[2] || ''), String(r[3] || ''), String(r[4] || ''), sid,
       String(r[6] == null ? '' : r[6]).replace(/^'/, ''), Number(r[7]) || 0, test ? 'TEST' : '', String(r[9] || 'web'), r[0], svTaken_(data, key) + 1));
   });
-  if (add.length) { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, add.length, add[0].length).setValues(add); }
+  if (add.length) { var lr = lastDataRow_(sh); ensureRows_(sh, lr + add.length); sh.getRange(lr + 1, 1, add.length, add[0].length).setValues(add); }
   SpreadsheetApp.flush();
   old.getRange(2, 1, old.getLastRow() - 1, Math.max(1, old.getLastColumn())).clearContent();
   return add.length;
@@ -881,7 +888,7 @@ function saveSurvey_(d) {
     var row = svRowVals_(key, name, school, d.year || '', sid, ans, ms, test, src, null, svTaken_(cur, key) + 1);
     at = svFindRow_(cur, key, sid, !!d.isTest);
     if (at > 0) sh.getRange(at, 1, 1, row.length).setValues([row]);
-    else { var lr = lastDataRow_(sh); sh.getRange(lr + 1, 1, 1, row.length).setValues([row]); }
+    else { var lr = lastDataRow_(sh); ensureRows_(sh, lr + 1); sh.getRange(lr + 1, 1, 1, row.length).setValues([row]); }
   } finally { if (lock) { try { lock.releaseLock(); } catch (eR) {} } }
   try { buildSendSheet(); } catch (eS) {}                   // DT 회차 저장과 같이 — 문자발송 탭에 바로
   return { ok: true, updated: at > 0, code: pubId_(key), reportLink: svLinkOf_(key) };
@@ -2241,7 +2248,7 @@ function _rememberCode_(ss, map) {
     sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().forEach(function (r) { have[String(r[0])] = 1; });
   var add = [];
   for (var code in map) if (!have[code]) add.push([code, map[code].key, map[code].name, new Date()]);
-  if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, 4).setValues(add);
+  if (add.length) { ensureRows_(sh, sh.getLastRow() + add.length); sh.getRange(sh.getLastRow() + 1, 1, add.length, 4).setValues(add); }
   return add.length;
 }
 
