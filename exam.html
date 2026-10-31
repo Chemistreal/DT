@@ -1183,7 +1183,9 @@ let M=null,R=null,A=[],cur=0,view='boot',info={name:'',school:'',grade:''},cours
    {과목·회차·학생·답·위치} 를 localStorage 에 두고, 다시 열면 «이어서 풀기» 를 내준다. 서버가 저장을
    확인했거나(ok) 받지 않겠다고 답하면(refused) 지운다 — 그 뒤로는 이어서 풀 것이 없다.
    (index.html 채점 앱의 saveSession 과 같은 방식 · 저장소를 못 쓰는 브라우저면 조용히 지금처럼) */
-var PKEY='dt_exam_progress_v1', PKEEP_MS=3*86400000;
+/* 제출했는데 저장이 확인 안 된 답도 여기 남는다(저장 확인 때만 비운다). 3일이던 것을 14일로 —
+   2026-10-26~31 서버 저장 고장 때 사흘 넘게 지난 학생은 «이어서 하기» 가 안 떠 다시 보낼 길이 없었다. */
+var PKEY='dt_exam_progress_v1', PKEEP_MS=14*86400000;
 function saveProgress(){
   if(!R) return;
   try{ localStorage.setItem(PKEY, JSON.stringify({course:R.course||course, round:Number(R.round||round), info:info, A:A, cur:cur, t:Date.now()})); }catch(_e){}
@@ -1207,7 +1209,7 @@ async function resumeProgress(){
 function discardProgress(){ clearProgress(); boot(); }
 function resumeView(p){
   var done=p.A.filter(function(a){return a==='O'||a==='X';}).length;
-  var tm=new Date(p.t||0), hm=('0'+tm.getHours()).slice(-2)+':'+('0'+tm.getMinutes()).slice(-2);
+  var tm=new Date(p.t||0), hm=(tm.getMonth()+1)+'/'+tm.getDate()+' '+('0'+tm.getHours()).slice(-2)+':'+('0'+tm.getMinutes()).slice(-2);
   return '<div class="resumebox" role="region" aria-label="이어서 풀기"><h1 style="font-size:18px">풀던 시험이 있습니다</h1>'+
     '<p class="lede" style="margin-bottom:12px"><b>'+esc((p.info&&p.info.name)||'')+'</b> · '+esc(COURSE[p.course]||p.course)+' '+Number(p.round)+'회 · 응답 <b>'+done+'</b>/'+p.A.length+' · '+hm+' 저장</p>'+
     '<div class="btnrow" style="margin-top:0"><button class="ghost" onclick="discardProgress()">처음부터</button><button onclick="resumeProgress()">이어서 풀기 →</button></div></div>';
