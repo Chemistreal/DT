@@ -1375,6 +1375,37 @@ async function assertNoOverflow(page, label) {
     assert(r.배열[0] === 3, '배열을 못 넣는다');
   });
 
+  /* 선생님 2026-11-09: 화학Ⅰ 1회(결합 기초만 틀림) 성적표가 «O·H 기준으로 산화수를 직접 배분하는
+     계산» 을 권했다 — 산화수는 아직 안 배웠다. 축 문단은 그 축에서 실제로 틀린 개념으로 고른다. */
+  await test('처방 코멘트 · 축 문단이 배운 범위를 넘지 않는다', async page => {
+    await page.goto(BASE + 'report.html?demo');
+    await page.waitForTimeout(2500);
+    const r = await page.evaluate(() => {
+      const keep = { rows: allRows, latest: latest };
+      const ax = (course, mis, key) => { allRows = [{ course: course, round: 1, wrongMis: mis }]; latest = Object.assign({}, keep.latest, { course: course }); return rxAxisText(key); };
+      const out = {
+        결합: ax('ch1', ['결합 기초', '루이스 전자점식'], 'A3'),
+        산화: ax('ch1', ['결합 기초', '산화수 계산'], 'A3'),
+        극성: ax('ch1', ['결합의 극성'], 'A3'),
+        기체: ax('ch1', ['기체 몰부피'], 'A2'),
+        속도: ax('ch2', ['반응 속도와 온도'], 'A2'),
+        반응열: ax('ch1', ['반응열과 발열'], 'A1'),
+        다른과목: ax('ch2', ['산화수 계산'], 'A3') && (allRows = [{ course: 'ch2', round: 1, wrongMis: ['산화수 계산'] }], latest = Object.assign({}, keep.latest, { course: 'ch1' }), rxAxisText('A3')),
+        없음: ax('ch1', [], 'A3')
+      };
+      allRows = keep.rows; latest = keep.latest;
+      return out;
+    });
+    assert(!/산화수/.test(r.결합) && /결합/.test(r.결합), '결합만 틀렸는데 산화수 얘기: ' + r.결합);
+    assert(/산화수/.test(r.산화), '산화수를 틀렸는데 산화수 처방이 없다: ' + r.산화);
+    assert(/극성/.test(r.극성) && !/산화수/.test(r.극성), '극성 처방이 아니다: ' + r.극성);
+    assert(!/촉매/.test(r.기체) && /기체/.test(r.기체), '기체만 틀렸는데 촉매 얘기: ' + r.기체);
+    assert(/촉매/.test(r.속도), '반응 속도를 틀렸는데 속도 처방이 없다: ' + r.속도);
+    assert(!/ΔS|엔트로피/.test(r.반응열), '반응열만 틀렸는데 엔트로피 얘기: ' + r.반응열);
+    assert(!/산화수/.test(r.다른과목), '다른 과목 오답으로 이 과목 처방을 골랐다: ' + r.다른과목);
+    assert(!/산화수|결합/.test(r.없음), '틀린 개념이 없는데 특정 내용을 권한다: ' + r.없음);
+  });
+
   await test('내용 · 온도 표기가 한 가지다', async () => {
     const AD = path.join(ROOT, 'appdata');
     const bad = [];
