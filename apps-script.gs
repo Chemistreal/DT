@@ -1565,11 +1565,15 @@ function computeAbsentees_(withinDays, overrides) {
     else if (k.round === 0 || k.round) round = Number(k.round);  // 2순위: 명단(roster) 고정 회차
     else round = currentRoundForClass_(all, course, k.students, withinDays);  // 3순위: 자동(최빈 회차)
     if (round == null) { out.push({ label: k.label, course: course, round: null, absent: [], present: 0, total: total, noExam: true }); return; }
-    var took = {}, tookKey = {};
+    var took = {}, tookKey = {}, tookSch = {}, tookK = {};
     all.forEach(function (r) {
       if (r.course !== course || r.round !== round) return;
       took[norm_(r.name)] = 1;
       took[norm_(studentName_(r.studentKey))] = 1;
+      /* 이름마다 본 학생의 학교를 모은다 — 다른 반·옛 반의 동명이인이 같은 회차를 봤다고
+         이 반 학생이 «응시» 로 세지면 안 된다(2026-11-14 · 화학1 토6-9 최○○ 가 7월의 다른 학교 학생 기록에 잡혔다). */
+      var tn = norm_(r.name); (tookSch[tn] || (tookSch[tn] = [])).push(normSchool_(String(r.school || '')));
+      (tookK[tn] || (tookK[tn] = [])).push(r.studentKey);
       /* 학교까지 아는 기록은 학교까지 담아 둔다 — 동명이인을 가르는 열쇠다. */
       if (r.school) tookKey[canonicalKey_(String(r.name || ''), String(r.school))] = 1;
     });
@@ -1580,7 +1584,14 @@ function computeAbsentees_(withinDays, overrides) {
     var absentWho = (k.students || []).filter(function (x) {
       var nm = stuName_(x), sc = stuSchool_(x);
       if (dupe[norm_(nm)] > 1 && sc) return !tookKey[canonicalKey_(nm, sc)];
-      return !took[norm_(nm)];
+      if (!took[norm_(nm)]) return true;
+      /* 명단에 학교가 있으면 학교가 맞는 기록이 있어야 봤다고 센다(학교를 안 적은 기록은 그대로 믿는다). */
+      var ss = tookSch[norm_(nm)];
+      if (sc && ss) return !ss.some(function (x) { return !x || schoolAkin_(x, normSchool_(sc)); });
+      /* 학교가 없으면 — 같은 이름의 학생이 여럿이면 **지금 다니는(최근 60일 안에 기록이 있는)** 쪽 기록만 믿는다. */
+      var act = activeKeys_(all, nm);
+      if (act) return !(tookK[norm_(nm)] || []).some(function (k) { return act[k]; });
+      return false;
     }).map(function (x) { return { name: stuName_(x), school: stuSchool_(x) }; });
     /* ⚠ `absent` 는 **글자열 배열 그대로** 둔다. 화면·문자·메일이 이것을
        이름으로 읽는다 — 객체를 넣으면 문자가 '[object Object] 학생' 이 된다.
@@ -1590,6 +1601,21 @@ function computeAbsentees_(withinDays, overrides) {
                absentWho: absentWho, present: total - absent.length, total: total });
   });
   return { classes: out, generatedAt: Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm') };
+}
+/* 같은 이름의 학생키가 둘 이상일 때, 가장 최근 기록에서 60일 안에 기록이 있는 키들. 하나뿐이면 null. */
+function activeKeys_(all, nm) {
+  var n = norm_(nm), last = {}, cnt = 0, mx = 0;
+  all.forEach(function (r) {
+    if (norm_(r.name) !== n || !r.studentKey) return;
+    var t = (r.date instanceof Date) ? r.date.getTime() : (new Date(r.date)).getTime() || 0;
+    if (last[r.studentKey] == null) { last[r.studentKey] = 0; cnt++; }
+    if (t > last[r.studentKey]) last[r.studentKey] = t;
+    if (t > mx) mx = t;
+  });
+  if (cnt < 2) return null;
+  var out = {};
+  for (var k in last) if (last[k] >= mx - 60 * 86400000) out[k] = 1;
+  return out;
 }
 function weeklyAbsenteeEmail() {
   var A = computeAbsentees_(8);

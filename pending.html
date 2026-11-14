@@ -506,11 +506,30 @@ function gRowsFor(students, rows){
   return students.map(function(x){
     var nm=justName(gName(x)), sc=gSchool(x), n=gNorm(nm);
     if(dupe[n]>1&&sc){
-      var key=gNorm(sc.replace(/중학교$/,'중').replace(/고등학교$/,'고').replace(/초등학교$/,'초')+'-'+nm);
+      var key=gNorm(gSch(sc)+'-'+nm);
       return {name:nm, school:sc, rows:byKey[key]||[]};
     }
-    return {name:nm, school:sc, rows:byName[n]||[]};
+    /* 명단에 학교가 있으면 학교가 맞는 기록만 — 다른 반·옛 반의 동명이인 기록이 이 학생 칸에
+       «재» 로 들어왔다(2026-11-14 · 화학1 토6-9 최○○ 3회). 학교를 안 적은 기록은 그대로 둔다. */
+    var mine=byName[n]||[];
+    if(sc) mine=mine.filter(function(r){ var rs=gSch(r.school); return !rs||gAkin(rs, gSch(sc)); });
+    else {
+      /* 학교가 없으면 — 같은 이름의 학생키가 여럿일 때 최근 60일 안에 기록이 있는 쪽만. */
+      var last={}, mx=0;
+      mine.forEach(function(r){ var k=r.studentKey||''; var tt=new Date(r.date).getTime()||0; if(!(k in last)) last[k]=0; if(tt>last[k]) last[k]=tt; if(tt>mx) mx=tt; });
+      if(Object.keys(last).length>1) mine=mine.filter(function(r){ return last[r.studentKey||'']>=mx-60*86400000; });
+    }
+    return {name:nm, school:sc, rows:mine};
   });
+}
+/* 서버 normSchool_ · schoolAkin_ 과 같은 규칙. */
+function gSch(s){ return gNorm(s).replace(/중학교$/,'중').replace(/고등학교$/,'고').replace(/초등학교$/,'초'); }
+function gAkin(a,b){
+  a=String(a||''); b=String(b||''); if(!a||!b) return false; if(a===b) return true;
+  var sh=a.length<=b.length?a:b, lo=a.length<=b.length?b:a;
+  if(sh.length>=3&&lo.indexOf(sh)>=0) return true;
+  var core=function(v){ return v.replace(/(중|고|초)$/,''); }, typ=function(v){ var m=v.match(/(중|고|초)$/); return m?m[1]:''; };
+  return core(a)===core(b) && (typ(a)===''||typ(b)===''||typ(a)===typ(b));
 }
 function gridFor(c){
   if(!GRID||!GRID.classes||!GRID.rows) return null;
@@ -518,7 +537,15 @@ function gridFor(c){
   if(!cls||!(cls.students||[]).length) return null;
   var upto=Number(c.round)||0; if(!upto) return null;
   var stus=gRowsFor(cls.students, GRID.rows);
+  /* 같은 이름이 다른 학교에도 있으면(다른 반 명단이든 지난 기록이든) 이름 옆에 학교를 붙여 보인다 —
+     «홍길동(가나중)» · «홍길동(다라중)» 처럼(선생님 2026-11-14). 문자에는 이름만 나간다. */
+  var schOf={};
+  (GRID.classes||[]).forEach(function(k){ (k.students||[]).forEach(function(x){ var n=gNorm(justName(gName(x))), s=gSch(gSchool(x)); if(n&&s) (schOf[n]||(schOf[n]={}))[s]=1; }); });
+  (GRID.rows||[]).forEach(function(r){ var n=gNorm(justName(r.name)), s=gSch(r.school); if(n&&s) (schOf[n]||(schOf[n]={}))[s]=1; });
+  var many=function(n){ var o=schOf[n]||{}, ks=Object.keys(o), grp=[];
+    ks.forEach(function(k){ if(!grp.some(function(g){ return gAkin(g,k); })) grp.push(k); }); return grp.length>1; };
   return stus.map(function(st){
+    var shown=(st.school&&many(gNorm(st.name)))?st.name+'('+gSch(st.school).replace(/\d+$/,'')+')':st.name;
     var states=gStates(st.rows, c.course, upto);
     /* 학부모에게 보내는 리포트 주소. 시트 행이 그대로 들고 있다(mapRow_). */
     var link=''; for(var i=st.rows.length-1;i>=0;i--){ if(st.rows[i].reportLink){ link=st.rows[i].reportLink; break; } }
@@ -526,7 +553,7 @@ function gridFor(c){
     states.forEach(function(v,i){ if(v==='miss') backlog.push(i+1); });
     var needRetry=[];
     states.forEach(function(v,i){ if(v==='need'||v==='retry') needRetry.push(i+1); });
-    return {name:st.name, school:st.school, states:states, backlog:backlog, needRetry:needRetry, link:link};
+    return {name:st.name, shown:shown, school:st.school, states:states, backlog:backlog, needRetry:needRetry, link:link};
   }).sort(function(a,b){
     return (b.backlog.length-a.backlog.length) || (b.needRetry.length-a.needRetry.length)
         || a.name.localeCompare(b.name);
@@ -549,7 +576,7 @@ function gridHTML(c){
         +(i+1)+'회 · '+(CELLLBL[v]||'')+'">'+k.t+'</span></td>';
     }).join('');
     var b=st.backlog.length;
-    return '<tr><th scope="row" class="gname">'+esc(st.name)+'</th>'+tds
+    return '<tr><th scope="row" class="gname">'+esc(st.shown||st.name)+'</th>'+tds
       +'<td class="gsum">'+(b?'<b>'+b+'</b>':'—')+'</td></tr>';
   }).join('');
   var lg='<div class="glegend">'
@@ -569,7 +596,7 @@ function gridHTML(c){
       return st.states.slice(segFrom-1,segEnd).some(function(v){ return v!=='miss'&&v!=='pre'; });
     }).map(function(st){
       var took=st.states.slice(segFrom-1,segEnd).filter(function(v){return v!=='miss'&&v!=='pre';}).length;
-      return '<div class="gact"><span class="who">'+esc(st.name)+'</span>'
+      return '<div class="gact"><span class="who">'+esc(st.shown||st.name)+'</span>'
         +'<span class="why">'+segFrom+'~'+segEnd+'회 중 '+took+'회 응시</span>'
         +'<div class="copygrp" data-kind="seg" data-name="'+escAttr(st.name)+'"'
         +' data-course="'+escAttr(c.course)+'" data-from="'+segFrom+'" data-to="'+segEnd+'"'
@@ -582,7 +609,7 @@ function gridHTML(c){
   /* 밀린 회차가 둘 이상인 학생만 몰아 안내 단추를 세운다. 하나뿐이면 위의
      1차·리마인드·최종이 이미 그 일을 한다 — 같은 말을 두 서식으로 갖지 않는다. */
   var acts=g.filter(function(st){ return st.backlog.length>=2; }).map(function(st){
-    return '<div class="gact"><span class="who">'+esc(st.name)+'</span>'
+    return '<div class="gact"><span class="who">'+esc(st.shown||st.name)+'</span>'
       +'<span class="why">'+roundsPhrase(st.backlog)+' 안 봄</span>'
       +'<div class="copygrp" data-kind="backlog" data-name="'+escAttr(st.name)+'"'
       +' data-course="'+escAttr(c.course)+'" data-rounds="'+escAttr(st.backlog.join(','))+'">'

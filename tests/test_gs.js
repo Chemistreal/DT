@@ -826,6 +826,36 @@ console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
 
   SHEETS['결과']._rows.pop();
 
+  /* ── 다른 반·옛 반의 동명이인 (2026-11-14) ─────────────────────────
+     반에 같은 이름이 하나뿐이어도, **다른 학교의** 같은 이름 학생이 그 회차를 봤다고
+     이 반 학생이 «응시» 로 세지면 안 된다. 명단에 학교가 있으면 학교까지 본다. */
+  {
+    const keepRoster = ctx.getRoster_();
+    ctx.setRoster_([{ label: '화학1 토6-9', course: 'ch1', students: [{ name: '테스트갑', school: '다라중' }], round: null }]);
+    SHEETS['결과']._rows.push(
+      ['테스트갑', 'L', new Date(), 60, '미달', '가나중-테스트갑', '가나중', '2',
+       'ch1', 3, '재시', 36, 24, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
+    let c2 = ((ctx.computeAbsentees_(8, { '화학1 토6-9': 3 }).classes) || []).filter(x => x.label === '화학1 토6-9')[0] || {};
+    T('다른 학교 동명이인의 기록으로 응시 처리하지 않는다', (c2.absent || []).indexOf('테스트갑') >= 0, JSON.stringify(c2));
+    SHEETS['결과']._rows.push(
+      ['테스트갑', 'L', new Date(), 85, '통과', '다라중2-테스트갑', '다라중2', '2',
+       'ch1', 3, '첫 응시', 51, 9, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
+    c2 = ((ctx.computeAbsentees_(8, { '화학1 토6-9': 3 }).classes) || []).filter(x => x.label === '화학1 토6-9')[0] || {};
+    T('학교 표기가 조금 달라도(다라중2) 본인 기록은 응시로 센다', (c2.absent || []).indexOf('테스트갑') < 0, JSON.stringify(c2));
+    SHEETS['결과']._rows.pop(); SHEETS['결과']._rows.pop();
+    /* 명단에 학교가 없을 때: 옛 동명이인(석 달 전 기록)만 그 회차를 봤으면 응시로 세지 않는다. */
+    ctx.setRoster_([{ label: '화학1 토6-9', course: 'ch1', students: ['테스트갑'], round: null }]);
+    SHEETS['결과']._rows.push(
+      ['테스트갑', 'L', new Date(Date.now() - 120 * 86400000), 60, '미달', '가나중-테스트갑', '가나중', '2',
+       'ch1', 3, '재시', 36, 24, '', '{}', '', '[]', '[]', 'O'.repeat(60)],
+      ['테스트갑', 'L', new Date(), 85, '통과', '다라중2-테스트갑', '다라중2', '2',
+       'ch1', 2, '첫 응시', 51, 9, '', '{}', '', '[]', '[]', 'O'.repeat(60)]);
+    c2 = ((ctx.computeAbsentees_(8, { '화학1 토6-9': 3 }).classes) || []).filter(x => x.label === '화학1 토6-9')[0] || {};
+    T('명단에 학교가 없어도 옛 동명이인 기록으로 응시 처리하지 않는다', (c2.absent || []).indexOf('테스트갑') >= 0, JSON.stringify(c2));
+    SHEETS['결과']._rows.pop(); SHEETS['결과']._rows.pop();
+    ctx.setRoster_(keepRoster);
+  }
+
   /* ── 이름 칸에 학교를 붙여 적어 둔 옛 명단 ──────────────────────────
      명단에 두 명을 넣을 방법이 없던 때 이름 칸에 '홍길동 두레중' 이라고
      적어 구분해 두었다. 그 값이 그대로 문자에 실려 학부모에게
