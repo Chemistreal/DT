@@ -545,7 +545,12 @@ function gridFor(c){
   var many=function(n){ var o=schOf[n]||{}, ks=Object.keys(o), grp=[];
     ks.forEach(function(k){ if(!grp.some(function(g){ return gAkin(g,k); })) grp.push(k); }); return grp.length>1; };
   return stus.map(function(st){
-    var shown=(st.school&&many(gNorm(st.name)))?st.name+'('+gSch(st.school).replace(/\d+$/,'')+')':st.name;
+    /* 명단에 학교가 없으면 이 학생 칸에 붙은 기록의 학교로 보인다. 그 기록이 두 학교에 걸쳐 있으면
+       누구 것인지 모르니 «학교 확인» 으로 — 명단에 학교를 적어 달라는 뜻이다. */
+    var sch=st.school, mixed=false;
+    if(!sch){ var gs2=[]; st.rows.forEach(function(r){ var s2=gSch(r.school); if(s2&&!gs2.some(function(g){ return gAkin(g,s2); })) gs2.push(s2); });
+      if(gs2.length===1) sch=gs2[0]; else if(gs2.length>1) mixed=true; }
+    var shown=!many(gNorm(st.name))?st.name:(sch?st.name+'('+gSch(sch).replace(/\d+$/,'')+')':(mixed?st.name+'(학교 확인)':st.name));
     var states=gStates(st.rows, c.course, upto);
     /* 학부모에게 보내는 리포트 주소. 시트 행이 그대로 들고 있다(mapRow_). */
     var link=''; for(var i=st.rows.length-1;i>=0;i--){ if(st.rows[i].reportLink){ link=st.rows[i].reportLink; break; } }
@@ -684,8 +689,11 @@ function absentClassHTML(c){
   }
   var bc='<div class="copygrp abx-bc" data-kind="exam" data-name="" data-course="'+escAttr(c.course)+'" data-round="'+escAttr(c.round)+'" data-link="'+escAttr(el)+'">'
     +'<button class="copybtn abc" data-stage="bc" data-orig="반 전체 공지 복사" onclick="copyShare(this)">반 전체 공지 복사</button></div>';
-  var stus=(c.absent||[]).map(function(nm){
-    return '<div class="abx-stu"><span class="abx-sname">'+esc(nm)+'</span>'
+  var gs={}; (gridFor(c)||[]).forEach(function(st){ if(st.shown&&st.shown!==st.name) (gs[st.name]||(gs[st.name]=[])).push(st); });
+  var stus=(c.absent||[]).map(function(nm,j){
+    var w=(c.absentWho||[])[j]||{}, lab=nm, cand=gs[nm]||[];
+    if(cand.length){ var hit=cand.filter(function(st){ return w.school&&gAkin(gSch(st.school||''),gSch(w.school)); })[0]||(cand.length===1?cand[0]:null); if(hit) lab=hit.shown; }
+    return '<div class="abx-stu"><span class="abx-sname">'+esc(lab)+'</span>'
       +'<div class="copygrp abx-btns" data-kind="exam" data-name="'+escAttr(nm)+'" data-course="'+escAttr(c.course)+'" data-round="'+escAttr(c.round)+'" data-link="'+escAttr(el)+'">'
       +'<button class="copybtn a1" data-stage="1" data-orig="1차 안내" onclick="copyShare(this)">1차 안내</button>'
       +'<button class="copybtn a2" data-stage="2" data-orig="리마인드" onclick="copyShare(this)">리마인드</button>'
