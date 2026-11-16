@@ -686,7 +686,14 @@ function doGet(e) {
     rank: valid ? rank_(all, key, getExcluded_(), want) : null,
     ranks: valid ? ranksAll_(all, key, getExcluded_()) : [],
     cohort: valid ? cohortItems_(all, key, getExcluded_(), want) : null,
-    challenges: valid ? challengesOf_(key) : [] });
+    challenges: valid ? challengesOf_(key) : [],
+    /* 같은 이름의 다른 학생(다른 학생키)이 있으면 성적표가 이름 옆에 학교를 붙인다(동명이인 · 2026-11-16). */
+    sameName: valid ? sameNameOf_(all, key, rows) : false });
+}
+function sameNameOf_(all, key, rows) {
+  var nm = rows.length ? norm_(cleanName_(String(rows[0].name || ''))) : norm_(studentName_(key));
+  if (!nm) return false;
+  return all.some(function (r) { return r.studentKey && r.studentKey !== key && !r.isTest && norm_(cleanName_(String(r.name || ''))) === nm; });
 }
 /* 성적표 주소의 ?student= 값 → 학생키. 없거나 안 맞으면 null.
    doGet(성적표 조회)과 심화 기록(doPost kind:'challenge')이 같은 규칙을 쓴다 — 갈라 적으면 한쪽만 고쳐진다. */

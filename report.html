@@ -3164,7 +3164,7 @@ function render(commit){
   if(_pre){ _thesis=_pre.trim(); _detail=_week; } else { _thesis=_week; }
   if(!V2) h+=`<div class="card hero">
     <div class="verdict5 ${status.c}"><span class="sig"></span><span class="vlab">추이</span>${status.k} · ${status.t}</div>
-    <div class="who">${_esc(A.info.name)} · ${_esc(A.info.school)} · ${CRSLBL[latest.course]||'화학'} 누적 OX 진단</div>
+    <div class="who">${SAME_NAME&&A.info.school?_esc(nameWithSchool(justNameRep(A.info.name),A.info.school)):_esc(A.info.name)+' · '+_esc(A.info.school)} · ${CRSLBL[latest.course]||'화학'} 누적 OX 진단</div>
     <div class="line">${_thesis}</div>
     ${_detail?`<div class="linesub">${_detail}</div>`:''}
     ${risk.note?`<div class="herosub">${risk.note}</div>`:''}
@@ -4294,6 +4294,9 @@ async function renderSegment(){
 }
 function justNameRep(v){ var s=String(v==null?'':v).trim(); var i=s.lastIndexOf('-'); return i>=0?s.slice(i+1):s; }
 /* 학부모에게 아이를 가리킬 때 쓰는 이름(3인칭 · HTML 에 넣을 수 있게 이스케이프). */
+/* 같은 이름의 다른 학생이 있으면(서버 sameName) 머리말·표지 이름에 학교를 붙인다 — «이서준(대명중) 학생». */
+var SAME_NAME=false;
+function nameWithSchool(nm, sc){ sc=String(sc||'').replace(/중학교$/,'중').replace(/고등학교$/,'고').replace(/초등학교$/,'초').replace(/\d+$/,''); return (SAME_NAME&&sc)?nm+'('+sc+')':nm; }
 function stuNm(){ return _esc(justNameRep((A&&A.info&&A.info.name)||'')||'학생'); }
 
 async function boot(){
@@ -4318,7 +4321,7 @@ async function boot(){
     if(!j) LOAD_FAIL=true;                       // 물어보지 못했다(기록이 없는 것과 다르다)
     else if(j.cumulative){ j=JSON.parse(JSON.stringify(j));     /* 다시 그릴 때 받은 원본을 건드리지 않게 사본으로 */
       A=j.cumulative; allRows=j.rows||[]; RANK=j.rank||null; RANKS=j.ranks||[]; COHORT=j.cohort||null;
-      CHALLENGES=Array.isArray(j.challenges)?j.challenges:[]; }
+      CHALLENGES=Array.isArray(j.challenges)?j.challenges:[]; SAME_NAME=!!j.sameName; }
   }
   var demoHard=(new URLSearchParams(location.search).get('demo')==='hard');
   // ★안전장치: 학생 링크(student 파라미터)가 있는데 데이터가 안 열리면(코드 미해석·링크 오류)
@@ -4481,7 +4484,7 @@ function buildReportModel(){
   var lg=(latest.finalScore!=null&&latest.jeongsiScore!=null)?latest.finalScore-latest.jeongsiScore:0;
   var M={v:1, brand:BRAND, course:course, courseName:{ch1:'화학Ⅰ',ch1s:'화학Ⅰ 심화',ch2:'화학Ⅱ',gc:'일반화학'}[course]||(CRSLBL[course]||'화학'),
     v2:!!REPORT_V2[course], total:total, isLast:isLastRound(),
-    student:{name:nm, school:(A.info&&A.info.school)||''},
+    student:{name:nm, school:(A.info&&A.info.school)||'', label:nameWithSchool(nm,(A.info&&A.info.school)||'')},
     pub:pubP?(pubP.y+'년 '+pubP.m+'월 '+pubP.d+'일'):'',
     latest:{round:Number(latest.round), js:latest.jeongsiScore, fs:latest.finalScore, passed:!!latest.passed, gain:lg>0?lg:0},
     rounds:rounds, taken:rounds.length, passedN:rounds.filter(function(r){ return r.passed; }).length,
@@ -4660,7 +4663,7 @@ function renderV2(M){
   var X=M&&M.v2x; if(!X) return '';
   var h='', cur=M.latest.round;
   h+='<header class="v2mast"><div><div class="t">DT 성적표 · '+_esc(M.courseName)+' '+cur+'회</div></div>'
-    +'<div class="m">'+_esc(M.student.name)+' 학생'+(M.student.school?' · '+_esc(M.student.school):'')+'<br>'+_esc(M.pub)+' · '+cur+'회째</div></header>';
+    +'<div class="m">'+_esc(M.student.label||M.student.name)+' 학생'+(M.student.school&&M.student.label===M.student.name?' · '+_esc(M.student.school):'')+'<br>'+_esc(M.pub)+' · '+cur+'회째</div></header>';
   h+='<p class="v2lede">'+frHTML(X.lede)+'</p>';
   if(X.tiles.length) h+='<div class="v2tiles n'+X.tiles.length+'">'+X.tiles.map(function(t){
     return '<div class="v2tile"><div class="v">'+_esc(t.v)+(t.u?'<small>'+_esc(t.u)+'</small>':'')+'</div><div class="k">'+_esc(t.k)+'</div><div class="m">'+_esc(t.m)+'</div></div>'; }).join('')+'</div>';

@@ -855,6 +855,12 @@ console.log('[동명이인] 같은 반에 이름이 같은 학생 둘');
     SHEETS['결과']._rows.pop(); SHEETS['결과']._rows.pop();
     ctx.setRoster_(keepRoster);
   }
+  /* 성적표: 같은 이름의 다른 학생이 있으면 sameName — 머리말에 학교를 붙인다. */
+  {
+    const all = [{ name: '테스트병', studentKey: '가나중-테스트병', isTest: false }, { name: '테스트병', studentKey: '다라중-테스트병', isTest: false }, { name: '테스트정', studentKey: '가나중-테스트정', isTest: false }];
+    T('동명이인이면 sameName', ctx.sameNameOf_(all, '가나중-테스트병', [all[0]]) === true);
+    T('혼자면 sameName 아님', ctx.sameNameOf_(all, '가나중-테스트정', [all[2]]) === false);
+  }
 
   /* ── 이름 칸에 학교를 붙여 적어 둔 옛 명단 ──────────────────────────
      명단에 두 명을 넣을 방법이 없던 때 이름 칸에 '홍길동 두레중' 이라고

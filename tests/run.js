@@ -4161,7 +4161,7 @@ async function assertNoOverflow(page, label) {
         const A = opts.oldServer ? CE.cumulative(rows.map(r => Object.assign({}, r, { course: r.course })))[K] : CE.cumulative(rows, c)[K];
         if (opts.oldServer) { delete A.course; delete A.courses; }
         return route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: A, rank: opts.rank || null, cohort: null }) });
+          body: JSON.stringify({ ok: true, student: 'x', rows, excluded: [], cumulative: A, rank: opts.rank || null, cohort: null, sameName: !!opts.sameName }) });
       });
       await page.goto(BASE + 'report.html?student=x' + (opts.c ? '&c=' + opts.c : ''));
       await page.waitForSelector('.ladder', { timeout: 20000 });
@@ -4183,6 +4183,20 @@ async function assertNoOverflow(page, label) {
       { answers: molCh1.map(() => 'O').join(''), retakeCids: molCh1.join(','), retakeKeys: molCh1.map(() => 'O').join(''), wrongMis: [] }));
     ROWS1.push(mk(K1, 'ch1s', 1, '첫 응시', wrongTo('ch1s', 1, ['CH1S-012'], i => i % 7 === 3), '2026-09-07T01:00:00Z'));
     ROWS1.push(mk(K1, 'ch1s', 2, '첫 응시', wrongTo('ch1s', 2, [], i => i % 6 === 1), '2026-09-14T01:00:00Z'));
+
+    /* 동명이인(선생님 2026-11-16): 서버가 sameName 을 주면 머리말 이름 옆에 학교를 붙인다. 아니면 그대로. */
+    await test('성적표 · 동명이인이면 이름(학교) 학생', async page => {
+      const rows = [mk('가상고-이음', 'ch1', 1, '첫 응시', [1, 2], '2026-03-01T01:00:00Z')];
+      await serve(page, rows, '가상고-이음', { sameName: true });
+      const head = await page.evaluate(() => (document.querySelector('header .m') || document.querySelector('.who') || {}).innerText || '');
+      assert(/이음\(가상고\)/.test(head) && (head.match(/가상고/g) || []).length === 1, '머리말에 학교가 안 붙었거나 두 번 나온다: ' + head);
+    });
+    await test('성적표 · 동명이인이 아니면 이름만', async page => {
+      const rows = [mk('가상고-이음', 'ch1', 1, '첫 응시', [1, 2], '2026-03-01T01:00:00Z')];
+      await serve(page, rows, '가상고-이음', {});
+      const head = await page.evaluate(() => (document.querySelector('header .m') || document.querySelector('.who') || {}).innerText || '');
+      assert(/이음/.test(head) && !/이음\(/.test(head), '동명이인이 아닌데 학교가 붙었다: ' + head);
+    });
 
     await test('7단계 2차 (i) · ch1+ch1s 학생 성적표에 「화학1에서 이어 온 기록」 — 맞는 심화 개념 · 심화반에서 다시 물었는지', async page => {
       const got = await serve(page, ROWS1, K1);

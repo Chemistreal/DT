@@ -209,7 +209,7 @@
       txt('DT 성적표', { align: AlignmentType.CENTER, bold: true, size: SZ.cover + 10, color: K.g9, after: 110 }),
       txt(course + '  ·  ' + L.round + '회', { align: AlignmentType.CENTER, color: K.g8, size: SZ.h2, after: 80 }),
       P([], { before: 2400 }),
-      txt(nm + ' 학생', { align: AlignmentType.CENTER, bold: true, size: SZ.num, after: 50 }),
+      txt((M.student.label || nm) + ' 학생', { align: AlignmentType.CENTER, bold: true, size: SZ.num, after: 50 }),
       txt(M.student.school, { align: AlignmentType.CENTER, color: K.mut, size: SZ.body, after: 40 }),
       txt([L.fs != null ? pt(L.fs) + '점' : null, band].filter(Boolean).join('      ·      '),
           { align: AlignmentType.CENTER, bold: true, color: L.passed ? K.ok : K.amber, size: SZ.h3, before: 40, after: 80 }),
